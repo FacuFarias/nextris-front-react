@@ -32,7 +32,7 @@ const router = createBrowserRouter([
         ),
     },
     {
-        path: "/pacientes/:pacienteId/historial-paciente",
+        path: "/pacientes/historial-paciente",
         element: (
             <ProtectedRoute>
                 <HistorialPaciente />

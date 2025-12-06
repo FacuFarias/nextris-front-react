@@ -69,8 +69,10 @@ export const Inicio = () => {
                             key={item.id}
                             className="group cursor-pointer bg-white/95 backdrop-blur-sm hover:bg-white hover:shadow-lg transition-all duration-300 border-none p-3 flex flex-col items-center justify-center gap-2 h-28"
                         >
-                            <div className="text-brand-purple group-hover:scale-110 transition-transform duration-300">
-                                {item.icon}
+                            <div className="bg-purple-100 rounded-lg p-2 group-hover:bg-purple-200 transition-all duration-300">
+                                <div className="text-brand-purple group-hover:scale-110 transition-transform duration-300">
+                                    {item.icon}
+                                </div>
                             </div>
                             <h3 className="text-xs font-medium text-gray-700 text-center leading-tight">
                                 {item.title}

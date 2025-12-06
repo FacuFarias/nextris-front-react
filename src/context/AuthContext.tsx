@@ -15,7 +15,6 @@ interface AuthData {
     access_token: string;
     refresh_token: string;
     user: User;
-    patientDomains?: any[];
 }
 
 interface AuthContextType {
@@ -25,7 +24,6 @@ interface AuthContextType {
     login: (data: AuthData) => void;
     logout: () => void;
     updateUser: (user: User) => void;
-    updatePatientDomains: (patientDomains: any[]) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,13 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const updatePatientDomains = (patientDomains: any[]) => {
-        if (authData) {
-            const updatedAuthData = { ...authData, patientDomains };
-            setAuthData(updatedAuthData);
-            localStorage.setItem("authData", JSON.stringify(updatedAuthData));
-        }
-    };
+
 
     const isAuthenticated = !!authData;
 
@@ -86,7 +78,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 login,
                 logout,
                 updateUser,
-                updatePatientDomains,
             }}
         >
             {children}

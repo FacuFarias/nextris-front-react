@@ -1,5 +1,8 @@
+//react hook form and zod
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
+//components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,7 +20,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+//schema
 import { createPatientSchema, type CreatePatientFormValues } from "../schemas/create-patient.schema";
+//hooks
+import { usePatientsDomains } from "@/hooks/use-patients-domains";
+import { useAuth } from "@/context/AuthContext";
 
 interface CreatePatientFormProps {
     onSubmit: (data: CreatePatientFormValues) => void;
@@ -25,6 +32,8 @@ interface CreatePatientFormProps {
 }
 
 export const CreatePatientForm = ({ onSubmit, isLoading }: CreatePatientFormProps) => {
+    const { authData } = useAuth();
+    const { data: patientsDomains, isLoading: isLoadingDomains } = usePatientsDomains();
     const form = useForm<CreatePatientFormValues>({
         resolver: zodResolver(createPatientSchema),
         defaultValues: {
@@ -40,12 +49,63 @@ export const CreatePatientForm = ({ onSubmit, isLoading }: CreatePatientFormProp
             province: "",
             country: "",
             healthinsurance: "",
+            patientdomain_id: "",
         },
+
     });
+
+    const isAdmin = authData?.user?.name === "Administrador";
+    const domains = patientsDomains?.data || [];
+    const shouldShowSelect = isAdmin || domains.length > 1;
+
+    // Si no es admin y solo hay un dominio, seleccionarlo automáticamente
+    useEffect(() => {
+        if (!isAdmin && domains.length === 1 && !form.getValues("patientdomain_id")) {
+            form.setValue("patientdomain_id", domains[0].patientdomain_id);
+        }
+    }, [isAdmin, domains, form]);
 
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                {shouldShowSelect ? (
+                    <FormField
+                        control={form.control}
+                        name="patientdomain_id"
+                        render={({ field }) => (
+                            <FormItem className="w-full cursor-pointer">
+                                <FormLabel>Seleccione dominio *</FormLabel>
+                                <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    disabled={isLoading || isLoadingDomains}
+                                >
+                                    <FormControl className="w-full cursor-pointer">
+                                        <SelectTrigger>
+                                            <SelectValue placeholder={isLoadingDomains ? "Cargando..." : "Seleccione dominio"} />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent className="cursor-pointer">
+                                        {domains.length > 0 && domains.map((domain: any) => (
+                                            <SelectItem key={domain.patientdomain_id} value={domain.patientdomain_id}>
+                                                {domain.patientdomain_name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                ) : domains.length === 1 && (
+                    <div className="w-full">
+                        <p className="text-sm font-medium mb-2">Dominio:</p>
+                        <p className="text-sm text-muted-foreground bg-secondary p-3 rounded-md">
+                            {domains[0].patientdomain_name}
+                        </p>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                         control={form.control}

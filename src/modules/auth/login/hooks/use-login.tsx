@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query"
 import { login } from "../services/login.service"
-import { getPatientDomains } from "../services/patient-domains.service"
+import { getPatientDomains } from "../../../../services/patient-domains.service"
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -24,26 +24,16 @@ interface LoginResponse {
 
 export const UseLogin = () => {
     const navigate = useNavigate();
-    const { login: loginContext, updatePatientDomains } = useAuth();
+    const { login: loginContext } = useAuth();
 
     const mutation = useMutation<LoginResponse, Error, { username: string; password: string; user_type: string }>({
         mutationFn: ({ username, password, user_type }: { username: string; password: string; user_type: string }) => login(username, password, user_type),
         onSuccess: async (data) => {
-            // Guardar datos en el contexto y localStorage
             loginContext(data);
-
-            // Obtener patientDomains
-            try {
-                const patientDomains = await getPatientDomains(data.user.id);
-                updatePatientDomains(patientDomains);
-            } catch (error) {
-                console.error("Error fetching patient domains:", error);
-            }
-
             toast.success(data?.message || "¡Inicio de sesión exitoso!", {
                 position: "top-right",
             });
-            // Redirigir según el tipo de usuario o si requiere cambio de contraseña
+
             navigate("/inicio");
         },
         onError: (error) => {

@@ -1,5 +1,5 @@
 import { MainLayout } from '@/layouts/layout'
-import { useParams } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { useHistorialPaciente } from './hooks/use-historial-paciente';
 import { Search } from 'lucide-react';
 import { InputSearch } from '@/components/InputSearch';
@@ -9,10 +9,10 @@ import type { HistoryPatient } from '../../types/BuscarPaciente';
 import { historyColumns } from './components/columns';
 
 export const HistorialPaciente = () => {
-    const { pacienteId } = useParams()
+    const location = useLocation()
     const [searchTerm, setSearchTerm] = useState("");
-    const { historyData, isLoading, error } = useHistorialPaciente({ patientId: pacienteId! });
-    console.log(historyData)
+    const { historyData, isLoading } = useHistorialPaciente({ patientId: location?.state?.patient.guid });
+
     return (
         <MainLayout>
             <div className="bg-white backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
@@ -21,7 +21,7 @@ export const HistorialPaciente = () => {
                     <div className="bg-brand-purple p-2 sm:p-3 rounded-lg">
                         <Search className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Historial Paciente / </h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Historial Paciente / {location?.state?.patient.name} {location?.state?.patient?.surname}</h1>
                 </div>
 
                 {/* Barra de búsqueda */}

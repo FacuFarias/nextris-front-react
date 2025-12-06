@@ -40,10 +40,12 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-brand-purple: var(--brand-purple);
+  --color-gradient: var(--gradient);
 }
 
 :root {
   --radius: 0.625rem;
+  --gradient: linear-gradient(to bottom, #2D1B4E 0%, #2D1B4E 40%, #1a0f2e 100%);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --brand-purple: #440f6d;

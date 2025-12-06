@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Menu, X } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { Footer } from "./Footer";
-import fondoImage from "@/assets/fondo.jpg";
+import fondoImage from "@/assets/fondo1.png";
 
 interface MainLayoutProps {
     children: ReactNode;
@@ -41,7 +41,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
                     <div
                         className="absolute inset-0 z-0"
                         style={{
-                            backgroundImage: `linear-gradient(rgba(68, 15, 109, 0.4), rgba(68, 15, 109, 0.4)), url(${fondoImage})`,
+                            backgroundImage: ` url(${fondoImage})`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                             backgroundRepeat: 'no-repeat',

@@ -40,7 +40,6 @@ export function TablaDynamic<T extends Record<string, any>>({
         key: keyof T | string;
         direction: "asc" | "desc";
     } | null>(null);
-    console.log(pagination)
     // Función para obtener el valor anidado de un objeto
     const getNestedValue = (obj: any, path: string): any => {
         return path.split(".").reduce((current, key) => current?.[key], obj);
@@ -134,7 +133,7 @@ export function TablaDynamic<T extends Record<string, any>>({
     }
 
     return (
-        <div className={cn("space-y-4 mt-10", className)}>
+        <div className={cn("space-y-4 mt-5", className)}>
             <div className="rounded-md border overflow-hidden">
                 <Table /* style={{ tableLayout: "fixed" }} */>
                     <TableHeader className="bg-brand-purple">

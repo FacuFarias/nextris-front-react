@@ -18,7 +18,15 @@ export const createPatient = async (data: CreatePatientFormValues) => {
         throw error;
     }
 }
-
+export const deletePatient = async (patientId: string) => {
+    try {
+        const response = await api.delete(`/patients/${patientId}`);
+        return response.data;
+    } catch (error) {
+        console.error('🔴 DELETE Patient - Error:', error);
+        throw error;
+    }
+}
 export const getHistoryPatient = async ({ patientId }: { patientId: string }) => {
     try {
         const response = await api.get(`/patients/${patientId}/history`);

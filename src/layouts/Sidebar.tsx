@@ -66,17 +66,17 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         <>
             {/* Desktop Sidebar */}
             <aside className={cn(
-                "fixed top-0 left-0 h-full w-64 border-r border-border z-40 transition-transform duration-300",
+                "fixed top-0 left-0 h-full w-64  border-border z-40 transition-transform duration-300",
                 "lg:translate-x-0",
                 isOpen ? "translate-x-0" : "-translate-x-full"
             )}
-                style={{ backgroundColor: '#F9FAFA' }}>
+                style={{ background: 'linear-gradient(to bottom, #2D1B4E 0%, #2D1B4E 40%, #1a0f2e 100%)' }}>
                 <div className="flex flex-col h-full">
                     {/* Logo */}
-                    <div className="h-20 flex items-center px-6 border-b border-border  cursor-pointer" onClick={() => navigate("/inicio")}>
-                        <img src={logo} alt="NextRIS Logo" className="w-8 h-8" />
-                        <span className="ml-3 font-display text-xl font-bold text-foreground">
-                            Next<span className="text-primary">RIS</span>
+                    <div className="h-20 flex items-center px-6 border-b border-purple-800/30 cursor-pointer" onClick={() => navigate("/inicio")}>
+                        <img src={logo} alt="NextRIS Logo" className="w-8 h-8 brightness-105" />
+                        <span className="ml-3 font-display text-xl font-bold text-white">
+                            Next<span className="text-purple-400">RIS</span>
                         </span>
                     </div>
 
@@ -89,10 +89,10 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                         <>
                                             <button
                                                 onClick={() => toggleItem(item.label)}
-                                                className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300 group text-muted-foreground hover:bg-purple-900 hover:text-white cursor-pointer"
+                                                className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300 group text-white hover:bg-purple-700 cursor-pointer"
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    <item.icon className="w-5 h-5 text-muted-foreground group-hover:text-white transition-transform duration-300 group-hover:scale-110" />
+                                                    <item.icon className="w-5 h-5 text-white transition-transform duration-300 group-hover:scale-110" />
                                                     <span className="text-sm font-medium">{item.label}</span>
                                                 </div>
                                                 {expandedItems.includes(item.label) ? (
@@ -114,10 +114,10 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                                                 to={subItem.path || "#"}
                                                                 onClick={onClose}
                                                                 className={cn(
-                                                                    "flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 group cursor-pointer",
+                                                                    "flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 group cursor-pointer text-white",
                                                                     location.pathname === subItem.path
-                                                                        ? "bg-purple-900 text-white"
-                                                                        : "text-muted-foreground hover:bg-purple-900 hover:text-white"
+                                                                        ? "bg-purple-700"
+                                                                        : "hover:bg-purple-700"
                                                                 )}
                                                             >
                                                                 <subItem.icon className={cn(
@@ -136,15 +136,14 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                             to={item.path || "#"}
                                             onClick={onClose}
                                             className={cn(
-                                                "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group cursor-pointer",
+                                                "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group cursor-pointer text-white",
                                                 location.pathname === item.path
-                                                    ? "bg-purple-900 text-white"
-                                                    : "text-muted-foreground hover:bg-purple-900 hover:text-white"
+                                                    ? "bg-purple-700"
+                                                    : "hover:bg-purple-700"
                                             )}
                                         >
                                             <item.icon className={cn(
-                                                "w-5 h-5 transition-transform duration-300",
-                                                location.pathname === item.path ? "text-white" : "text-muted-foreground group-hover:text-white group-hover:scale-110"
+                                                "w-5 h-5 transition-transform duration-300 text-white group-hover:scale-110"
                                             )} />
                                             <span className="text-sm font-medium">{item.label}</span>
                                         </Link>
@@ -155,14 +154,14 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     </nav>
 
                     {/* User Section */}
-                    <div className="p-4 border-t border-border">
-                        <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/50">
-                            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                                <span className="text-primary-foreground font-semibold">{authData?.user.username.charAt(0).toUpperCase()}{authData?.user.username.charAt(1).toUpperCase()}</span>
+                    <div className="p-4 border-t border-purple-800/30">
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-purple-800/30">
+                            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
+                                <span className="text-white font-semibold">{authData?.user.username.charAt(0).toUpperCase()}{authData?.user.username.charAt(1).toUpperCase()}</span>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">{authData?.user.username}</p>
-                                <p className="text-xs text-muted-foreground">{authData?.user.name}</p>
+                                <p className="text-sm font-medium text-white truncate">{authData?.user.username}</p>
+                                <p className="text-xs text-purple-300">{authData?.user.name}</p>
                             </div>
                         </div>
 
@@ -171,7 +170,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                 logout();
                                 navigate('/');
                             }}
-                            className="cursor-pointer w-full mt-3 flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-all duration-300 group"
+                            className="cursor-pointer w-full mt-3 flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-red-900/30 rounded-lg transition-all duration-300 group"
                         >
                             <Power className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
                             <span>Desconectarse</span>

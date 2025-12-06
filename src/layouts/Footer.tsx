@@ -2,7 +2,8 @@ import { Headset, Code } from "lucide-react";
 
 export const Footer = () => {
     return (
-        <footer className=" bg-brand-purple py-4 px-4 md:px-6 lg:px-8 z-40">
+        <footer className="py-4 px-4 md:px-6 lg:px-8 z-10" style={{ background: 'linear-gradient(to bottom, #2D1B4E 0%, #2D1B4E 40%, #1a0f2e 100%)' }}>
+
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="text-sm text-white/80">
                     Producto de <span className="font-semibold text-white">Soft[in]Health</span>

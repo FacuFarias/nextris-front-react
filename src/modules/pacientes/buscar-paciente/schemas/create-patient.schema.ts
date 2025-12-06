@@ -25,6 +25,9 @@ export const createPatientSchema = z.object({
     province: z.string().optional(),
     country: z.string().optional(),
     healthinsurance: z.string().optional(),
+    patientdomain_id: z.string().min(1, {
+        message: "El dominio del paciente es requerido",
+    }),
 });
 
 export type CreatePatientFormValues = z.infer<typeof createPatientSchema>;

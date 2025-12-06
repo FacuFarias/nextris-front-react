@@ -20,15 +20,20 @@ import { getPatientActions, patientColumns } from "./components/columns";
 import type { CreatePatientFormValues } from "./schemas/create-patient.schema";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { useNavigate } from "react-router-dom";
+import { IsAdmin } from "@/components/IsAdmin";
+import { EliminarPaciente } from "./components/EliminarPaciente";
 
 export const BuscarPaciente = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
     const useDebounceSearch = useDebounce(searchTerm, 300);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const navigate = useNavigate();
     const createPatientMutation = useCreatePatient();
-
+    //crear paciente modal
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    //eliminar paciente modal
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
     // Funciones para las acciones de la tabla
     const handleEditPatient = (patient: Patient) => {
         console.log("Editar paciente:", patient);
@@ -36,12 +41,12 @@ export const BuscarPaciente = () => {
     };
 
     const handleDeletePatient = (patient: Patient) => {
-        console.log("Eliminar paciente:", patient);
-        // Aquí mostrarías un modal de confirmación
+        setIsDeleteModalOpen(true);
+        setSelectedPatient(patient);
     };
 
     const handleViewHistory = (patient: Patient) => {
-        navigate(`/pacientes/${patient.guid}/historial-paciente`);
+        navigate(`/pacientes/historial-paciente`, { state: { patient } });
     };
 
     // Generar las acciones con las funciones
@@ -69,7 +74,7 @@ export const BuscarPaciente = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                 {/* Header */}
                 <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                     <div className="bg-brand-purple p-2 sm:p-3 rounded-lg">
@@ -85,15 +90,18 @@ export const BuscarPaciente = () => {
                         setSearchTerm={setSearchTerm}
                         placeholder="Buscar paciente o historial..."
                     />
-                    <PrimaryButton onClick={() => setIsModalOpen(true)}>
-                        <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                        AGREGAR
-                    </PrimaryButton>
+                    <IsAdmin>
+                        <PrimaryButton onClick={() => setIsModalOpen(true)}>
+                            <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                            AGREGAR
+                        </PrimaryButton>
+                    </IsAdmin>
+
                 </div>
 
                 {/* Resultados */}
                 <div>
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-700 mb-3 sm:mb-4">RESULTADOS</h2>
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-700">RESULTADOS</h2>
                 </div>
 
                 {isLoading ? (
@@ -102,7 +110,7 @@ export const BuscarPaciente = () => {
                     </div>
                 ) : (
                     <TablaDynamic<Patient>
-                        data={(patientsData?.data?.patients) || []}
+                        data={(patientsData?.data?.data) || []}
                         columns={patientColumns}
                         showIndex
                         onRowDoubleClick={handleViewHistory}
@@ -125,6 +133,20 @@ export const BuscarPaciente = () => {
                     <CreatePatientForm
                         onSubmit={handleCreatePatient}
                         isLoading={createPatientMutation.isPending}
+                    />
+                </Modal>
+
+
+                {/* Modal para eliminar Paciente */}
+                <Modal
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => setIsDeleteModalOpen(false)}
+                    title="Eliminar Paciente"
+                    size="lg"
+                >
+                    <EliminarPaciente
+                        patient={selectedPatient}
+                        onClose={() => setIsDeleteModalOpen(false)}
                     />
                 </Modal>
             </div>
