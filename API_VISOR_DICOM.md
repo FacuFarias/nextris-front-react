@@ -98,6 +98,275 @@ Content-Type: application/json
 
 ---
 
+## Pasos de Implementación para el Frontend
+
+### 📋 Checklist de Implementación
+
+#### 1. **Crear el Servicio de API** (15 minutos)
+
+Crea el archivo `src/services/dicomViewer.ts`:
+
+```typescript
+// src/services/dicomViewer.ts
+import { getAuthToken } from './auth'; // Ajusta según tu implementación
+
+interface ViewerResponse {
+  success: boolean;
+  data?: {
+    viewer_url: string;
+    study_uid: string;
+    expires_in: number;
+    access_token: string;
+    html_page: string;
+    direct_url: string;
+  };
+  message?: string;
+}
+
+export const openDicomViewer = async (
+  userId: string,
+  examinationId: string
+): Promise<void> => {
+  try {
+    const response = await fetch('/api/general/viewer-url', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${getAuthToken()}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        examination_id: examinationId
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data: ViewerResponse = await response.json();
+
+    if (data.success && data.data) {
+      // Abrir en nueva ventana
+      const viewerWindow = window.open(
+        data.data.viewer_url,
+        '_blank',
+        'width=1400,height=900,resizable=yes,scrollbars=yes'
+      );
+
+      if (!viewerWindow) {
+        alert('Por favor, permite popups para abrir el visor DICOM');
+      }
+    } else {
+      throw new Error(data.message || 'Error desconocido');
+    }
+  } catch (error) {
+    console.error('Error al abrir visor DICOM:', error);
+    throw error;
+  }
+};
+```
+
+#### 2. **Crear el Componente Botón** (10 minutos)
+
+Crea el componente `src/components/DicomViewerButton.tsx`:
+
+```tsx
+// src/components/DicomViewerButton.tsx
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Eye, Loader2 } from 'lucide-react';
+import { openDicomViewer } from '@/services/dicomViewer';
+import { useToast } from '@/hooks/use-toast';
+
+interface DicomViewerButtonProps {
+  userId: string;
+  examinationId: string;
+  disabled?: boolean;
+  variant?: 'default' | 'outline' | 'ghost';
+  size?: 'default' | 'sm' | 'lg';
+}
+
+export const DicomViewerButton: React.FC<DicomViewerButtonProps> = ({
+  userId,
+  examinationId,
+  disabled = false,
+  variant = 'default',
+  size = 'default'
+}) => {
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleClick = async () => {
+    setLoading(true);
+    try {
+      await openDicomViewer(userId, examinationId);
+      toast({
+        title: "Visor abierto",
+        description: "El visor DICOM se ha abierto en una nueva ventana",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo abrir el visor DICOM",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleClick}
+      disabled={disabled || loading}
+      variant={variant}
+      size={size}
+    >
+      {loading ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Abriendo...
+        </>
+      ) : (
+        <>
+          <Eye className="mr-2 h-4 w-4" />
+          Ver Imágenes
+        </>
+      )}
+    </Button>
+  );
+};
+```
+
+#### 3. **Integrar en la Tabla de Exámenes** (5 minutos)
+
+En tu componente de tabla de exámenes (ejemplo: `src/pages/Examinations.tsx`):
+
+```tsx
+import { DicomViewerButton } from '@/components/DicomViewerButton';
+
+// Dentro de tu tabla, en la columna de acciones:
+<TableCell>
+  <DicomViewerButton
+    userId={currentUser.id}
+    examinationId={examination.guid}
+    size="sm"
+    variant="outline"
+  />
+</TableCell>
+```
+
+#### 4. **Alternativa: Hook Personalizado** (Opcional, 10 minutos)
+
+Si prefieres más control, crea un hook:
+
+```tsx
+// src/hooks/useDicomViewer.ts
+import { useState } from 'react';
+import { openDicomViewer } from '@/services/dicomViewer';
+
+export const useDicomViewer = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const open = async (userId: string, examinationId: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      await openDicomViewer(userId, examinationId);
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+      setError(errorMessage);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { open, loading, error };
+};
+```
+
+Uso del hook:
+
+```tsx
+const { open, loading, error } = useDicomViewer();
+
+<button 
+  onClick={() => open(userId, examinationId)}
+  disabled={loading}
+>
+  {loading ? 'Abriendo...' : 'Ver Imágenes'}
+</button>
+
+{error && <p className="text-red-500">{error}</p>}
+```
+
+#### 5. **Configurar Variables de Entorno** (2 minutos)
+
+En tu `.env` o `.env.local`:
+
+```env
+VITE_API_BASE_URL=https://nextris.cloud
+```
+
+Y en tu código:
+
+```typescript
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+```
+
+#### 6. **Testing Manual** (5 minutos)
+
+1. Abre la aplicación en desarrollo
+2. Navega a la lista de exámenes
+3. Haz clic en "Ver Imágenes"
+4. Verifica que:
+   - ✅ Se abre una nueva ventana
+   - ✅ Muestra pantalla de "Abriendo visor DICOM..."
+   - ✅ Redirige automáticamente al visor OHIF
+   - ✅ No pide credenciales de Keycloak
+   - ✅ Carga las imágenes del estudio
+
+#### 7. **Manejo de Errores Comunes**
+
+Agrega manejo para estos casos:
+
+```tsx
+const handleError = (error: any) => {
+  if (error.message?.includes('403')) {
+    toast({
+      title: "Sin permisos",
+      description: "No tienes permisos para ver las imágenes de esta ubicación",
+      variant: "destructive"
+    });
+  } else if (error.message?.includes('404')) {
+    toast({
+      title: "No encontrado",
+      description: "El examen no tiene imágenes asociadas",
+      variant: "destructive"
+    });
+  } else if (error.message?.includes('popup')) {
+    toast({
+      title: "Popup bloqueado",
+      description: "Por favor, permite popups en tu navegador",
+      variant: "destructive"
+    });
+  } else {
+    toast({
+      title: "Error",
+      description: "No se pudo abrir el visor. Intenta de nuevo.",
+      variant: "destructive"
+    });
+  }
+};
+```
+
+---
+
 ## Implementación en Frontend
 
 ### Opción 1: Usar `viewer_url` (RECOMENDADO)
@@ -386,5 +655,47 @@ export const openDicomViewer = async (
 
 ---
 
+## Resumen de Archivos a Crear/Modificar
+
+### Nuevos Archivos
+
+1. ✅ `src/services/dicomViewer.ts` - Servicio para llamar al API
+2. ✅ `src/components/DicomViewerButton.tsx` - Componente botón reutilizable
+3. ✅ `src/hooks/useDicomViewer.ts` - Hook personalizado (opcional)
+
+### Archivos a Modificar
+
+1. 📝 `src/pages/Examinations.tsx` (o similar) - Agregar botón en tabla
+2. 📝 `.env.local` - Configurar URL del API
+
+### Tiempo Estimado de Implementación
+
+- **Básico** (solo botón funcional): ~30 minutos
+- **Completo** (con manejo de errores y estados): ~1 hora
+- **Con testing**: ~1.5 horas
+
+---
+
+## Troubleshooting
+
+### ❌ "Popup bloqueado"
+**Solución**: Asegúrate de que `window.open()` se llame directamente en el evento `onClick`, no en un callback asíncrono posterior.
+
+### ❌ "403 Forbidden"
+**Solución**: Verifica que el usuario tenga permisos en la tabla `rel_user_location` para la ubicación del examen.
+
+### ❌ "CORS Error"
+**Solución**: Ya está configurado en el backend. Si persiste, verifica que estés usando la URL correcta del API.
+
+### ❌ "ERR_TIMED_OUT"
+**Solución**: Verifica que el backend esté corriendo (`sudo systemctl status nextris-dev-react.service`).
+
+### ❌ Pide credenciales en el visor
+**Solución**: El token no se guardó en localStorage. Verifica que la página intermedia se cargue antes de redirigir al visor.
+
+---
+
 **Última actualización**: Diciembre 6, 2025  
-**Versión del API**: 1.0
+**Versión del API**: 1.0  
+**Desarrollador Backend**: Sistema NextRIS  
+**Para dudas**: Ver sección "Soporte" arriba
