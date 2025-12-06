@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 interface SidebarProps {
     isOpen: boolean;
@@ -49,6 +50,8 @@ const menuItems: MenuItem[] = [
 ];
 
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
+
+    const { authData, logout } = useAuth();
     const [expandedItems, setExpandedItems] = useState<string[]>([]);
     const navigate = useNavigate();
     const location = useLocation();
@@ -155,15 +158,21 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     <div className="p-4 border-t border-border">
                         <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/50">
                             <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                                <span className="text-primary-foreground font-semibold">SY</span>
+                                <span className="text-primary-foreground font-semibold">{authData?.user.username.charAt(0).toUpperCase()}{authData?.user.username.charAt(1).toUpperCase()}</span>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">sysadmin</p>
-                                <p className="text-xs text-muted-foreground">SYSADMIN</p>
+                                <p className="text-sm font-medium text-foreground truncate">{authData?.user.username}</p>
+                                <p className="text-xs text-muted-foreground">{authData?.user.name}</p>
                             </div>
                         </div>
 
-                        <button className="w-full mt-3 flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-all duration-300 group">
+                        <button
+                            onClick={() => {
+                                logout();
+                                navigate('/');
+                            }}
+                            className="cursor-pointer w-full mt-3 flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-all duration-300 group"
+                        >
                             <Power className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
                             <span>Desconectarse</span>
                         </button>

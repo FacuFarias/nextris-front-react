@@ -1,41 +1,47 @@
-import type { TableAction, TableColumn } from "@/types/table";
-import type { Patient } from "../types/BuscarPaciente";
-import { Delete, Edit, History } from "lucide-react";
+import type { TableColumn } from "@/types/table";
+import type { HistoryPatient } from "../../../types/BuscarPaciente";
 
 // Configuración de columnas para usuarios
-const patientColumns: TableColumn<Patient>[] = [
+const historyColumns: TableColumn<HistoryPatient>[] = [
     {
-        key: "name",
-        label: "NOMBRE",
+        key: "estudio",
+        label: "ESTUDIO",
         className: "font-medium",
     },
     {
-        key: "surname",
-        label: "APELLIDO",
+        key: "medico_autor",
+        label: "MEDICO AUTOR",
         className: "font-medium",
     },
     {
-        key: "gender",
-        label: "GENERO",
-        className: "font-medium",
-        hideOnMobile: true,
-    },
-    {
-        key: "birthdate",
-        label: "FECHA DE NACIMIENTO",
+        key: "medico_referente",
+        label: "MEDICO REFERENTE",
         className: "font-medium",
         hideOnMobile: true,
     },
     {
-        key: "study_count",
-        label: "CANTIDAD DE ESTUDIOS",
+        key: "fecha",
+        label: "FECHA",
+        className: "font-medium",
+        hideOnMobile: true,
+    },
+    {
+        key: "modalidad",
+        label: "MODALIDAD",
+        className: "font-medium",
+        render: (value: number) => value.toString(),
+        hideOnMobile: true,
+    },
+    {
+        key: "con_imagen",
+        label: "CON IMAGEN",
         className: "font-medium",
         render: (value: number) => value.toString(),
         hideOnMobile: true,
     },
 ];
 
-// Función que genera las acciones con handlers personalizados
+/* // Función que genera las acciones con handlers personalizados
 export const getPatientActions = (
     onEdit: (patient: Patient) => void,
     onDelete: (patient: Patient) => void,
@@ -58,4 +64,5 @@ export const getPatientActions = (
         },
     ];
 
-export { patientColumns };
+ */
+export { historyColumns }

@@ -3,6 +3,21 @@ import axios from 'axios';
 // Configuración base de la API
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
+// Variable para controlar si ya se está refrescando el token
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+    failedQueue.forEach(prom => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
 // Crear instancia de axios con configuración por defecto
 export const api = axios.create({
     baseURL: API_BASE_URL,
@@ -15,13 +30,92 @@ export const api = axios.create({
 // Interceptor para agregar el token de autenticación
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        const data = localStorage.getItem('authData');
+        if (data) {
+            const parsedData = JSON.parse(data);
+            config.headers.Authorization = `Bearer ${parsedData?.access_token}`;
         }
         return config;
     },
     (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Interceptor para manejar errores de respuesta y refresh token
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+
+        // Si el error es 401 y no hemos intentado refrescar aún
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            if (isRefreshing) {
+                // Si ya se está refrescando, agregar a la cola
+                return new Promise((resolve, reject) => {
+                    failedQueue.push({ resolve, reject });
+                }).then(token => {
+                    originalRequest.headers.Authorization = `Bearer ${token}`;
+                    return api(originalRequest);
+                }).catch(err => {
+                    return Promise.reject(err);
+                });
+            }
+
+            originalRequest._retry = true;
+            isRefreshing = true;
+
+            const authDataStr = localStorage.getItem('authData');
+            if (!authDataStr) {
+                // No hay refresh token, redirigir al login
+                window.location.href = '/';
+                return Promise.reject(error);
+            }
+
+            const authData = JSON.parse(authDataStr);
+            const refreshToken = authData?.refresh_token;
+
+            if (!refreshToken) {
+                // No hay refresh token, redirigir al login
+                localStorage.removeItem('authData');
+                window.location.href = '/';
+                return Promise.reject(error);
+            }
+
+            try {
+                // Llamar al endpoint de refresh token
+                const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+                    refresh_token: refreshToken,
+                });
+
+                const newAccessToken = response.data.data.access_token;
+                const newAuthData = {
+                    ...authData,
+                    access_token: newAccessToken,
+                };
+
+                // Actualizar localStorage
+                localStorage.setItem('authData', JSON.stringify(newAuthData));
+
+                // Actualizar el header de la petición original
+                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+                // Procesar cola de peticiones pendientes
+                processQueue(null, newAccessToken);
+                isRefreshing = false;
+
+                // Reintentar la petición original
+                return api(originalRequest);
+            } catch (refreshError) {
+                // Si falla el refresh, cerrar sesión
+                processQueue(refreshError, null);
+                isRefreshing = false;
+                localStorage.removeItem('authData');
+                window.location.href = '/';
+                return Promise.reject(refreshError);
+            }
+        }
+
         return Promise.reject(error);
     }
 );

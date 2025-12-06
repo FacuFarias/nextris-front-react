@@ -18,6 +18,7 @@ import {
     LogOut,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/context/AuthContext";
 
 interface MenuItem {
     id: string;
@@ -47,13 +48,17 @@ const menuItems: MenuItem[] = [
 ];
 
 export const Inicio = () => {
+
+    const { authData } = useAuth();
+
+
     return (
         <MainLayout>
             <div className="space-y-6">
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-purple-500 mb-2">
-                        Bienvenido: <span className="text-brand-purple">sysadmin</span>
+                    <h1 className="text-3xl font-bold text-white mb-2">
+                        Bienvenido: <span className="text-brand-purple">{authData?.user.username}</span>
                     </h1>
                 </div>
 

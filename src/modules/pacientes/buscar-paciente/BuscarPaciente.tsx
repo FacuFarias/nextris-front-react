@@ -1,141 +1,75 @@
+//layout
 import { MainLayout } from "@/layouts/layout";
+//react
 import { useState } from "react";
+//lucide react
 import { Search, UserPlus } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { PatientsTable } from "./components/PatientsTable";
-import { type Patient } from "./components/columns";
+//components
+import { TablaDynamic } from "@/components/TableDynamic";
+import { InputSearch } from "@/components/InputSearch";
+import { Modal } from "@/components/Modal";
+import { CreatePatientForm } from "./components/CreatePatientForm";
+import { useDebounce } from "@uidotdev/usehooks";
 
-// Datos de ejemplo (mock data)
-const mockPatients: Patient[] = [
-    {
-        id: 1,
-        nombre: "Sabine",
-        apellido: "Carvalho",
-        dni: "542423434",
-        sexo: "F",
-        fechaNac: "03/11/2025",
-        telefono: "",
-        email: "facufarias93@gmail.com",
-        tarjeta: "542423434",
-        estudios: 0,
-    },
-    {
-        id: 2,
-        nombre: "Lucia",
-        apellido: "Díaz",
-        dni: "39876543",
-        sexo: "F",
-        fechaNac: "11/06/1994",
-        telefono: "",
-        email: "lucia.diaz@gmail.com",
-        tarjeta: "39876543",
-        estudios: 0,
-    },
-    {
-        id: 3,
-        nombre: "Patricia",
-        apellido: "Domínguez",
-        dni: "23124124",
-        sexo: "F",
-        fechaNac: "02/11/2025",
-        telefono: "02644818397",
-        email: "facufarias93@gmail.com",
-        tarjeta: "37742243",
-        estudios: 0,
-    },
-    {
-        id: 4,
-        nombre: "Facunditos",
-        apellido: "Fanasss",
-        dni: "37742243",
-        sexo: "M",
-        fechaNac: "20/10/2025",
-        telefono: "",
-        email: "facufarias93@gmail.com",
-        tarjeta: "37742243",
-        estudios: 0,
-    },
-    {
-        id: 5,
-        nombre: "Carlos",
-        apellido: "Fernández",
-        dni: "32456789",
-        sexo: "M",
-        fechaNac: "09/03/1987",
-        telefono: "",
-        email: "carlos.fernandez@yahoo.com",
-        tarjeta: "32456789",
-        estudios: 0,
-    },
-    {
-        id: 6,
-        nombre: "María",
-        apellido: "González",
-        dni: "28123456",
-        sexo: "F",
-        fechaNac: "15/07/1990",
-        telefono: "02644123456",
-        email: "maria.gonzalez@gmail.com",
-        tarjeta: "28123456",
-        estudios: 2,
-    },
-    {
-        id: 7,
-        nombre: "Juan",
-        apellido: "Pérez",
-        dni: "35678901",
-        sexo: "M",
-        fechaNac: "22/03/1985",
-        telefono: "",
-        email: "juan.perez@hotmail.com",
-        tarjeta: "35678901",
-        estudios: 1,
-    },
-    {
-        id: 8,
-        nombre: "Ana",
-        apellido: "Martínez",
-        dni: "41234567",
-        sexo: "F",
-        fechaNac: "08/12/1998",
-        telefono: "02644987654",
-        email: "ana.martinez@outlook.com",
-        tarjeta: "41234567",
-        estudios: 3,
-    },
-    {
-        id: 9,
-        nombre: "Roberto",
-        apellido: "Silva",
-        dni: "29876543",
-        sexo: "M",
-        fechaNac: "30/05/1992",
-        telefono: "",
-        email: "roberto.silva@gmail.com",
-        tarjeta: "29876543",
-        estudios: 0,
-    },
-];
+//hooks and services
+import { useBuscarPaciente } from "./hooks/use-buscar-paciente";
+import { useCreatePatient } from "./hooks/use-create-patient";
+//types and columns
+import type { Patient } from "./types/BuscarPaciente";
+import { getPatientActions, patientColumns } from "./components/columns";
+import type { CreatePatientFormValues } from "./schemas/create-patient.schema";
+import { PrimaryButton } from "@/components/PrimaryButton";
+import { useNavigate } from "react-router-dom";
 
 export const BuscarPaciente = () => {
     const [searchTerm, setSearchTerm] = useState("");
-    const [patients] = useState<Patient[]>(mockPatients);
+    const [page, setPage] = useState(1);
+    const useDebounceSearch = useDebounce(searchTerm, 300);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const navigate = useNavigate();
+    const createPatientMutation = useCreatePatient();
 
-    // Filtrar pacientes según el término de búsqueda
-    const filteredPatients = patients.filter((patient) => {
-        const searchLower = searchTerm.toLowerCase();
-        return (
-            patient.nombre.toLowerCase().includes(searchLower) ||
-            patient.apellido.toLowerCase().includes(searchLower) ||
-            patient.dni.includes(searchTerm) ||
-            patient.email.toLowerCase().includes(searchLower)
-        );
-    });
+    // Funciones para las acciones de la tabla
+    const handleEditPatient = (patient: Patient) => {
+        console.log("Editar paciente:", patient);
+        // Aquí abrirías un modal de edición
+    };
+
+    const handleDeletePatient = (patient: Patient) => {
+        console.log("Eliminar paciente:", patient);
+        // Aquí mostrarías un modal de confirmación
+    };
+
+    const handleViewHistory = (patient: Patient) => {
+        navigate(`/pacientes/${patient.guid}/historial-paciente`);
+    };
+
+    // Generar las acciones con las funciones
+    const patientActions = getPatientActions(
+        handleEditPatient,
+        handleDeletePatient,
+        handleViewHistory
+    );
+    const { patientsData, isLoading } = useBuscarPaciente({ page, per_page: 8, search: useDebounceSearch });
+
+
+    const pagination = patientsData && {
+        page: patientsData?.data?.page || 1,
+        pageSize: patientsData?.data?.per_page || 5,
+        total: patientsData?.data?.total || 0,
+    };
+
+    const handleCreatePatient = (data: CreatePatientFormValues) => {
+        createPatientMutation.mutate(data, {
+            onSuccess: () => {
+                setIsModalOpen(false);
+            },
+        });
+    };
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm">
+            <div className="bg-white backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                 {/* Header */}
                 <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                     <div className="bg-brand-purple p-2 sm:p-3 rounded-lg">
@@ -146,27 +80,53 @@ export const BuscarPaciente = () => {
 
                 {/* Barra de búsqueda */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-                    <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
-                        <Input
-                            type="text"
-                            placeholder="Buscar paciente o historial..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9 sm:pl-10 border-purple-300 focus:border-purple-500 focus:ring-purple-500 text-sm sm:text-base"
-                        />
-                    </div>
-                    <Button className="bg-brand-purple hover:bg-purple-700 text-white w-full sm:w-auto">
+                    <InputSearch
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        placeholder="Buscar paciente o historial..."
+                    />
+                    <PrimaryButton onClick={() => setIsModalOpen(true)}>
                         <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                         AGREGAR
-                    </Button>
+                    </PrimaryButton>
                 </div>
 
                 {/* Resultados */}
                 <div>
                     <h2 className="text-base sm:text-lg font-semibold text-gray-700 mb-3 sm:mb-4">RESULTADOS</h2>
-                    <PatientsTable data={filteredPatients} />
                 </div>
+
+                {isLoading ? (
+                    <div className='flex justify-center items-center h-40'>
+                        <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
+                    </div>
+                ) : (
+                    <TablaDynamic<Patient>
+                        data={(patientsData?.data?.patients) || []}
+                        columns={patientColumns}
+                        showIndex
+                        onRowDoubleClick={handleViewHistory}
+                        actions={patientActions}
+                        pagination={pagination}
+                        onPaginationChange={(newPage) => {
+                            setPage(newPage);
+                        }}
+                    />
+                )}
+
+                {/* Modal de Agregar Paciente */}
+                <Modal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    title="Agregar Nuevo Paciente"
+                    description="Complete los datos del nuevo paciente"
+                    size="lg"
+                >
+                    <CreatePatientForm
+                        onSubmit={handleCreatePatient}
+                        isLoading={createPatientMutation.isPending}
+                    />
+                </Modal>
             </div>
         </MainLayout>
     );

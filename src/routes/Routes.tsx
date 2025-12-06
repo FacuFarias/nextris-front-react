@@ -1,7 +1,9 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Login } from "@/modules/auth/login/Login";
 import { Inicio } from "@/modules/inicio/Inicio";
+import { ProtectedRoute } from "./ProtectedRoute";
 import { BuscarPaciente } from "@/modules/pacientes/buscar-paciente/BuscarPaciente";
+import { HistorialPaciente } from "@/modules/pacientes/buscar-paciente/pages/historial-paciente/HistorialPaciente";
 
 const router = createBrowserRouter([
     {
@@ -14,12 +16,28 @@ const router = createBrowserRouter([
     },
     {
         path: "/inicio",
-        element: <Inicio />,
+        element: (
+            <ProtectedRoute>
+                <Inicio />
+            </ProtectedRoute>
+        ),
     },
     {/*buscar pacientes*/ },
     {
         path: "/pacientes/buscar-paciente",
-        element: <BuscarPaciente />,
+        element: (
+            <ProtectedRoute>
+                <BuscarPaciente />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/pacientes/:pacienteId/historial-paciente",
+        element: (
+            <ProtectedRoute>
+                <HistorialPaciente />
+            </ProtectedRoute>
+        ),
     },
 ]);
 
