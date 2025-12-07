@@ -548,9 +548,9 @@ El sistema implementa **5 capas de protección** para garantizar que solo usuari
 - El session_id se guarda en localStorage del navegador
 - Vincula al usuario con el estudio específico autorizado
 
-#### 3. **Lista blanca de estudios permitidos**
-- Cada sesión tiene un array `allowed_studies` con los Study UIDs autorizados
-- Solo puede acceder a los estudios de esa lista
+#### 3. **Validación de Study UID específico**
+- Cada sesión está vinculada a UN solo `study_uid` autorizado
+- Solo puede acceder a ese estudio específico
 - Si intenta acceder a otro estudio → **403 Forbidden**
 
 #### 4. **Expiración temporal**
@@ -570,7 +570,8 @@ El sistema implementa **5 capas de protección** para garantizar que solo usuari
   "session_id": "uuid-generado",
   "user_id": "guid-del-usuario",
   "location_id": "guid-de-la-location",
-  "allowed_studies": ["1.2.826.0.1.3680043..."],
+  "study_uid": "1.2.826.0.1.3680043...",
+  "examination_id": "guid-del-examen",
   "access_token": "eyJhbGc...",
   "expires_at": "2025-12-07T10:30:00",
   "created_at": "2025-12-07T10:25:00"
@@ -592,7 +593,7 @@ El sistema implementa **5 capas de protección** para garantizar que solo usuari
 4. Backend genera:
    • Token de Keycloak (userviewer/uvnr123)
    • Session ID único
-   • Lista: allowed_studies = [study_uid_autorizado]
+   • Vincula sesión a study_uid específico
    ↓
 5. Backend guarda en cache:
    • viewer_tokens_cache[access_id]
@@ -613,8 +614,8 @@ El sistema implementa **5 capas de protección** para garantizar que solo usuari
 11. (Opcional) Frontend puede validar con:
     POST /api/general/validate-session
     ↓
-12. Si study_uid ∈ allowed_studies → ✅ Permitido
-    Si study_uid ∉ allowed_studies → ❌ 403 Forbidden
+12. Si study_uid == session.study_uid → ✅ Permitido
+    Si study_uid != session.study_uid → ❌ 403 Forbidden
 ```
 
 ---
@@ -800,9 +801,8 @@ Valida si una sesión del visor tiene permisos para acceder a un Study UID espec
     "session_id": "abc-123-...",
     "user_id": "9388650a-fa37-4cb1-b346-e68ef2407d1b",
     "location_id": "3bd59315-52de-4a40-b6c5-f4a8a4df2d61",
-    "allowed_studies": [
-      "1.2.826.0.1.3680043.8.498.13201767099594831302408562419423378227"
-    ],
+    "study_uid": "1.2.826.0.1.3680043.8.498.13201767099594831302408562419423378227",
+    "examination_id": "5cbf5499-febd-47e9-a465-5117eb7c432d",
     "expires_at": "2025-12-07T10:30:00"
   }
 }
@@ -880,9 +880,12 @@ El usuario debe:
 
 ### ❓ ¿Se pueden ver múltiples estudios en una sesión?
 
-Actualmente **no**. Cada sesión está limitada a un Study UID específico. Para ver otro estudio, debe solicitar un nuevo acceso desde NextRIS.
+**No**. Cada sesión está vinculada a UN solo estudio específico. Para ver otro estudio, el usuario debe:
+1. Cerrar el visor
+2. Volver a NextRIS
+3. Solicitar acceso al nuevo estudio
 
-**Mejora futura**: Podría modificarse para agregar múltiples Study UIDs a `allowed_studies` en una misma sesión.
+Esto es **por diseño de seguridad**: cada acceso requiere validación de permisos explícita.
 
 ---
 
