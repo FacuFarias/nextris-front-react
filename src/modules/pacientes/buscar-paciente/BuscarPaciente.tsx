@@ -9,11 +9,12 @@ import { TablaDynamic } from "@/components/TableDynamic";
 import { InputSearch } from "@/components/InputSearch";
 import { Modal } from "@/components/Modal";
 import { CreatePatientForm } from "./components/CreatePatientForm";
+import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb";
 import { useDebounce } from "@uidotdev/usehooks";
 
 //hooks and services
 import { useBuscarPaciente } from "./hooks/use-buscar-paciente";
-import { useCreatePatient } from "./hooks/use-create-patient";
+import { useCreatePatient, useEditPatient } from "./hooks/use-create-patient";
 //types and columns
 import type { Patient } from "./types/BuscarPaciente";
 import { getPatientActions, patientColumns } from "./components/columns";
@@ -29,15 +30,25 @@ export const BuscarPaciente = () => {
     const useDebounceSearch = useDebounce(searchTerm, 300);
     const navigate = useNavigate();
     const createPatientMutation = useCreatePatient();
-    //crear paciente modal
+    const editPatientMutation = useEditPatient();
+    //crear/editar paciente modal
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
     //eliminar paciente modal
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+
     // Funciones para las acciones de la tabla
     const handleEditPatient = (patient: Patient) => {
-        console.log("Editar paciente:", patient);
-        // Aquí abrirías un modal de edición
+        setSelectedPatient(patient);
+        setIsEditMode(true);
+        setIsModalOpen(true);
+    };
+
+    const handleAddPatient = () => {
+        setSelectedPatient(null);
+        setIsEditMode(false);
+        setIsModalOpen(true);
     };
 
     const handleDeletePatient = (patient: Patient) => {
@@ -65,16 +76,58 @@ export const BuscarPaciente = () => {
     };
 
     const handleCreatePatient = (data: CreatePatientFormValues) => {
-        createPatientMutation.mutate(data, {
-            onSuccess: () => {
+        // Si estamos en modo edición, enviar solo los campos modificados
+        if (isEditMode && selectedPatient) {
+            const changedFields: Partial<CreatePatientFormValues> = {};
+            const initialData = {
+                name: selectedPatient.name,
+                surname: selectedPatient.surname,
+                documentnumber: selectedPatient.nationalcode,
+                birthdate: selectedPatient.birthdate,
+                gender: selectedPatient.gender as "M" | "F" | "Otro",
+                email: selectedPatient.email,
+                phone: selectedPatient.phone || "",
+                patientdomain_id: selectedPatient.patientid,
+            };
+
+            // Comparar cada campo y agregar solo los que cambiaron
+            (Object.keys(data) as Array<keyof CreatePatientFormValues>).forEach((key) => {
+                if (data[key] !== initialData[key as keyof typeof initialData]) {
+                    (changedFields as any)[key] = data[key];
+                }
+            });
+
+            // Si hay cambios, enviar solo esos campos
+            if (Object.keys(changedFields).length > 0) {
+                editPatientMutation.mutate({ patientId: selectedPatient.guid, updatedData: changedFields }, {
+                    onSuccess: () => {
+                        setIsModalOpen(false);
+                        setSelectedPatient(null);
+                        setIsEditMode(false);
+                    },
+                });
+            } else {
+                // No hay cambios, cerrar modal
                 setIsModalOpen(false);
-            },
-        });
+                setSelectedPatient(null);
+                setIsEditMode(false);
+            }
+        } else {
+            // Modo crear: enviar todos los datos
+            createPatientMutation.mutate(data, {
+                onSuccess: () => {
+                    setIsModalOpen(false);
+                },
+            });
+        }
     };
 
     return (
         <MainLayout>
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+                {/* Breadcrumb */}
+                <DynamicBreadcrumb />
+
                 {/* Header */}
                 <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                     <div className="bg-brand-purple p-2 sm:p-3 rounded-lg">
@@ -91,7 +144,7 @@ export const BuscarPaciente = () => {
                         placeholder="Buscar paciente o historial..."
                     />
                     <IsAdmin>
-                        <PrimaryButton onClick={() => setIsModalOpen(true)}>
+                        <PrimaryButton onClick={handleAddPatient}>
                             <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                             AGREGAR
                         </PrimaryButton>
@@ -122,17 +175,31 @@ export const BuscarPaciente = () => {
                     />
                 )}
 
-                {/* Modal de Agregar Paciente */}
+                {/* Modal de Agregar/Editar Paciente */}
                 <Modal
                     isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                    title="Agregar Nuevo Paciente"
-                    description="Complete los datos del nuevo paciente"
+                    onClose={() => {
+                        setIsModalOpen(false);
+                        setSelectedPatient(null);
+                        setIsEditMode(false);
+                    }}
+                    title={isEditMode ? "Editar Paciente" : "Agregar Nuevo Paciente"}
+                    description={isEditMode ? "Modifique los datos del paciente" : "Complete los datos del nuevo paciente"}
                     size="lg"
                 >
                     <CreatePatientForm
                         onSubmit={handleCreatePatient}
                         isLoading={createPatientMutation.isPending}
+                        initialData={isEditMode && selectedPatient ? {
+                            name: selectedPatient.name,
+                            surname: selectedPatient.surname,
+                            documentnumber: selectedPatient.nationalcode,
+                            birthdate: selectedPatient.birthdate,
+                            gender: selectedPatient.gender as "M" | "F" | "Otro",
+                            email: selectedPatient.email,
+                            phone: selectedPatient.phone || "",
+                            patientdomain_id: selectedPatient.patientid,
+                        } : undefined}
                     />
                 </Modal>
 

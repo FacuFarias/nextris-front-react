@@ -17,17 +17,18 @@ import {
     Settings,
     LogOut,
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
+import { Link } from "react-router-dom";
 
 interface MenuItem {
     id: string;
     title: string;
     icon: React.ReactNode;
+    path?: string;
 }
 
 const menuItems: MenuItem[] = [
-    { id: "buscar", title: "Buscar Pacientes", icon: <Users className="w-6 h-6" /> },
+    { id: "buscar", title: "Buscar Pacientes", icon: <Users className="w-6 h-6" />, path: "/pacientes" },
     { id: "unificacion", title: "Unificación de Paciente", icon: <UserCheck className="w-6 h-6" /> },
     { id: "reasignacion", title: "Reasignación de Exámenes", icon: <ClipboardList className="w-6 h-6" /> },
     { id: "nueva-cita", title: "Nueva Cita", icon: <Calendar className="w-6 h-6" /> },
@@ -65,9 +66,10 @@ export const Inicio = () => {
                 {/* Grid de Tarjetas */}
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                     {menuItems.map((item) => (
-                        <Card
+                        <Link
                             key={item.id}
-                            className="group cursor-pointer bg-white/95 backdrop-blur-sm hover:bg-white hover:shadow-lg transition-all duration-300 border-none p-3 flex flex-col items-center justify-center gap-2 h-28"
+                            to={item.path || "#"}
+                            className="group cursor-pointer rounded-2xl bg-white/95 backdrop-blur-sm hover:bg-white hover:shadow-lg transition-all duration-300 border-none p-3 flex flex-col items-center justify-center gap-2 h-28"
                         >
                             <div className="bg-purple-100 rounded-lg p-2 group-hover:bg-purple-200 transition-all duration-300">
                                 <div className="text-brand-purple group-hover:scale-110 transition-transform duration-300">
@@ -77,7 +79,7 @@ export const Inicio = () => {
                             <h3 className="text-xs font-medium text-gray-700 text-center leading-tight">
                                 {item.title}
                             </h3>
-                        </Card>
+                        </Link>
                     ))}
                 </div>
             </div>

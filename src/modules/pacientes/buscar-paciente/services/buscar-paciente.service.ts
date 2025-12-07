@@ -27,6 +27,16 @@ export const deletePatient = async (patientId: string) => {
         throw error;
     }
 }
+
+export const editPatient = async (patientId: string, updatedData: Partial<CreatePatientFormValues>) => {
+    try {
+        const response = await api.put(`/patients/${patientId}`, updatedData);
+        return response.data;
+    } catch (error) {
+        console.error('🔴 EDIT Patient - Error:', error);
+        throw error;
+    }
+}
 export const getHistoryPatient = async ({ patientId }: { patientId: string }) => {
     try {
         const response = await api.get(`/patients/${patientId}/history`);

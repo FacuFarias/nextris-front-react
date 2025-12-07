@@ -10,7 +10,7 @@ import {
     FileText,
     ChevronDown,
     ChevronRight,
-    UserSearch,
+
     UserCog,
     ClipboardList,
 } from "lucide-react";
@@ -28,25 +28,40 @@ interface MenuItem {
     icon: React.ElementType;
     label: string;
     path?: string;
-    subItems?: { icon: React.ElementType; label: string; path: string }[];
+    subItems?: { icon: React.ElementType; label: string; path: string; allowedRoles?: string[] }[];
+    allowedRoles?: string[]; // Si está vacío o no está definido, todos pueden verlo
 }
 
 const menuItems: MenuItem[] = [
     {
         icon: Users,
         label: "Pacientes",
-        subItems: [
-            { icon: UserSearch, label: "Buscar Pacientes", path: "/pacientes/buscar-paciente" },
-            { icon: UserCog, label: "Unificación de Paciente", path: "/pacientes/unificacion" },
-            { icon: ClipboardList, label: "Reasignación de Exámenes", path: "/pacientes/reasignacion" },
-        ]
+        path: "/pacientes",
     },
     { icon: Calendar, label: "Citas", path: "/citas" },
     { icon: UserPlus, label: "Admision", path: "/admision" },
     { icon: Home, label: "Ubicacion", path: "/ubicacion" },
     { icon: FileText, label: "Redaccion", path: "/redaccion" },
     { icon: Send, label: "Distribucion", path: "/distribucion" },
-    { icon: Settings, label: "Configuraciones", path: "/configuraciones" },
+    {
+        icon: Settings,
+        label: "Configuraciones",
+        path: "/configuraciones",
+        subItems: [
+            {
+                icon: UserCog,
+                label: "Unificación de Paciente",
+                path: "/pacientes/unificacion",
+                allowedRoles: ["Administrador"]
+            },
+            {
+                icon: ClipboardList,
+                label: "Reasignación de Exámenes",
+                path: "/pacientes/reasignacion",
+                allowedRoles: ["Administrador"]
+            },
+        ]
+    },
 ];
 
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
@@ -55,6 +70,29 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const [expandedItems, setExpandedItems] = useState<string[]>([]);
     const navigate = useNavigate();
     const location = useLocation();
+
+    const userRole = authData?.user?.name || "";
+
+    // Función para verificar si el usuario tiene acceso
+    const hasAccess = (allowedRoles?: string[]) => {
+        if (!allowedRoles || allowedRoles.length === 0) return true;
+        return allowedRoles.includes(userRole);
+    };
+
+    // Filtrar los items del menú según los roles
+    const filteredMenuItems = menuItems.map(item => {
+        if (!hasAccess(item.allowedRoles)) return null;
+
+        if (item.subItems) {
+            const filteredSubItems = item.subItems.filter(subItem => hasAccess(subItem.allowedRoles));
+            // Si no hay subitems visibles, no mostrar el item padre
+            if (filteredSubItems.length === 0) return null;
+            return { ...item, subItems: filteredSubItems };
+        }
+
+        return item;
+    }).filter(Boolean) as MenuItem[];
+
     const toggleItem = (label: string) => {
         setExpandedItems(prev =>
             prev.includes(label)
@@ -83,7 +121,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     {/* Menu Items */}
                     <nav className="flex-1 overflow-y-auto py-4">
                         <ul className="space-y-1 px-3">
-                            {menuItems.map((item) => (
+                            {filteredMenuItems.map((item) => (
                                 <li key={item.label}>
                                     {item.subItems ? (
                                         <>

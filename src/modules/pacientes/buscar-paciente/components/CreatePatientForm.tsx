@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 //components
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
     Form,
@@ -25,35 +24,36 @@ import { createPatientSchema, type CreatePatientFormValues } from "../schemas/cr
 //hooks
 import { usePatientsDomains } from "@/hooks/use-patients-domains";
 import { useAuth } from "@/context/AuthContext";
+import { PrimaryButton } from "@/components/PrimaryButton";
 
 interface CreatePatientFormProps {
     onSubmit: (data: CreatePatientFormValues) => void;
     isLoading?: boolean;
+    initialData?: Partial<CreatePatientFormValues>;
 }
 
-export const CreatePatientForm = ({ onSubmit, isLoading }: CreatePatientFormProps) => {
+export const CreatePatientForm = ({ onSubmit, isLoading, initialData }: CreatePatientFormProps) => {
     const { authData } = useAuth();
     const { data: patientsDomains, isLoading: isLoadingDomains } = usePatientsDomains();
     const form = useForm<CreatePatientFormValues>({
         resolver: zodResolver(createPatientSchema),
         defaultValues: {
-            name: "",
-            surname: "",
-            documentnumber: "",
-            birthdate: "",
-            gender: undefined,
-            email: "",
-            phone: "",
-            address: "",
-            city: "",
-            province: "",
-            country: "",
-            healthinsurance: "",
-            patientdomain_id: "",
+            name: initialData?.name || "",
+            surname: initialData?.surname || "",
+            documentnumber: initialData?.documentnumber || "",
+            birthdate: initialData?.birthdate || "",
+            gender: initialData?.gender || undefined,
+            email: initialData?.email || "",
+            phone: initialData?.phone || "",
+            address: initialData?.address || "",
+            city: initialData?.city || "",
+            province: initialData?.province || "",
+            country: initialData?.country || "",
+            healthinsurance: initialData?.healthinsurance || "",
+            patientdomain_id: initialData?.patientdomain_id || "",
         },
 
     });
-
     const isAdmin = authData?.user?.name === "Administrador";
     const domains = patientsDomains?.data || [];
     const shouldShowSelect = isAdmin || domains.length > 1;
@@ -295,13 +295,12 @@ export const CreatePatientForm = ({ onSubmit, isLoading }: CreatePatientFormProp
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4">
-                    <Button
+                    <PrimaryButton
                         type="submit"
-                        className="bg-brand-purple hover:bg-purple-700"
                         disabled={isLoading}
                     >
-                        {isLoading ? "Guardando..." : "Guardar Paciente"}
-                    </Button>
+                        {isLoading ? "Guardando..." : initialData ? "Actualizar Paciente" : "Guardar Paciente"}
+                    </PrimaryButton>
                 </div>
             </form>
         </Form>

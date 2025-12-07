@@ -24,7 +24,7 @@ const router = createBrowserRouter([
     },
     {/*buscar pacientes*/ },
     {
-        path: "/pacientes/buscar-paciente",
+        path: "/pacientes",
         element: (
             <ProtectedRoute>
                 <BuscarPaciente />
