@@ -534,11 +534,88 @@ Antes de devolver la URL, el backend verifica:
 
 ## Características de Seguridad
 
-- 🔐 **Token de un solo uso**: La `viewer_url` solo funciona una vez
-- ⏱️ **Expiración temporal**: Token válido por 5 minutos
-- 🔒 **Validación de permisos**: Solo usuarios autorizados acceden
-- 🎯 **Usuario genérico**: Usa credenciales `userviewer/uvnr123` para Keycloak
-- 🚫 **No permite construcción manual**: No se puede manipular la URL
+### 🛡️ Sistema de Seguridad Multicapa
+
+El sistema implementa **5 capas de protección** para garantizar que solo usuarios autorizados accedan a estudios específicos:
+
+#### 1. **Token de un solo uso**
+- La `viewer_url` solo funciona una vez
+- Después de usarse, el `access_id` se elimina del cache
+- No se puede reutilizar el mismo enlace
+
+#### 2. **Session ID único por acceso**
+- Cada vez que se solicita acceso, se genera un `session_id` único
+- El session_id se guarda en localStorage del navegador
+- Vincula al usuario con el estudio específico autorizado
+
+#### 3. **Lista blanca de estudios permitidos**
+- Cada sesión tiene un array `allowed_studies` con los Study UIDs autorizados
+- Solo puede acceder a los estudios de esa lista
+- Si intenta acceder a otro estudio → **403 Forbidden**
+
+#### 4. **Expiración temporal**
+- Token de Keycloak: **5 minutos**
+- Session ID: **5 minutos**
+- Después de expirar, debe solicitar nuevo acceso
+
+#### 5. **Validación de permisos previa**
+- Backend valida en `rel_user_location` antes de generar token
+- Solo usuarios con permisos sobre la location del examen obtienen acceso
+- Validación a nivel de base de datos
+
+### 📊 Datos almacenados en la sesión
+
+```json
+{
+  "session_id": "uuid-generado",
+  "user_id": "guid-del-usuario",
+  "location_id": "guid-de-la-location",
+  "allowed_studies": ["1.2.826.0.1.3680043..."],
+  "access_token": "eyJhbGc...",
+  "expires_at": "2025-12-07T10:30:00",
+  "created_at": "2025-12-07T10:25:00"
+}
+```
+
+### 🔍 Flujo de Seguridad Completo
+
+```
+1. Usuario hace clic en "Ver Imágenes"
+   ↓
+2. Frontend envía: user_id + examination_id
+   ↓
+3. Backend valida:
+   ✓ Usuario autenticado (JWT NextRIS)
+   ✓ Examen existe en BD
+   ✓ Usuario tiene permiso en rel_user_location
+   ↓
+4. Backend genera:
+   • Token de Keycloak (userviewer/uvnr123)
+   • Session ID único
+   • Lista: allowed_studies = [study_uid_autorizado]
+   ↓
+5. Backend guarda en cache:
+   • viewer_tokens_cache[access_id]
+   • viewer_sessions_cache[session_id]
+   ↓
+6. Frontend recibe: viewer_url + session_id
+   ↓
+7. Usuario abre viewer_url en nueva ventana
+   ↓
+8. Página intermedia guarda en localStorage:
+   • access_token (Keycloak)
+   • session_id (NextRIS)
+   ↓
+9. Redirige a: viewer.nextris.cloud/viewer?StudyInstanceUIDs=X&session_id=Y
+   ↓
+10. OHIF intenta cargar estudio
+    ↓
+11. (Opcional) Frontend puede validar con:
+    POST /api/general/validate-session
+    ↓
+12. Si study_uid ∈ allowed_studies → ✅ Permitido
+    Si study_uid ∉ allowed_studies → ❌ 403 Forbidden
+```
 
 ---
 
@@ -695,7 +772,121 @@ export const openDicomViewer = async (
 
 ---
 
-**Última actualización**: Diciembre 6, 2025  
-**Versión del API**: 1.0  
+---
+
+## Nuevo Endpoint: Validación de Sesión
+
+### `POST /api/general/validate-session`
+
+Valida si una sesión del visor tiene permisos para acceder a un Study UID específico.
+
+**Uso:** Opcional, para verificar permisos antes de mostrar estudios adicionales.
+
+#### Request
+
+```json
+{
+  "session_id": "uuid-de-la-sesion",
+  "study_uid": "1.2.826.0.1.3680043.8.498..." // Opcional
+}
+```
+
+#### Response - Éxito
+
+```json
+{
+  "success": true,
+  "data": {
+    "session_id": "abc-123-...",
+    "user_id": "9388650a-fa37-4cb1-b346-e68ef2407d1b",
+    "location_id": "3bd59315-52de-4a40-b6c5-f4a8a4df2d61",
+    "allowed_studies": [
+      "1.2.826.0.1.3680043.8.498.13201767099594831302408562419423378227"
+    ],
+    "expires_at": "2025-12-07T10:30:00"
+  }
+}
+```
+
+#### Response - Sin permisos
+
+```json
+{
+  "success": false,
+  "message": "No tiene permisos para este estudio"
+}
+```
+
+#### Ejemplo de uso
+
+```typescript
+const validateAccess = async (sessionId: string, studyUid: string) => {
+  const response = await fetch('/api/general/validate-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: sessionId,
+      study_uid: studyUid
+    })
+  });
+  
+  const data = await response.json();
+  return data.success;
+};
+
+// Uso
+const sessionId = localStorage.getItem('nextris_session_id');
+const canView = await validateAccess(sessionId, '1.2.826...');
+
+if (canView) {
+  // Mostrar estudio
+} else {
+  alert('No tiene permisos para ver este estudio');
+}
+```
+
+---
+
+## Preguntas Frecuentes (FAQ)
+
+### ❓ ¿Puede un usuario ver cualquier imagen con el token de Keycloak?
+
+**No.** Aunque el token de Keycloak es genérico (usuario `userviewer`), el sistema implementa control de acceso mediante:
+1. Session ID único por acceso
+2. Lista blanca de Study UIDs permitidos en la sesión
+3. Validación previa de permisos en `rel_user_location`
+
+### ❓ ¿Qué pasa si alguien intercepta el token de Keycloak?
+
+El token solo es válido por **5 minutos**. Además:
+- No puede usarse para modificar datos (solo lectura)
+- Está vinculado a un session_id específico
+- Solo permite acceder a los estudios autorizados en esa sesión
+
+### ❓ ¿El usuario puede cambiar el Study UID en la URL manualmente?
+
+Técnicamente sí, pero:
+- El session_id restringe qué estudios puede ver
+- Si intenta ver un estudio no autorizado, puede implementarse validación
+- El token expira rápidamente (5 min)
+
+### ❓ ¿Cómo se renueva el acceso si el token expira?
+
+El usuario debe:
+1. Cerrar el visor
+2. Volver a NextRIS
+3. Hacer clic nuevamente en "Ver Imágenes"
+4. Se generará un nuevo token y session_id
+
+### ❓ ¿Se pueden ver múltiples estudios en una sesión?
+
+Actualmente **no**. Cada sesión está limitada a un Study UID específico. Para ver otro estudio, debe solicitar un nuevo acceso desde NextRIS.
+
+**Mejora futura**: Podría modificarse para agregar múltiples Study UIDs a `allowed_studies` en una misma sesión.
+
+---
+
+**Última actualización**: Diciembre 7, 2025  
+**Versión del API**: 1.1 (Con sistema de sesiones de seguridad)  
 **Desarrollador Backend**: Sistema NextRIS  
 **Para dudas**: Ver sección "Soporte" arriba
