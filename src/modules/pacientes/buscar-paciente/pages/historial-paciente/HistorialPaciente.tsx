@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { TablaDynamic } from '@/components/TableDynamic';
 import type { HistoryPatient } from '../../types/BuscarPaciente';
 import { historyColumns } from './components/columns';
+import { DynamicBreadcrumb } from '@/components/DynamicBreadcrumb';
 
 export const HistorialPaciente = () => {
     const location = useLocation()
@@ -16,6 +17,7 @@ export const HistorialPaciente = () => {
     return (
         <MainLayout>
             <div className="bg-white backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+                <DynamicBreadcrumb />
                 {/* Header */}
                 <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                     <div className="bg-brand-purple p-2 sm:p-3 rounded-lg">
