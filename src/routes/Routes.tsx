@@ -4,6 +4,8 @@ import { Inicio } from "@/modules/inicio/Inicio";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { BuscarPaciente } from "@/modules/pacientes/buscar-paciente/BuscarPaciente";
 import { HistorialPaciente } from "@/modules/pacientes/buscar-paciente/pages/historial-paciente/HistorialPaciente";
+import { AdmisionCita } from "@/modules/admision/admision-cita/AdmisionCita";
+import { AdmisionEspontanea } from "@/modules/admision/admision-espontanea/AdmisionEspontanea";
 
 const router = createBrowserRouter([
     {
@@ -39,6 +41,26 @@ const router = createBrowserRouter([
             </ProtectedRoute>
         ),
     },
+
+    {/*Admision*/ },
+
+    {
+        path: "/nueva-admision",
+        element: (
+            <ProtectedRoute>
+                <AdmisionCita />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/admision-espontanea",
+        element: (
+            <ProtectedRoute>
+                <AdmisionEspontanea />
+            </ProtectedRoute>
+        ),
+    }
+
 ]);
 
 export const AppRoutes = () => {

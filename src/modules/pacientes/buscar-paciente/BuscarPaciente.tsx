@@ -57,6 +57,8 @@ export const BuscarPaciente = () => {
     };
 
     const handleViewHistory = (patient: Patient) => {
+        // Solo navegar si tiene estudios
+        if (patient.study_count === 0) return;
         navigate(`/pacientes/historial-paciente`, { state: { patient } });
     };
 

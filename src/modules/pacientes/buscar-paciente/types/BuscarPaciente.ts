@@ -1,13 +1,13 @@
 export interface Patient {
     birthdate: string;
-    email: string;
+    email?: string;
     gender: string;
     guid: string;
     name: string;
     nationalcode: string;
     patientid: string;
     phone?: string;
-    study_count: number;
+    study_count?: number;
     surname: string;
 }
 

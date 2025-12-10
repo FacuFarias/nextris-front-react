@@ -3,7 +3,6 @@ import {
     Home,
     Users,
     Calendar,
-    UserPlus,
     Send,
     Settings,
     Power,
@@ -13,6 +12,7 @@ import {
 
     UserCog,
     ClipboardList,
+    CalendarPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
@@ -39,7 +39,27 @@ const menuItems: MenuItem[] = [
         path: "/pacientes",
     },
     { icon: Calendar, label: "Citas", path: "/citas" },
-    { icon: UserPlus, label: "Admision", path: "/admision" },
+    {
+        icon: CalendarPlus, label: "Admision",
+
+        subItems: [
+            {
+                icon: CalendarPlus,
+                label: "Adm por cita",
+                path: "/nueva-admision",
+            },
+            {
+                icon: CalendarPlus,
+                label: "Adm espontánea",
+                path: "/admision-espontanea",
+            },
+            {
+                icon: CalendarPlus,
+                label: "Historico de visitas",
+                path: "/admision/historico-visitas",
+            }
+        ]
+    },
     { icon: Home, label: "Ubicacion", path: "/ubicacion" },
     { icon: FileText, label: "Redaccion", path: "/redaccion" },
     { icon: Send, label: "Distribucion", path: "/distribucion" },

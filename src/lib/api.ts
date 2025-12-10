@@ -84,8 +84,11 @@ api.interceptors.response.use(
 
             try {
                 // Llamar al endpoint de refresh token
-                const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-                    refresh_token: refreshToken,
+                const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${refreshToken}`,
+                    }
                 });
 
                 const newAccessToken = response.data.data.access_token;
@@ -119,5 +122,7 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+
+
 
 

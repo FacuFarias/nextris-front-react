@@ -1,29 +1,58 @@
 import { MainLayout } from '@/layouts/layout'
-import { useLocation } from 'react-router-dom'
-import { useHistorialPaciente } from './hooks/use-historial-paciente';
-import { Search } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useHistorialPaciente, useViewImagenDicom } from './hooks/use-historial-paciente';
+import { Search, ArrowLeft } from 'lucide-react';
 import { InputSearch } from '@/components/InputSearch';
 import { useState } from 'react';
 import { TablaDynamic } from '@/components/TableDynamic';
 import type { HistoryPatient } from '../../types/BuscarPaciente';
-import { historyColumns } from './components/columns';
+import { getHistoryPatientActions, historyColumns } from './components/columns';
 import { DynamicBreadcrumb } from '@/components/DynamicBreadcrumb';
+import { Button } from '@/components/ui/button';
 
 export const HistorialPaciente = () => {
     const location = useLocation()
+    const navigate = useNavigate()
     const [searchTerm, setSearchTerm] = useState("");
     const { historyData, isLoading } = useHistorialPaciente({ patientId: location?.state?.patient.guid });
+    const { viewImagenDicom } = useViewImagenDicom();
+    const onViewImage = (patient: HistoryPatient) => {
+        viewImagenDicom({ imageId: patient.guid, userId: location?.state?.patient.guid! });
+    };
 
+    const onViewReport = (patient: HistoryPatient) => {
+        console.log("asdas", patient)
+    };
+
+    // Generar las acciones con las funciones
+    const patientActions = getHistoryPatientActions(
+        onViewReport,
+        onViewImage
+    );
     return (
         <MainLayout>
             <div className="bg-white backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                 <DynamicBreadcrumb />
+
+                {/* Botón Volver */}
+
                 {/* Header */}
-                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                    <div className="bg-brand-purple p-2 sm:p-3 rounded-lg">
-                        <Search className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                <div className="flex justify-between items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <div className="flex gap-2 items-center">
+                        <div className="bg-brand-purple p-2 sm:p-3 rounded-lg w-min">
+                            <Search className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                        </div>
+                        <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Historial Paciente / {location?.state?.patient.name} {location?.state?.patient?.surname}</h1>
                     </div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Historial Paciente / {location?.state?.patient.name} {location?.state?.patient?.surname}</h1>
+
+                    <Button
+                        variant="ghost"
+                        onClick={() => navigate(-1)}
+                        className=" hover:bg-purple-50 text-brand-purple border-2 border-brand-purple cursor-pointer "
+                    >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Volver
+                    </Button>
                 </div>
 
                 {/* Barra de búsqueda */}
@@ -56,6 +85,7 @@ export const HistorialPaciente = () => {
                         onRowClick={(patient) => {
                             console.log("Paciente seleccionado:", patient);
                         }}
+                        actions={patientActions}
                     /* pagination={pagination} */
                     /*  onPaginationChange={(newPage) => {
                          setPage(newPage);

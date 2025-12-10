@@ -55,6 +55,7 @@ export const getPatientActions = (
             label: "Historial",
             icon: <History className="h-4 w-4 text-green-700" />,
             onClick: onViewHistory,
+            disabled: (patient: Patient) => patient.study_count === 0,
         },
     ];
 

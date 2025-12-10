@@ -49,4 +49,6 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     showIndex?: boolean;
     onRowClick?: (row: T, index: number) => void;
     onRowDoubleClick?: (row: T, index: number) => void;
+    selectedRow?: T | null;
+    rowIdKey?: keyof T;
 }

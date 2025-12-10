@@ -35,6 +35,8 @@ export function TablaDynamic<T extends Record<string, any>>({
     onRowDoubleClick,
     pagination,
     onPaginationChange,
+    selectedRow,
+    rowIdKey = 'guid' as keyof T,
 }: DynamicTableProps<T>) {
     const [sortConfig, setSortConfig] = useState<{
         key: keyof T | string;
@@ -176,61 +178,65 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            paginatedData.map((row, index) => (
-                                <TableRow
-                                    key={getRowIndex(index)}
-                                    className={cn(
-                                        (onRowClick || onRowDoubleClick) && "cursor-pointer hover:bg-muted/50"
-                                    )}
-                                    onClick={() => onRowClick?.(row, getRowIndex(index))}
-                                    onDoubleClick={() => onRowDoubleClick?.(row, getRowIndex(index))}
-                                >
-                                    {columns.map((column, colIndex) => (
-                                        <TableCell
-                                            key={colIndex}
-                                            className={cn(
-                                                column.className,
-                                                column.hideOnMobile && "hidden md:table-cell"
-                                            )}
-                                        >
-                                            {renderCellContent(column, row, getRowIndex(index))}
-                                        </TableCell>
-                                    ))}
-                                    {actions.length > 0 && (
-                                        <TableCell>
-                                            <TooltipProvider>
-                                                <div className="flex items-center gap-2">
-                                                    {visibleActions(row).map((action, actionIndex) => (
-                                                        <Tooltip key={actionIndex}>
-                                                            <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className={cn(
-                                                                        "h-8 w-8 hover:bg-brand-purple/10 cursor-pointer",
-                                                                        action.variant === "destructive" && "hover:bg-red-50 hover:text-red-600"
+                            paginatedData.map((row, index) => {
+                                const isSelected = selectedRow && row[rowIdKey] === selectedRow[rowIdKey];
+                                return (
+                                    <TableRow
+                                        key={getRowIndex(index)}
+                                        className={cn(
+                                            (onRowClick || onRowDoubleClick) && "cursor-pointer hover:bg-muted/50",
+                                            isSelected && "bg-purple-100 hover:bg-purple-100/80 border-l-4 border-l-brand-purple"
+                                        )}
+                                        onClick={() => onRowClick?.(row, getRowIndex(index))}
+                                        onDoubleClick={() => onRowDoubleClick?.(row, getRowIndex(index))}
+                                    >
+                                        {columns.map((column, colIndex) => (
+                                            <TableCell
+                                                key={colIndex}
+                                                className={cn(
+                                                    column.className,
+                                                    column.hideOnMobile && "hidden md:table-cell"
+                                                )}
+                                            >
+                                                {renderCellContent(column, row, getRowIndex(index))}
+                                            </TableCell>
+                                        ))}
+                                        {actions.length > 0 && (
+                                            <TableCell>
+                                                <TooltipProvider>
+                                                    <div className="flex items-center gap-2">
+                                                        {visibleActions(row).map((action, actionIndex) => (
+                                                            <Tooltip key={actionIndex}>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className={cn(
+                                                                            "h-8 w-8 hover:bg-brand-purple/10 cursor-pointer",
+                                                                            action.variant === "destructive" && "hover:bg-red-50 hover:text-red-600"
 
-                                                                    )}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        action.onClick(row, getRowIndex(index));
-                                                                    }}
-                                                                    disabled={action.disabled?.(row)}
-                                                                >
-                                                                    {action.icon}
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                <p>{action.label}</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    ))}
-                                                </div>
-                                            </TooltipProvider>
-                                        </TableCell>
-                                    )}
-                                </TableRow>
-                            ))
+                                                                        )}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            action.onClick(row, getRowIndex(index));
+                                                                        }}
+                                                                        disabled={action.disabled?.(row)}
+                                                                    >
+                                                                        {action.icon}
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>{action.label}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        ))}
+                                                    </div>
+                                                </TooltipProvider>
+                                            </TableCell>
+                                        )}
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>

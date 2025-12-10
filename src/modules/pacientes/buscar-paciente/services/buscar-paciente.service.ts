@@ -45,3 +45,16 @@ export const getHistoryPatient = async ({ patientId }: { patientId: string }) =>
         throw error;
     }
 }
+
+export const postViewImagenDicom = async ({ imageId, userId }: { imageId?: string, userId?: string }) => {
+
+    try {
+        const response = await api.post(`/general/viewer-url`, {
+            user_id: userId,
+            examination_id: imageId,
+        });
+        return response.data.data;
+    } catch (error) {
+        throw error;
+    }
+}

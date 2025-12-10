@@ -1,5 +1,6 @@
-import type { TableColumn } from "@/types/table";
+import type { TableAction, TableColumn } from "@/types/table";
 import type { HistoryPatient } from "../../../types/BuscarPaciente";
+import { File, Image } from "lucide-react";
 
 // Configuración de columnas para usuarios
 const historyColumns: TableColumn<HistoryPatient>[] = [
@@ -41,28 +42,23 @@ const historyColumns: TableColumn<HistoryPatient>[] = [
     },
 ];
 
-/* // Función que genera las acciones con handlers personalizados
-export const getPatientActions = (
-    onEdit: (patient: Patient) => void,
-    onDelete: (patient: Patient) => void,
-    onViewHistory: (patient: Patient) => void
-): TableAction<Patient>[] => [
+// Función que genera las acciones con handlers personalizados
+export const getHistoryPatientActions = (
+    onViewReport: (patient: HistoryPatient) => void,
+    onViewImage: (patient: HistoryPatient) => void
+
+): TableAction<HistoryPatient>[] => [
         {
-            label: "Editar",
-            icon: <Edit className="h-4 w-4 text-blue-900" />,
-            onClick: onEdit,
+            label: "Ver informe",
+            icon: <File className="h-4 w-4 text-brand-purple" />,
+            onClick: onViewReport,
         },
         {
-            label: "Eliminar",
-            icon: <Delete className="h-4 w-4 text-red-700" />,
-            onClick: onDelete,
-        },
-        {
-            label: "Historial",
-            icon: <History className="h-4 w-4 text-green-700" />,
-            onClick: onViewHistory,
+            label: "Ver imagen",
+            icon: <Image className="h-4 w-4 text-brand-purple" />,
+            onClick: onViewImage,
         },
     ];
 
- */
-export { historyColumns }
+
+export { historyColumns };
