@@ -951,43 +951,40 @@ Authorization: Bearer {access_token}
 
 ---
 
-#### GET /studies
-Obtener estudios/exámenes disponibles (con filtros opcionales).
+#### GET /study-types
+Obtener todos los tipos de estudios disponibles desde la tabla `isstudytype`.
 
 **Headers:**
 ```
 Authorization: Bearer {access_token}
 ```
 
-**Query Parameters:**
-- `modality` (opcional): Filtrar por modalidad (ej: CT, MR)
-- `page` (opcional): Número de página
-- `per_page` (opcional): Items por página
-
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": {
-    "studies": [
-      {
-        "guid": "s001",
-        "code": "TC-TORAX",
-        "description": "Tomografía de Tórax",
-        "modality": "CT",
-        "bodypart": "Tórax"
-      },
-      {
-        "guid": "s002",
-        "code": "RX-TORAX",
-        "description": "Radiografía de Tórax",
-        "modality": "CR",
-        "bodypart": "Tórax"
-      }
+  "data": [
+    [
+      "guid-001",
+      "TC-TORAX",
+      "TOMOGRAFIA AXIAL COMPUTADA TORACICA",
+      "CT",
+      "Tórax",
+      "Torax"
+    ],
+    [
+      "guid-002",
+      "RX-TORAX",
+      "RADIOGRAFIA SIMPLE DE TORAX",
+      "RX",
+      "Tórax",
+      "Torax"
     ]
-  }
+  ]
 }
 ```
+
+**Nota:** Retorna un array de arrays con [guid, code, description, modality_code, bodypart, studygroup]. Este es el catálogo completo de tipos de estudios disponibles en el sistema.
 
 ---
 
@@ -1044,29 +1041,21 @@ Body: { "location_id": "..." }
 Usuario selecciona paciente o crea uno nuevo
 ```
 
-**Paso 3: Cargar Opciones de Filtrado de Estudios**
+**Paso 3: Cargar Catálogo de Tipos de Estudios**
 ```
-GET /api/config/modalities
-GET /api/config/body-parts
+GET /api/study-types
 ↓
-Usuario filtra estudios por modalidad/parte del cuerpo
+Usuario selecciona estudio por código/descripción
 ```
 
-**Paso 4: Cargar Estudios**
-```
-GET /api/studies?modality=...
-↓
-Usuario selecciona estudio
-```
-
-**Paso 5: Cargar Equipos**
+**Paso 4: Cargar Equipos Disponibles**
 ```
 GET /api/config/equipment?location_id=...
 ↓
 Usuario selecciona equipo
 ```
 
-**Paso 6: Finalizar Orden**
+**Paso 5: Finalizar Orden**
 ```
 POST /api/... (crear worklist)
 ```
