@@ -7,12 +7,13 @@ Esta documentación describe todos los endpoints REST disponibles en el sistema 
 1. [Autenticación](#autenticación)
 2. [Pacientes](#pacientes)
 3. [Estudios](#estudios)
-4. [Admision](#administración)
-5. [Turnos](#turnos)
-6. [Institucional](#institucional)
-7. [Médicos](#médicos)
-8. [Reportes](#reportes)
-9. [Configuración](#configuración)
+4. [Administración](#administración)
+5. [Admisión React](#admisión-react)
+6. [Turnos](#turnos)
+7. [Institucional](#institucional)
+8. [Médicos](#médicos)
+9. [Reportes](#reportes)
+10. [Configuración](#configuración)
 
 ---
 
@@ -754,6 +755,288 @@ Obtener logs de auditoría.
   ]
 }
 ```
+
+---
+
+## Admisión React
+
+### Base URL
+`/api/patients` / `/api/studies` / `/api/config` / `/api/institutional`
+
+### Descripción
+Esta sección documenta las APIs utilizadas en la nueva vista React de Admisión. El flujo de admisión permite crear órdenes de trabajo (worklist) seleccionando:
+1. Un paciente (con filtrado por ubicación)
+2. Un estudio/examen (con filtrado por modalidad y parte del cuerpo)
+3. Un equipo (con filtrado por ubicación y estudio)
+4. Médico solicitante y obra social (filtrados por ubicación)
+
+### Endpoints Utilizados
+
+#### GET /institutional/locations
+Obtener ubicaciones/sedes del usuario autenticado para el selector de ubicación.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "name": "string",
+      "code": "string"
+    }
+  ]
+}
+```
+
+---
+
+#### POST /patients/by-location
+Obtener pacientes filtrados por ubicación (con búsqueda opcional).
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request Body:**
+```json
+{
+  "location_id": "uuid",
+  "search_term": "string (opcional)"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "name": "string",
+      "surname": "string",
+      "nationalcode": "string",
+      "gender": "string",
+      "birthdate": "DD/MM/YYYY"
+    }
+  ]
+}
+```
+
+---
+
+#### POST /patients
+Crear nuevo paciente rápidamente desde admisión.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request Body:**
+```json
+{
+  "name": "string",
+  "surname": "string",
+  "nationalcode": "string",
+  "birthdate": "YYYY-MM-DD",
+  "gender": "string"
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Paciente creado exitosamente",
+  "data": {
+    "guid": "uuid"
+  }
+}
+```
+
+---
+
+#### GET /studies?modality=string
+Obtener estudios/exámenes disponibles con opción de filtrado por modalidad.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `modality` (opcional): Filtrar por modalidad (ej: CT, MR, CR, DX)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "studies": [
+      {
+        "guid": "uuid",
+        "code": "string",
+        "description": "string",
+        "modality": "string",
+        "bodypart": "string"
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### GET /config/modalities
+Obtener modalidades disponibles (RX, TC, RM, ECO, etc.).
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "externalcode": "string",
+      "description": "string"
+    }
+  ]
+}
+```
+
+---
+
+#### GET /config/body-parts
+Obtener partes del cuerpo disponibles.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "description": "string"
+    }
+  ]
+}
+```
+
+---
+
+#### GET /config/equipment?location_id=uuid
+Obtener equipos disponibles, opcionalmente filtrados por ubicación.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `location_id` (opcional): Filtrar por ubicación
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "code": "string",
+      "description": "string",
+      "modality": "string",
+      "location": "string"
+    }
+  ]
+}
+```
+
+---
+
+#### GET /institutional/locations/:location_id/physicians
+Obtener médicos solicitantes de una ubicación específica.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "name": "string",
+      "surname": "string",
+      "specialty": "string"
+    }
+  ]
+}
+```
+
+---
+
+#### GET /institutional/locations/:location_id/insurance
+Obtener obras sociales/seguros de una ubicación específica.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "description": "string"
+    }
+  ]
+}
+```
+
+---
+
+### Flujo de Trabajo en Admisión React
+
+1. **Seleccionar Ubicación:**
+   - Obtener ubicaciones del usuario: `GET /institutional/locations`
+   - Cargar automáticamente médicos y obras sociales: `GET /institutional/locations/{id}/physicians` y `/insurance`
+
+2. **Buscar/Seleccionar Paciente:**
+   - Listar pacientes de la ubicación: `POST /patients/by-location`
+   - Crear nuevo paciente (opcional): `POST /patients`
+
+3. **Seleccionar Estudio:**
+   - Obtener modalidades: `GET /config/modalities`
+   - Obtener partes del cuerpo: `GET /config/body-parts`
+   - Filtrar estudios: `GET /studies?modality=...`
+
+4. **Seleccionar Equipo:**
+   - Obtener equipos de la ubicación: `GET /config/equipment?location_id=...`
+
+5. **Completar Datos de Prestación:**
+   - Médico solicitante: Cargado automáticamente desde ubicación
+   - Obra social: Cargada automáticamente desde ubicación
+
+6. **Crear Orden (Worklist):**
+   - Endpoint pendiente de documentación (crear desde API en lugar de ruta heredada)
 
 ---
 
