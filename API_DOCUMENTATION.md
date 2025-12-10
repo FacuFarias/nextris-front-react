@@ -1,201 +1,88 @@
-# API Documentation - NextRIS Backend
+# Documentación de APIs - Nextris
 
-Documentación completa de los endpoints REST API disponibles para el frontend React.
+Esta documentación describe todos los endpoints REST disponibles en el sistema Nextris.
 
-**Base URL:** `http://148.230.72.8:5001/api`
-
----
-
-## 🧪 Usuarios de Prueba
-
-Para realizar testing, puedes utilizar las siguientes credenciales:
-
-### Usuario Administrador (Acceso completo)
-- **Username:** `sysadmin`
-- **Password:** `1234`
-- **Tipo:** `staff`
-- **Permisos:** Acceso a todos los dominios de pacientes
-
-### Usuario Médico (Acceso limitado)
-- **Username:** `DrParedes`
-- **Password:** `123456`
-- **Tipo:** `staff`
-- **Permisos:** Acceso solo a un dominio de pacientes específico
-
----
-
-## 📋 Tabla de Contenidos
+## Tabla de Contenidos
 
 1. [Autenticación](#autenticación)
 2. [Pacientes](#pacientes)
 3. [Estudios](#estudios)
-4. [Formato de Respuestas](#formato-de-respuestas)
-5. [Manejo de Errores](#manejo-de-errores)
-6. [Ejemplos de Uso](#ejemplos-de-uso)
+4. [Admision](#administración)
+5. [Turnos](#turnos)
+6. [Institucional](#institucional)
+7. [Médicos](#médicos)
+8. [Reportes](#reportes)
+9. [Configuración](#configuración)
 
 ---
 
-## 🔐 Autenticación
+## Autenticación
 
-Todos los endpoints (excepto `/auth/login`) requieren autenticación JWT.
+### Base URL
+`/api/auth`
 
-### Headers Requeridos
+### Endpoints
 
-```http
-Authorization: Bearer <access_token>
-Content-Type: application/json
-```
+#### POST /auth/login
+Autenticación de usuario y obtención de tokens JWT.
 
-### Tokens
-
-- **Access Token:** Válido por 1 hora (usar para todas las peticiones)
-- **Refresh Token:** Válido por 30 días (usar para obtener nuevo access token)
-
----
-
-## 📡 Endpoints
-
-### Health Check
-
-#### `GET /health`
-
-Verificar que la API está funcionando.
-
-**Sin autenticación requerida**
-
-**Respuesta:**
+**Request Body:**
 ```json
 {
-  "success": true,
-  "message": "NextRIS API is running",
-  "version": "1.0.0"
+  "username": "string",
+  "password": "string"
 }
 ```
 
----
-
-## 🔑 Autenticación
-
-### Login
-
-#### `POST /auth/login`
-
-Autenticar usuario y obtener tokens JWT.
-
-**Body:**
-```json
-{
-  "username": "usuario",
-  "password": "contraseña",
-  "user_type": "staff" // o "patient"
-}
-```
-
-**Campos:**
-- `username` (string, requerido): Nombre de usuario
-- `password` (string, requerido): Contraseña
-- `user_type` (string, opcional): `"staff"` o `"patient"` (default: `"staff"`)
-
-**Respuesta Exitosa (200):**
+**Response (200):**
 ```json
 {
   "success": true,
+  "message": "Login exitoso",
   "data": {
-    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-    "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+    "access_token": "string",
+    "refresh_token": "string",
     "user": {
-      "id": "uuid-guid",
-      "username": "usuario",
-      "name": "Nombre",
-      "surname": "Apellido",
-      "email": "email@example.com",
-      "user_type": "staff",
-      "role_id": 1,
+      "id": "uuid",
+      "username": "string",
+      "name": "string",
+      "surname": "string",
+      "email": "string",
+      "user_type": "string",
+      "role_id": "uuid",
       "requires_password_change": false
     }
-  },
-  "message": "Login exitoso"
-}
-```
-
-**Errores:**
-- `400`: Datos faltantes o inválidos
-- `401`: Credenciales inválidas o usuario inactivo
-- `500`: Error del servidor
-
----
-
-### Obtener Usuario Actual
-
-#### `GET /auth/me`
-
-Obtener información del usuario autenticado.
-
-**Headers:**
-```http
-Authorization: Bearer <access_token>
-```
-
-**Respuesta (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid-guid",
-    "username": "usuario",
-    "name": "Nombre",
-    "surname": "Apellido",
-    "email": "email@example.com",
-    "user_type": "staff",
-    "role_id": 1
   }
 }
 ```
 
-**Errores:**
-- `401`: Token inválido o expirado
-- `404`: Usuario no encontrado
-
----
-
-### Refrescar Token
-
-#### `POST /auth/refresh`
-
-Obtener un nuevo access token usando el refresh token.
+#### POST /auth/refresh
+Renovar token de acceso usando refresh token.
 
 **Headers:**
-```http
-Authorization: Bearer <refresh_token>
+```
+Authorization: Bearer {refresh_token}
 ```
 
-**Respuesta (200):**
+**Response (200):**
 ```json
 {
   "success": true,
   "data": {
-    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+    "access_token": "string"
   }
 }
 ```
 
-**Errores:**
-- `401`: Refresh token inválido o expirado
-
----
-
-### Logout
-
-#### `POST /auth/logout`
-
-Cerrar sesión (el frontend debe eliminar los tokens).
+#### POST /auth/logout
+Cerrar sesión e invalidar tokens.
 
 **Headers:**
-```http
-Authorization: Bearer <access_token>
+```
+Authorization: Bearer {access_token}
 ```
 
-**Respuesta (200):**
+**Response (200):**
 ```json
 {
   "success": true,
@@ -203,194 +90,239 @@ Authorization: Bearer <access_token>
 }
 ```
 
-**Nota:** En JWT stateless, el logout se maneja en el cliente eliminando los tokens del localStorage.
+#### POST /auth/change-password
+Cambiar contraseña del usuario autenticado.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request Body:**
+```json
+{
+  "current_password": "string",
+  "new_password": "string"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Contraseña actualizada correctamente"
+}
+```
+
+#### POST /auth/reset-password
+Resetear contraseña de un usuario (requiere permisos admin).
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request Body:**
+```json
+{
+  "user_id": "uuid",
+  "new_password": "string"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Contraseña reseteada correctamente"
+}
+```
+
+#### GET /auth/verify
+Verificar validez del token actual.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "valid": true,
+    "user": {
+      "id": "uuid",
+      "username": "string",
+      "user_type": "string"
+    }
+  }
+}
+```
+
+#### GET /auth/user/:user_id/patientdomains
+Obtener los patientdomains asociados a un usuario.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "patientdomain_id": "uuid",
+      "patientdomain_name": "GENERAL",
+      "created_at": "2024-01-01T10:00:00"
+    }
+  ]
+}
+```
 
 ---
 
-## 👥 Pacientes
+## Pacientes
 
-**⚠️ Importante:** Todos los endpoints de pacientes implementan filtrado automático por dominios de pacientes (`id_patientdomain`) basado en los permisos del usuario autenticado. Los usuarios solo pueden ver y acceder a pacientes que pertenecen a los dominios asignados en la tabla `rel_user_patientdomain`.
+### Base URL
+`/api/patients`
 
-### Listar Pacientes
+### Endpoints
 
-#### `GET /patients`
-
-Obtener lista de pacientes con paginación y búsqueda. Solo retorna pacientes de los dominios a los que el usuario tiene acceso.
-
-**Headers:**
-```http
-Authorization: Bearer <access_token>
-```
+#### GET /patients
+Listar pacientes con filtros opcionales.
 
 **Query Parameters:**
-- `page` (int, opcional): Número de página (default: 1)
-- `per_page` (int, opcional): Resultados por página (default: 20, max: 100)
-- `search` (string, opcional): Término de búsqueda (busca en nombre, apellido, DNI)
+- `search` (opcional): Búsqueda por nombre, apellido o documento
+- `page` (opcional): Número de página (default: 1)
+- `per_page` (opcional): Items por página (default: 20)
 
-**Ejemplo:**
-```
-GET /patients?page=1&per_page=20&search=juan
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "valid": true,
+    "user": {
+      "id": "uuid",
+      "username": "string",
+      "user_type": "string"
+    }
+  }
+}
 ```
 
-**Respuesta (200):**
+---
+
+## Pacientes
+
+### Base URL
+`/api/patients`
+
+### Endpoints
+
+#### GET /patients
+Listar pacientes con filtros opcionales.
+
+**Query Parameters:**
+- `search` (opcional): Búsqueda por nombre, apellido o documento
+- `page` (opcional): Número de página (default: 1)
+- `per_page` (opcional): Items por página (default: 20)
+
+**Response (200):**
 ```json
 {
   "success": true,
   "data": {
     "patients": [
       {
-        "guid": "uuid-guid",
-        "name": "Juan",
-        "surname": "Pérez",
-        "email": "juan@example.com",
-        "phone": "+1234567890",
-        "nationalcode": "12345678",
-        "patientid": "12345678",
-        "birthdate": "1990-05-15",
-        "gender": "M",
-        "id_patientdomain": "domain-uuid-guid"
+        "guid": "uuid",
+        "name": "string",
+        "surname": "string",
+        "documentnumber": "string",
+        "birthdate": "date",
+        "gender": "string",
+        "email": "string",
+        "phone": "string"
       }
     ],
+    "total": 100,
     "page": 1,
     "per_page": 20,
-    "total": 100
+    "total_pages": 5
   }
 }
 ```
 
----
+#### GET /patients/:id
+Obtener detalles de un paciente específico.
 
-### Obtener Paciente
-
-#### `GET /patients/{guid}`
-
-Obtener detalles completos de un paciente específico.
-
-**Headers:**
-```http
-Authorization: Bearer <access_token>
-```
-
-**Path Parameters:**
-- `guid` (string): GUID del paciente
-
-**Respuesta (200):**
+**Response (200):**
 ```json
 {
   "success": true,
   "data": {
-    "guid": "uuid-guid",
-    "name": "Juan",
-    "surname": "Pérez",
-    "email": "juan@example.com",
-    "phone": "+1234567890",
-    "nationalcode": "12345678",
-    "patientid": "12345678",
-    "birthdate": "1990-05-15",
-    "gender": "M",
-    "healthcard": "CARD123",
-    "id_patientdomain": "domain-uuid-guid",
-    "ismerged": 0,
-    "isanonymous": 0
+    "guid": "uuid",
+    "name": "string",
+    "surname": "string",
+    "documentnumber": "string",
+    "birthdate": "date",
+    "gender": "string",
+    "email": "string",
+    "phone": "string",
+    "address": "string",
+    "city": "string",
+    "province": "string",
+    "postalcode": "string",
+    "country": "string",
+    "socialsecuritynumber": "string",
+    "healthinsurance": "string",
+    "healthinsuranceplan": "string"
   }
 }
 ```
 
-**Errores:**
-- `404`: Paciente no encontrado
+#### POST /patients
+Crear nuevo paciente.
 
----
-
-### Crear Paciente
-
-#### `POST /patients`
-
-Crear un nuevo paciente.
-
-**Headers:**
-```http
-Authorization: Bearer <access_token>
-Content-Type: application/json
-```
-
-**Body:**
+**Request Body:**
 ```json
 {
-  "name": "Juan",
-  "surname": "Pérez",
-  "nationalcode": "12345678",
-  "patientid": "12345678",
-  "email": "juan@example.com",
-  "phone": "+1234567890",
-  "birthdate": "1990-05-15",
-  "gender": "M",
-  "address": "Calle 123",
-  "city": "Ciudad",
-  "state": "Estado",
-  "country": "País",
-  "postalcode": "12345"
+  "name": "string",
+  "surname": "string",
+  "documentnumber": "string",
+  "birthdate": "date",
+  "gender": "string",
+  "email": "string",
+  "phone": "string",
+  "address": "string",
+  "city": "string",
+  "province": "string",
+  "country": "string",
+  "healthinsurance": "string"
 }
 ```
 
-**Campos Requeridos:**
-- `name` (string): Nombre
-- `surname` (string): Apellido
-- `nationalcode` (string): DNI/Documento nacional
-- `patientid` (string): ID del paciente
-
-**Campos Opcionales:**
-- `email` (string): Email
-- `phone` (string): Teléfono
-- `birthdate` (string): Fecha de nacimiento (formato: YYYY-MM-DD)
-- `gender` (string): Género (`M`, `F`, `O`)
-- `healthcard` (string): Número de tarjeta de salud
-- `id_patientdomain` (string): GUID del dominio del paciente
-
-**Respuesta (201):**
+**Response (201):**
 ```json
 {
   "success": true,
+  "message": "Paciente creado exitosamente",
   "data": {
-    "guid": "nuevo-uuid-guid"
-  },
-  "message": "Paciente creado exitosamente"
+    "guid": "uuid"
+  }
 }
 ```
 
-**Errores:**
-- `400`: Campos requeridos faltantes
-- `500`: Error al crear paciente
+#### PUT /patients/:id
+Actualizar información de un paciente.
 
----
+**Request Body:** (mismos campos que POST, todos opcionales)
 
-### Actualizar Paciente
-
-#### `PUT /patients/{guid}`
-
-Actualizar un paciente existente.
-
-**Headers:**
-```http
-Authorization: Bearer <access_token>
-Content-Type: application/json
-```
-
-**Path Parameters:**
-- `guid` (string): GUID del paciente
-
-**Body:**
-```json
-{
-  "email": "nuevo@email.com",
-  "phone": "+9876543210",
-  "address": "Nueva Dirección"
-}
-```
-
-**Campos Actualizables:**
-- Todos los campos del modelo (excepto `guid`)
-
-**Respuesta (200):**
+**Response (200):**
 ```json
 {
   "success": true,
@@ -398,517 +330,1356 @@ Content-Type: application/json
 }
 ```
 
-**Errores:**
-- `400`: Sin campos para actualizar
-- `404`: Paciente no encontrado
+#### DELETE /patients/:id
+Eliminar un paciente.
 
----
-
-## 📊 Estudios
-
-### Listar Estudios
-
-#### `GET /studies`
-
-Obtener lista de estudios médicos con filtros.
-
-**Headers:**
-```http
-Authorization: Bearer <access_token>
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Paciente eliminado exitosamente"
+}
 ```
+
+#### GET /patients/:id/studies
+Obtener estudios de un paciente.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "studydate": "datetime",
+      "studytype": "string",
+      "modality": "string",
+      "status": "string",
+      "description": "string"
+    }
+  ]
+}
+```
+
+#### GET /patients/:id/appointments
+Obtener turnos de un paciente.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "appointmentdate": "datetime",
+      "studytype": "string",
+      "status": "string",
+      "equipment": "string",
+      "location": "string"
+    }
+  ]
+}
+```
+
+#### GET /patients/:id/medical-history
+Obtener historial médico del paciente.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "allergies": "string",
+    "medications": "string",
+    "conditions": "string",
+    "surgeries": "string",
+    "family_history": "string",
+    "notes": "string"
+  }
+}
+```
+
+#### POST /patients/:id/medical-history
+Actualizar historial médico del paciente.
+
+**Request Body:**
+```json
+{
+  "allergies": "string",
+  "medications": "string",
+  "conditions": "string",
+  "surgeries": "string",
+  "family_history": "string",
+  "notes": "string"
+}
+```
+
+#### GET /patients/search
+Búsqueda avanzada de pacientes.
 
 **Query Parameters:**
-- `page` (int, opcional): Número de página (default: 1)
-- `per_page` (int, opcional): Resultados por página (default: 20, max: 100)
-- `patient_id` (string, opcional): Filtrar por GUID del paciente
-- `modality` (string, opcional): Filtrar por modalidad (ej: `CT`, `MR`, `CR`, `DX`)
-- `date_from` (string, opcional): Fecha inicio (formato: YYYY-MM-DD)
-- `date_to` (string, opcional): Fecha fin (formato: YYYY-MM-DD)
+- `name`: Nombre
+- `surname`: Apellido
+- `document`: Número de documento
+- `healthinsurance`: Obra social
 
-**Ejemplo:**
-```
-GET /studies?patient_id=uuid-guid&modality=CT&date_from=2025-01-01&page=1&per_page=20
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "name": "string",
+      "surname": "string",
+      "documentnumber": "string"
+    }
+  ]
+}
 ```
 
-**Respuesta (200):**
+---
+
+## Estudios
+
+### Base URL
+`/api/studies`
+
+### Endpoints
+
+#### GET /studies
+Listar estudios con filtros.
+
+**Query Parameters:**
+- `patient_id`: UUID del paciente
+- `status`: Estado del estudio
+- `date_from`: Fecha desde (YYYY-MM-DD)
+- `date_to`: Fecha hasta (YYYY-MM-DD)
+- `page`: Número de página
+- `per_page`: Items por página
+
+**Response (200):**
 ```json
 {
   "success": true,
   "data": {
     "studies": [
       {
-        "guid": "uuid-guid",
-        "study_instance_uid": "1.2.840.113619...",
-        "study_description": "TC de Tórax",
-        "modality": "CT",
-        "study_date": "2025-01-15",
-        "study_time": "14:30:00",
-        "accession_number": "ACC12345",
-        "patient_id": "patient-uuid",
-        "patient_name": "Juan Pérez",
-        "number_of_series": 3,
-        "number_of_instances": 150
+        "guid": "uuid",
+        "studydate": "datetime",
+        "patient_name": "string",
+        "patient_surname": "string",
+        "studytype": "string",
+        "modality": "string",
+        "status": "string",
+        "referring_physician": "string"
       }
     ],
+    "total": 100,
     "page": 1,
-    "per_page": 20,
-    "total": 50
+    "per_page": 20
   }
+}
+```
+
+#### GET /studies/:id
+Obtener detalles de un estudio.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "guid": "uuid",
+    "studydate": "datetime",
+    "patient": {
+      "guid": "uuid",
+      "name": "string",
+      "surname": "string"
+    },
+    "studytype": "string",
+    "modality": "string",
+    "status": "string",
+    "description": "string",
+    "indication": "string",
+    "referring_physician": "string",
+    "equipment": "string",
+    "location": "string"
+  }
+}
+```
+
+#### POST /studies
+Crear nuevo estudio.
+
+**Request Body:**
+```json
+{
+  "patient_id": "uuid",
+  "studytype_id": "uuid",
+  "studydate": "datetime",
+  "modality_id": "uuid",
+  "description": "string",
+  "indication": "string",
+  "referring_physician_id": "uuid",
+  "equipment_id": "uuid",
+  "location_id": "uuid"
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Estudio creado exitosamente",
+  "data": {
+    "guid": "uuid"
+  }
+}
+```
+
+#### PUT /studies/:id
+Actualizar estudio.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Estudio actualizado exitosamente"
+}
+```
+
+#### DELETE /studies/:id
+Eliminar estudio.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Estudio eliminado exitosamente"
+}
+```
+
+#### GET /studies/:id/images
+Obtener imágenes del estudio.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "filename": "string",
+      "series_number": "string",
+      "instance_number": "string",
+      "url": "string"
+    }
+  ]
+}
+```
+
+#### POST /studies/:id/images
+Subir imagen al estudio.
+
+**Request Body:** (multipart/form-data)
+- `file`: Archivo de imagen
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Imagen subida exitosamente"
+}
+```
+
+#### GET /studies/:id/report
+Obtener informe del estudio.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "guid": "uuid",
+    "report_text": "string",
+    "findings": "string",
+    "conclusion": "string",
+    "radiologist": "string",
+    "report_date": "datetime",
+    "status": "string"
+  }
+}
+```
+
+#### POST /studies/:id/report
+Crear o actualizar informe del estudio.
+
+**Request Body:**
+```json
+{
+  "report_text": "string",
+  "findings": "string",
+  "conclusion": "string"
+}
+```
+
+#### PUT /studies/:id/status
+Cambiar estado del estudio.
+
+**Request Body:**
+```json
+{
+  "status": "string"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Estado actualizado exitosamente"
 }
 ```
 
 ---
 
-### Obtener Estudio
+## Administración
 
-#### `GET /studies/{guid}`
+### Base URL
+`/api/admin`
 
-Obtener detalles completos de un estudio específico, incluyendo sus series.
+### Endpoints
 
-**Headers:**
-```http
-Authorization: Bearer <access_token>
+#### GET /admin/users
+Listar usuarios del sistema.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "username": "string",
+      "name": "string",
+      "surname": "string",
+      "email": "string",
+      "user_type": "string",
+      "isactive": true,
+      "role": "string"
+    }
+  ]
+}
 ```
 
-**Path Parameters:**
-- `guid` (string): GUID del estudio
+#### POST /admin/users
+Crear nuevo usuario.
 
-**Respuesta (200):**
+**Request Body:**
+```json
+{
+  "username": "string",
+  "password": "string",
+  "name": "string",
+  "surname": "string",
+  "email": "string",
+  "user_type": "string",
+  "role_id": "uuid"
+}
+```
+
+#### PUT /admin/users/:id
+Actualizar usuario.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Usuario actualizado exitosamente"
+}
+```
+
+#### DELETE /admin/users/:id
+Desactivar usuario.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Usuario desactivado exitosamente"
+}
+```
+
+#### GET /admin/roles
+Listar roles disponibles.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "name": "string",
+      "description": "string",
+      "permissions": ["string"]
+    }
+  ]
+}
+```
+
+#### GET /admin/audit-logs
+Obtener logs de auditoría.
+
+**Query Parameters:**
+- `user_id`: Filtrar por usuario
+- `action`: Filtrar por acción
+- `date_from`: Fecha desde
+- `date_to`: Fecha hasta
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "user": "string",
+      "action": "string",
+      "entity": "string",
+      "timestamp": "datetime",
+      "details": "string"
+    }
+  ]
+}
+```
+
+---
+
+## Turnos
+
+### Base URL
+`/api/appointments`
+
+### Endpoints
+
+#### GET /appointments
+Listar turnos.
+
+**Query Parameters:**
+- `date`: Fecha específica (YYYY-MM-DD)
+- `equipment_id`: Filtrar por equipo
+- `status`: Filtrar por estado
+- `patient_id`: Filtrar por paciente
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "appointmentdate": "datetime",
+      "patient_name": "string",
+      "studytype": "string",
+      "equipment": "string",
+      "status": "string",
+      "duration": 30
+    }
+  ]
+}
+```
+
+#### POST /appointments
+Crear nuevo turno.
+
+**Request Body:**
+```json
+{
+  "patient_id": "uuid",
+  "appointmentdate": "datetime",
+  "studytype_id": "uuid",
+  "equipment_id": "uuid",
+  "duration": 30,
+  "notes": "string"
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Turno creado exitosamente",
+  "data": {
+    "guid": "uuid"
+  }
+}
+```
+
+#### PUT /appointments/:id
+Actualizar turno.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Turno actualizado exitosamente"
+}
+```
+
+#### DELETE /appointments/:id
+Cancelar turno.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Turno cancelado exitosamente"
+}
+```
+
+#### GET /appointments/availability
+Consultar disponibilidad de turnos.
+
+**Query Parameters:**
+- `equipment_id`: UUID del equipo
+- `date`: Fecha (YYYY-MM-DD)
+- `studytype_id`: Tipo de estudio
+
+**Response (200):**
 ```json
 {
   "success": true,
   "data": {
-    "study": {
-      "guid": "uuid-guid",
-      "study_instance_uid": "1.2.840.113619...",
-      "study_description": "TC de Tórax",
-      "modality": "CT",
-      "study_date": "2025-01-15",
-      "study_time": "14:30:00",
-      "accession_number": "ACC12345",
-      "patient_id": "patient-uuid",
-      "patient_name": "Juan Pérez",
-      "patient_nationalcode": "12345678",
-      "number_of_series": 3,
-      "number_of_instances": 150
-    },
-    "series": [
+    "available_slots": [
       {
-        "guid": "series-uuid",
-        "series_instance_uid": "1.2.840.113619...",
-        "series_description": "Axial",
-        "modality": "CT",
-        "series_number": 1,
-        "number_of_instances": 50
+        "start_time": "HH:MM",
+        "end_time": "HH:MM",
+        "available": true
       }
     ]
   }
 }
 ```
 
-**Errores:**
-- `404`: Estudio no encontrado
+#### POST /appointments/:id/confirm
+Confirmar turno.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Turno confirmado exitosamente"
+}
+```
+
+#### POST /appointments/:id/reschedule
+Reprogramar turno.
+
+**Request Body:**
+```json
+{
+  "new_date": "datetime"
+}
+```
 
 ---
 
-### Obtener Estudios de un Paciente
+## Institucional
 
-#### `GET /studies/patient/{patient_id}`
+### Base URL
+`/api/institutional`
 
-Obtener todos los estudios de un paciente específico.
+### Endpoints
 
-**Headers:**
-```http
-Authorization: Bearer <access_token>
+#### GET /institutional/locations
+Listar sedes/locaciones.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "name": "string",
+      "code": "string",
+      "address": "string",
+      "city": "string",
+      "phone": "string",
+      "email": "string",
+      "isactive": true
+    }
+  ]
+}
 ```
 
-**Path Parameters:**
-- `patient_id` (string): GUID del paciente
+#### GET /institutional/facilities
+Listar establecimientos.
 
-**Nota:** Si el usuario autenticado es un paciente, solo puede consultar sus propios estudios.
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "name": "string",
+      "code": "string",
+      "address": "string",
+      "city": "string",
+      "country": "string",
+      "phone": "string",
+      "email": "string",
+      "contact_person": "string",
+      "status": "string"
+    }
+  ]
+}
+```
 
-**Respuesta (200):**
+---
+
+## Médicos
+
+### Base URL
+`/api/physicians`
+
+### Endpoints
+
+#### GET /physicians
+Listar médicos.
+
+**Query Parameters:**
+- `specialty`: Filtrar por especialidad
+- `search`: Búsqueda por nombre
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "name": "string",
+      "surname": "string",
+      "specialty": "string",
+      "license_number": "string",
+      "email": "string",
+      "phone": "string"
+    }
+  ]
+}
+```
+
+#### POST /physicians
+Crear nuevo médico.
+
+**Request Body:**
+```json
+{
+  "name": "string",
+  "surname": "string",
+  "specialty": "string",
+  "license_number": "string",
+  "email": "string",
+  "phone": "string"
+}
+```
+
+#### PUT /physicians/:id
+Actualizar médico.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Médico actualizado exitosamente"
+}
+```
+
+#### DELETE /physicians/:id
+Eliminar médico.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Médico eliminado exitosamente"
+}
+```
+
+#### GET /physicians/:id/studies
+Obtener estudios del médico.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "studydate": "datetime",
+      "patient_name": "string",
+      "studytype": "string",
+      "status": "string"
+    }
+  ]
+}
+```
+
+#### GET /physicians/specialties
+Listar especialidades disponibles.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "name": "string",
+      "description": "string"
+    }
+  ]
+}
+```
+
+#### GET /physicians/:id/schedule
+Obtener agenda del médico.
+
+**Query Parameters:**
+- `date_from`: Fecha desde
+- `date_to`: Fecha hasta
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "date": "date",
+      "start_time": "HH:MM",
+      "end_time": "HH:MM",
+      "available": true
+    }
+  ]
+}
+```
+
+---
+
+## Reportes
+
+### Base URL
+`/api/reports`
+
+### Endpoints
+
+#### GET /reports/studies
+Reporte de estudios realizados.
+
+**Query Parameters:**
+- `date_from`: Fecha desde (YYYY-MM-DD)
+- `date_to`: Fecha hasta (YYYY-MM-DD)
+- `modality`: Filtrar por modalidad
+- `location_id`: Filtrar por sede
+- `format`: pdf|excel|json (default: json)
+
+**Response (200):**
 ```json
 {
   "success": true,
   "data": {
+    "total_studies": 150,
+    "by_modality": {
+      "RX": 50,
+      "TC": 30,
+      "RM": 40,
+      "ECO": 30
+    },
+    "by_status": {
+      "completed": 120,
+      "pending": 20,
+      "cancelled": 10
+    },
     "studies": [
       {
-        "guid": "uuid-guid",
-        "study_instance_uid": "1.2.840.113619...",
-        "study_description": "TC de Tórax",
-        "modality": "CT",
-        "study_date": "2025-01-15",
-        "study_time": "14:30:00",
-        "accession_number": "ACC12345",
-        "number_of_series": 3,
-        "number_of_instances": 150
+        "guid": "uuid",
+        "studydate": "datetime",
+        "patient": "string",
+        "studytype": "string",
+        "status": "string"
       }
     ]
   }
 }
 ```
 
-**Errores:**
-- `403`: No autorizado (paciente intentando ver estudios de otro paciente)
+#### GET /reports/appointments
+Reporte de turnos.
 
----
+**Query Parameters:**
+- `date_from`: Fecha desde
+- `date_to`: Fecha hasta
+- `status`: Filtrar por estado
 
-## 📝 Formato de Respuestas
-
-Todas las respuestas de la API siguen el siguiente formato:
-
-### Respuesta Exitosa
-
+**Response (200):**
 ```json
 {
   "success": true,
   "data": {
-    // Datos específicos del endpoint
-  },
-  "message": "Mensaje opcional"
-}
-```
-
-### Respuesta de Error
-
-```json
-{
-  "success": false,
-  "message": "Descripción del error"
-}
-```
-
----
-
-## ⚠️ Manejo de Errores
-
-### Códigos de Estado HTTP
-
-- `200` - OK: Solicitud exitosa
-- `201` - Created: Recurso creado exitosamente
-- `400` - Bad Request: Datos inválidos o faltantes
-- `401` - Unauthorized: Token inválido, expirado o faltante
-- `403` - Forbidden: No tiene permisos para esta acción
-- `404` - Not Found: Recurso no encontrado
-- `500` - Internal Server Error: Error del servidor
-
-### Errores Comunes
-
-#### Token Expirado (401)
-
-```json
-{
-  "msg": "Token has expired"
-}
-```
-
-**Solución:** Usar el refresh token para obtener un nuevo access token.
-
-#### Token Inválido (401)
-
-```json
-{
-  "msg": "Invalid token"
-}
-```
-
-**Solución:** Redirigir al usuario al login.
-
-#### Datos Faltantes (400)
-
-```json
-{
-  "success": false,
-  "message": "El campo name es requerido"
-}
-```
-
----
-
-## 💡 Ejemplos de Uso
-
-### Ejemplo 1: Flujo Completo de Autenticación
-
-```javascript
-// 1. Login
-const loginResponse = await fetch('http://148.230.72.8:5001/api/auth/login', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    username: 'usuario',
-    password: 'password123',
-    user_type: 'staff'
-  })
-});
-
-const loginData = await loginResponse.json();
-
-if (loginData.success) {
-  // Guardar tokens
-  localStorage.setItem('access_token', loginData.data.access_token);
-  localStorage.setItem('refresh_token', loginData.data.refresh_token);
-  localStorage.setItem('user', JSON.stringify(loginData.data.user));
-}
-
-// 2. Hacer petición autenticada
-const token = localStorage.getItem('access_token');
-
-const patientsResponse = await fetch('http://148.230.72.8:5001/api/patients?page=1', {
-  method: 'GET',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
+    "total_appointments": 200,
+    "by_status": {
+      "scheduled": 100,
+      "confirmed": 70,
+      "cancelled": 30
+    },
+    "appointments": [...]
   }
-});
+}
+```
 
-const patientsData = await patientsResponse.json();
+#### GET /reports/revenue
+Reporte de facturación.
 
-// 3. Manejar token expirado
-if (patientsResponse.status === 401) {
-  // Intentar refrescar token
-  const refreshToken = localStorage.getItem('refresh_token');
-  
-  const refreshResponse = await fetch('http://148.230.72.8:5001/api/auth/refresh', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${refreshToken}`,
-      'Content-Type': 'application/json'
+**Query Parameters:**
+- `date_from`: Fecha desde
+- `date_to`: Fecha hasta
+- `location_id`: Filtrar por sede
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "total_revenue": 150000,
+    "by_location": {
+      "Sede A": 80000,
+      "Sede B": 70000
+    },
+    "by_studytype": {
+      "Radiografía": 30000,
+      "Tomografía": 50000,
+      "Resonancia": 70000
     }
-  });
-  
-  if (refreshResponse.ok) {
-    const refreshData = await refreshResponse.json();
-    localStorage.setItem('access_token', refreshData.data.access_token);
-    // Reintentar petición original
-  } else {
-    // Redirigir a login
-    window.location.href = '/login';
   }
 }
 ```
 
----
+#### GET /reports/patients
+Reporte de pacientes.
 
-### Ejemplo 2: Configuración de Axios con Interceptors
+**Query Parameters:**
+- `date_from`: Fecha desde (fecha de registro)
+- `date_to`: Fecha hasta
 
-```javascript
-import axios from 'axios';
-
-const api = axios.create({
-  baseURL: 'http://148.230.72.8:5001/api',
-  headers: {
-    'Content-Type': 'application/json',
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "total_patients": 500,
+    "new_patients": 50,
+    "by_gender": {
+      "M": 250,
+      "F": 250
+    },
+    "by_age_range": {
+      "0-18": 50,
+      "19-40": 200,
+      "41-60": 150,
+      "60+": 100
+    }
   }
-});
+}
+```
 
-// Interceptor para agregar token a todas las peticiones
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+#### GET /reports/equipment-usage
+Reporte de uso de equipos.
 
-// Interceptor para manejar errores de autenticación
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+**Query Parameters:**
+- `date_from`: Fecha desde
+- `date_to`: Fecha hasta
+- `equipment_id`: Filtrar por equipo
 
-    // Si el token expiró y no hemos reintentado
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        const response = await axios.post(
-          'http://148.230.72.8:5001/api/auth/refresh',
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${refreshToken}`
-            }
-          }
-        );
-
-        const { access_token } = response.data.data;
-        localStorage.setItem('access_token', access_token);
-
-        // Reintentar petición original con nuevo token
-        originalRequest.headers.Authorization = `Bearer ${access_token}`;
-        return api(originalRequest);
-      } catch (refreshError) {
-        // Refresh token también expiró, redirigir a login
-        localStorage.clear();
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "equipment": [
+      {
+        "equipment_name": "string",
+        "total_studies": 50,
+        "utilization_rate": 0.75,
+        "downtime_hours": 2
       }
-    }
-
-    return Promise.reject(error);
+    ]
   }
-);
-
-export default api;
+}
 ```
 
----
+#### GET /reports/physicians-productivity
+Reporte de productividad de médicos.
 
-### Ejemplo 3: Buscar y Crear Paciente
+**Query Parameters:**
+- `date_from`: Fecha desde
+- `date_to`: Fecha hasta
+- `physician_id`: Filtrar por médico
 
-```javascript
-import api from './services/api';
-
-// Buscar pacientes
-async function searchPatients(searchTerm) {
-  try {
-    const response = await api.get('/patients', {
-      params: {
-        search: searchTerm,
-        page: 1,
-        per_page: 20
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "physicians": [
+      {
+        "physician_name": "string",
+        "total_reports": 45,
+        "avg_report_time": 15,
+        "pending_reports": 5
       }
-    });
-    
-    if (response.data.success) {
-      return response.data.data.patients;
-    }
-  } catch (error) {
-    console.error('Error buscando pacientes:', error);
-    throw error;
+    ]
   }
 }
+```
 
-// Crear nuevo paciente
-async function createPatient(patientData) {
-  try {
-    const response = await api.post('/patients', {
-      name: patientData.name,
-      surname: patientData.surname,
-      nationalcode: patientData.nationalcode,
-      patientid: patientData.patientid,
-      email: patientData.email,
-      phone: patientData.phone,
-      birthdate: patientData.birthdate,
-      gender: patientData.gender
-    });
-    
-    if (response.data.success) {
-      return response.data.data.guid;
-    }
-  } catch (error) {
-    console.error('Error creando paciente:', error);
-    throw error;
+#### POST /reports/custom
+Generar reporte personalizado.
+
+**Request Body:**
+```json
+{
+  "report_type": "string",
+  "filters": {
+    "date_from": "date",
+    "date_to": "date",
+    "additional_filters": {}
+  },
+  "columns": ["string"],
+  "format": "pdf|excel|json"
+}
+```
+
+#### GET /reports/:id/download
+Descargar reporte generado.
+
+**Response:** Archivo PDF o Excel
+
+#### GET /reports/dashboard
+Datos para dashboard principal.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "today_appointments": 15,
+    "pending_studies": 8,
+    "pending_reports": 12,
+    "equipment_available": 5,
+    "revenue_today": 15000,
+    "new_patients_week": 25
+  }
+}
+```
+
+#### GET /reports/waitlist
+Reporte de lista de espera.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "total_waiting": 50,
+    "by_priority": {
+      "high": 10,
+      "medium": 25,
+      "low": 15
+    },
+    "avg_wait_days": 5
   }
 }
 ```
 
 ---
 
-### Ejemplo 4: Obtener Estudios con Filtros
+## Configuración
 
-```javascript
-import api from './services/api';
+### Base URL
+`/api/config`
 
-async function getStudies(filters = {}) {
-  try {
-    const params = {
-      page: filters.page || 1,
-      per_page: filters.perPage || 20
-    };
-    
-    if (filters.patientId) params.patient_id = filters.patientId;
-    if (filters.modality) params.modality = filters.modality;
-    if (filters.dateFrom) params.date_from = filters.dateFrom;
-    if (filters.dateTo) params.date_to = filters.dateTo;
-    
-    const response = await api.get('/studies', { params });
-    
-    if (response.data.success) {
-      return {
-        studies: response.data.data.studies,
-        total: response.data.data.total,
-        page: response.data.data.page
-      };
-    }
-  } catch (error) {
-    console.error('Error obteniendo estudios:', error);
-    throw error;
+### Endpoints
+
+#### GET /config/system
+Obtener configuración del sistema.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "system_name": "string",
+    "version": "string",
+    "timezone": "string",
+    "language": "string",
+    "date_format": "string",
+    "currency": "string"
   }
 }
+```
 
-// Uso:
-const studies = await getStudies({
-  patientId: 'uuid-paciente',
-  modality: 'CT',
-  dateFrom: '2025-01-01',
-  dateTo: '2025-12-31',
-  page: 1,
-  perPage: 20
-});
+#### PUT /config/system
+Actualizar configuración del sistema.
+
+**Request Body:**
+```json
+{
+  "system_name": "string",
+  "timezone": "string",
+  "language": "string",
+  "date_format": "string"
+}
+```
+
+#### GET /config/workflow
+Obtener configuración de flujo de trabajo.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "auto_confirm_appointments": true,
+    "require_referral": false,
+    "default_study_duration": 30,
+    "email_notifications": true
+  }
+}
+```
+
+#### GET /config/study-types
+Listar tipos de estudio disponibles.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "code": "string",
+      "description": "string",
+      "modality": "string",
+      "bodypart": "string",
+      "duration": 30,
+      "isactive": true
+    }
+  ]
+}
+```
+
+#### POST /config/study-types
+Crear tipo de estudio.
+
+**Request Body:**
+```json
+{
+  "code": "string",
+  "description": "string",
+  "modality_id": "uuid",
+  "bodypart_id": "uuid",
+  "duration": 30
+}
+```
+
+#### PUT /config/study-types/:id
+Actualizar tipo de estudio.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Tipo de estudio actualizado exitosamente"
+}
+```
+
+#### DELETE /config/study-types/:id
+Eliminar tipo de estudio.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Tipo de estudio eliminado exitosamente"
+}
+```
+
+#### GET /config/modalities
+Listar modalidades (RX, TC, RM, ECO, etc.).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "externalcode": "string",
+      "description": "string"
+    }
+  ]
+}
+```
+
+#### GET /config/body-parts
+Listar partes del cuerpo.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "description": "string"
+    }
+  ]
+}
+```
+
+#### GET /config/study-groups
+Listar grupos de estudio.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "description": "string"
+    }
+  ]
+}
+```
+
+#### GET /config/equipment
+Listar equipos disponibles.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "code": "string",
+      "description": "string",
+      "modality": "string",
+      "location": "string",
+      "status": "string",
+      "isactive": true
+    }
+  ]
+}
+```
+
+#### POST /config/equipment
+Crear equipo.
+
+**Request Body:**
+```json
+{
+  "code": "string",
+  "description": "string",
+  "modality_id": "uuid",
+  "location_id": "uuid",
+  "aetitle": "string"
+}
+```
+
+#### DELETE /config/equipment/:id
+Eliminar equipo.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Equipo eliminado exitosamente"
+}
+```
+
+#### GET /config/locations
+Listar ubicaciones/sedes.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "name": "string",
+      "code": "string",
+      "address": "string",
+      "city": "string",
+      "phone": "string",
+      "facility": "string"
+    }
+  ]
+}
+```
+
+#### POST /config/locations
+Crear ubicación.
+
+**Request Body:**
+```json
+{
+  "name": "string",
+  "code": "string",
+  "address": "string",
+  "city": "string",
+  "phone": "string",
+  "facility_id": "uuid"
+}
+```
+
+#### DELETE /config/locations/:id
+Eliminar ubicación.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Ubicación eliminada exitosamente"
+}
+```
+
+#### GET /config/facilities
+Listar establecimientos.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "name": "string",
+      "code": "string",
+      "email": "string",
+      "contact_person": "string",
+      "description": "string",
+      "address": "string",
+      "city": "string",
+      "country": "string",
+      "phone": "string",
+      "status": "string"
+    }
+  ]
+}
+```
+
+#### POST /config/facilities
+Crear establecimiento.
+
+**Request Body:**
+```json
+{
+  "name": "string",
+  "code": "string",
+  "email": "string",
+  "contact_person": "string",
+  "address": "string",
+  "city": "string",
+  "country": "string",
+  "phone": "string"
+}
+```
+
+#### PUT /config/facilities/:id
+Actualizar establecimiento.
+
+**Request Body:**
+```json
+{
+  "name": "string",
+  "code": "string",
+  "email": "string",
+  "contact_person": "string",
+  "description": "string",
+  "address": "string",
+  "city": "string",
+  "country": "string",
+  "phone": "string",
+  "status": "string"
+}
+```
+
+#### PATCH /config/facilities/:id
+Actualizar parcialmente establecimiento (mismos campos que PUT, todos opcionales).
+
+#### DELETE /config/facilities/:id
+Eliminar establecimiento.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Establecimiento eliminado exitosamente"
+}
 ```
 
 ---
 
-## 🔒 Seguridad
+## Códigos de Error Comunes
 
-### Mejores Prácticas
+- **400 Bad Request**: Datos inválidos en la solicitud
+- **401 Unauthorized**: Token de autenticación inválido o ausente
+- **403 Forbidden**: Sin permisos para realizar la operación
+- **404 Not Found**: Recurso no encontrado
+- **409 Conflict**: Conflicto con el estado actual (ej: duplicado)
+- **422 Unprocessable Entity**: Validación de datos falló
+- **500 Internal Server Error**: Error interno del servidor
 
-1. **Nunca almacenar tokens en cookies sin httpOnly**
-2. **Usar HTTPS en producción**
-3. **Implementar refresh token rotation** (recomendado)
-4. **Validar y sanitizar inputs** antes de enviar
-5. **Manejar errores de forma segura** (no exponer detalles internos)
+## Notas Generales
 
-### CORS
-
-El backend ya tiene CORS configurado para aceptar peticiones desde:
-- `http://localhost:5173` (desarrollo local)
-- `http://148.230.72.8:5173` (servidor de desarrollo)
-
----
-
-## 📚 Recursos Adicionales
-
-### Modalidades DICOM Comunes
-
-- `CT` - Tomografía Computarizada
-- `MR` - Resonancia Magnética
-- `CR` - Radiografía Computarizada
-- `DX` - Radiografía Digital
-- `US` - Ultrasonido
-- `XA` - Angiografía por Rayos X
-- `MG` - Mamografía
-
-### Tipos de Usuario
-
-- `staff` - Personal médico/administrativo (acceso completo)
-- `patient` - Paciente (acceso limitado a sus propios datos)
-
----
-
-## 🆘 Soporte
-
-**Errores o problemas con la API:**
-1. Verificar logs del backend: `journalctl -u nextris-dev-react -f`
-2. Probar endpoint con curl o Postman
-3. Revisar formato de datos enviados
-
-**Servidor Backend:**
-- URL: `http://148.230.72.8:5001`
-- Health Check: `http://148.230.72.8:5001/api/health`
-
-**Logs del servidor:**
-```bash
-ssh nextris@148.230.72.8
-journalctl -u nextris-dev-react -f
+### Autenticación
+Todos los endpoints (excepto `/auth/login`) requieren un token JWT válido en el header:
+```
+Authorization: Bearer {access_token}
 ```
 
+### Paginación
+Los endpoints que retornan listas soportan paginación con los parámetros:
+- `page`: Número de página (default: 1)
+- `per_page`: Items por página (default: 20, max: 100)
+
+### Formato de Fechas
+- Fechas: `YYYY-MM-DD`
+- Fechas con hora: `YYYY-MM-DD HH:MM:SS`
+- Timezone: UTC por defecto
+
+### Respuestas Estandarizadas
+Todas las respuestas siguen el formato:
+```json
+{
+  "success": true|false,
+  "data": {},
+  "message": "string"
+}
+```
+
+### Rate Limiting
+- 1000 requests por hora por usuario autenticado
+- 100 requests por hora para endpoints públicos
+
 ---
 
-**Última actualización:** 2025-12-04  
-**Versión API:** 1.0.0
+**Versión:** 1.0  
+**Última actualización:** Diciembre 2025
