@@ -1085,7 +1085,12 @@ Orden creada con número de admisión y acceso
 ```
 
 #### POST /admission/create-order
-Crear orden de admisión (worklist) con un examen.
+Crear orden de admisión (worklist) con un examen. Este endpoint:
+1. Valida la existencia del paciente, equipo y tipo de estudio
+2. Genera números de admisión y acceso automáticamente
+3. **Envía mensaje HL7 al dcm4chee (que crea el mwl_item en el worklist DICOM)**
+4. Inserta el examen en tbexamination
+5. Crea el registro en tbreport
 
 **Headers:**
 ```
