@@ -989,7 +989,7 @@ Authorization: Bearer {access_token}
 ---
 
 #### GET /config/equipment
-Obtener equipos disponibles (opcionalmente filtrados por ubicación).
+Obtener equipos disponibles filtrados por ubicación.
 
 **Headers:**
 ```
@@ -997,7 +997,7 @@ Authorization: Bearer {access_token}
 ```
 
 **Query Parameters:**
-- `location_id` (opcional): Filtrar equipos por ubicación
+- `location_id` (OBLIGATORIO): UUID de la ubicación para filtrar equipos
 
 **Response (200):**
 ```json
@@ -1006,19 +1006,27 @@ Authorization: Bearer {access_token}
   "data": [
     {
       "guid": "eq001",
-      "code": "TC-001",
       "description": "Tomógrafo Siemens SOMATOM",
-      "modality": "CT",
-      "location": "Sede Centro"
+      "aeTitle": "CT_SIEMENS_01",
+      "externalcode": "TC-001",
+      "modality": "CT"
     },
     {
       "guid": "eq002",
-      "code": "RX-001",
       "description": "Radiografo Digital Philips",
-      "modality": "CR",
-      "location": "Sede Centro"
+      "aeTitle": "CR_PHILIPS_01",
+      "externalcode": "RX-001",
+      "modality": "CR"
     }
   ]
+}
+```
+
+**Response (400) - Sin location_id:**
+```json
+{
+  "success": false,
+  "message": "El parámetro location_id es obligatorio"
 }
 ```
 
@@ -1055,9 +1063,95 @@ GET /api/config/equipment?location_id=...
 Usuario selecciona equipo
 ```
 
-**Paso 5: Finalizar Orden**
+**Paso 5: Cargar Médicos Solicitantes**
+```
+GET /api/institutional/locations/{location_id}/physicians
+↓
+Usuario selecciona médico solicitante
+```
+
+**Paso 6: Cargar Obras Sociales**
+```
+GET /api/institutional/locations/{location_id}/health-insurances
+↓
+Usuario selecciona obra social
+```
+
+**Paso 7: Finalizar Orden**
 ```
 POST /api/... (crear worklist)
+```
+
+#### GET /institutional/locations/{location_id}/physicians
+Obtener médicos solicitantes filtrados por ubicación.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Path Parameters:**
+- `location_id` (OBLIGATORIO): UUID de la ubicación
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "physician-guid-1",
+      "description": "Dr. Juan Pérez"
+    },
+    {
+      "guid": "physician-guid-2",
+      "description": "Dra. María González"
+    }
+  ]
+}
+```
+
+**Response (400) - Sin location_id:**
+```json
+{
+  "success": false,
+  "message": "El parámetro location_id es obligatorio"
+}
+```
+
+#### GET /institutional/locations/{location_id}/health-insurances
+Obtener obras sociales (price lists) filtradas por ubicación.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Path Parameters:**
+- `location_id` (OBLIGATORIO): UUID de la ubicación
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "insurance-guid-1",
+      "description": "OSDE"
+    },
+    {
+      "guid": "insurance-guid-2",
+      "description": "Swiss Medical"
+    }
+  ]
+}
+```
+
+**Response (400) - Sin location_id:**
+```json
+{
+  "success": false,
+  "message": "El parámetro location_id es obligatorio"
+}
 ```
 
 ---
