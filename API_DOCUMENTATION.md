@@ -1079,8 +1079,67 @@ Usuario selecciona obra social
 
 **Paso 7: Finalizar Orden**
 ```
-POST /api/... (crear worklist)
+POST /api/admission/create-order
+↓
+Orden creada con número de admisión y acceso
 ```
+
+#### POST /admission/create-order
+Crear orden de admisión (worklist) con un examen.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "patient_id": "550e8400-e29b-41d4-a716-446655440000",
+  "location_id": "d290f1ee-6c54-4b01-90e6-d701748f0851",
+  "exam": {
+    "study_type_id": "cb90d4eb-b298-4e6e-91ea-010a3e4dc8d9",
+    "equipment_id": "eq001-guid",
+    "physician_id": "physician-guid" (opcional),
+    "insurance_id": "insurance-guid" (opcional),
+    "severity": "normal" | "urgent" (opcional, default: "normal")
+  }
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "admission_number": "ADM008",
+    "accession_number": "ACC008",
+    "exam_id": "9b130f5c-e689-4b47-9488-3629a24d9cac",
+    "study_instance_uid": "1.2.840.1765496198069.NR00000013"
+  },
+  "message": "Orden creada exitosamente"
+}
+```
+
+**Response (400) - Campos obligatorios faltantes:**
+```json
+{
+  "success": false,
+  "message": "patient_id es obligatorio"
+}
+```
+
+**Campos Obligatorios:**
+- `patient_id`: UUID del paciente
+- `location_id`: UUID de la ubicación
+- `exam.study_type_id`: UUID del tipo de estudio
+- `exam.equipment_id`: UUID del equipo
+
+**Campos Opcionales:**
+- `exam.physician_id`: UUID del médico solicitante
+- `exam.insurance_id`: UUID de la obra social
+- `exam.severity`: "normal" o "urgent"
 
 #### GET /institutional/locations/{location_id}/physicians
 Obtener médicos solicitantes filtrados por ubicación.
