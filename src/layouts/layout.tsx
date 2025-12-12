@@ -45,6 +45,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                             backgroundRepeat: 'no-repeat',
+                            backgroundAttachment: 'fixed',
                         }}
                     />
 
