@@ -38,13 +38,6 @@ export const Prestacion = ({
     });
 
     const handleSubmit = () => {
-
-        if (!selectedMedico || !selectedObrasSociales) {
-            toast.error("Por favor, complete todos los campos obligatorios.", {
-                position: "top-right",
-            });
-            return;
-        }
         mutationCrearOrden.mutate({
             patient_id: selectedPatient?.guid,
             location_id: selectedDireccion,

@@ -111,7 +111,7 @@ export const AdmisionEspontanea = () => {
                             <TabsTrigger
                                 value="examen"
                                 disabled={!selectedPatient}
-                                className="bg-purple-100 data-[state=active]:bg-brand-purple data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-3 px-4 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                                className="bg-purple-100 data-[state=active]:bg-brand-purple data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-3 px-4 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed enabled:cursor-pointer"
                             >
                                 <ClipboardList className="w-4 h-4" />
                                 <span className="font-semibold">2. Examen</span>
@@ -119,7 +119,7 @@ export const AdmisionEspontanea = () => {
                             <TabsTrigger
                                 value="prestacion"
                                 disabled={!selectedExam}
-                                className="bg-purple-100 data-[state=active]:bg-brand-purple data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-3 px-4 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                                className="bg-purple-100 data-[state=active]:bg-brand-purple data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-3 px-4 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed enabled:cursor-pointer"
                             >
                                 <FileCheck className="w-4 h-4" />
                                 <span className="font-semibold">3. Prestación</span>
