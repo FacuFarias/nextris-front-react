@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { postPacientesDireccion } from "../services/pacientes-direccion.service";
+import { creatOrderForPatient, postPacientesDireccion } from "../services/pacientes-direccion.service";
+import { toast } from "sonner";
 
 export const usePacienteDireccion = () => {
     const queryClient = useQueryClient();
@@ -13,6 +14,25 @@ export const usePacienteDireccion = () => {
         ,
         onError: (error: any) => {
             console.error("Error al obtener pacientes por dirección:", error);
+        },
+    });
+}
+
+export const useCrearOrdenParaPaciente = (onSuccessCallback?: () => void) => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: any) =>
+            creatOrderForPatient({ data }),
+        onSuccess: () => {
+            toast.success("Orden creada exitosamente", {
+                position: "top-right",
+            });
+            queryClient.invalidateQueries({ queryKey: ["pacientesDireccion"] });
+            onSuccessCallback?.();
+        }
+        ,
+        onError: (error: any) => {
+            console.error("Error al crear orden para paciente:", error);
         },
     });
 }

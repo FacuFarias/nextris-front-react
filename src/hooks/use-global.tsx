@@ -12,6 +12,11 @@ interface Modalidad {
     description: string;
     externalcode: string;
 }
+
+interface MedicosPorLocacion {
+    guid: string;
+    description: string;
+}
 export const usePartesDelCuerpo = () => {
     const { data, isLoading } = useQuery<ParteCuerpo[]>({
         queryKey: ['partes-del-cuerpo'],
@@ -53,7 +58,7 @@ export const useEquiposPorLocacion = (locationGuid: string) => {
 }
 
 export const useMedicosPorLocacion = (locationGuid: string) => {
-    const { data, isLoading } = useQuery<any[]>({
+    const { data, isLoading } = useQuery<MedicosPorLocacion[]>({
         queryKey: ['medicos-por-locacion', locationGuid],
         queryFn: () => getMedicosPorLocacion(locationGuid),
         staleTime: 10 * 60 * 1000, // 10 minutos

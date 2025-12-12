@@ -1,12 +1,18 @@
 import { User, ClipboardList, Monitor } from "lucide-react"
 import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPaciente"
 import { useMedicosPorLocacion, useObrasSocialesPorLocacion } from "@/hooks/use-global";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
+import { PrimaryButton } from "@/components/PrimaryButton";
+import { useCrearOrdenParaPaciente } from "../hooks/use-paciente-direccion";
+import { toast } from "sonner";
 
 interface PrestacionProps {
     selectedPatient: Patient | null;
     selectedEstudio: any;
     selectedEquipo: any;
     selectedDireccion?: string;
+    onResetForm?: () => void;
 }
 
 export const Prestacion = ({
@@ -14,32 +20,117 @@ export const Prestacion = ({
     selectedEstudio,
     selectedEquipo,
     selectedDireccion,
+    onResetForm,
 }: PrestacionProps) => {
 
+    const [selectedMedico, setSelectedMedico] = useState<string>("");
+    const [selectedObrasSociales, setSelectedObrasSociales] = useState<string>("");
+    const [selectedPrioridad, setSelectedPrioridad] = useState<string>("");
     const { data: medicos } = useMedicosPorLocacion(selectedDireccion || "");
     const { data: obrasSociales } = useObrasSocialesPorLocacion(selectedDireccion || "");
+    const mutationCrearOrden = useCrearOrdenParaPaciente(() => {
+        // Resetear formulario local
+        setSelectedMedico("");
+        setSelectedObrasSociales("");
+        setSelectedPrioridad("");
+        // Llamar callback del padre para resetear todo
+        onResetForm?.();
+    });
 
-    console.log(medicos)
-    console.log(obrasSociales)
+    const handleSubmit = () => {
+
+        if (!selectedMedico || !selectedObrasSociales) {
+            toast.error("Por favor, complete todos los campos obligatorios.", {
+                position: "top-right",
+            });
+            return;
+        }
+        mutationCrearOrden.mutate({
+            patient_id: selectedPatient?.guid,
+            location_id: selectedDireccion,
+            exam: {
+                study_type_id: selectedEstudio?.guid,
+                equipment_id: selectedEquipo?.guid,
+                physician_id: selectedMedico || undefined,
+                insurance_id: selectedObrasSociales || undefined,
+                severity: selectedPrioridad || "normal",
+            }
+        });
+    }
     return (
         <div className="space-y-6">
-            {/* Header Card con resumen */}
-            {/* <div className="bg-linear-to-r from-brand-purple to-purple-600 rounded-lg p-6 text-white shadow-lg">
-                <div className="flex items-center gap-3 mb-4">
-                    <FileCheck className="w-8 h-8" />
-                    <h2 className="text-2xl font-bold">Prestación</h2>
-                </div>
-                <p className="text-purple-100">Revise la información seleccionada antes de continuar</p>
-            </div> */}
-
-            {/* Grid con la información */}
-
-
             {/* Sección de acciones o formulario adicional */}
             <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4">Información Adicional</h3>
-                <div className="text-center text-gray-500 py-8">
-                    <p>Select de medicos y obras sociales por locacion</p>
+                <div className="w-full flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold text-gray-700 ">Información Adicional</h3>
+
+                    <div className="">
+                        <PrimaryButton onClick={handleSubmit} >
+                            Crear orden
+                        </PrimaryButton>
+                    </div>
+                </div>
+                <div className="space-y-4">
+                    <div className="w-full flex gap-3">
+                        <div className="w-full">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Médico Solicitante
+                            </label>
+                            <Select
+                                onValueChange={setSelectedMedico}
+                                value={selectedMedico}
+                                required={true}
+                            >
+                                <SelectTrigger className="w-full border-purple-300 focus:border-purple-500 focus:ring-purple-500">
+                                    <SelectValue placeholder="Seleccione un médico" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {medicos?.map((medico: any) => (
+                                        <SelectItem key={medico.guid} value={medico.guid}>
+                                            {medico.description}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="w-full">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Obras Sociales Solicitante
+                            </label>
+                            <Select
+                                onValueChange={setSelectedObrasSociales}
+                                value={selectedObrasSociales}
+                            >
+                                <SelectTrigger className="w-full border-purple-300 focus:border-purple-500 focus:ring-purple-500">
+                                    <SelectValue placeholder="Seleccione una obra social" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {obrasSociales?.map((obraSocial: any) => (
+                                        <SelectItem key={obraSocial.guid} value={obraSocial.guid}>
+                                            {obraSocial.description}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div className="w-1/2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Prioridad
+                        </label>
+                        <Select
+                            onValueChange={setSelectedPrioridad}
+                            value={selectedPrioridad}
+                        >
+                            <SelectTrigger className="w-full border-purple-300 focus:border-purple-500 focus:ring-purple-500">
+                                <SelectValue placeholder="Seleccione la prioridad" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="normal">Normal</SelectItem>
+                                <SelectItem value="urgente">Urgente</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
             </div>
 
@@ -122,6 +213,9 @@ export const Prestacion = ({
                     </div>
                 </div>
             </div>
+
+
+
         </div>
     )
 }

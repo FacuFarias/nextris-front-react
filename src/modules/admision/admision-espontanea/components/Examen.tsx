@@ -1,4 +1,4 @@
-import { User, ClipboardList, Check, ChevronLeft, ChevronRight } from "lucide-react"
+import { ClipboardList, Check, ChevronLeft, ChevronRight } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,6 @@ interface ExamenProps {
 }
 
 export const Examen = ({
-    selectedPatient,
     selectedDireccion,
     onEquipoSelected,
 }: ExamenProps) => {
@@ -34,6 +33,7 @@ export const Examen = ({
     const filteredEquipos = equiposData?.filter((equipo: any) =>
         equipo.modality === selectedEstudio.modalityName
     ) || [];
+
     // Filtrar estudios por modalidad y parte del cuerpo
     const filteredEstudios = (() => {
         if (!estudiosData) return [];
@@ -42,11 +42,11 @@ export const Examen = ({
         return estudiosData.filter((estudio: any) => {
             let matches = true;
 
-            if (selectedTipoExamen && estudio.modality !== selectedTipoExamen) {
+            if (selectedTipoExamen && selectedTipoExamen !== 'all' && estudio.modality !== selectedTipoExamen) {
                 matches = false;
             }
 
-            if (selectedParteCuerpo && estudio.bodypart !== selectedParteCuerpo) {
+            if (selectedParteCuerpo && selectedParteCuerpo !== 'all' && estudio.bodypart !== selectedParteCuerpo) {
                 matches = false;
             }
 
@@ -88,22 +88,7 @@ export const Examen = ({
 
     return (
         <div className="space-y-6">
-            {/* Header - Paciente Seleccionado */}
-            <div className="bg-white rounded-lg border border-purple-100 shadow-sm overflow-hidden">
-                <div className="bg-brand-purple p-6 text-white">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
-                            <User className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-purple-100">Paciente seleccionado</p>
-                            <h2 className="text-xl font-bold">
-                                {selectedPatient?.name} {selectedPatient?.surname}
-                            </h2>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
 
             {/* Grid de contenido */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -131,6 +116,7 @@ export const Examen = ({
                                         <SelectValue placeholder="Seleccionar modalidad" />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="all">Todos</SelectItem>
                                         {(tiposExamenData ?? []).length > 0 ? (
                                             (tiposExamenData ?? []).map((tipo: any) => (
                                                 <SelectItem key={tipo.externalcode} value={tipo.externalcode}>
@@ -158,6 +144,7 @@ export const Examen = ({
                                         <SelectValue placeholder="Seleccionar parte del cuerpo" />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="all">Todos</SelectItem>
                                         {(partesDelCuerpoData ?? []).length > 0 ? (
                                             partesDelCuerpoData?.map((parte: any) => (
                                                 <SelectItem key={parte.description} value={parte.description}>

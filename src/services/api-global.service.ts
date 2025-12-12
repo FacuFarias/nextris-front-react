@@ -32,7 +32,7 @@ export const getEstudios = async () => {
             modality: item[3],
             bodypart: item[4],
             studygroup: item[5],
-            modalityName: item[3] === 'RX' ? 'RAYOS X' : item[3] === 'CT' ? 'TOMOGRAFÍA' : item[3] === 'RMN' ? 'RESONANCIA' : item[3] === 'US' ? 'ECOGRAFIA' : item[3] === 'MG' ? 'MAMOGRAFÍA' : 'OTRO',
+            modalityName: item[3] === 'RX' ? 'RAYOS X' : item[3] === 'CT' ? 'TOMOGRAFIA' : item[3] === 'RMN' ? 'RESONANCIA' : item[3] === 'US' ? 'ECOGRAFIA' : item[3] === 'MG' ? 'MAMOGRAFÍA' : 'OTRO',
         }));
     } catch (error) {
         throw error;
@@ -62,7 +62,7 @@ export const getMedicosPorLocacion = async (locationGuid: string) => {
 
 export const getObrasSocialesPorLocacion = async (locationGuid: string) => {
     try {
-        const response = await api.get(`/institutional/locations/${locationGuid}/insurance`);
+        const response = await api.get(`/institutional/locations/${locationGuid}/health-insurances`);
         return response.data.data;
     } catch (error) {
         throw error;
