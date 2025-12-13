@@ -38,7 +38,21 @@ const menuItems: MenuItem[] = [
         label: "Pacientes",
         path: "/pacientes",
     },
-    { icon: Calendar, label: "Citas", path: "/citas" },
+    {
+        icon: Calendar, label: "Citas",
+        subItems: [
+            {
+                icon: Calendar,
+                label: "Agendar Cita",
+                path: "/cita/nueva-cita",
+            },
+            {
+                icon: Calendar,
+                label: "Editar Citas",
+                path: "/cita/editar-cita",
+            },
+        ]
+    },
     {
         icon: CalendarPlus, label: "Admision",
 
@@ -60,7 +74,7 @@ const menuItems: MenuItem[] = [
             }
         ]
     },
-    { icon: Home, label: "Ubicacion", path: "/ubicacion" },
+    { icon: Home, label: "Ejecucion", path: "/ejecucion" },
     { icon: FileText, label: "Redaccion", path: "/redaccion" },
     { icon: Send, label: "Distribucion", path: "/distribucion" },
     {

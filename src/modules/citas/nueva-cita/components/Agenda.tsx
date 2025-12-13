@@ -1,0 +1,573 @@
+import React, { useRef, useState, useEffect } from 'react'
+import FullCalendar from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import interactionPlugin, { Draggable } from '@fullcalendar/interaction'
+import { ClipboardList, GripVertical, Monitor, Calendar } from 'lucide-react'
+import { useEquiposPorLocacion } from '@/hooks/use-global'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { PrimaryButton } from '@/components/PrimaryButton';
+import { toast } from 'sonner'
+import { useCalendarEventos } from '../hooks/use-calendar-eventos'
+
+interface AgendaProps {
+    selectedPatient: any;
+    selectedEstudios: any[];
+    selectedEquipo: any;
+    onAgendaSelected: (agenda: any) => void;
+    selectedDireccion: string;
+    setAllEvents?: React.Dispatch<React.SetStateAction<{ [equipoGuid: string]: any[] }>>;
+    allEvents?: { [equipoGuid: string]: any[] };
+    onGoNext?: () => void;
+}
+
+export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDisabled?: boolean }> = ({
+    selectedPatient,
+    selectedEstudios,
+    selectedEquipo,
+    onAgendaSelected,
+    selectedDireccion,
+    setAllEvents = () => { },
+    allEvents = {},
+    onGoNext = () => { }
+
+}) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const calendarRef = useRef<FullCalendar>(null);
+    // Eventos globales por equipo
+    // Eventos visibles en el calendario (solo del equipo seleccionado)
+    const [events, setEvents] = useState<any[]>([]);
+    const [selectedEquipoLocal, setSelectedEquipoLocal] = useState<string>("");
+    const [selectedDate, setSelectedDate] = useState<string>("");
+    const calendarEventosMutation = useCalendarEventos();
+    const [horariosDisponibles, setHorariosDisponibles] = useState<any[]>([]);
+    const [blockedEventsByEquipo, setBlockedEventsByEquipo] = useState<{ [equipoGuid: string]: any[] }>({});
+    // Obtener equipos por locación
+    const { data: equipos, isLoading: isLoadingEquipos } = useEquiposPorLocacion(selectedDireccion);
+    // Obtener el equipo completo seleccionado
+    const equipoSeleccionado = React.useMemo(() => {
+        if (!selectedEquipoLocal || !equipos) return null;
+        return equipos.find((eq: any) => eq.guid === selectedEquipoLocal);
+    }, [selectedEquipoLocal, equipos]);
+    // Obtener modalidades únicas de los estudios seleccionados
+    const modalidadesSeleccionadas = React.useMemo(() => {
+        if (!selectedEstudios || selectedEstudios.length === 0) return [];
+        const modalidades = selectedEstudios.map((estudio: any) => estudio.modalityName).filter(Boolean);
+        return [...new Set(modalidades)]; // Eliminar duplicados
+    }, [selectedEstudios]);
+    // Filtrar equipos por las modalidades de los estudios seleccionados
+    const equiposFiltrados = React.useMemo(() => {
+        if (!equipos || modalidadesSeleccionadas.length === 0) return [];
+        return equipos.filter((equipo: any) =>
+            modalidadesSeleccionadas.includes(equipo.modality)
+        );
+    }, [equipos, modalidadesSeleccionadas]);
+
+    // Inicializar draggable para los estudios (solo los activos)
+    useEffect(() => {
+        if (containerRef.current) {
+            const draggable = new Draggable(containerRef.current, {
+                itemSelector: '.draggable-study:not(.disabled-study)',
+                eventData: function (eventEl) {
+                    const studyData = eventEl.getAttribute('data-study');
+                    if (studyData) {
+                        const study = JSON.parse(studyData);
+                        if (!equipoSeleccionado) {
+                            toast.error("Debe seleccionar un equipo antes de agendar un estudio.");
+                            return null;
+                        }
+                        // Log para depuración
+                        console.log('Equipo seleccionado al crear evento:', equipoSeleccionado);
+                        // Solo guardar los campos esenciales del equipo
+                        const equipoSimple = equipoSeleccionado
+                            ? {
+                                guid: equipoSeleccionado.guid,
+                                description: equipoSeleccionado.description,
+                                modalityName: equipoSeleccionado.modalityName
+                            }
+                            : null;
+                        return {
+                            title: `${study.externalcode} - ${study.description}`,
+                            duration: '01:00', // duración por defecto de 1 hora
+                            extendedProps: {
+                                study: study,
+                                patient: selectedPatient,
+                                equipo: equipoSimple
+                            },
+                            backgroundColor: '#8b5cf6',
+                            borderColor: '#7c3aed'
+                        };
+                    }
+                    return null;
+                }
+            });
+
+            return () => {
+                draggable.destroy();
+            };
+        }
+    }, [selectedEstudios, selectedPatient, equipoSeleccionado]);
+
+    const handleDateSelect = (selectInfo: any) => {
+        const { start, end, allDay } = selectInfo;
+        onAgendaSelected({
+            start,
+            end,
+            allDay,
+            patient: selectedPatient,
+            estudios: selectedEstudios,
+            equipo: selectedEquipo
+        });
+    };
+
+    const handleEventReceive = (info: any) => {
+        // Obtener los datos del elemento draggable
+        const draggedEl = info.draggedEl;
+        const studyData = draggedEl.getAttribute('data-study');
+
+        if (studyData) {
+            const study = JSON.parse(studyData);
+            const startDate = info.date;
+            const endDate = new Date(info.date.getTime() + 60 * 60 * 1000); // +1 hora
+
+            // Validar horario permitido
+            if (horariosDisponibles && horariosDisponibles.length > 0) {
+                const jsDay = startDate.getDay();
+                const dia = jsDay === 0 ? 7 : jsDay;
+                const horario = horariosDisponibles.find((h: any) => h.day === dia);
+                if (horario) {
+                    const [startHour, startMin, startSec] = horario.start.split(":").map(Number);
+                    const [endHour, endMin, endSec] = horario.end.split(":").map(Number);
+                    const startAllowed = new Date(startDate);
+                    startAllowed.setHours(startHour, startMin, startSec || 0, 0);
+                    const endAllowed = new Date(startDate);
+                    endAllowed.setHours(endHour, endMin, endSec || 0, 0);
+                    if (startDate < startAllowed || endDate > endAllowed) {
+                        toast.error("El horario seleccionado está fuera del rango permitido para este equipo.");
+                        if (info && typeof info.revert === 'function') info.revert();
+                        return;
+                    }
+                }
+            }
+
+            // Buscar el equipo seleccionado actual (por si FullCalendar lo perdió)
+            let equipoSimple = null;
+            if (equipoSeleccionado) {
+                equipoSimple = {
+                    guid: equipoSeleccionado.guid,
+                    description: equipoSeleccionado.description,
+                    modalityName: equipoSeleccionado.modalityName,
+                    title: equipoSeleccionado.aeTitle
+                };
+            } else if (selectedEquipoLocal && Array.isArray(equipos)) {
+                const eq = equipos.find((e: any) => e.guid === selectedEquipoLocal);
+                if (eq) {
+                    equipoSimple = {
+                        guid: eq.guid,
+                        description: eq.description,
+                        modalityName: eq.modalityName,
+                        title: eq.aeTitle
+
+                    };
+                }
+            }
+
+            const eventData = {
+                id: Date.now().toString(),
+                title: `${study.externalcode} - ${study.description}`,
+                start: startDate,
+                end: endDate,
+                extendedProps: {
+                    study: study,
+                    patient: selectedPatient,
+                    equipo: equipoSimple,
+                    blocked: false
+                },
+                backgroundColor: '#8b5cf6',
+                borderColor: '#7c3aed'
+            };
+
+            // Guardar evento en el equipo correspondiente
+            setAllEvents(prev => {
+                const equipoId = selectedEquipoLocal;
+                const prevEvents = prev[equipoId] || [];
+                const updated = { ...prev, [equipoId]: [...prevEvents, eventData] };
+                // Siempre mostrar eventos de usuario + bloqueados
+                const blocked = blockedEventsByEquipo[equipoId] || [];
+                setEvents([...updated[equipoId], ...blocked]);
+                return updated;
+            });
+        }
+    };
+
+    const handleEventDrop = (info: any) => {
+        // Cuando se mueve un evento existente
+        console.log('Evento movido:', info.event);
+    };
+
+
+
+    const handleDateChange = (date: string) => {
+        setSelectedDate(date);
+        if (calendarRef.current && date) {
+            const calendarApi = calendarRef.current.getApi();
+            calendarApi.gotoDate(date);
+        }
+    };
+
+    // Nueva función para manejar la selección de equipo
+    const handleEquipoChange = (equipoGuid: string) => {
+        setSelectedEquipoLocal(equipoGuid);
+        // Mostrar eventos de usuario + bloqueados si existen
+        const userEvents = allEvents[equipoGuid] || [];
+        const blocked = blockedEventsByEquipo[equipoGuid] || [];
+        setEvents([...userEvents, ...blocked]);
+        // Buscar el equipo seleccionado
+        const equipo = equipos?.find((eq: any) => eq.guid === equipoGuid);
+        if (equipo) {
+            const payload = {
+                equipment_aetitle: equipo.aeTitle,
+                guid: equipo.guid
+            };
+            calendarEventosMutation.mutate({ data: payload }, {
+                onSuccess: (data: any) => {
+                    setHorariosDisponibles(data?.data?.work_hours || []);
+                    if (Array.isArray(data?.data?.events)) {
+                        const backendEvents = data.data.events.map((ev: any) => ({
+                            ...ev,
+                            editable: false,
+                            backgroundColor: '#1e2939',
+                            borderColor: '#1e2939',
+                            extendedProps: {
+                                ...(ev.extendedProps || {}),
+                                blocked: true
+                            }
+                        }));
+                        setBlockedEventsByEquipo(prev => {
+                            const updated = { ...prev, [equipoGuid]: backendEvents };
+                            // Siempre mostrar eventos de usuario + bloqueados
+                            setEvents([...(allEvents[equipoGuid] || []), ...backendEvents]);
+                            return updated;
+                        });
+                    }
+                }
+            });
+        }
+    };
+    // Calcular slotMinTime y slotMaxTime dinámicamente según horariosDisponibles
+    // Fijar el rango de horario del calendario siempre de 05:00 a 22:00
+    let slotMinTime = "05:00:00";
+    let slotMaxTime = "23:00:00";
+
+    // Estado para mostrar/agrupar los eventos de usuario actuales (no bloqueados)
+    const userEvents = events.filter(ev => !ev.extendedProps?.blocked);
+    // Botón habilitado solo si hay al menos un evento de usuario
+    const canGoNext = userEvents.length > 0;
+
+    return (
+        <div className="space-y-6">
+
+
+            {/* Selector de Equipo y Fecha */}
+            <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                    <Monitor className="w-5 h-5 text-brand-purple" />
+                    <h3 className="text-lg font-semibold text-gray-800">
+                        Seleccionar equipo y fecha
+                    </h3>
+                </div>
+
+                {/* Contenedor flex para Select e Input lado a lado */}
+                <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
+                    {/* Select de Equipo */}
+                    <div className="space-y-2 flex-1">
+                        <label className="text-sm font-medium text-gray-700">
+                            Equipos disponibles
+                        </label>
+                        <Select
+                            onValueChange={handleEquipoChange}
+                            value={selectedEquipoLocal}
+                            disabled={isLoadingEquipos || equiposFiltrados.length === 0}
+                        >
+                            <SelectTrigger className="w-full h-11! border-2 border-gray-300 focus:border-brand-purple focus:ring-brand-purple bg-white text-base">
+                                <SelectValue placeholder={
+                                    isLoadingEquipos
+                                        ? "Cargando equipos..."
+                                        : equiposFiltrados.length === 0
+                                            ? "No hay equipos disponibles"
+                                            : "Seleccione un equipo..."
+                                } />
+                            </SelectTrigger>
+                            <SelectContent className=''>
+                                {equiposFiltrados && equiposFiltrados.length > 0 ? (
+                                    equiposFiltrados.map((equipo: any) => (
+                                        <SelectItem key={equipo.guid} value={equipo.guid}>
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold">{equipo.description}</span>
+                                                <span className="text-xs text-gray-500">
+                                                    {equipo.modalityName}
+                                                </span>
+                                            </div>
+                                        </SelectItem>
+                                    ))
+                                ) : (
+                                    <SelectItem value="no-data" disabled>
+                                        No hay equipos disponibles
+                                    </SelectItem>
+                                )}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* Input de fecha deseada */}
+                    <div className="space-y-2 flex-1">
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-brand-purple" />
+                            Fecha deseada
+                        </label>
+                        <input
+                            type="date"
+                            value={selectedDate}
+                            onChange={(e) => handleDateChange(e.target.value)}
+                            className="w-full h-11 px-4 border-2 border-gray-300 rounded-lg focus:border-brand-purple focus:ring-2 focus:ring-brand-purple focus:outline-none bg-white text-gray-700 text-base"
+                        />
+                    </div>
+                </div>
+
+                {/* Modalidades seleccionadas */}
+                {modalidadesSeleccionadas.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        <span className="text-xs text-gray-600">Modalidades:</span>
+                        {modalidadesSeleccionadas.map((modalidad, index) => (
+                            <span key={index} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">
+                                {modalidad}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+            {/* Panel de estudios seleccionados */}
+            {selectedEstudios && selectedEstudios.length > 0 && (
+                <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <ClipboardList className="w-5 h-5 text-brand-purple" />
+                        <h3 className="text-lg font-semibold text-gray-800">
+                            Estudios seleccionados ({selectedEstudios.length})
+                        </h3>
+                    </div>
+                    <div ref={containerRef} className="flex flex-wrap gap-3">
+                        {selectedEstudios.map((estudio: any, index: number) => {
+                            const isActive = equipoSeleccionado ? estudio.modalityName === equipoSeleccionado.modality : true;
+                            const baseClasses = "draggable-study inline-flex items-center gap-2 rounded-lg px-4 py-3 transition-all";
+                            const activeClasses = isActive
+                                ? "bg-green-50 border-2 border-green-500 cursor-move hover:bg-green-100 hover:border-green-600 hover:shadow-md"
+                                : "disabled-study bg-gray-100 border-2 border-gray-300 cursor-not-allowed opacity-60";
+
+                            return (
+                                <div
+                                    key={estudio.guid || index}
+                                    className={`${baseClasses} ${activeClasses}`}
+                                    data-study={JSON.stringify(estudio)}
+                                >
+                                    <GripVertical className={`w-5 h-5 ${isActive ? 'text-green-600' : 'text-gray-400'}`} />
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-sm font-bold ${isActive ? 'text-green-700' : 'text-gray-500'}`}>
+                                                {estudio.externalcode}
+                                            </span>
+                                            <span className={`text-xs px-2 py-1 rounded-full font-semibold ${isActive
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-gray-200 text-gray-600'
+                                                }`}>
+                                                {estudio.modalityName}
+                                            </span>
+                                        </div>
+                                        <span className={`text-xs mt-1 ${isActive ? 'text-gray-700' : 'text-gray-500'}`}>
+                                            {estudio.description}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+
+
+            {/* Calendario - Solo se muestra si hay equipo seleccionado */}
+            {selectedEquipoLocal && (
+                <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-6">
+                    <div className="flex items-center mb-4 justify-between w-full">
+                        <div className="flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-brand-purple" />
+                            <h3 className="text-lg font-semibold text-gray-800">
+                                Seleccionar fecha y hora
+                            </h3>
+                            <span className="text-xs text-gray-500 ml-2">
+                                (Arrastra los estudios al calendario)
+                            </span>
+                        </div>
+                        {/* Botón para pasar al siguiente tab */}
+
+                        <PrimaryButton onClick={onGoNext} disabled={!canGoNext}>
+                            Siguiente
+                        </PrimaryButton>
+                    </div>
+                    <div className="agenda-container" style={{ height: '600px' }}>
+                        <style>{`
+                            .fc .fc-button-primary {
+                                background-color: #440f6d !important;
+                                border-color: #7c3aed !important;
+                                color: white !important;
+                            }
+                            .fc .fc-button-primary:hover {
+                                background-color: #7c3aed !important;
+                                border-color: #6d28d9 !important;
+                            }
+                            .fc .fc-button-primary:not(:disabled):active,
+                            .fc .fc-button-primary:not(:disabled).fc-button-active {
+                                background-color: #6d28d9 !important;
+                                border-color: #5b21b6 !important;
+                            }
+                            .fc .fc-button-primary:disabled {
+                                background-color: #c4b5fd !important;
+                                border-color: #c4b5fd !important;
+                                opacity: 0.6;
+                            }
+                            /* Morado para sábado */
+                            .fc-day-sat, .fc-col-header-cell.fc-day-sat {
+                                background-color: #ede9fe !important;
+                                /* Puedes ajustar el tono de morado aquí */
+                            }
+                        `}</style>
+                        <FullCalendar
+                            ref={calendarRef}
+                            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                            initialView="timeGridWeek"
+                            headerToolbar={{
+                                left: 'prev,next today',
+                                center: 'title',
+                                right: ''
+                            }}
+                            buttonText={{
+                                today: 'hoy'
+                            }}
+                            selectable={true}
+                            selectMirror={true}
+                            select={handleDateSelect}
+                            droppable={true}
+                            drop={handleEventReceive}
+                            eventDrop={handleEventDrop}
+                            eventAllow={(dropInfo) => {
+                                // dropInfo.start y dropInfo.end son Date
+                                if (!horariosDisponibles || horariosDisponibles.length === 0) return true;
+                                const startDate = dropInfo.start;
+                                const endDate = dropInfo.end;
+                                const jsDay = startDate.getDay();
+                                const dia = jsDay === 0 ? 7 : jsDay;
+                                const horario = horariosDisponibles.find((h) => h.day === dia);
+                                if (!horario) return false;
+                                const [startHour, startMin, startSec] = horario.start.split(":").map(Number);
+                                const [endHour, endMin, endSec] = horario.end.split(":").map(Number);
+                                const startAllowed = new Date(startDate);
+                                startAllowed.setHours(startHour, startMin, startSec || 0, 0);
+                                const endAllowed = new Date(startDate);
+                                endAllowed.setHours(endHour, endMin, endSec || 0, 0);
+                                return startDate >= startAllowed && endDate <= endAllowed;
+                            }}
+                            events={events}
+                            allDaySlot={true}
+                            slotMinTime={slotMinTime}
+                            slotMaxTime={slotMaxTime}
+                            slotDuration="00:30:00"
+                            height="100%"
+                            locale="es"
+                            firstDay={0}
+                            weekends={true}
+                            dayMaxEvents={true}
+                            nowIndicator={true}
+                            editable={true}
+                            timeZone="local"
+                            eventClick={(info => {
+                                const eventTitle = info.event.title;
+                                toast.info(`Evento: ${eventTitle}`, {
+                                    description: 'Puede arrastrar el evento para cambiar su fecha u hora, o eliminarlo usando el botón ✕.',
+                                    duration: 4000
+                                });
+                            })}
+                            eventContent={(eventInfo) => {
+                                // Un evento bloqueado es aquel con extendedProps.blocked === true
+                                const isBlocked = eventInfo.event.extendedProps?.blocked === true;
+                                return (
+                                    <div
+                                        className={`flex items-center justify-between gap-2 p-1 w-full cursor-pointer group ${isBlocked ? 'bg-gray-800' : ''}`}
+                                        style={isBlocked ? { backgroundColor: '#1e2939', color: '#e5e7eb' } : {}}
+                                    >
+                                        <div className="flex-1 overflow-hidden">
+                                            <div className="text-xs font-semibold truncate">
+                                                {eventInfo.event.title}
+                                            </div>
+                                            <div className="text-xs opacity-80">
+                                                {eventInfo.timeText}
+                                            </div>
+                                        </div>
+                                        {!isBlocked && (
+                                            <button
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded px-1.5 py-0.5 text-xs font-bold"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const eventId = eventInfo.event.id;
+                                                    const eventTitle = eventInfo.event.title;
+
+                                                    toast.error(`¿Eliminar "${eventTitle}"?`, {
+                                                        description: 'Esta acción eliminará el estudio del calendario',
+                                                        duration: 5000,
+                                                        action: {
+                                                            label: 'Eliminar',
+                                                            onClick: () => {
+                                                                setEvents(prev => prev.filter(ev => ev.id !== eventId));
+                                                                setAllEvents(prev => {
+                                                                    const equipoId = selectedEquipoLocal;
+                                                                    const prevEvents = prev[equipoId] || [];
+                                                                    return {
+                                                                        ...prev,
+                                                                        [equipoId]: prevEvents.filter(ev => ev.id !== eventId)
+                                                                    };
+                                                                });
+                                                                toast.success('Estudio eliminado del calendario');
+                                                            }
+                                                        },
+                                                        cancel: {
+                                                            label: 'Cancelar',
+                                                            onClick: () => { }
+                                                        }
+                                                    });
+                                                }}
+                                            >
+                                                ✕
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Mensaje cuando no hay equipo seleccionado */}
+            {!selectedEquipoLocal && (
+                <div className="bg-purple-50 border-2 border-dashed border-purple-300 rounded-lg p-8 text-center">
+                    <Calendar className="w-16 h-16 mx-auto mb-4 text-purple-300" />
+                    <p className="text-gray-600 font-medium">
+                        Seleccione un equipo para ver el calendario
+                    </p>
+                    <p className="text-sm text-gray-500 mt-2">
+                        El calendario se mostrará cuando elija un equipo médico
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+}
