@@ -1227,6 +1227,70 @@ Authorization: Bearer {access_token}
 
 ### Endpoints
 
+#### POST /appointments/calendar-events
+Obtiene eventos del calendario para un equipo específico junto con horarios de trabajo.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "equipment_aetitle": "CT_SIEMENS_01",
+  "guid": "optional-event-guid-to-edit"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "events": [
+      {
+        "guid": "event-uuid",
+        "start": "2025-12-13T10:00:00",
+        "end": "2025-12-13T11:00:00",
+        "title": "García Juan - TAC Torax",
+        "patient_name": "García Juan",
+        "exam": "TAC Torax",
+        "idmed": "doctor-uuid",
+        "idmed_sol": "requesting-doctor-uuid",
+        "editable": false
+      }
+    ],
+    "work_hours": [
+      {
+        "day": 1,
+        "start": "08:00:00",
+        "end": "17:00:00"
+      },
+      {
+        "day": 2,
+        "start": "08:00:00",
+        "end": "17:00:00"
+      }
+    ]
+  }
+}
+```
+
+**Parámetros:**
+- `equipment_aetitle` (obligatorio): AE Title del equipo del cual obtener eventos
+- `guid` (opcional): GUID del evento a marcar como editable (útil para modo edición)
+
+**Mapeo de días en work_hours:**
+- 0: Domingo
+- 1: Lunes
+- 2: Martes
+- 3: Miércoles
+- 4: Jueves
+- 5: Viernes
+- 6: Sábado
+
 #### GET /appointments
 Listar turnos.
 
