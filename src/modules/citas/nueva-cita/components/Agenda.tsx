@@ -266,308 +266,293 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
 
     return (
         <div className="space-y-6">
-
-
-            {/* Selector de Equipo y Fecha */}
+            {/* Tarjeta principal con layout solicitado */}
             <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-6">
                 <div className="flex items-center gap-2 mb-4">
                     <Monitor className="w-5 h-5 text-brand-purple" />
                     <h3 className="text-lg font-semibold text-gray-800">
-                        Seleccionar equipo y fecha
+                        Agenda de equipos y estudios
                     </h3>
                 </div>
-
-                {/* Contenedor flex para Select e Input lado a lado */}
-                <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
-                    {/* Select de Equipo */}
-                    <div className="space-y-2 flex-1">
-                        <label className="text-sm font-medium text-gray-700">
-                            Equipos disponibles
-                        </label>
-                        <Select
-                            onValueChange={handleEquipoChange}
-                            value={selectedEquipoLocal}
-                            disabled={isLoadingEquipos || equiposFiltrados.length === 0}
-                        >
-                            <SelectTrigger className="w-full h-11! border-2 border-gray-300 focus:border-brand-purple focus:ring-brand-purple bg-white text-base">
-                                <SelectValue placeholder={
-                                    isLoadingEquipos
-                                        ? "Cargando equipos..."
-                                        : equiposFiltrados.length === 0
-                                            ? "No hay equipos disponibles"
-                                            : "Seleccione un equipo..."
-                                } />
-                            </SelectTrigger>
-                            <SelectContent className=''>
-                                {equiposFiltrados && equiposFiltrados.length > 0 ? (
-                                    equiposFiltrados.map((equipo: any) => (
-                                        <SelectItem key={equipo.guid} value={equipo.guid}>
-                                            <div className="flex flex-col">
-                                                <span className="font-semibold">{equipo.description}</span>
-                                                <span className="text-xs text-gray-500">
-                                                    {equipo.modalityName}
-                                                </span>
-                                            </div>
+                <div className="flex flex-col md:flex-row gap-6">
+                    {/* Columna izquierda */}
+                    <div className="flex flex-col gap-6 w-full md:w-80 max-w-xs">
+                        {/* Select de Equipo */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">
+                                Equipos disponibles
+                            </label>
+                            <Select
+                                onValueChange={handleEquipoChange}
+                                value={selectedEquipoLocal}
+                                disabled={isLoadingEquipos || equiposFiltrados.length === 0}
+                            >
+                                <SelectTrigger className="w-full h-11! border-2 border-gray-300 focus:border-brand-purple focus:ring-brand-purple bg-white text-base">
+                                    <SelectValue placeholder={
+                                        isLoadingEquipos
+                                            ? "Cargando equipos..."
+                                            : equiposFiltrados.length === 0
+                                                ? "No hay equipos disponibles"
+                                                : "Seleccione un equipo..."
+                                    } />
+                                </SelectTrigger>
+                                <SelectContent className=''>
+                                    {equiposFiltrados && equiposFiltrados.length > 0 ? (
+                                        equiposFiltrados.map((equipo: any) => (
+                                            <SelectItem key={equipo.guid} value={equipo.guid}>
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold">{equipo.description}</span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {equipo.modalityName}
+                                                    </span>
+                                                </div>
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <SelectItem value="no-data" disabled>
+                                            No hay equipos disponibles
                                         </SelectItem>
-                                    ))
-                                ) : (
-                                    <SelectItem value="no-data" disabled>
-                                        No hay equipos disponibles
-                                    </SelectItem>
-                                )}
-                            </SelectContent>
-                        </Select>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {/* Input de fecha deseada */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-brand-purple" />
+                                Fecha deseada
+                            </label>
+                            <input
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => handleDateChange(e.target.value)}
+                                className="w-full h-11 px-4 border-2 border-gray-300 rounded-lg focus:border-brand-purple focus:ring-2 focus:ring-brand-purple focus:outline-none bg-white text-gray-700 text-base"
+                            />
+                        </div>
+                        {/* Modalidades seleccionadas */}
+                        {modalidadesSeleccionadas.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                <span className="text-xs text-gray-600">Modalidades:</span>
+                                {modalidadesSeleccionadas.map((modalidad, index) => (
+                                    <span key={index} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">
+                                        {modalidad}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                        {/* Panel de estudios seleccionados */}
+                        {selectedEstudios && selectedEstudios.length > 0 && (
+                            <div className="bg-gray-50 rounded-lg border border-purple-100 shadow-sm p-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <ClipboardList className="w-5 h-5 text-brand-purple" />
+                                    <h3 className="text-base font-semibold text-gray-800">
+                                        Estudios a mover ({selectedEstudios.length})
+                                    </h3>
+                                </div>
+                                <div ref={containerRef} className="flex flex-wrap gap-3">
+                                    {selectedEstudios.map((estudio: any, index: number) => {
+                                        const isActive = equipoSeleccionado ? estudio.modalityName === equipoSeleccionado.modality : true;
+                                        const baseClasses = "draggable-study inline-flex items-center gap-2 rounded-lg px-4 py-3 transition-all";
+                                        const activeClasses = isActive
+                                            ? "bg-green-50 border-2 border-green-500 cursor-move hover:bg-green-100 hover:border-green-600 hover:shadow-md"
+                                            : "disabled-study bg-gray-100 border-2 border-gray-300 cursor-not-allowed opacity-60";
+                                        return (
+                                            <div
+                                                key={estudio.guid || index}
+                                                className={`${baseClasses} ${activeClasses}`}
+                                                data-study={JSON.stringify(estudio)}
+                                            >
+                                                <GripVertical className={`w-5 h-5 ${isActive ? 'text-green-600' : 'text-gray-400'}`} />
+                                                <div className="flex flex-col">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-sm font-bold ${isActive ? 'text-green-700' : 'text-gray-500'}`}>
+                                                            {estudio.externalcode}
+                                                        </span>
+                                                        <span className={`text-xs px-2 py-1 rounded-full font-semibold ${isActive
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-gray-200 text-gray-600'
+                                                            }`}>
+                                                            {estudio.modalityName}
+                                                        </span>
+                                                    </div>
+                                                    <span className={`text-xs mt-1 ${isActive ? 'text-gray-700' : 'text-gray-500'}`}>
+                                                        {estudio.description}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
-
-                    {/* Input de fecha deseada */}
-                    <div className="space-y-2 flex-1">
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-brand-purple" />
-                            Fecha deseada
-                        </label>
-                        <input
-                            type="date"
-                            value={selectedDate}
-                            onChange={(e) => handleDateChange(e.target.value)}
-                            className="w-full h-11 px-4 border-2 border-gray-300 rounded-lg focus:border-brand-purple focus:ring-2 focus:ring-brand-purple focus:outline-none bg-white text-gray-700 text-base"
-                        />
-                    </div>
-                </div>
-
-                {/* Modalidades seleccionadas */}
-                {modalidadesSeleccionadas.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        <span className="text-xs text-gray-600">Modalidades:</span>
-                        {modalidadesSeleccionadas.map((modalidad, index) => (
-                            <span key={index} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">
-                                {modalidad}
-                            </span>
-                        ))}
-                    </div>
-                )}
-            </div>
-            {/* Panel de estudios seleccionados */}
-            {selectedEstudios && selectedEstudios.length > 0 && (
-                <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <ClipboardList className="w-5 h-5 text-brand-purple" />
-                        <h3 className="text-lg font-semibold text-gray-800">
-                            Estudios seleccionados ({selectedEstudios.length})
-                        </h3>
-                    </div>
-                    <div ref={containerRef} className="flex flex-wrap gap-3">
-                        {selectedEstudios.map((estudio: any, index: number) => {
-                            const isActive = equipoSeleccionado ? estudio.modalityName === equipoSeleccionado.modality : true;
-                            const baseClasses = "draggable-study inline-flex items-center gap-2 rounded-lg px-4 py-3 transition-all";
-                            const activeClasses = isActive
-                                ? "bg-green-50 border-2 border-green-500 cursor-move hover:bg-green-100 hover:border-green-600 hover:shadow-md"
-                                : "disabled-study bg-gray-100 border-2 border-gray-300 cursor-not-allowed opacity-60";
-
-                            return (
-                                <div
-                                    key={estudio.guid || index}
-                                    className={`${baseClasses} ${activeClasses}`}
-                                    data-study={JSON.stringify(estudio)}
-                                >
-                                    <GripVertical className={`w-5 h-5 ${isActive ? 'text-green-600' : 'text-gray-400'}`} />
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`text-sm font-bold ${isActive ? 'text-green-700' : 'text-gray-500'}`}>
-                                                {estudio.externalcode}
-                                            </span>
-                                            <span className={`text-xs px-2 py-1 rounded-full font-semibold ${isActive
-                                                ? 'bg-green-100 text-green-800'
-                                                : 'bg-gray-200 text-gray-600'
-                                                }`}>
-                                                {estudio.modalityName}
-                                            </span>
-                                        </div>
-                                        <span className={`text-xs mt-1 ${isActive ? 'text-gray-700' : 'text-gray-500'}`}>
-                                            {estudio.description}
+                    {/* Columna derecha: calendario grande */}
+                    <div className="flex-1 min-w-0">
+                        {selectedEquipoLocal ? (
+                            <div className="h-[600px] w-full">
+                                <div className="flex items-center mb-4 justify-between w-full">
+                                    <div className="flex items-center gap-2">
+                                        <Calendar className="w-5 h-5 text-brand-purple" />
+                                        <h3 className="text-lg font-semibold text-gray-800">
+                                            Seleccionar fecha y hora
+                                        </h3>
+                                        <span className="text-xs text-gray-500 ml-2">
+                                            (Arrastra los estudios al calendario)
                                         </span>
                                     </div>
+                                    <PrimaryButton onClick={onGoNext} disabled={!canGoNext}>
+                                        Siguiente
+                                    </PrimaryButton>
                                 </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
-
-
-
-            {/* Calendario - Solo se muestra si hay equipo seleccionado */}
-            {selectedEquipoLocal && (
-                <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-6">
-                    <div className="flex items-center mb-4 justify-between w-full">
-                        <div className="flex items-center gap-2">
-                            <Calendar className="w-5 h-5 text-brand-purple" />
-                            <h3 className="text-lg font-semibold text-gray-800">
-                                Seleccionar fecha y hora
-                            </h3>
-                            <span className="text-xs text-gray-500 ml-2">
-                                (Arrastra los estudios al calendario)
-                            </span>
-                        </div>
-                        {/* Botón para pasar al siguiente tab */}
-
-                        <PrimaryButton onClick={onGoNext} disabled={!canGoNext}>
-                            Siguiente
-                        </PrimaryButton>
-                    </div>
-                    <div className="agenda-container" style={{ height: '600px' }}>
-                        <style>{`
-                            .fc .fc-button-primary {
-                                background-color: #440f6d !important;
-                                border-color: #7c3aed !important;
-                                color: white !important;
-                            }
-                            .fc .fc-button-primary:hover {
-                                background-color: #7c3aed !important;
-                                border-color: #6d28d9 !important;
-                            }
-                            .fc .fc-button-primary:not(:disabled):active,
-                            .fc .fc-button-primary:not(:disabled).fc-button-active {
-                                background-color: #6d28d9 !important;
-                                border-color: #5b21b6 !important;
-                            }
-                            .fc .fc-button-primary:disabled {
-                                background-color: #c4b5fd !important;
-                                border-color: #c4b5fd !important;
-                                opacity: 0.6;
-                            }
-                            /* Morado para sábado */
-                            .fc-day-sat, .fc-col-header-cell.fc-day-sat {
-                                background-color: #ede9fe !important;
-                                /* Puedes ajustar el tono de morado aquí */
-                            }
-                        `}</style>
-                        <FullCalendar
-                            ref={calendarRef}
-                            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                            initialView="timeGridWeek"
-                            headerToolbar={{
-                                left: 'prev,next today',
-                                center: 'title',
-                                right: ''
-                            }}
-                            buttonText={{
-                                today: 'hoy'
-                            }}
-                            selectable={true}
-                            selectMirror={true}
-                            select={handleDateSelect}
-                            droppable={true}
-                            drop={handleEventReceive}
-                            eventDrop={handleEventDrop}
-                            eventAllow={(dropInfo) => {
-                                // dropInfo.start y dropInfo.end son Date
-                                if (!horariosDisponibles || horariosDisponibles.length === 0) return true;
-                                const startDate = dropInfo.start;
-                                const endDate = dropInfo.end;
-                                const jsDay = startDate.getDay();
-                                const dia = jsDay === 0 ? 7 : jsDay;
-                                const horario = horariosDisponibles.find((h) => h.day === dia);
-                                if (!horario) return false;
-                                const [startHour, startMin, startSec] = horario.start.split(":").map(Number);
-                                const [endHour, endMin, endSec] = horario.end.split(":").map(Number);
-                                const startAllowed = new Date(startDate);
-                                startAllowed.setHours(startHour, startMin, startSec || 0, 0);
-                                const endAllowed = new Date(startDate);
-                                endAllowed.setHours(endHour, endMin, endSec || 0, 0);
-                                return startDate >= startAllowed && endDate <= endAllowed;
-                            }}
-                            events={events}
-                            allDaySlot={true}
-                            slotMinTime={slotMinTime}
-                            slotMaxTime={slotMaxTime}
-                            slotDuration="00:30:00"
-                            height="100%"
-                            locale="es"
-                            firstDay={0}
-                            weekends={true}
-                            dayMaxEvents={true}
-                            nowIndicator={true}
-                            editable={true}
-                            timeZone="local"
-                            eventClick={(info => {
-                                const eventTitle = info.event.title;
-                                toast.info(`Evento: ${eventTitle}`, {
-                                    description: 'Puede arrastrar el evento para cambiar su fecha u hora, o eliminarlo usando el botón ✕.',
-                                    duration: 4000
-                                });
-                            })}
-                            eventContent={(eventInfo) => {
-                                // Un evento bloqueado es aquel con extendedProps.blocked === true
-                                const isBlocked = eventInfo.event.extendedProps?.blocked === true;
-                                return (
-                                    <div
-                                        className={`flex items-center justify-between gap-2 p-1 w-full cursor-pointer group ${isBlocked ? 'bg-gray-800' : ''}`}
-                                        style={isBlocked ? { backgroundColor: '#1e2939', color: '#e5e7eb' } : {}}
-                                    >
-                                        <div className="flex-1 overflow-hidden">
-                                            <div className="text-xs font-semibold truncate">
-                                                {eventInfo.event.title}
-                                            </div>
-                                            <div className="text-xs opacity-80">
-                                                {eventInfo.timeText}
-                                            </div>
-                                        </div>
-                                        {!isBlocked && (
-                                            <button
-                                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded px-1.5 py-0.5 text-xs font-bold"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const eventId = eventInfo.event.id;
-                                                    const eventTitle = eventInfo.event.title;
-
-                                                    toast.error(`¿Eliminar "${eventTitle}"?`, {
-                                                        description: 'Esta acción eliminará el estudio del calendario',
-                                                        duration: 5000,
-                                                        action: {
-                                                            label: 'Eliminar',
-                                                            onClick: () => {
-                                                                setEvents(prev => prev.filter(ev => ev.id !== eventId));
-                                                                setAllEvents(prev => {
-                                                                    const equipoId = selectedEquipoLocal;
-                                                                    const prevEvents = prev[equipoId] || [];
-                                                                    return {
-                                                                        ...prev,
-                                                                        [equipoId]: prevEvents.filter(ev => ev.id !== eventId)
-                                                                    };
+                                <div className="agenda-container h-full" style={{ height: 'calc(100% - 48px)' }}>
+                                    <style>{`
+                                        .fc .fc-button-primary {
+                                            background-color: #440f6d !important;
+                                            border-color: #7c3aed !important;
+                                            color: white !important;
+                                        }
+                                        .fc .fc-button-primary:hover {
+                                            background-color: #7c3aed !important;
+                                            border-color: #6d28d9 !important;
+                                        }
+                                        .fc .fc-button-primary:not(:disabled):active,
+                                        .fc .fc-button-primary:not(:disabled).fc-button-active {
+                                            background-color: #6d28d9 !important;
+                                            border-color: #5b21b6 !important;
+                                        }
+                                        .fc .fc-button-primary:disabled {
+                                            background-color: #c4b5fd !important;
+                                            border-color: #c4b5fd !important;
+                                            opacity: 0.6;
+                                        }
+                                        .fc-day-sat, .fc-col-header-cell.fc-day-sat {
+                                            background-color: #ede9fe !important;
+                                        }
+                                    `}</style>
+                                    <FullCalendar
+                                        ref={calendarRef}
+                                        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                                        initialView="timeGridWeek"
+                                        headerToolbar={{
+                                            left: 'prev,next today',
+                                            center: 'title',
+                                            right: ''
+                                        }}
+                                        buttonText={{
+                                            today: 'hoy'
+                                        }}
+                                        selectable={true}
+                                        selectMirror={true}
+                                        select={handleDateSelect}
+                                        droppable={true}
+                                        drop={handleEventReceive}
+                                        eventDrop={handleEventDrop}
+                                        eventAllow={(dropInfo) => {
+                                            if (!horariosDisponibles || horariosDisponibles.length === 0) return true;
+                                            const startDate = dropInfo.start;
+                                            const endDate = dropInfo.end;
+                                            const jsDay = startDate.getDay();
+                                            const dia = jsDay === 0 ? 7 : jsDay;
+                                            const horario = horariosDisponibles.find((h) => h.day === dia);
+                                            if (!horario) return false;
+                                            const [startHour, startMin, startSec] = horario.start.split(":").map(Number);
+                                            const [endHour, endMin, endSec] = horario.end.split(":").map(Number);
+                                            const startAllowed = new Date(startDate);
+                                            startAllowed.setHours(startHour, startMin, startSec || 0, 0);
+                                            const endAllowed = new Date(startDate);
+                                            endAllowed.setHours(endHour, endMin, endSec || 0, 0);
+                                            return startDate >= startAllowed && endDate <= endAllowed;
+                                        }}
+                                        events={events}
+                                        allDaySlot={true}
+                                        slotMinTime={slotMinTime}
+                                        slotMaxTime={slotMaxTime}
+                                        slotDuration="00:30:00"
+                                        height="100%"
+                                        locale="es"
+                                        firstDay={0}
+                                        weekends={true}
+                                        dayMaxEvents={true}
+                                        nowIndicator={true}
+                                        editable={true}
+                                        timeZone="local"
+                                        eventClick={(info => {
+                                            const eventTitle = info.event.title;
+                                            toast.info(`Evento: ${eventTitle}`, {
+                                                description: 'Puede arrastrar el evento para cambiar su fecha u hora, o eliminarlo usando el botón ✕.',
+                                                duration: 4000
+                                            });
+                                        })}
+                                        eventContent={(eventInfo) => {
+                                            const isBlocked = eventInfo.event.extendedProps?.blocked === true;
+                                            return (
+                                                <div
+                                                    className={`flex items-center justify-between gap-2 p-1 w-full cursor-pointer group ${isBlocked ? 'bg-gray-800' : ''}`}
+                                                    style={isBlocked ? { backgroundColor: '#1e2939', color: '#e5e7eb' } : {}}
+                                                >
+                                                    <div className="flex-1 overflow-hidden">
+                                                        <div className="text-xs font-semibold truncate">
+                                                            {eventInfo.event.title}
+                                                        </div>
+                                                        <div className="text-xs opacity-80">
+                                                            {eventInfo.timeText}
+                                                        </div>
+                                                    </div>
+                                                    {!isBlocked && (
+                                                        <button
+                                                            className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded px-1.5 py-0.5 text-xs font-bold"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const eventId = eventInfo.event.id;
+                                                                const eventTitle = eventInfo.event.title;
+                                                                toast.error(`¿Eliminar "${eventTitle}"?`, {
+                                                                    description: 'Esta acción eliminará el estudio del calendario',
+                                                                    duration: 5000,
+                                                                    action: {
+                                                                        label: 'Eliminar',
+                                                                        onClick: () => {
+                                                                            setEvents(prev => prev.filter(ev => ev.id !== eventId));
+                                                                            setAllEvents(prev => {
+                                                                                const equipoId = selectedEquipoLocal;
+                                                                                const prevEvents = prev[equipoId] || [];
+                                                                                return {
+                                                                                    ...prev,
+                                                                                    [equipoId]: prevEvents.filter(ev => ev.id !== eventId)
+                                                                                };
+                                                                            });
+                                                                            toast.success('Estudio eliminado del calendario');
+                                                                        }
+                                                                    },
+                                                                    cancel: {
+                                                                        label: 'Cancelar',
+                                                                        onClick: () => { }
+                                                                    }
                                                                 });
-                                                                toast.success('Estudio eliminado del calendario');
-                                                            }
-                                                        },
-                                                        cancel: {
-                                                            label: 'Cancelar',
-                                                            onClick: () => { }
-                                                        }
-                                                    });
-                                                }}
-                                            >
-                                                ✕
-                                            </button>
-                                        )}
-                                    </div>
-                                );
-                            }}
-                        />
+                                                            }}
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-purple-50 border-2 border-dashed border-purple-300 rounded-lg p-8 text-center h-full flex flex-col items-center justify-center">
+                                <Calendar className="w-16 h-16 mx-auto mb-4 text-purple-300" />
+                                <p className="text-gray-600 font-medium">
+                                    Seleccione un equipo para ver el calendario
+                                </p>
+                                <p className="text-sm text-gray-500 mt-2">
+                                    El calendario se mostrará cuando elija un equipo médico
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
-            )}
-
-            {/* Mensaje cuando no hay equipo seleccionado */}
-            {!selectedEquipoLocal && (
-                <div className="bg-purple-50 border-2 border-dashed border-purple-300 rounded-lg p-8 text-center">
-                    <Calendar className="w-16 h-16 mx-auto mb-4 text-purple-300" />
-                    <p className="text-gray-600 font-medium">
-                        Seleccione un equipo para ver el calendario
-                    </p>
-                    <p className="text-sm text-gray-500 mt-2">
-                        El calendario se mostrará cuando elija un equipo médico
-                    </p>
-                </div>
-            )}
+            </div>
         </div>
     );
 }
