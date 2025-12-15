@@ -64,6 +64,21 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
         );
     }, [equipos, modalidadesSeleccionadas]);
 
+    // Sincronizar estudiosAgendados con los eventos existentes cuando se monta o cambia allEvents
+    useEffect(() => {
+        const todosLosEventos = Object.values(allEvents).flat();
+        const estudiosEnCalendario = new Set<string>();
+
+        todosLosEventos.forEach((evento: any) => {
+            if (evento?.extendedProps?.study) {
+                const studyId = evento.extendedProps.study.guid || evento.extendedProps.study.externalcode;
+                estudiosEnCalendario.add(studyId);
+            }
+        });
+
+        setEstudiosAgendados(estudiosEnCalendario);
+    }, [allEvents]);
+
     // Inicializar draggable para los estudios (solo los activos)
     useEffect(() => {
         if (containerRef.current) {
