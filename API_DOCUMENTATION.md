@@ -14,6 +14,7 @@ Esta documentación describe todos los endpoints REST disponibles en el sistema 
 8. [Médicos](#médicos)
 9. [Reportes](#reportes)
 10. [Configuración](#configuración)
+11. [Citas y Agenda](#citas-y-agenda)
 
 ---
 
@@ -2177,6 +2178,256 @@ Eliminar establecimiento.
 ## Notas Generales
 
 ### Autenticación
+---
+
+## Citas y Agenda
+
+### Base URL
+`/api/appointments`
+
+### Endpoints
+
+#### POST /appointments
+Crea una o múltiples citas en la agenda del sistema.
+
+**Características:**
+- Permite crear múltiples eventos de calendario en una sola operación
+- Cada evento puede tener diferentes médicos, equipos y obras sociales
+- Los datos del paciente se mantienen consistentes en todos los eventos
+- Soporte transaccional (rollback automático si algún evento falla)
+
+**Request Body:**
+```json
+{
+  "patient_id": "uuid",
+  "appointment_type": "equipment|doctor",
+  "calendar_events": [
+    {
+      "exam_id": "uuid",
+      "start_datetime": "YYYY-MM-DD HH:MM",
+      "end_datetime": "YYYY-MM-DD HH:MM",
+      "physician_id": "uuid",
+      "obra_social_id": "uuid",
+      "equipment_id": "uuid"
+    }
+  ]
+}
+```
+
+**Campos requeridos:**
+- `patient_id`: GUID del paciente
+- `appointment_type`: Tipo de cita ("equipment" o "doctor")
+- `calendar_events`: Array con al menos un evento
+- Por cada evento:
+  - `exam_id`: GUID del tipo de estudio
+  - `start_datetime`: Fecha y hora de inicio
+  - `end_datetime`: Fecha y hora de fin
+  - `physician_id`: GUID del médico
+  - `obra_social_id`: GUID de la obra social
+  - `equipment_id`: GUID del equipo (requerido solo si appointment_type = "equipment")
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "appointment_ids": ["uuid1", "uuid2"],
+    "created_count": 2
+  },
+  "message": "2 cita(s) creada(s) exitosamente"
+}
+```
+
+**Response (400):**
+```json
+{
+  "success": false,
+  "message": "Evento 1: Faltan campos requeridos exam_id, start_datetime, end_datetime, physician_id, obra_social_id"
+}
+```
+
+**Ejemplo de uso:**
+```javascript
+const appointmentData = {
+  patient_id: "274f5207-1b8d-4bcc-824a-bf48aad85195",
+  appointment_type: "equipment",
+  calendar_events: [
+    {
+      exam_id: "d0bad265-f43d-4c0f-b48b-b67d4ba83290",
+      start_datetime: "2025-12-16 10:00",
+      end_datetime: "2025-12-16 11:00",
+      physician_id: "9388650a-fa37-4cb1-b346-e68ef2407d1b",
+      obra_social_id: "550e8400-e29b-41d4-a716-446655440001",
+      equipment_id: "fe61d1c5-782f-4844-98e2-6af243536ce3"
+    },
+    {
+      exam_id: "1131e1c8-773c-46ba-9bd5-e3fcb15d47bb",
+      start_datetime: "2025-12-16 14:00",
+      end_datetime: "2025-12-16 15:00",
+      physician_id: "584f6b5b-9eb6-438d-a63f-920a12adbfe9",
+      obra_social_id: "550e8400-e29b-41d4-a716-446655440002",
+      equipment_id: "cd5dcd73-ba4e-488a-8963-cf6c36b7e2ff"
+    }
+  ]
+};
+
+const response = await fetch('/api/appointments', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify(appointmentData)
+});
+```
+
+---
+
+#### POST /appointments/calendar-events
+Obtiene eventos del calendario para visualización y edición.
+
+**Request Body:**
+```json
+{
+  "equipment_aetitle": "string",
+  "guid": "uuid (opcional)"
+}
+```
+
+**Campos:**
+- `equipment_aetitle`: AE Title del equipo a consultar
+- `guid`: GUID de evento específico para marcar como editable (opcional)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "events": [
+      {
+        "guid": "uuid",
+        "start": "2025-12-05T10:00:00",
+        "end": "2025-12-05T11:00:00",
+        "title": "Paciente - Examen",
+        "patient_name": "string",
+        "exam": "string",
+        "idmed": "uuid",
+        "idmed_sol": "string",
+        "editable": false
+      }
+    ],
+    "work_hours": [
+      {
+        "day": 1,
+        "start": "08:00:00",
+        "end": "17:00:00"
+      }
+    ]
+  }
+}
+```
+
+**Campos de respuesta:**
+- `events`: Array de eventos del calendario
+  - `guid`: Identificador único del evento
+  - `start/end`: Fechas de inicio y fin en formato ISO
+  - `title`: Título formateado para mostrar
+  - `patient_name`: Nombre del paciente
+  - `exam`: Descripción del examen
+  - `editable`: Si el evento puede editarse
+- `work_hours`: Horarios de trabajo del equipo
+  - `day`: Día de la semana (0=Domingo, 1=Lunes, etc.)
+  - `start/end`: Horarios en formato HH:MM:SS
+
+**Ejemplo de uso:**
+```javascript
+const calendarData = {
+  equipment_aetitle: "CT1",
+  guid: "optional-guid-to-mark-editable"
+};
+
+const response = await fetch('/api/appointments/calendar-events', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify(calendarData)
+});
+```
+
+---
+
+#### GET /appointments
+Obtiene lista de citas con filtros opcionales.
+
+**Query Parameters:**
+- `date`: Fecha específica (YYYY-MM-DD)
+- `doctor_id`: Filtrar por médico
+- `equipment_id`: Filtrar por equipo  
+- `admitted`: true/false (filtrar por estado de admisión)
+- `today`: true (obtener solo citas del día actual)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "uuid",
+      "patient_name": "string",
+      "start": "2025-12-05T10:00:00",
+      "end": "2025-12-05T11:00:00",
+      "exam": "string",
+      "doctor": "string",
+      "equipment": "string",
+      "status": "string",
+      "is_admitted": false
+    }
+  ]
+}
+```
+
+---
+
+#### PATCH /appointments/{appointment_id}/reschedule
+Reprograma una cita existente (actualiza fechas).
+
+**Path Parameters:**
+- `appointment_id`: GUID de la cita a reprogramar
+
+**Request Body:**
+```json
+{
+  "start": "2025-12-05T10:00:00Z",
+  "end": "2025-12-05T11:00:00Z"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Cita reprogramada exitosamente"
+}
+```
+
+### Notas de Implementación
+
+**Transacciones:**
+- La creación de múltiples eventos usa transacciones de base de datos
+- Si algún evento falla, toda la operación hace rollback
+- Esto garantiza consistencia de datos
+
+**Validaciones:**
+- Todos los GUIDs se validan contra la base de datos
+- Las fechas deben estar en formato correcto
+- Los horarios no pueden superponerse (validación en frontend)
+
+**Performance:**
+- Los eventos se crean en una sola transacción para optimizar rendimiento
+- Las consultas usan índices en campos GUID y fechas
+
 Todos los endpoints (excepto `/auth/login`) requieren un token JWT válido en el header:
 ```
 Authorization: Bearer {access_token}
