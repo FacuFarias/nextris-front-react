@@ -42,6 +42,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
     const calendarEventosMutation = useCalendarEventos();
     const [horariosDisponibles, setHorariosDisponibles] = useState<any[]>([]);
     const [blockedEventsByEquipo, setBlockedEventsByEquipo] = useState<{ [equipoGuid: string]: any[] }>({});
+    const [estudiosAgendados, setEstudiosAgendados] = useState<Set<string>>(new Set());
     // Obtener equipos por locación
     const { data: equipos, isLoading: isLoadingEquipos } = useEquiposPorLocacion(selectedDireccion);
     // Obtener el equipo completo seleccionado
@@ -197,6 +198,30 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                 setEvents([...updated[equipoId], ...blocked]);
                 return updated;
             });
+
+            // Trackear el estudio como agendado
+            setEstudiosAgendados(prev => {
+                const newSet = new Set(prev);
+                newSet.add(study.guid || study.externalcode);
+
+                // Verificar si todos los estudios están agendados
+                const totalEstudios = selectedEstudios.length;
+                const agendados = newSet.size;
+
+                if (agendados === totalEstudios) {
+                    toast.success('¡Todos los estudios han sido agendados!', {
+                        description: `${agendados} de ${totalEstudios} estudios ubicados en el calendario`,
+                        duration: 4000
+                    });
+                } else {
+                    toast.success(`Estudio agendado (${agendados}/${totalEstudios})`, {
+                        description: `${study.externalcode} - ${study.description}`,
+                        duration: 3000
+                    });
+                }
+
+                return newSet;
+            });
         }
     };
 
@@ -258,6 +283,21 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
     // Fijar el rango de horario del calendario siempre de 05:00 a 22:00
     let slotMinTime = "05:00:00";
     let slotMaxTime = "23:00:00";
+
+    // Convertir horariosDisponibles a formato businessHours de FullCalendar
+    const businessHours = React.useMemo(() => {
+        if (!horariosDisponibles || horariosDisponibles.length === 0) return undefined;
+        return horariosDisponibles.map((horario: any) => {
+            // day: 1=Lunes, 7=Domingo en nuestro backend
+            // FullCalendar: 0=Domingo, 1=Lunes, 6=Sábado
+            const fcDay = horario.day === 7 ? 0 : horario.day;
+            return {
+                daysOfWeek: [fcDay],
+                startTime: horario.start,
+                endTime: horario.end
+            };
+        });
+    }, [horariosDisponibles]);
 
     // Estado para mostrar/agrupar los eventos de usuario actuales (no bloqueados)
     const userEvents = events.filter(ev => !ev.extendedProps?.blocked);
@@ -348,34 +388,52 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                     <h3 className="text-base font-semibold text-gray-800">
                                         Estudios a mover ({selectedEstudios.length})
                                     </h3>
+                                    {estudiosAgendados.size > 0 && (
+                                        <span className={`text-xs px-2 py-1 rounded-full font-semibold ${estudiosAgendados.size === selectedEstudios.length
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-blue-100 text-blue-800'
+                                            }`}>
+                                            {estudiosAgendados.size}/{selectedEstudios.length} agendados
+                                        </span>
+                                    )}
                                 </div>
                                 <div ref={containerRef} className="flex flex-wrap gap-3">
                                     {selectedEstudios.map((estudio: any, index: number) => {
                                         const isActive = equipoSeleccionado ? estudio.modalityName === equipoSeleccionado.modality : true;
-                                        const baseClasses = "draggable-study inline-flex items-center gap-2 rounded-lg px-4 py-3 transition-all";
-                                        const activeClasses = isActive
-                                            ? "bg-green-50 border-2 border-green-500 cursor-move hover:bg-green-100 hover:border-green-600 hover:shadow-md"
-                                            : "disabled-study bg-gray-100 border-2 border-gray-300 cursor-not-allowed opacity-60";
+                                        const isAgendado = estudiosAgendados.has(estudio.guid || estudio.externalcode);
+                                        const baseClasses = "draggable-study inline-flex items-center gap-2 rounded-lg px-4 py-3";
+                                        const activeClasses = isAgendado
+                                            ? "bg-blue-50 border-2 border-blue-500 cursor-move hover:bg-blue-100 hover:border-blue-600 hover:shadow-md"
+                                            : isActive
+                                                ? "bg-green-50 border-2 border-green-500 cursor-move hover:bg-green-100 hover:border-green-600 hover:shadow-md"
+                                                : "disabled-study bg-gray-100 border-2 border-gray-300 cursor-not-allowed opacity-60";
                                         return (
                                             <div
                                                 key={estudio.guid || index}
                                                 className={`${baseClasses} ${activeClasses}`}
                                                 data-study={JSON.stringify(estudio)}
                                             >
-                                                <GripVertical className={`w-5 h-5 ${isActive ? 'text-green-600' : 'text-gray-400'}`} />
+                                                <GripVertical className={`w-5 h-5 ${isAgendado ? 'text-blue-600' : isActive ? 'text-green-600' : 'text-gray-400'}`} />
                                                 <div className="flex flex-col">
                                                     <div className="flex items-center gap-2">
-                                                        <span className={`text-sm font-bold ${isActive ? 'text-green-700' : 'text-gray-500'}`}>
+                                                        <span className={`text-sm font-bold ${isAgendado ? 'text-blue-700' : isActive ? 'text-green-700' : 'text-gray-500'}`}>
                                                             {estudio.externalcode}
                                                         </span>
-                                                        <span className={`text-xs px-2 py-1 rounded-full font-semibold ${isActive
-                                                            ? 'bg-green-100 text-green-800'
-                                                            : 'bg-gray-200 text-gray-600'
+                                                        <span className={`text-xs px-2 py-1 rounded-full font-semibold ${isAgendado
+                                                            ? 'bg-blue-100 text-blue-800'
+                                                            : isActive
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : 'bg-gray-200 text-gray-600'
                                                             }`}>
                                                             {estudio.modalityName}
                                                         </span>
+                                                        {isAgendado && (
+                                                            <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-bold">
+                                                                ✓
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                    <span className={`text-xs mt-1 ${isActive ? 'text-gray-700' : 'text-gray-500'}`}>
+                                                    <span className={`text-xs mt-1 ${isAgendado ? 'text-blue-700' : isActive ? 'text-gray-700' : 'text-gray-500'}`}>
                                                         {estudio.description}
                                                     </span>
                                                 </div>
@@ -428,6 +486,24 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                         .fc-day-sat, .fc-col-header-cell.fc-day-sat {
                                             background-color: #ede9fe !important;
                                         }
+                                        /* Horarios no laborales (fuera de businessHours) */
+                                        .fc .fc-non-business {
+                                            background-color: #1f2937 !important;
+                                            opacity: 0.15;
+                                        }
+                                        /* Optimización del drag and drop */
+                                        .disabled-study {
+                                            pointer-events: none !important;
+                                            user-select: none !important;
+                                        }
+                                        .draggable-study:not(.disabled-study) {
+                                            transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+                                            will-change: transform;
+                                        }
+                                        .draggable-study:not(.disabled-study):active {
+                                            cursor: grabbing !important;
+                                            transform: scale(1.02);
+                                        }
                                     `}</style>
                                     <FullCalendar
                                         ref={calendarRef}
@@ -447,6 +523,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                         droppable={true}
                                         drop={handleEventReceive}
                                         eventDrop={handleEventDrop}
+                                        businessHours={businessHours}
                                         eventAllow={(dropInfo) => {
                                             if (!horariosDisponibles || horariosDisponibles.length === 0) return true;
                                             const startDate = dropInfo.start;
@@ -464,7 +541,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                             return startDate >= startAllowed && endDate <= endAllowed;
                                         }}
                                         events={events}
-                                        allDaySlot={true}
+                                        allDaySlot={false}
                                         slotMinTime={slotMinTime}
                                         slotMaxTime={slotMaxTime}
                                         slotDuration="00:30:00"
@@ -511,6 +588,17 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                                                     action: {
                                                                         label: 'Eliminar',
                                                                         onClick: () => {
+                                                                            // Remover del tracking de estudios agendados
+                                                                            const event = events.find(ev => ev.id === eventId);
+                                                                            if (event?.extendedProps?.study) {
+                                                                                const studyId = event.extendedProps.study.guid || event.extendedProps.study.externalcode;
+                                                                                setEstudiosAgendados(prev => {
+                                                                                    const newSet = new Set(prev);
+                                                                                    newSet.delete(studyId);
+                                                                                    return newSet;
+                                                                                });
+                                                                            }
+
                                                                             setEvents(prev => prev.filter(ev => ev.id !== eventId));
                                                                             setAllEvents(prev => {
                                                                                 const equipoId = selectedEquipoLocal;

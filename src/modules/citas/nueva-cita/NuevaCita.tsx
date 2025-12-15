@@ -27,7 +27,6 @@ export const NuevaCita = () => {
     const [selectedAgenda, setSelectedAgenda] = useState<any>(null);
     const [selectedEquipo, setSelectedEquipo] = useState<any>(null);
     const [allEvents, setAllEvents] = useState<{ [equipoGuid: string]: any[] }>({});
-    console.log(allEvents)
     const debouncedSearch = useDebounce(searchTerm, 500);
     const { mutate: fetchPacientesDireccion, data: pacientesData, isPending } = usePacienteDireccion();
     //modal agregar paciente
