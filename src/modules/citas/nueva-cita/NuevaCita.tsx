@@ -17,6 +17,7 @@ import { usePacienteDireccion } from "@/modules/admision/admision-espontanea/hoo
 import { admisionColumns } from "@/modules/admision/admision-espontanea/components/columns"
 import { Agenda } from "./components/Agenda"
 import { Examen } from "./components/Examen"
+import { Prestacion } from "./components/Prestacion"
 
 export const NuevaCita = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -53,6 +54,8 @@ export const NuevaCita = () => {
         setSelectedEquipo(null);
         setSearchTerm("");
         setSelectedDireccion("");
+        setAllEvents({});
+
         setTimeout(() => {
             setActiveTab("paciente");
         }, 300);
@@ -210,30 +213,12 @@ export const NuevaCita = () => {
 
                         {/* Tab Content - Prestación */}
                         <TabsContent value="prestacion" className="mt-6">
-                            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-                                {Object.values(allEvents)
-                                    .flat()
-                                    .filter(ev => !ev.extendedProps?.blocked)
-                                    .map((ev, idx) => (
-                                        <div key={ev.id || idx} className="bg-white border border-purple-200 rounded-lg shadow p-4 flex flex-col gap-2">
-                                            <div className="font-bold text-brand-purple text-lg">
-                                                {ev.extendedProps?.study?.description}
-                                            </div>
-                                            <div className="text-sm text-gray-700">
-                                                <span className="font-semibold">Equipo:</span> {ev.extendedProps?.equipo?.description || ev.extendedProps?.equipo?.guid}
-                                            </div>
-                                            <div className="text-sm text-gray-700">
-                                                <span className="font-semibold">Código:</span> {ev.extendedProps?.study?.externalcode}
-                                            </div>
-                                            <div className="text-sm text-gray-700">
-                                                <span className="font-semibold">Inicio:</span> {new Date(ev.start).toLocaleString()}
-                                            </div>
-                                            <div className="text-sm text-gray-700">
-                                                <span className="font-semibold">Fin:</span> {new Date(ev.end).toLocaleString()}
-                                            </div>
-                                        </div>
-                                    ))}
-                            </div>
+                            <Prestacion
+                                selectedPatient={selectedPatient}
+                                selectedDireccion={selectedDireccion}
+                                allEvents={allEvents}
+                                onSuccess={handleResetForm}
+                            />
                         </TabsContent>
                     </Tabs>
                 </div>

@@ -79,6 +79,15 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
         setEstudiosAgendados(estudiosEnCalendario);
     }, [allEvents]);
 
+    // Sincronizar events con allEvents y blockedEventsByEquipo cuando cambian
+    useEffect(() => {
+        if (selectedEquipoLocal) {
+            const userEvents = allEvents[selectedEquipoLocal] || [];
+            const blocked = blockedEventsByEquipo[selectedEquipoLocal] || [];
+            setEvents([...userEvents, ...blocked]);
+        }
+    }, [allEvents, blockedEventsByEquipo, selectedEquipoLocal]);
+
     // Inicializar draggable para los estudios (solo los activos)
     useEffect(() => {
         if (containerRef.current) {
@@ -92,8 +101,6 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                             toast.error("Debe seleccionar un equipo antes de agendar un estudio.");
                             return null;
                         }
-                        // Log para depuración
-                        console.log('Equipo seleccionado al crear evento:', equipoSeleccionado);
                         // Solo guardar los campos esenciales del equipo
                         const equipoSimple = equipoSeleccionado
                             ? {
@@ -136,6 +143,16 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
         });
     };
 
+    // Función para verificar si hay solapamiento entre dos eventos
+    const checkEventOverlap = (newStart: Date, newEnd: Date, existingEvents: any[]) => {
+        return existingEvents.some(event => {
+            const eventStart = new Date(event.start);
+            const eventEnd = new Date(event.end);
+            // Verifica si hay cualquier tipo de solapamiento
+            return (newStart < eventEnd && newEnd > eventStart);
+        });
+    };
+
     const handleEventReceive = (info: any) => {
         // Obtener los datos del elemento draggable
         const draggedEl = info.draggedEl;
@@ -145,6 +162,13 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
             const study = JSON.parse(studyData);
             const startDate = info.date;
             const endDate = new Date(info.date.getTime() + 60 * 60 * 1000); // +1 hora
+
+            // Verificar si hay solapamiento con eventos existentes
+            if (checkEventOverlap(startDate, endDate, events)) {
+                toast.error("No se puede agendar aquí porque se solapa con otro evento existente.");
+                if (info && typeof info.revert === 'function') info.revert();
+                return;
+            }
 
             // Validar horario permitido
             if (horariosDisponibles && horariosDisponibles.length > 0) {
@@ -207,11 +231,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
             setAllEvents(prev => {
                 const equipoId = selectedEquipoLocal;
                 const prevEvents = prev[equipoId] || [];
-                const updated = { ...prev, [equipoId]: [...prevEvents, eventData] };
-                // Siempre mostrar eventos de usuario + bloqueados
-                const blocked = blockedEventsByEquipo[equipoId] || [];
-                setEvents([...updated[equipoId], ...blocked]);
-                return updated;
+                return { ...prev, [equipoId]: [...prevEvents, eventData] };
             });
 
             // Trackear el estudio como agendado
@@ -242,7 +262,39 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
 
     const handleEventDrop = (info: any) => {
         // Cuando se mueve un evento existente
-        console.log('Evento movido:', info.event);
+        const movedEvent = info.event;
+        const newStart = movedEvent.start;
+        const newEnd = movedEvent.end || new Date(newStart.getTime() + 60 * 60 * 1000);
+
+        // Verificar solapamiento con otros eventos (excluyendo el que se está moviendo)
+        const otherEvents = events.filter(ev => ev.id !== movedEvent.id);
+        if (checkEventOverlap(newStart, newEnd, otherEvents)) {
+            toast.error("No se puede mover aquí porque se solapa con otro evento.");
+            info.revert();
+            return;
+        }
+
+        // Actualizar el evento en el estado
+        const eventId = movedEvent.id;
+        const updatedEvent = {
+            id: eventId,
+            title: movedEvent.title,
+            start: newStart,
+            end: newEnd,
+            extendedProps: movedEvent.extendedProps,
+            backgroundColor: movedEvent.backgroundColor,
+            borderColor: movedEvent.borderColor
+        };
+
+        setEvents(prev => prev.map(ev => ev.id === eventId ? updatedEvent : ev));
+        setAllEvents(prev => {
+            const equipoId = selectedEquipoLocal;
+            const prevEvents = prev[equipoId] || [];
+            return {
+                ...prev,
+                [equipoId]: prevEvents.map(ev => ev.id === eventId ? updatedEvent : ev)
+            };
+        });
     };
 
 
@@ -258,10 +310,6 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
     // Nueva función para manejar la selección de equipo
     const handleEquipoChange = (equipoGuid: string) => {
         setSelectedEquipoLocal(equipoGuid);
-        // Mostrar eventos de usuario + bloqueados si existen
-        const userEvents = allEvents[equipoGuid] || [];
-        const blocked = blockedEventsByEquipo[equipoGuid] || [];
-        setEvents([...userEvents, ...blocked]);
         // Buscar el equipo seleccionado
         const equipo = equipos?.find((eq: any) => eq.guid === equipoGuid);
         if (equipo) {
@@ -276,6 +324,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                         const backendEvents = data.data.events.map((ev: any) => ({
                             ...ev,
                             editable: false,
+                            overlap: false,
                             backgroundColor: '#1e2939',
                             borderColor: '#1e2939',
                             extendedProps: {
@@ -283,12 +332,10 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                 blocked: true
                             }
                         }));
-                        setBlockedEventsByEquipo(prev => {
-                            const updated = { ...prev, [equipoGuid]: backendEvents };
-                            // Siempre mostrar eventos de usuario + bloqueados
-                            setEvents([...(allEvents[equipoGuid] || []), ...backendEvents]);
-                            return updated;
-                        });
+                        setBlockedEventsByEquipo(prev => ({
+                            ...prev,
+                            [equipoGuid]: backendEvents
+                        }));
                     }
                 }
             });
@@ -418,7 +465,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                         const isAgendado = estudiosAgendados.has(estudio.guid || estudio.externalcode);
                                         const baseClasses = "draggable-study inline-flex items-center gap-2 rounded-lg px-4 py-3";
                                         const activeClasses = isAgendado
-                                            ? "bg-blue-50 border-2 border-blue-500 cursor-move hover:bg-blue-100 hover:border-blue-600 hover:shadow-md"
+                                            ? "disabled-study bg-blue-50 border-2 border-blue-500 cursor-not-allowed"
                                             : isActive
                                                 ? "bg-green-50 border-2 border-green-500 cursor-move hover:bg-green-100 hover:border-green-600 hover:shadow-md"
                                                 : "disabled-study bg-gray-100 border-2 border-gray-300 cursor-not-allowed opacity-60";
@@ -540,9 +587,23 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                         eventDrop={handleEventDrop}
                                         businessHours={businessHours}
                                         eventAllow={(dropInfo) => {
-                                            if (!horariosDisponibles || horariosDisponibles.length === 0) return true;
+
+                                            // Verificar solapamiento con eventos existentes
                                             const startDate = dropInfo.start;
-                                            const endDate = dropInfo.end;
+                                            const endDate = dropInfo.end || new Date(startDate.getTime() + 60 * 60 * 1000);
+
+                                            // Para eventos existentes que se mueven, excluir el propio evento de la validación
+                                            // Para eventos nuevos (drop externo), validar contra todos los eventos
+                                            const eventsToCheck = 'event' in dropInfo && dropInfo.event
+                                                ? events.filter((ev: any) => ev.id !== (dropInfo.event as any).id)
+                                                : events;
+
+                                            if (checkEventOverlap(startDate, endDate, eventsToCheck)) {
+                                                return false; // No permitir drop si hay solapamiento
+                                            }
+
+                                            // Validar horarios de negocio
+                                            if (!horariosDisponibles || horariosDisponibles.length === 0) return true;
                                             const jsDay = startDate.getDay();
                                             const dia = jsDay === 0 ? 7 : jsDay;
                                             const horario = horariosDisponibles.find((h) => h.day === dia);
@@ -567,6 +628,8 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                         dayMaxEvents={true}
                                         nowIndicator={true}
                                         editable={true}
+                                        eventOverlap={false}
+                                        selectOverlap={false}
                                         timeZone="local"
                                         eventClick={(info => {
                                             const eventTitle = info.event.title;
@@ -596,40 +659,27 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 const eventId = eventInfo.event.id;
-                                                                const eventTitle = eventInfo.event.title;
-                                                                toast.error(`¿Eliminar "${eventTitle}"?`, {
-                                                                    description: 'Esta acción eliminará el estudio del calendario',
-                                                                    duration: 5000,
-                                                                    action: {
-                                                                        label: 'Eliminar',
-                                                                        onClick: () => {
-                                                                            // Remover del tracking de estudios agendados
-                                                                            const event = events.find(ev => ev.id === eventId);
-                                                                            if (event?.extendedProps?.study) {
-                                                                                const studyId = event.extendedProps.study.guid || event.extendedProps.study.externalcode;
-                                                                                setEstudiosAgendados(prev => {
-                                                                                    const newSet = new Set(prev);
-                                                                                    newSet.delete(studyId);
-                                                                                    return newSet;
-                                                                                });
-                                                                            }
 
-                                                                            setEvents(prev => prev.filter(ev => ev.id !== eventId));
-                                                                            setAllEvents(prev => {
-                                                                                const equipoId = selectedEquipoLocal;
-                                                                                const prevEvents = prev[equipoId] || [];
-                                                                                return {
-                                                                                    ...prev,
-                                                                                    [equipoId]: prevEvents.filter(ev => ev.id !== eventId)
-                                                                                };
-                                                                            });
-                                                                            toast.success('Estudio eliminado del calendario');
-                                                                        }
-                                                                    },
-                                                                    cancel: {
-                                                                        label: 'Cancelar',
-                                                                        onClick: () => { }
-                                                                    }
+                                                                // Remover del tracking de estudios agendados
+                                                                const event = events.find(ev => ev.id === eventId);
+                                                                if (event?.extendedProps?.study) {
+                                                                    const studyId = event.extendedProps.study.guid || event.extendedProps.study.externalcode;
+                                                                    setEstudiosAgendados(prev => {
+                                                                        const newSet = new Set(prev);
+                                                                        newSet.delete(studyId);
+                                                                        return newSet;
+                                                                    });
+                                                                }
+
+                                                                // Eliminar el evento directamente
+                                                                setEvents(prev => prev.filter(ev => ev.id !== eventId));
+                                                                setAllEvents(prev => {
+                                                                    const equipoId = selectedEquipoLocal;
+                                                                    const prevEvents = prev[equipoId] || [];
+                                                                    return {
+                                                                        ...prev,
+                                                                        [equipoId]: prevEvents.filter(ev => ev.id !== eventId)
+                                                                    };
                                                                 });
                                                             }}
                                                         >
