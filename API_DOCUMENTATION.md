@@ -2359,7 +2359,7 @@ const response = await fetch('/api/appointments/calendar-events', {
 ---
 
 #### GET /appointments
-Obtiene lista de citas con filtros opcionales.
+Obtiene lista de citas con filtros opcionales y paginación.
 
 **Query Parameters:**
 - `date`: Fecha específica (YYYY-MM-DD)
@@ -2367,26 +2367,79 @@ Obtiene lista de citas con filtros opcionales.
 - `equipment_id`: Filtrar por equipo  
 - `admitted`: true/false (filtrar por estado de admisión)
 - `today`: true (obtener solo citas del día actual)
+- `page`: Número de página (default: 1, min: 1)
+- `per_page`: Items por página (default: 20, min: 1, max: 100)
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "guid": "uuid",
-      "patient_name": "string",
-      "start": "2025-12-05T10:00:00",
-      "end": "2025-12-05T11:00:00",
-      "exam": "string",
-      "doctor": "string",
-      "equipment": "string",
-      "status": "string",
-      "is_admitted": false
+  "data": {
+    "appointments": [
+      {
+        "guid": "uuid",
+        "patient_name": "string",
+        "start": "2025-12-05T10:00:00",
+        "end": "2025-12-05T11:00:00",
+        "exam": "string",
+        "doctor": "string",
+        "equipment": "string",
+        "is_admitted": false
+      }
+    ],
+    "pagination": {
+      "current_page": 1,
+      "per_page": 20,
+      "total_items": 150,
+      "total_pages": 8,
+      "has_next": true,
+      "has_prev": false,
+      "next_page": 2,
+      "prev_page": null
     }
-  ]
+  }
 }
 ```
+
+**Campos de paginación:**
+- `current_page`: Página actual solicitada
+- `per_page`: Items por página utilizados
+- `total_items`: Total de registros que coinciden con los filtros
+- `total_pages`: Total de páginas disponibles
+- `has_next`: Si existe una página siguiente
+- `has_prev`: Si existe una página anterior
+- `next_page`: Número de la página siguiente (null si no existe)
+- `prev_page`: Número de la página anterior (null si no existe)
+
+**Ejemplo de uso:**
+```javascript
+// Obtener primera página con 10 items
+const response = await fetch('/api/appointments?page=1&per_page=10', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+
+// Obtener citas de hoy con paginación
+const todayResponse = await fetch('/api/appointments?today=true&page=1&per_page=25', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+
+// Filtrar por médico con paginación
+const doctorResponse = await fetch('/api/appointments?doctor_id=uuid&page=2&per_page=15', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+```
+
+**Validaciones automáticas:**
+- Si `page` es menor a 1, se corrige a 1
+- Si `per_page` es menor a 1, se corrige a 20
+- Si `per_page` es mayor a 100, se limita a 100
+- Los filtros se aplican antes de la paginación
 
 ---
 
