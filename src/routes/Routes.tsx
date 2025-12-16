@@ -8,6 +8,7 @@ import { AdmisionCita } from "@/modules/admision/admision-cita/AdmisionCita";
 import { AdmisionEspontanea } from "@/modules/admision/admision-espontanea/AdmisionEspontanea";
 import { NuevaCita } from "@/modules/citas/nueva-cita/NuevaCita";
 import { EditarCita } from "@/modules/citas/editar-cita/EditarCita";
+import { EditarFecha } from "@/modules/citas/editar-cita/pages/editar-fecha/EditarFecha";
 
 const router = createBrowserRouter([
     {
@@ -58,6 +59,14 @@ const router = createBrowserRouter([
         element: (
             <ProtectedRoute>
                 <EditarCita />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/cita/editar-cita/:id",
+        element: (
+            <ProtectedRoute>
+                <EditarFecha />
             </ProtectedRoute>
         ),
     },

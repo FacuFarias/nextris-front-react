@@ -12,6 +12,7 @@ import type { Cita } from "./types/cita.type"
 import { useCitas } from "./hooks/use-citas"
 import { InputSearch } from "@/components/InputSearch"
 import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
+import { useNavigate } from "react-router-dom"
 
 
 
@@ -21,7 +22,7 @@ export const EditarCita = () => {
     const [page, setPage] = useState(1);
     const debouncedSearch = useDebounce(searchTerm, 500);
     const { citasData, isLoading: isLoadingCitas } = useCitas({ page, per_page: 8, search: debouncedSearch });
-
+    const navigate = useNavigate();
     const pagination = citasData && {
         page: citasData?.data?.page || 1,
         pageSize: citasData?.data?.per_page || 5,
@@ -31,8 +32,17 @@ export const EditarCita = () => {
     const handleEditCita = (cita: Cita) => {
         console.log("hola")
     };
+    const handleEditFecha = (cita: Cita) => {
+        navigate(`/cita/editar-cita/${cita.guid}`,
+            {
+                state: { cita }
+            }
+        );
+
+    };
     const citasActions = getCitasActions(
         handleEditCita,
+        handleEditFecha,
     );
     return (
         <MainLayout>
@@ -51,8 +61,6 @@ export const EditarCita = () => {
                     {/* Barra de búsqueda */}
                     <InputSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Buscar cita..." />
                     {/* Tabla de pacientes */}
-
-
 
                     {isLoadingCitas ? (
                         <div className='flex justify-center items-center h-40'>
