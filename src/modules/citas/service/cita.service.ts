@@ -19,3 +19,9 @@ export const crearCita = async (data: CrearCitaData) => {
     const response = await api.post('/appointments', data);
     return response.data;
 };
+
+
+export const getCitas = async ({ page, per_page, search }: { page: number, per_page: number, search: string }) => {
+    const response = await api.get(`/appointments?per_page=${per_page}&page=${page}&search=${search}`);
+    return response.data;
+};

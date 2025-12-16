@@ -164,14 +164,16 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                                                     <span className="font-semibold">Inicio:</span>{' '}
                                                     {new Date(ev.start).toLocaleString('es-ES', {
                                                         dateStyle: 'short',
-                                                        timeStyle: 'short'
+                                                        timeStyle: 'short',
+                                                        hour12: false
                                                     })}
                                                 </div>
                                                 <div>
                                                     <span className="font-semibold">Fin:</span>{' '}
                                                     {new Date(ev.end).toLocaleString('es-ES', {
                                                         dateStyle: 'short',
-                                                        timeStyle: 'short'
+                                                        timeStyle: 'short',
+                                                        hour12: false
                                                     })}
                                                 </div>
                                             </div>

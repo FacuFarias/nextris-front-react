@@ -7,6 +7,7 @@ import { HistorialPaciente } from "@/modules/pacientes/buscar-paciente/pages/his
 import { AdmisionCita } from "@/modules/admision/admision-cita/AdmisionCita";
 import { AdmisionEspontanea } from "@/modules/admision/admision-espontanea/AdmisionEspontanea";
 import { NuevaCita } from "@/modules/citas/nueva-cita/NuevaCita";
+import { EditarCita } from "@/modules/citas/editar-cita/EditarCita";
 
 const router = createBrowserRouter([
     {
@@ -56,10 +57,11 @@ const router = createBrowserRouter([
         path: "/cita/editar-cita",
         element: (
             <ProtectedRoute>
-                <HistorialPaciente />
+                <EditarCita />
             </ProtectedRoute>
         ),
     },
+
 
     {/*Admision*/ },
 

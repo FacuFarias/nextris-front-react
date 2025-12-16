@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { crearCita } from '../services/cita.service';
+import { crearCita } from '../../service/cita.service';
 
 export const useCrearCita = () => {
     return useMutation({
