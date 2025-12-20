@@ -39,6 +39,7 @@ Authorization: Bearer <JWT_TOKEN>
 {
   "success": true,
   "data": {
+    "timezone": "America/Argentina/Buenos_Aires",
     "data": [
       {
         "guid": "f39710b4-7914-44ba-ab72-ad4ed5e22e98",
@@ -51,8 +52,7 @@ Authorization: Bearer <JWT_TOKEN>
         "is_admitted": false,
         "location_id": "a1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o6",
         "equipment_id": "c1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o8",
-        "modality": "Tomografía Computarizada",
-        "timezone": "America/Argentina/Buenos_Aires"
+        "modality": "Tomografía Computarizada"
       }
     ],
     "page": 1,
