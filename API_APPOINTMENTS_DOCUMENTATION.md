@@ -51,7 +51,8 @@ Authorization: Bearer <JWT_TOKEN>
         "is_admitted": false,
         "location_id": "a1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o6",
         "equipment_id": "c1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o8",
-        "modality": "Tomografía Computarizada"
+        "modality": "Tomografía Computarizada",
+        "timezone": "America/Argentina/Buenos_Aires"
       }
     ],
     "page": 1,
@@ -298,7 +299,7 @@ Admits an appointment and creates an examination order in the DICOM worklist.
 #### Request Body (opcional)
 ```json
 {
-  "additional_notes": "Notas adicionales (opcional)"
+  "equipment_id": "uuid-del-equipo (opcional, si no viene en la cita)"
 }
 ```
 
@@ -309,7 +310,7 @@ Content-Type: application/json
 Authorization: Bearer <JWT_TOKEN>
 
 {
-  "additional_notes": "Paciente llegó temprano"
+  "equipment_id": "c1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o8"
 }
 ```
 
@@ -319,10 +320,13 @@ Authorization: Bearer <JWT_TOKEN>
 ```json
 {
   "success": true,
-  "message": "Cita admisionada exitosamente y orden creada en worklist",
+  "message": "Cita admisionada exitosamente",
   "data": {
-    "appointment_id": "f39710b4-7914-44ba-ab72-ad4ed5e22e98",
-    "order_status": "admitted"
+    "admission_number": "ADM001",
+    "accession_number": "ACC001",
+    "exam_id": "f39710b4-7914-44ba-ab72-ad4ed5e22e98",
+    "study_instance_uid": "1.2.840.113619.1234567890.1",
+    "timezone": "America/Argentina/Buenos_Aires"
   }
 }
 ```
@@ -334,6 +338,8 @@ Authorization: Bearer <JWT_TOKEN>
   "message": "Cita no encontrada"
 }
 ```
+
+**Status Code:** 404 Not Found
 
 ---
 
@@ -370,6 +376,7 @@ Authorization: Bearer <JWT_TOKEN>
 {
   "success": true,
   "data": {
+    "timezone": "America/Argentina/Buenos_Aires",
     "events": [
       {
         "guid": "f39710b4-7914-44ba-ab72-ad4ed5e22e98",
@@ -497,6 +504,73 @@ Content-Type: application/json
 
 ---
 
+### 9. POST /admission/create-order
+Crea una orden de admisión (worklist) con un examen.
+
+#### Description
+Creates an admission order (examination) in the system and sends it to the DICOM worklist.
+
+#### Request Body
+```json
+{
+  "patient_id": "uuid-del-paciente",
+  "location_id": "uuid-de-la-ubicacion",
+  "exam": {
+    "study_type_id": "uuid-del-tipo-de-estudio",
+    "equipment_id": "uuid-del-equipo",
+    "physician_id": "uuid-del-medico-solicitante (opcional)",
+    "insurance_id": "uuid-de-la-obra-social (opcional)",
+    "severity": "normal | urgent (opcional, default: normal)"
+  }
+}
+```
+
+#### Request
+```http
+POST /api/admission/create-order
+Content-Type: application/json
+Authorization: Bearer <JWT_TOKEN>
+
+{
+  "patient_id": "a1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o6",
+  "location_id": "d1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o9",
+  "exam": {
+    "study_type_id": "b1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o7",
+    "equipment_id": "c1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o8",
+    "physician_id": "e1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5f1",
+    "insurance_id": "f1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5f2",
+    "severity": "urgent"
+  }
+}
+```
+
+#### Response
+**Status Code:** 201 Created
+
+```json
+{
+  "success": true,
+  "data": {
+    "admission_number": "ADM001",
+    "accession_number": "ACC001",
+    "exam_id": "f39710b4-7914-44ba-ab72-ad4ed5e22e98",
+    "study_instance_uid": "1.2.840.113619.1234567890.1",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
+  "message": "Orden creada exitosamente"
+}
+```
+
+#### Errors
+```json
+{
+  "success": false,
+  "message": "patient_id es obligatorio"
+}
+```
+
+---
+
 ## Data Types
 
 ### Appointment Object
@@ -512,14 +586,17 @@ Content-Type: application/json
   "is_admitted": "boolean",
   "location_id": "string (UUID)",
   "equipment_id": "string (UUID)",
-  "modality": "string"
+  "modality": "string",
+  "timezone": "string (e.g., America/Argentina/Buenos_Aires)"
 }
 ```
 
 ### DateTime Format
 - **Input:** ISO 8601 with timezone (e.g., `2025-12-05T10:00:00Z`)
 - **Output:** ISO 8601 without timezone (e.g., `2025-12-05T10:00:00`)
-- **Timezone:** Argentina/Buenos_Aires (UTC-3)
+- **Timezone Field:** Incluido en todas las respuestas (e.g., `America/Argentina/Buenos_Aires`)
+
+**Nota:** El campo `timezone` devuelto indica la zona horaria de la ubicación (location) asociada a la cita/examen, útil para convertir horarios locales.
 
 ---
 
@@ -610,6 +687,14 @@ curl -X POST http://localhost:5000/api/appointments/f39710b4-7914-44ba-ab72-ad4e
 ---
 
 ## Change Log
+
+### Version 1.2.0 (2025-12-20) ✨ **NEW - Timezone Support**
+- ✅ Agregado campo `timezone` a GET /appointments (cada cita)
+- ✅ Agregado campo `timezone` a POST /appointments/calendar-events
+- ✅ Agregado campo `timezone` a POST /appointments/:id/admit
+- ✅ Agregado campo `timezone` a POST /admission/create-order (nuevo endpoint)
+- ✅ Todas las ubicaciones (locations) configuradas con timezone
+- ✅ Soporte para ajustar horarios según zona horaria de location
 
 ### Version 1.1.0 (2025-12-17)
 - ✅ Agregado campo `location_id` a respuesta de GET /appointments
