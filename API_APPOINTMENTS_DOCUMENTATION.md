@@ -10,6 +10,51 @@ Este documento describe todos los endpoints disponibles para la gestión de cita
 
 ## Endpoints
 
+### 0. GET /doctors
+Obtiene la lista de médicos disponibles en el sistema.
+
+#### Description
+Retrieves a list of all users with the role "Medico" (Physician) for assignment in appointments.
+
+#### Parameters
+**Query Parameters:**
+- `active_only` (optional): true/false para obtener solo médicos activos (default: false)
+
+#### Request
+```http
+GET /api/doctors
+Authorization: Bearer <JWT_TOKEN>
+```
+
+#### Response
+**Status Code:** 200 OK
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "584f6b5b-9eb6-438d-a63f-920a12adbfe9",
+      "name": "Paredes Armando"
+    },
+    {
+      "guid": "7cbdd185-2efc-4a61-bff8-0eac3f715b20",
+      "name": "Test Usuario Actualizado"
+    }
+  ]
+}
+```
+
+#### Errors
+```json
+{
+  "success": false,
+  "message": "Error: {error_details}"
+}
+```
+
+---
+
 ### 1. GET /appointments
 Obtiene una lista de citas con filtros y paginación.
 
@@ -704,6 +749,18 @@ curl -X PATCH http://localhost:5000/api/appointments/f39710b4-7914-44ba-ab72-ad4
   }'
 ```
 
+### Obtener lista de médicos disponibles
+```bash
+curl -X GET "http://localhost:5000/api/doctors" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Obtener solo médicos activos
+```bash
+curl -X GET "http://localhost:5000/api/doctors?active_only=true" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
 ### Obtener citas de hoy
 ```bash
 curl -X GET "http://localhost:5000/api/appointments?today=true&per_page=50" \
@@ -723,6 +780,13 @@ curl -X POST http://localhost:5000/api/appointments/f39710b4-7914-44ba-ab72-ad4e
 ---
 
 ## Change Log
+
+### Version 1.3.1 (2025-12-20) ✨ **Added Doctors Endpoint**
+- ✅ Nuevo endpoint GET /doctors para obtener lista de médicos
+- ✅ Filtra automáticamente usuarios con rol "Medico"
+- ✅ Devuelve guid y nombre completo (concatenado)
+- ✅ Soporta parámetro opcional `active_only` para filtrar médicos activos
+- ✅ Útil para seleccionar médicos al crear/editar citas
 
 ### Version 1.3.0 (2025-12-20) ✨ **UTC Storage & Automatic Conversion**
 - ✅ POST /appointments: Convierte automáticamente hora local → UTC usando timezone del equipment
