@@ -13,6 +13,8 @@ import { useCitas } from "./hooks/use-citas"
 import { InputSearch } from "@/components/InputSearch"
 import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
 import { useNavigate } from "react-router-dom"
+import { ModalEditarCitaContent } from "./components/ModalEditarCita"
+import { Modal } from "@/components/Modal"
 
 
 
@@ -20,9 +22,14 @@ import { useNavigate } from "react-router-dom"
 export const EditarCita = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [citaSeleccionada, setCitaSeleccionada] = useState<Cita | null>(null);
     const debouncedSearch = useDebounce(searchTerm, 500);
     const { citasData, isLoading: isLoadingCitas } = useCitas({ page, per_page: 8, search: debouncedSearch });
     const navigate = useNavigate();
+
+
+
     const pagination = citasData && {
         page: citasData?.data?.page || 1,
         pageSize: citasData?.data?.per_page || 5,
@@ -30,8 +37,24 @@ export const EditarCita = () => {
     };
 
     const handleEditCita = (cita: Cita) => {
-        console.log("hola")
+        setCitaSeleccionada(cita);
+        setIsModalOpen(true);
     };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        // Mantener el contenido durante la animación de cierre
+        setTimeout(() => {
+            setCitaSeleccionada(null);
+        }, 400);
+    };
+
+    const handleGuardarCambios = (citaActualizada: Cita) => {
+        // Aquí implementarás la lógica para guardar los cambios
+        console.log("Guardando cambios:", citaActualizada);
+        handleCloseModal();
+    };
+
     const handleEditFecha = (cita: Cita) => {
         navigate(`/cita/editar-cita/${cita.guid}`,
             {
@@ -82,6 +105,24 @@ export const EditarCita = () => {
                     )}
                 </div>
             </div>
+
+            {/* Modal para editar cita */}
+
+            <Modal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                title="Editar Cita"
+                description="Modifica los detalles de la cita"
+                size="xxl"
+            >
+                {citaSeleccionada && (
+                    <ModalEditarCitaContent
+                        cita={citaSeleccionada}
+                        onGuardar={handleGuardarCambios}
+                        onCancelar={handleCloseModal}
+                    />
+                )}
+            </Modal>
         </MainLayout>
     )
 }

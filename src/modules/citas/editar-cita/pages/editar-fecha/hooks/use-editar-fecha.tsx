@@ -13,7 +13,7 @@ export const useEditarFecha = () => {
             toast.success("Cita reprogramada exitosamente", {
                 position: "top-right",
             });
-            queryClient.invalidateQueries({ queryKey: ["calendarEventos"] });
+            queryClient.invalidateQueries({ queryKey: ["citas"] });
             navigate("/cita/editar-cita");
         }
         ,

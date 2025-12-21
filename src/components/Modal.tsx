@@ -13,7 +13,7 @@ interface ModalProps {
     children: React.ReactNode;
     title?: string;
     description?: string;
-    size?: "sm" | "md" | "lg" | "xl" | "full";
+    size?: "sm" | "md" | "lg" | "xl" | "full" | "xxl";
     className?: string;
 }
 
@@ -22,6 +22,7 @@ const sizeClasses = {
     md: "sm:max-w-md",
     lg: "sm:max-w-lg",
     xl: "sm:max-w-xl",
+    xxl: "sm:max-w-2xl",
     full: "sm:max-w-full",
 };
 
