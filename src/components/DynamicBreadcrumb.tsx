@@ -15,14 +15,18 @@ const routeNames: Record<string, string> = {
     pacientes: "Pacientes",
     "historial-paciente": "Historial",
     citas: "Citas",
+    cita: "Cita",
     admision: "Admisión",
-    ubicacion: "Ubicación",
+    ejecucion: "Ejecución",
     redaccion: "Redacción",
     distribucion: "Distribución",
     configuraciones: "Configuraciones",
     unificacion: "Unificación de Paciente",
     reasignacion: "Reasignación de Exámenes",
 };
+
+// Rutas que no deben ser clicables
+const disabledRoutes = ["cita"];
 
 export const DynamicBreadcrumb = () => {
     const location = useLocation();
@@ -47,6 +51,7 @@ export const DynamicBreadcrumb = () => {
                 {pathnames.map((pathname, index) => {
                     const routeTo = `/${pathnames.slice(0, index + 1).join("/")}`;
                     const isLast = index === pathnames.length - 1;
+                    const isDisabled = disabledRoutes.includes(pathname);
                     const displayName = routeNames[pathname] || pathname.charAt(0).toUpperCase() + pathname.slice(1);
 
                     return (
@@ -59,6 +64,10 @@ export const DynamicBreadcrumb = () => {
                                     <BreadcrumbPage className="text-brand-purple font-medium">
                                         {displayName}
                                     </BreadcrumbPage>
+                                ) : isDisabled ? (
+                                    <span className="text-gray-400 cursor-not-allowed">
+                                        {displayName}
+                                    </span>
                                 ) : (
                                     <BreadcrumbLink asChild>
                                         <Link to={routeTo} className="hover:text-brand-purple transition-colors">

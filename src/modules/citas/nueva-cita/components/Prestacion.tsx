@@ -92,6 +92,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
         const appointmentData = {
             patient_id: selectedPatient.guid,
             appointment_type: 'equipment',
+            location_id: selectedDireccion,
             calendar_events
         };
         crearCitaMutation.mutate(appointmentData, {

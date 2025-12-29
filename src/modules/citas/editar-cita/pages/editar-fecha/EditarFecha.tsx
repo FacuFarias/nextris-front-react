@@ -1,17 +1,19 @@
 import { MainLayout } from "@/layouts/layout";
 import { useCalendarEventos } from "@/modules/citas/nueva-cita/hooks/use-calendar-eventos";
-import { CalendarPlus, User, FileText, Calendar, ArrowLeft, Check } from "lucide-react";
+import { CalendarPlus, User, Calendar, ArrowLeft, Check, Monitor } from "lucide-react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { toast } from "sonner";
 import { useEditarFecha } from "./hooks/use-editar-fecha";
+import { useEquiposPorLocacion } from "@/hooks/use-global";
 
 
 export const EditarFecha = () => {
@@ -23,14 +25,14 @@ export const EditarFecha = () => {
     const calendarEventosMutation = useCalendarEventos();
     const reprogramarCitaMutation = useEditarFecha();
     const [fechaDeseada, setFechaDeseada] = useState("");
+    const [equipoSeleccionado, setEquipoSeleccionado] = useState("");
     const [, setEventosPrevios] = useState<any[]>([]);
     const [workHours, setWorkHours] = useState<any[]>([]);
     const [events, setEvents] = useState<any[]>([]);
     const [businessHours, setBusinessHours] = useState<any[]>([]);
-
+    const { data: equipos } = useEquiposPorLocacion(cita?.location_id || '');
     let slotMinTime = "05:00:00";
     let slotMaxTime = "23:00:00";
-
     // Actualizar slotMinTime y slotMaxTime basado en workHours
     useEffect(() => {
         if (workHours.length > 0) {
@@ -41,18 +43,17 @@ export const EditarFecha = () => {
         }
     }, [workHours]);
 
-
-
-    useEffect(() => {
+    // Función reutilizable para cargar eventos del calendario
+    const cargarEventosCalendario = (equipmentAetitle: string) => {
         const payload = {
-            equipment_aetitle: cita.equipment,
+            equipment_aetitle: equipmentAetitle,
         };
+
         if (payload.equipment_aetitle) {
             calendarEventosMutation.mutate(
                 { data: payload },
                 {
                     onSuccess: (data) => {
-
                         // Guardar work_hours
                         const workHoursData = data?.data?.work_hours || [];
                         setWorkHours(workHoursData);
@@ -66,7 +67,7 @@ export const EditarFecha = () => {
                         setBusinessHours(businessHoursFormatted);
 
                         // Buscar el evento con el id y cambiar editable a true
-                        const eventosActualizados = data?.data?.events.map((evento: any) => {
+                        let eventosActualizados = data?.data?.events.map((evento: any) => {
                             const isEditable = evento.guid === id || evento.guid === Number(id);
 
                             return {
@@ -84,6 +85,30 @@ export const EditarFecha = () => {
                                 }
                             };
                         });
+
+                        // Verificar si la cita actual está en los eventos
+                        const citaEnEventos = eventosActualizados.find((ev: any) =>
+                            ev.id === id || ev.id === cita?.guid || String(ev.id) === String(id) || String(ev.id) === String(cita?.guid)
+                        );
+
+                        // Si la cita no está en los eventos del nuevo equipo, agregarla
+                        if (!citaEnEventos && cita) {
+                            const eventoCita = {
+                                id: cita.guid || id,
+                                title: cita.patient_name || 'Mi Cita',
+                                start: cita.start,
+                                end: cita.end,
+                                editable: true,
+                                backgroundColor: '#7c3aed',
+                                borderColor: '#6d28d9',
+                                textColor: '#ffffff',
+                                extendedProps: {
+                                    blocked: false
+                                }
+                            };
+                            eventosActualizados = [eventoCita, ...eventosActualizados];
+                        }
+
                         setEventosPrevios(eventosActualizados);
                         setEvents(eventosActualizados);
 
@@ -103,11 +128,56 @@ export const EditarFecha = () => {
                     },
                     onError: (error) => {
                         console.error("Error al obtener eventos:", error);
+                        toast.error("Error al cargar eventos del calendario");
                     }
                 }
             );
         }
+    };
+
+    // Cargar eventos inicialmente con el equipo de la cita
+    useEffect(() => {
+        if (cita?.equipment) {
+            cargarEventosCalendario(cita.equipment);
+        }
     }, []);
+    const equiposFiltrados = useMemo(() => {
+        if (!equipos || !cita?.modality) return [];
+        return equipos.filter((equipo: any) =>
+            equipo.modality === cita.modality
+        );
+    }, [equipos, cita?.modality]);
+
+
+
+    // Establecer el equipo seleccionado por defecto cuando se cargan los equipos filtrados
+    useEffect(() => {
+        if (equiposFiltrados.length > 0 && cita?.equipment_id && !equipoSeleccionado) {
+            const equipoActual = equiposFiltrados.find((equipo: any) =>
+                equipo.guid === cita.equipment_id || equipo.guid === String(cita.equipment_id)
+            );
+            if (equipoActual) {
+                setEquipoSeleccionado(String(equipoActual.guid));
+            }
+        }
+    }, [equiposFiltrados, cita?.equipment_id, equipoSeleccionado]);
+
+
+
+
+    // Manejar cambio de equipo
+    const handleEquipoChange = (nuevoEquipoId: string) => {
+        setEquipoSeleccionado(nuevoEquipoId);
+
+        // Buscar el equipo seleccionado para obtener su aetitle
+        const equipoSeleccionadoObj = equiposFiltrados.find((equipo: any) =>
+            equipo.guid === nuevoEquipoId || equipo.guid === String(nuevoEquipoId)
+        );
+        if (equipoSeleccionadoObj?.aeTitle) {
+            toast.info("Cargando eventos del equipo...");
+            cargarEventosCalendario(equipoSeleccionadoObj.aeTitle);
+        }
+    };
 
     const handleRegresar = () => {
         navigate(-1);
@@ -121,17 +191,29 @@ export const EditarFecha = () => {
             return;
         }
 
-        // Formatear las fechas en formato ISO string
+        // Formatear las fechas en formato UTC
         const startDate = new Date(eventoEditable.start);
         const endDate = new Date(eventoEditable.end);
 
-        const payload = {
-            id_cita: id || '',
-            start: startDate.toISOString(),
-            end: endDate.toISOString()
+        // Función para formatear fecha en formato UTC con Z
+        const formatToUTC = (date: Date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         };
 
-        console.log("Enviando datos:", payload);
+        const payload = {
+            id_cita: cita?.id_cita || id || '',
+            start_datetime: formatToUTC(startDate),
+            end_datetime: formatToUTC(endDate),
+            equipment_id: equipoSeleccionado || cita?.equipment_id,
+        };
+
+
         reprogramarCitaMutation.mutate(payload);
     };
 
@@ -284,16 +366,27 @@ export const EditarFecha = () => {
         });
     };
 
+
     return (
         <MainLayout>
             <div className="space-y-4">
                 {/* Header */}
                 <div className="bg-white rounded-lg p-3 sm:p-6 shadow-md border border-gray-100">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-brand-purple p-2.5 rounded-lg">
-                            <CalendarPlus className="w-6 h-6 text-white" />
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-brand-purple p-2.5 rounded-lg">
+                                <CalendarPlus className="w-6 h-6 text-white" />
+                            </div>
+                            <h1 className="text-2xl font-bold text-brand-purple">Editar Cita</h1>
                         </div>
-                        <h1 className="text-2xl font-bold text-brand-purple">Editar Cita</h1>
+                        <Button
+                            onClick={handleRegresar}
+                            variant="outline"
+                            className="h-9 border-2 border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white text-sm font-semibold transition-all duration-200 rounded-lg"
+                        >
+                            <ArrowLeft className="w-4 h-4 mr-2" />
+                            Regresar
+                        </Button>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 py-4">
@@ -317,6 +410,43 @@ export const EditarFecha = () => {
                             </CardContent>
                         </Card>
 
+                        {/* Card: Seleccionar Equipo */}
+                        <Card className="bg-white shadow-lg border-0 overflow-hidden rounded-xl p-0">
+                            <CardHeader className="pb-2 pt-2 bg-brand-purple">
+                                <CardTitle className="flex items-center gap-2 text-white text-sm font-semibold">
+                                    <Monitor className="w-4 h-4" />
+                                    Seleccionar Equipo
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3 pt-3 pb-3">
+                                <div>
+                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Equipo Actual</p>
+                                    <p className="font-semibold text-sm text-gray-700">{cita?.equipment || 'No especificado'}</p>
+                                </div>
+                                <div className="border-t pt-2">
+                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Cambiar Equipo</p>
+                                    {equiposFiltrados && equiposFiltrados.length > 0 ? (
+                                        <Select value={equipoSeleccionado} onValueChange={handleEquipoChange}>
+                                            <SelectTrigger className="w-full h-9 border-2 border-gray-200 rounded-lg focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 transition-all">
+                                                <SelectValue placeholder="Selecciona un equipo" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {equiposFiltrados.map((equipo: any) => (
+                                                    <SelectItem key={equipo.guid} value={equipo.guid}>
+                                                        {equipo.description}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <div className="flex items-center justify-center h-9 text-sm font-semibold text-red-600 bg-red-50 rounded-lg border-2 border-red-300">
+                                            No hay equipos disponibles
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
                         {/* Card: Fecha deseada */}
                         <Card className="bg-white shadow-lg border-0 overflow-hidden rounded-xl p-0">
                             <CardHeader className="pb-2 pt-2 bg-brand-purple">
@@ -335,42 +465,24 @@ export const EditarFecha = () => {
                                 />
                             </CardContent>
                         </Card>
-
-                        {/* Card: Acciones */}
-                        <Card className="bg-white shadow-lg border-0 overflow-hidden rounded-xl p-0">
-                            <CardHeader className="pb-2 pt-2 bg-brand-purple">
-                                <CardTitle className="flex items-center gap-2 text-white text-sm font-semibold">
-                                    <FileText className="w-4 h-4" />
-                                    Acciones
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2 pt-3 pb-3">
-                                <Button
-                                    onClick={handleAplicarCambios}
-                                    className="w-full cursor-pointer h-9 bg-brand-purple hover:bg-brand-purple/90 text-white text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg rounded-lg"
-                                >
-                                    <Check className="w-4 h-4 mr-2" />
-                                    Aplicar cambios
-                                </Button>
-                                <Button
-                                    onClick={handleRegresar}
-                                    variant="outline"
-                                    className="w-full cursor-pointer h-9 border-2 border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white text-sm font-semibold transition-all duration-200 rounded-lg"
-                                >
-                                    <ArrowLeft className="w-4 h-4 mr-2" />
-                                    Regresar
-                                </Button>
-                            </CardContent>
-                        </Card>
                     </div>
 
                     {/* Sección del Calendario */}
                     <Card className="bg-white shadow-lg border-0 overflow-hidden rounded-xl p-0 h-auto md:h-[750px]">
                         <CardHeader className="pt-4 pb-4 bg-brand-purple">
-                            <CardTitle className="flex items-center gap-2 text-white text-lg font-semibold">
-                                <Calendar className="w-5 h-5" />
-                                Arrastra el evento donde lo requieras
-                            </CardTitle>
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="flex items-center gap-2 text-white text-lg font-semibold">
+                                    <Calendar className="w-5 h-5" />
+                                    Arrastra el evento donde lo requieras
+                                </CardTitle>
+                                <Button
+                                    onClick={handleAplicarCambios}
+                                    className="h-9 bg-white hover:bg-gray-100 text-brand-purple text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg rounded-lg"
+                                >
+                                    <Check className="w-4 h-4 mr-2" />
+                                    Aplicar cambios
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent className="pt-6 pb-6 h-full">
                             {/* Aquí irá el calendario */}
@@ -396,7 +508,7 @@ export const EditarFecha = () => {
                                             opacity: 0.6;
                                         }
                                         .fc-day-sat, .fc-col-header-cell.fc-day-sat {
-                                            background-color: #ede9fe !important;
+                                            background-color: white !important;
                                         }
                                         /* Horarios no laborales (fuera de businessHours) */
                                         .fc .fc-non-business {
@@ -466,7 +578,7 @@ export const EditarFecha = () => {
                                                             )
                                                         );
 
-                                                        toast.success("Cita movida a hoy", {
+                                                        toast.success("Cita movida", {
                                                             description: `El evento se ha movido a ${todayStr}`,
                                                             duration: 3000
                                                         });
@@ -553,7 +665,6 @@ export const EditarFecha = () => {
                     </Card>
                 </div>
             </div>
-
         </MainLayout >
     )
 }

@@ -8,4 +8,7 @@ export interface Cita {
     equipment: string;
     status: string;
     is_admitted: boolean;
+    exam_id: string;
+    location_id: string;
+
 }

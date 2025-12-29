@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createPatient, editPatient } from "../services/buscar-paciente.service";
 import { toast } from "sonner";
 import type { CreatePatientFormValues } from "../schemas/create-patient.schema";
+import { patientsKeys } from "../constants/query-keys";
 
 export const useCreatePatient = () => {
     const queryClient = useQueryClient();
@@ -14,7 +15,7 @@ export const useCreatePatient = () => {
                 className: "[&_svg]:text-brand-purple",
             });
             // Invalidar la query de pacientes para refrescar la lista
-            queryClient.invalidateQueries({ queryKey: ["patients"] });
+            queryClient.invalidateQueries({ queryKey: patientsKeys.lists() });
         },
         onError: (error: any) => {
             toast.error(error?.response?.data?.message || "Error al crear el paciente", {
@@ -37,7 +38,7 @@ export const useEditPatient = () => {
                 className: "[&_svg]:text-brand-purple",
             });
             // Invalidar la query de pacientes para refrescar la lista
-            queryClient.invalidateQueries({ queryKey: ["patients"] });
+            queryClient.invalidateQueries({ queryKey: patientsKeys.lists() });
         }
         ,
         onError: (error: any) => {

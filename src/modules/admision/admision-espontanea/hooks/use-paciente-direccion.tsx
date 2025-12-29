@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { creatOrderForPatient, postPacientesDireccion } from "../services/pacientes-direccion.service";
 import { toast } from "sonner";
+import { admisionKeys } from "../../constants/query-keys";
 
 export const usePacienteDireccion = () => {
     const queryClient = useQueryClient();
@@ -9,7 +10,7 @@ export const usePacienteDireccion = () => {
             postPacientesDireccion(data),
         onSuccess: () => {
             // Invalidar la query de pacientes para refrescar la lista
-            queryClient.invalidateQueries({ queryKey: ["pacientesDireccion"] });
+            queryClient.invalidateQueries({ queryKey: admisionKeys.pacientesDireccion() });
         }
         ,
         onError: (error: any) => {
@@ -27,7 +28,7 @@ export const useCrearOrdenParaPaciente = (onSuccessCallback?: () => void) => {
             toast.success("Orden creada exitosamente", {
                 position: "top-right",
             });
-            queryClient.invalidateQueries({ queryKey: ["pacientesDireccion"] });
+            queryClient.invalidateQueries({ queryKey: admisionKeys.pacientesDireccion() });
             onSuccessCallback?.();
         }
         ,

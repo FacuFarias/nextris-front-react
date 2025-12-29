@@ -15,6 +15,7 @@ export interface ApiPaginatedResponse<T> {
         data: T[];
         per_page: number;
         total: number;
+        timezone?: string;
     };
     success: boolean;
 }

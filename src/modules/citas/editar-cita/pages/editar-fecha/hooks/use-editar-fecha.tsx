@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { postReprogramarCita } from "../services/editar-fecha.service";
 import { useNavigate } from "react-router-dom";
+import { citasKeys } from "@/modules/citas/constants/query-keys";
 
 export const useEditarFecha = () => {
     const queryClient = useQueryClient();
@@ -13,7 +14,7 @@ export const useEditarFecha = () => {
             toast.success("Cita reprogramada exitosamente", {
                 position: "top-right",
             });
-            queryClient.invalidateQueries({ queryKey: ["calendarEventos"] });
+            queryClient.invalidateQueries({ queryKey: citasKeys.lists() });
             navigate("/cita/editar-cita");
         }
         ,

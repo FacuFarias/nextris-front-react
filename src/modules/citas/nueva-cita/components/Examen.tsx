@@ -32,6 +32,7 @@ export const Examen = ({
 
 
 
+
     // Filtrar estudios por modalidad y parte del cuerpo
     const filteredEstudios = (() => {
         if (!estudiosData) return [];
