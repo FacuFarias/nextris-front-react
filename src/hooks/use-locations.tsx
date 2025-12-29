@@ -1,11 +1,11 @@
 import { getLocationsInstitutional } from "@/services/institutional-locations.service";
 import { useQuery } from "@tanstack/react-query";
+import { locationsKeys } from "@/constants/query-keys";
 
 export const useLocationsInstitutional = () => {
     const { data, isLoading } = useQuery({
-        queryKey: ['locations-institutional'],
+        queryKey: locationsKeys.institutional(),
         queryFn: () => getLocationsInstitutional(),
-        staleTime: 10 * 60 * 1000, // 10 minutos
     });
     return { data, isLoading };
 }

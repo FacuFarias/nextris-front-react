@@ -366,6 +366,7 @@ export const EditarFecha = () => {
         });
     };
 
+
     return (
         <MainLayout>
             <div className="space-y-4">
@@ -507,7 +508,7 @@ export const EditarFecha = () => {
                                             opacity: 0.6;
                                         }
                                         .fc-day-sat, .fc-col-header-cell.fc-day-sat {
-                                            background-color: #ede9fe !important;
+                                            background-color: white !important;
                                         }
                                         /* Horarios no laborales (fuera de businessHours) */
                                         .fc .fc-non-business {
@@ -664,7 +665,6 @@ export const EditarFecha = () => {
                     </Card>
                 </div>
             </div>
-
         </MainLayout >
     )
 }

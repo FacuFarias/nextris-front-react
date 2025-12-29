@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { postPacientesFast } from '../services/pacientes-direccion.service';
 import { toast } from 'sonner';
+import { admisionKeys } from '../../constants/query-keys';
 
 export const usePacienteRapido = () => {
     const queryClient = useQueryClient();
@@ -11,7 +12,7 @@ export const usePacienteRapido = () => {
             toast.success("Paciente creado exitosamente", {
                 position: "top-right",
             });
-            queryClient.invalidateQueries({ queryKey: ["pacientesDireccion"] });
+            queryClient.invalidateQueries({ queryKey: admisionKeys.pacientesDireccion() });
         }
         ,
         onError: (error: any) => {

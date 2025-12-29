@@ -2,13 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { HistoryPatientResponse } from "../../../types/BuscarPaciente";
 import { getHistoryPatient, postViewImagenDicom } from "../../../services/buscar-paciente.service";
 import { toast } from "sonner";
+import { patientsKeys } from "../../../constants/query-keys";
 
 export const useHistorialPaciente = ({ patientId }: { patientId: string }) => {
     const { data, isLoading, error, refetch } = useQuery<HistoryPatientResponse>({
-        queryKey: [patientId, 'history'],
+        queryKey: patientsKeys.history(patientId),
         queryFn: () => getHistoryPatient({ patientId }),
-        staleTime: 5 * 60 * 1000,
-        retry: 1,
     });
 
     return {
@@ -25,7 +24,7 @@ export const useViewImagenDicom = () => {
         mutationFn: (data: { imageId: string; userId: string }) => postViewImagenDicom(data),
         onSuccess: (data) => {
             window.open(data.viewer_url, '_blank');
-            queryClient.invalidateQueries({ queryKey: ["history"] });
+            queryClient.invalidateQueries({ queryKey: patientsKeys.histories() });
         },
         onError: (error: any) => {
             toast.error(error.response?.data?.message || "Error viewing DICOM image", {

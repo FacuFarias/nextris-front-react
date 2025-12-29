@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { postObtenerEventosPrevios } from '../services/calendar-eventos.service';
 import { toast } from 'sonner';
+import { citasKeys } from '../../constants/query-keys';
 
 export const useCalendarEventos = () => {
     const queryClient = useQueryClient();
@@ -11,7 +12,7 @@ export const useCalendarEventos = () => {
             /* toast.success("Eventos obtenidos exitosamente", {
                 position: "top-right",
             }); */
-            queryClient.invalidateQueries({ queryKey: ["calendarEventos"] });
+            queryClient.invalidateQueries({ queryKey: citasKeys.calendarEventos() });
         }
         ,
         onError: (error: any) => {

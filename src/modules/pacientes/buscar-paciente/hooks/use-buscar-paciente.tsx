@@ -3,13 +3,12 @@ import { deletePatient, getAllPacientes } from "../services/buscar-paciente.serv
 import type { Patient } from "../types/BuscarPaciente";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { patientsKeys } from "../constants/query-keys";
 
 export const useBuscarPaciente = ({ page = 1, per_page = 8, search = "" }) => {
     const { data, isLoading, error, refetch } = useQuery<ApiPaginatedResponse<Patient>>({
-        queryKey: ['patients', page, per_page, search],
+        queryKey: patientsKeys.list(page, per_page, search),
         queryFn: () => getAllPacientes({ page, per_page, search }),
-        staleTime: 5 * 60 * 1000,
-        retry: 1,
     });
 
     return {
@@ -31,7 +30,7 @@ export const useEliminarPaciente = () => {
                 className: "[&_svg]:text-brand-purple",
             });
             // Invalidar la query de pacientes para refrescar la lista
-            queryClient.invalidateQueries({ queryKey: ["patients"] });
+            queryClient.invalidateQueries({ queryKey: patientsKeys.lists() });
         },
         onError: (error: any) => {
             toast.error(error?.response?.data?.message || "Error al eliminar el paciente", {
