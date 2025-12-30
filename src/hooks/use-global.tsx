@@ -1,4 +1,4 @@
-import { getEquiposPorLocacion, getEstudios, getMedicosPorLocacion, getModalidades, getObrasSocialesPorLocacion, getPartesCuerpo } from '@/services/api-global.service';
+import { getEquiposPorLocacion, getEstudios, getMedicosAll, getMedicosPorLocacion, getModalidades, getObrasSocialesPorLocacion, getPartesCuerpo } from '@/services/api-global.service';
 import { useQuery } from '@tanstack/react-query';
 import { globalKeys } from '@/constants/query-keys';
 
@@ -17,6 +17,11 @@ interface Modalidad {
 interface MedicosPorLocacion {
     guid: string;
     description: string;
+}
+
+interface MedicosAll {
+    guid: string;
+    name: string;
 }
 export const usePartesDelCuerpo = () => {
     const { data, isLoading } = useQuery<ParteCuerpo[]>({
@@ -55,10 +60,19 @@ export const useEquiposPorLocacion = (locationGuid: string) => {
 }
 
 export const useMedicosPorLocacion = (locationGuid: string) => {
+    console.log(locationGuid)
     const { data, isLoading } = useQuery<MedicosPorLocacion[]>({
         queryKey: globalKeys.medicosPorLocacion(locationGuid),
         queryFn: () => getMedicosPorLocacion(locationGuid),
         enabled: !!locationGuid, // Ejecutar solo si locationGuid está definido
+    });
+    return { data, isLoading };
+}
+export const useMedicosAll = () => {
+    const { data, isLoading } = useQuery<MedicosAll[]>({
+        queryKey: globalKeys.medicosAll(),
+        queryFn: () => getMedicosAll(),
+        enabled: true, // Siempre ejecutar la consulta
     });
     return { data, isLoading };
 }

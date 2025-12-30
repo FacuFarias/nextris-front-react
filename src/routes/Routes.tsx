@@ -9,6 +9,9 @@ import { AdmisionEspontanea } from "@/modules/admision/admision-espontanea/Admis
 import { NuevaCita } from "@/modules/citas/nueva-cita/NuevaCita";
 import { EditarCita } from "@/modules/citas/editar-cita/EditarCita";
 import { EditarFecha } from "@/modules/citas/editar-cita/pages/editar-fecha/EditarFecha";
+import { Ejecucion } from "@/modules/ejecucion/Ejecucion";
+import { Radiologia } from "@/modules/redaccion/Radiologia/Radiologia";
+import { InformePredefinidos } from "@/modules/redaccion/informe-predefinidos/InformePredefinidos";
 
 const router = createBrowserRouter([
     {
@@ -89,7 +92,33 @@ const router = createBrowserRouter([
                 <AdmisionEspontanea />
             </ProtectedRoute>
         ),
-    }
+    },
+    {/*Ejecucion*/ },
+    {
+        path: "/ejecucion",
+        element: (
+            <ProtectedRoute>
+                <Ejecucion />
+            </ProtectedRoute>
+        ),
+    },
+    {/*Redaccion*/ },
+    {
+        path: "/redaccion/radiologia",
+        element: (
+            <ProtectedRoute>
+                <Radiologia />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/redaccion/informes-predefinidos",
+        element: (
+            <ProtectedRoute>
+                <InformePredefinidos />
+            </ProtectedRoute>
+        ),
+    },
 
 ]);
 

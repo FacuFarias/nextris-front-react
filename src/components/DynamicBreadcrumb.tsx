@@ -26,7 +26,7 @@ const routeNames: Record<string, string> = {
 };
 
 // Rutas que no deben ser clicables
-const disabledRoutes = ["cita"];
+const disabledRoutes = ["cita", "redaccion"];
 
 export const DynamicBreadcrumb = () => {
     const location = useLocation();
