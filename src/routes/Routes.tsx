@@ -6,6 +6,7 @@ import { BuscarPaciente, HistorialPaciente } from "@/modules/pacientes";
 import { AdmisionCita, AdmisionEspontanea } from "@/modules/admision";
 import { NuevaCita, EditarCita, EditarFecha } from "@/modules/citas";
 import { Ejecucion } from "@/modules/ejecucion/Ejecucion";
+import { DetalleEjecucion } from "@/modules/ejecucion/detalle-ejecucion/DetalleEjecucion";
 import { Radiologia, InformePredefinidos } from "@/modules/redaccion";
 
 const router = createBrowserRouter([
@@ -94,6 +95,14 @@ const router = createBrowserRouter([
         element: (
             <ProtectedRoute>
                 <Ejecucion />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/ejecucion/detalle/:guid",
+        element: (
+            <ProtectedRoute>
+                <DetalleEjecucion />
             </ProtectedRoute>
         ),
     },

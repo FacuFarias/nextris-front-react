@@ -68,8 +68,11 @@ export function TablaDynamic<T extends Record<string, any>>({
         return 0;
     });
 
-    // Si la paginación la maneja el backend, no paginar localmente
-    const paginatedData = pagination ? sortedData : sortedData;
+    // Aplicar paginación local SOLO si serverSide es explícitamente false
+    // Por defecto (serverSide undefined o true), se asume que el backend ya envió los datos paginados
+    const paginatedData = pagination && pagination.serverSide === false
+        ? sortedData.slice((pagination.page - 1) * pagination.pageSize, pagination.page * pagination.pageSize)
+        : sortedData;
 
     // Ajustar el índice para la paginación
     const getRowIndex = (index: number) => {

@@ -179,9 +179,6 @@ export const EditarFecha = () => {
         }
     };
 
-    const handleRegresar = () => {
-        navigate(-1);
-    };
 
     const handleAplicarCambios = () => {
         const eventoEditable = events.find(ev => ev.editable);
@@ -380,12 +377,11 @@ export const EditarFecha = () => {
                             <h1 className="text-2xl font-bold text-brand-purple">Editar Cita</h1>
                         </div>
                         <Button
-                            onClick={handleRegresar}
-                            variant="outline"
-                            className="h-9 border-2 border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white text-sm font-semibold transition-all duration-200 rounded-lg"
+                            onClick={() => navigate(-1)}
+                            className="flex items-center gap-2 bg-transparent text-gray-600  mb-4 hover:bg-transparent"
                         >
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Regresar
+                            <ArrowLeft className="w-5 h-5" />
+                            <span className="font-medium">Volver</span>
                         </Button>
                     </div>
 

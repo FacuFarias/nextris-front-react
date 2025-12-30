@@ -46,12 +46,11 @@ export const HistorialPaciente = () => {
                     </div>
 
                     <Button
-                        variant="ghost"
                         onClick={() => navigate(-1)}
-                        className=" hover:bg-purple-50 text-brand-purple border-2 border-brand-purple cursor-pointer "
+                        className="flex items-center gap-2 bg-transparent text-gray-600  mb-4 hover:bg-transparent"
                     >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Volver
+                        <ArrowLeft className="w-5 h-5" />
+                        <span className="font-medium">Volver</span>
                     </Button>
                 </div>
 

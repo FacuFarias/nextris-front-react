@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { HistoryPatientResponse } from "../../../types/BuscarPaciente";
-import { getHistoryPatient, postViewImagenDicom } from "../../../services/buscar-paciente.service";
 import { toast } from "sonner";
-import { patientsKeys } from "../../../constants/query-keys";
+import { patientsKeys } from "../../constants/query-keys";
+import type { HistoryPatientResponse } from "../../types/BuscarPaciente";
+import { getHistoryPatient, postViewImagenDicom } from "../../services/buscar-paciente.service";
 
 export const useHistorialPaciente = ({ patientId }: { patientId: string }) => {
     const { data, isLoading, error, refetch } = useQuery<HistoryPatientResponse>({
