@@ -1,18 +1,18 @@
 import { useState } from "react";
 import {
-    Home,
     Users,
     Calendar,
     Send,
     Settings,
     Power,
-    FileText,
     ChevronDown,
     ChevronRight,
 
     UserCog,
     ClipboardList,
     CalendarPlus,
+    HandHelping,
+    NotebookText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
@@ -74,8 +74,21 @@ const menuItems: MenuItem[] = [
             }
         ]
     },
-    { icon: Home, label: "Ejecucion", path: "/ejecucion" },
-    { icon: FileText, label: "Redaccion", path: "/redaccion" },
+    { icon: HandHelping, label: "Ejecucion", path: "/ejecucion" },
+    {
+        icon: NotebookText, label: "Redaccion", subItems: [
+            {
+                icon: NotebookText,
+                label: "Radiología",
+                path: "/redaccion/radiologia",
+            },
+            {
+                icon: NotebookText,
+                label: "Inf.Predef",
+                path: "/redaccion/informes-predefinidos",
+            }
+        ]
+    },
     { icon: Send, label: "Distribucion", path: "/distribucion" },
     {
         icon: Settings,

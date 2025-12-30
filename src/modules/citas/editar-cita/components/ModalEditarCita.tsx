@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
-import { useEstudiosPorModalidad } from "@/hooks/use-global";
+import { useEstudiosPorModalidad, useMedicosAll, useMedicosPorLocacion } from "@/hooks/use-global";
 import type { Cita } from "../types/cita.type";
 
 interface ModalEditarCitaContentProps {
@@ -16,8 +17,9 @@ export const ModalEditarCitaContent = ({ cita, onGuardar, onCancelar }: ModalEdi
     const [citaEditada, setCitaEditada] = useState<Cita>(cita);
     const [busquedaEstudio, setBusquedaEstudio] = useState("");
     const { data: estudiosData } = useEstudiosPorModalidad();
-    console.log(citaEditada)
-    // Actualizar citaEditada cuando cambia la cita prop
+    const { data: doctorsData } = useMedicosAll();
+    const { data: medicosPorLocacionData } = useMedicosPorLocacion(cita.location_id);
+    // Actualizar citaEditada cuando cambia la cita prop    
     useEffect(() => {
         setCitaEditada(cita);
         setBusquedaEstudio("");
@@ -40,17 +42,60 @@ export const ModalEditarCitaContent = ({ cita, onGuardar, onCancelar }: ModalEdi
     };
     return (
         <div className="space-y-4">
-            {/* Paciente - Solo lectura */}
-            <div className="space-y-2">
-                <Label htmlFor="patient_name">Paciente</Label>
-                <Input
-                    id="patient_name"
-                    value={citaEditada.patient_name}
-                    disabled
-                    className="bg-gray-50"
-                />
-            </div>
+            {/* Selects de medicos - Grid de 2 columnas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Select de medico referente */}
+                <div className="space-y-2">
+                    <Label>Médico Referente</Label>
+                    <Select
+                        value={citaEditada.doctor}
+                        onValueChange={(value) => setCitaEditada({ ...citaEditada, doctor: value })}
+                    >
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Seleccione un médico" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {doctorsData && doctorsData.length > 0 ? (
+                                doctorsData.map((doctor: any) => (
+                                    <SelectItem key={doctor.guid} value={doctor.name}>
+                                        {doctor.name}
+                                    </SelectItem>
+                                ))
+                            ) : (
+                                <SelectItem value="no-doctors" disabled>
+                                    No hay médicos disponibles
+                                </SelectItem>
+                            )}
+                        </SelectContent>
+                    </Select>
+                </div>
 
+                {/* Select de medico solicitante */}
+                <div className="space-y-2">
+                    <Label>Médico Solicitante</Label>
+                    <Select
+                        value={citaEditada.doctor_id || ""}
+                        onValueChange={(value) => setCitaEditada({ ...citaEditada, doctor_id: value })}
+                    >
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Seleccione un médico" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {medicosPorLocacionData && medicosPorLocacionData.length > 0 ? (
+                                medicosPorLocacionData.map((medico: any) => (
+                                    <SelectItem key={medico.guid} value={medico.guid}>
+                                        {medico.description}
+                                    </SelectItem>
+                                ))
+                            ) : (
+                                <SelectItem value="no-medicos" disabled>
+                                    No hay médicos disponibles
+                                </SelectItem>
+                            )}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
             {/* Examen Actual */}
             <div className="space-y-2">
                 <Label>Estudio asignado</Label>
@@ -110,16 +155,6 @@ export const ModalEditarCitaContent = ({ cita, onGuardar, onCancelar }: ModalEdi
                         </tbody>
                     </table>
                 </div>
-            </div>
-
-            {/* Doctor */}
-            <div className="space-y-2">
-                <Label htmlFor="doctor">Doctor</Label>
-                <Input
-                    id="doctor"
-                    value={citaEditada.doctor}
-                    onChange={(e) => setCitaEditada({ ...citaEditada, doctor: e.target.value })}
-                />
             </div>
 
             {/* Botones */}
