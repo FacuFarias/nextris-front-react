@@ -1,5 +1,5 @@
-import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
-import { InputSearch } from "@/components/InputSearch"
+
+import { DynamicBreadcrumb, InputSearch } from "@/components";
 import { MainLayout } from "@/layouts/layout"
 import { Calendar } from "lucide-react"
 import { useState } from "react"

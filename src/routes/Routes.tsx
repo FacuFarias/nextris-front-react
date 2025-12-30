@@ -2,16 +2,11 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Login } from "@/modules/auth/login/Login";
 import { Inicio } from "@/modules/inicio/Inicio";
 import { ProtectedRoute } from "./ProtectedRoute";
-import { BuscarPaciente } from "@/modules/pacientes/buscar-paciente/BuscarPaciente";
-import { HistorialPaciente } from "@/modules/pacientes/buscar-paciente/pages/historial-paciente/HistorialPaciente";
-import { AdmisionCita } from "@/modules/admision/admision-cita/AdmisionCita";
-import { AdmisionEspontanea } from "@/modules/admision/admision-espontanea/AdmisionEspontanea";
-import { NuevaCita } from "@/modules/citas/nueva-cita/NuevaCita";
-import { EditarCita } from "@/modules/citas/editar-cita/EditarCita";
-import { EditarFecha } from "@/modules/citas/editar-cita/pages/editar-fecha/EditarFecha";
+import { BuscarPaciente, HistorialPaciente } from "@/modules/pacientes";
+import { AdmisionCita, AdmisionEspontanea } from "@/modules/admision";
+import { NuevaCita, EditarCita, EditarFecha } from "@/modules/citas";
 import { Ejecucion } from "@/modules/ejecucion/Ejecucion";
-import { Radiologia } from "@/modules/redaccion/Radiologia/Radiologia";
-import { InformePredefinidos } from "@/modules/redaccion/informe-predefinidos/InformePredefinidos";
+import { Radiologia, InformePredefinidos } from "@/modules/redaccion";
 
 const router = createBrowserRouter([
     {

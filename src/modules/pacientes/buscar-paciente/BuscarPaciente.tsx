@@ -5,16 +5,14 @@ import { useState } from "react";
 //lucide react
 import { Search, UserPlus } from "lucide-react";
 //components
-import { TablaDynamic } from "@/components/TableDynamic";
-import { InputSearch } from "@/components/InputSearch";
-import { Modal } from "@/components/Modal";
-import { CreatePatientForm } from "./components/CreatePatientForm";
-import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb";
+import { DynamicBreadcrumb, InputSearch, Modal } from "@/components";
 import { useDebounce } from "@uidotdev/usehooks";
 
 //hooks and services
 import { useBuscarPaciente } from "./hooks/use-buscar-paciente";
 import { useCreatePatient, useEditPatient } from "./hooks/use-create-patient";
+import TablaDynamic from "@/components/TableDynamic";
+
 //types and columns
 import type { Patient } from "./types/BuscarPaciente";
 import { getPatientActions, patientColumns } from "./components/columns";
@@ -23,6 +21,8 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { useNavigate } from "react-router-dom";
 import { IsAdmin } from "@/components/IsAdmin";
 import { EliminarPaciente } from "./components/EliminarPaciente";
+
+import { CreatePatientForm } from "./components/CreatePatientForm";
 
 export const BuscarPaciente = () => {
     const [searchTerm, setSearchTerm] = useState("");

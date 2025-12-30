@@ -250,3 +250,5 @@ export function TablaDynamic<T extends Record<string, any>>({
         </div>
     );
 }
+
+export default TablaDynamic;
