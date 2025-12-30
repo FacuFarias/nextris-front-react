@@ -16,6 +16,18 @@ export const Ejecucion = () => {
     const navigate = useNavigate();
     const { ejecucionData, isLoading } = useEjecucion();
 
+    // Filtrar datos por el término de búsqueda
+    const filteredData = ejecucionData?.data?.filter((item: EjecucionType) => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+            item.patient_name?.toLowerCase().includes(searchLower) ||
+            item.guid?.toLowerCase().includes(searchLower) ||
+            item.study_type?.toLowerCase().includes(searchLower) ||
+            item.status?.toLowerCase().includes(searchLower)
+        );
+    }) || [];
+
+
     const handlePaginationChange = (newPage: number, newPageSize: number) => {
         setPage(newPage);
         setPageSize(newPageSize);
@@ -59,7 +71,7 @@ export const Ejecucion = () => {
                     </div>
                 ) : (
                     <TablaDynamic
-                        data={ejecucionData?.data || []}
+                        data={filteredData}
                         columns={ejecucionColumns}
                         showIndex
                         actions={getEjecucionActions(handleVerDetalle)}
@@ -67,7 +79,7 @@ export const Ejecucion = () => {
                             page,
                             pageSize,
                             serverSide: false,
-                            total: ejecucionData?.data?.length || 0,
+                            total: filteredData.length,
                         }}
                         onPaginationChange={handlePaginationChange}
                     />

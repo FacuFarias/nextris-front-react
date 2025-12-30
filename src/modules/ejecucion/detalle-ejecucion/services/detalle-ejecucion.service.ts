@@ -14,7 +14,6 @@ export const getDetalleEjecucion = async (guid: string) => {
 
 export const postDetalleEjecucion = async (data: DetalleEjecucionRequest, guid: string) => {
     try {
-        // Ajusta el endpoint según tu API
         const response = await api.post(`/executions/examination/${guid}/execute`, data);
         return response.data;
     } catch (error) {

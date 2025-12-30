@@ -1,7 +1,7 @@
 import { MainLayout } from '@/layouts/layout';
 import { Eye, FileText, HelpCircle, MoveHorizontal, AlertCircle, Camera, ClipboardList, Play, ArrowLeft } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDetalleEjecucion } from './hooks/use-detalle-ejecucion';
+import { useDetalleEjecucion, useDetalleEjecucionPost } from './hooks/use-detalle-ejecucion';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState } from 'react';
@@ -20,8 +20,11 @@ export const DetalleEjecucion = () => {
     const [numeroVistas, setNumeroVistas] = useState(detalleData?.data?.number_of_views?.toString() || '');
     const [otrosDetalles, setOtrosDetalles] = useState(detalleData?.data?.other_details || '');
 
+    const isRX = detalleData?.data?.study_type?.toUpperCase().startsWith('RX');
+    const { postDetalleEjecucion } = useDetalleEjecucionPost(guid!, () => {
+        navigate('/ejecucion');
+    });
     const handleEjecutarOrden = () => {
-        // Lógica para ejecutar la orden
         const data: DetalleEjecucionRequest = {
             history: historiaClinica,
             clinical_question: preguntaClinica,
@@ -30,15 +33,8 @@ export const DetalleEjecucion = () => {
             number_of_views: Number(numeroVistas),
             other_details: otrosDetalles,
         };
-        console.log(data)
-        /* detalleEjecucionMutation.mutate({
-            history: historiaClinica,
-            clinical_question: preguntaClinica,
-            laterality: lateralidad,
-            stat: stat === 'Si',
-            number_of_views: numeroVistas,
-            other_details: otrosDetalles,
-        }); */
+
+        postDetalleEjecucion(data);
     };
 
     return (
@@ -111,7 +107,7 @@ export const DetalleEjecucion = () => {
                         </div>
 
                         {/* Fila 2: Lateralidad, STAT y Número de Vistas */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className={`grid grid-cols-1 gap-6 ${isRX ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
                             {/* Lateralidad */}
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2 text-brand-purple font-semibold text-base">
@@ -123,10 +119,10 @@ export const DetalleEjecucion = () => {
                                         <SelectValue placeholder="Seleccionar" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="izquierda">Izquierda</SelectItem>
-                                        <SelectItem value="derecha">Derecha</SelectItem>
-                                        <SelectItem value="bilateral">Bilateral</SelectItem>
-                                        <SelectItem value="no-aplica">No aplica</SelectItem>
+                                        <SelectItem value="Izquierda">Izquierda</SelectItem>
+                                        <SelectItem value="Derecha">Derecha</SelectItem>
+                                        <SelectItem value="Bilateral">Bilateral</SelectItem>
+                                        <SelectItem value="No aplica">No aplica</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -148,26 +144,28 @@ export const DetalleEjecucion = () => {
                                 </Select>
                             </div>
 
-                            {/* Número de Vistas */}
-                            <div className="space-y-2">
-                                <Label className="flex items-center gap-2 text-teal-600 font-semibold text-base">
-                                    <Camera className="w-5 h-5" />
-                                    Número de Vistas
-                                </Label>
-                                <Select value={numeroVistas} onValueChange={setNumeroVistas}>
-                                    <SelectTrigger className="w-full border-gray-300 focus:ring-2 focus:ring-teal-500">
-                                        <SelectValue placeholder="Ej: 2" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="1">1</SelectItem>
-                                        <SelectItem value="2">2</SelectItem>
-                                        <SelectItem value="3">3</SelectItem>
-                                        <SelectItem value="4">4</SelectItem>
-                                        <SelectItem value="5">5</SelectItem>
-                                        <SelectItem value="6">6</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                            {/* Número de Vistas - Solo para estudios RX */}
+                            {isRX && (
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2 text-teal-600 font-semibold text-base">
+                                        <Camera className="w-5 h-5" />
+                                        Número de Vistas
+                                    </Label>
+                                    <Select value={numeroVistas} onValueChange={setNumeroVistas}>
+                                        <SelectTrigger className="w-full border-gray-300 focus:ring-2 focus:ring-teal-500">
+                                            <SelectValue placeholder="Ej: 2" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="1">1</SelectItem>
+                                            <SelectItem value="2">2</SelectItem>
+                                            <SelectItem value="3">3</SelectItem>
+                                            <SelectItem value="4">4</SelectItem>
+                                            <SelectItem value="5">5</SelectItem>
+                                            <SelectItem value="6">6</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
                         </div>
 
                         {/* Fila 3: Otros Detalles Técnicos */}

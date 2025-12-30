@@ -20,7 +20,7 @@ export const useDetalleEjecucion = (guid: string) => {
 };
 
 
-export const useDetalleEjecucionPost = (guid: string) => {
+export const useDetalleEjecucionPost = (guid: string, onSuccessCallback?: () => void) => {
     const queryClient = useQueryClient();
 
     const { mutate, error, isPending } = useMutation<DetalleEjecucionResponse, Error, DetalleEjecucionRequest>({
@@ -32,6 +32,10 @@ export const useDetalleEjecucionPost = (guid: string) => {
             });
             queryClient.invalidateQueries({ queryKey: ejecucionKeys.detail(guid) });
 
+            // Ejecutar el callback si existe
+            if (onSuccessCallback) {
+                onSuccessCallback();
+            }
         },
         onError: (error) => {
             console.log('Error:', error);
