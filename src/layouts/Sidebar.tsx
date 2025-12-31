@@ -2,17 +2,16 @@ import { useState } from "react";
 import {
     Users,
     Calendar,
-    Send,
     Settings,
     Power,
     ChevronDown,
     ChevronRight,
-
     UserCog,
     ClipboardList,
     CalendarPlus,
     HandHelping,
     NotebookText,
+    Navigation,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
@@ -89,7 +88,7 @@ const menuItems: MenuItem[] = [
             }
         ]
     },
-    { icon: Send, label: "Distribucion", path: "/distribucion" },
+    { icon: Navigation, label: "Distribucion", path: "/distribucion" },
     {
         icon: Settings,
         label: "Configuraciones",

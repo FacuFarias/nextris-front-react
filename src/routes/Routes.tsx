@@ -8,6 +8,7 @@ import { NuevaCita, EditarCita, EditarFecha } from "@/modules/citas";
 import { Ejecucion } from "@/modules/ejecucion/Ejecucion";
 import { DetalleEjecucion } from "@/modules/ejecucion/detalle-ejecucion/DetalleEjecucion";
 import { Radiologia, InformePredefinidos } from "@/modules/redaccion";
+import { Distribucion } from "@/modules/distribucion";
 
 const router = createBrowserRouter([
     {
@@ -123,6 +124,16 @@ const router = createBrowserRouter([
             </ProtectedRoute>
         ),
     },
+
+    {/*Distribucion*/ },
+    {
+        path: "/distribucion",
+        element: (
+            <ProtectedRoute>
+                <Distribucion />
+            </ProtectedRoute>
+        ),
+    }
 
 ]);
 

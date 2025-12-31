@@ -1,0 +1,1 @@
+export { Distribucion } from './Distribucion';

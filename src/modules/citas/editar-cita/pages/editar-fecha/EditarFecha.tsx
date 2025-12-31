@@ -31,6 +31,7 @@ export const EditarFecha = () => {
     const [events, setEvents] = useState<any[]>([]);
     const [businessHours, setBusinessHours] = useState<any[]>([]);
     const { data: equipos } = useEquiposPorLocacion(cita?.location_id || '');
+
     let slotMinTime = "05:00:00";
     let slotMaxTime = "23:00:00";
     // Actualizar slotMinTime y slotMaxTime basado en workHours
@@ -161,8 +162,6 @@ export const EditarFecha = () => {
             }
         }
     }, [equiposFiltrados, cita?.equipment_id, equipoSeleccionado]);
-
-
 
 
     // Manejar cambio de equipo
