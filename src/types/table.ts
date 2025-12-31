@@ -32,6 +32,7 @@ export interface PaginationConfig {
     pageSizeOptions?: number[];
     showQuickJumper?: boolean;
     showTotal?: boolean;
+    serverSide?: boolean; // Por defecto true (paginación del servidor). Usar false para paginación del cliente
 }
 
 export interface PaginationProps {

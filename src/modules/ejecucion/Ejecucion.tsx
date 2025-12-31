@@ -3,9 +3,40 @@ import { InputSearch } from '@/components/InputSearch';
 import { MainLayout } from '@/layouts/layout'
 import { HandHelping } from 'lucide-react';
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom';
+import { useEjecucion } from './hooks/use-ejecucion';
+import TablaDynamic from '@/components/TableDynamic';
+import { ejecucionColumns, getEjecucionActions } from './components/columns';
+import type { Ejecucion as EjecucionType } from './types/ejecucion.type';
 
 export const Ejecucion = () => {
     const [searchTerm, setSearchTerm] = useState("");
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const navigate = useNavigate();
+    const { ejecucionData, isLoading } = useEjecucion();
+
+    // Filtrar datos por el término de búsqueda
+    const filteredData = ejecucionData?.data?.filter((item: EjecucionType) => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+            item.patient_name?.toLowerCase().includes(searchLower) ||
+            item.guid?.toLowerCase().includes(searchLower) ||
+            item.study_type?.toLowerCase().includes(searchLower) ||
+            item.status?.toLowerCase().includes(searchLower)
+        );
+    }) || [];
+
+
+    const handlePaginationChange = (newPage: number, newPageSize: number) => {
+        setPage(newPage);
+        setPageSize(newPageSize);
+    };
+
+    const handleVerDetalle = (ejecucion: EjecucionType) => {
+        navigate(`/ejecucion/detalle/${ejecucion.guid}`);
+    };
+
     return (
         <MainLayout>
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
@@ -34,23 +65,25 @@ export const Ejecucion = () => {
                     <h2 className="text-base sm:text-lg font-semibold text-gray-700">Resultados de Órdenes</h2>
                 </div>
 
-                {/*  {isLoading ? (
-                        <div className='flex justify-center items-center h-40'>
-                            <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
-                        </div>
-                    ) : (
-                        <TablaDynamic<Patient>
-                            data={(patientsData?.data?.data) || []}
-                            columns={patientColumns}
-                            showIndex
-                            onRowDoubleClick={handleViewHistory}
-                            actions={patientActions}
-                            pagination={pagination}
-                            onPaginationChange={(newPage) => {
-                                setPage(newPage);
-                            }}
-                        />
-                    )} */}
+                {isLoading ? (
+                    <div className='flex justify-center items-center h-40'>
+                        <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
+                    </div>
+                ) : (
+                    <TablaDynamic
+                        data={filteredData}
+                        columns={ejecucionColumns}
+                        showIndex
+                        actions={getEjecucionActions(handleVerDetalle)}
+                        pagination={{
+                            page,
+                            pageSize,
+                            serverSide: false,
+                            total: filteredData.length,
+                        }}
+                        onPaginationChange={handlePaginationChange}
+                    />
+                )}
 
 
             </div>

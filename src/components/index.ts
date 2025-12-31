@@ -1,0 +1,10 @@
+export { BackgroundEffects } from './BackgroundEffects';
+export { DireccionSelector } from './DireccionSelector';
+export { DynamicBreadcrumb } from './DynamicBreadcrumb';
+export { InputSearch } from './InputSearch';
+export { IsAdmin } from './IsAdmin';
+export { Modal } from './Modal';
+export { TablePagination } from './Pagination';
+export { PrimaryButton } from './PrimaryButton';
+export { SecondaryButton } from './SecondaryButton';
+export { default as TableDynamic } from './TableDynamic';

@@ -60,7 +60,6 @@ export const useEquiposPorLocacion = (locationGuid: string) => {
 }
 
 export const useMedicosPorLocacion = (locationGuid: string) => {
-    console.log(locationGuid)
     const { data, isLoading } = useQuery<MedicosPorLocacion[]>({
         queryKey: globalKeys.medicosPorLocacion(locationGuid),
         queryFn: () => getMedicosPorLocacion(locationGuid),

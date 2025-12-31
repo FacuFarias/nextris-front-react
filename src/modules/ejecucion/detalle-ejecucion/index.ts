@@ -1,0 +1,1 @@
+export { DetalleEjecucion } from './DetalleEjecucion';
