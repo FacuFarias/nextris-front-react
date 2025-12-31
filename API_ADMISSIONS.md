@@ -76,7 +76,61 @@ Authorization: Bearer <JWT_TOKEN>
 
 ---
 
-### 1. GET /admissions/{admission_guid}
+### 1. GET /appointments_to_admit
+Obtiene lista de citas/appointments no admitidas (pendientes de admisión).
+
+#### Description
+Retrieves all appointments that have not been admitted yet. This endpoint returns appointments from the `tbagendaevents` table that are pending admission, useful for displaying a worklist of pending orders to be admitted.
+
+#### Query Parameters
+None
+
+#### Request
+```http
+GET /api/appointments_to_admit
+Authorization: Bearer <JWT_TOKEN>
+```
+
+#### Response
+**Status Code:** 200 OK
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "e2746170-48ff-48ae-816a-afcb636677aa",
+      "fullname": "Lucía Díaz",
+      "comienzo": "2025-12-31T12:00:00",
+      "medref": "Dra. Ana González Martínez",
+      "description": "ANGIOTOMOGRAFIA TORACICA",
+      "equipo": "CT_CSM-GC_2",
+      "med_solicitante": "Dr. Carlos López"
+    },
+    {
+      "guid": "a1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o7",
+      "fullname": "Juan García",
+      "comienzo": "2025-12-31T14:30:00",
+      "medref": "Dr. Roberto Pérez",
+      "description": "RESONANCIA MAGNETICA",
+      "equipo": "MRI_CSM-GC_1",
+      "med_solicitante": "Dra. María Santos"
+    }
+  ]
+}
+```
+
+#### Errors
+```json
+{
+  "success": false,
+  "message": "Error de configuración de base de datos"
+}
+```
+
+---
+
+### 2. GET /admissions/{admission_guid}
 Obtiene detalles completos de una admisión específica.
 
 #### Description
@@ -126,7 +180,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 ---
 
-### 2. POST /admissions/appointment/{appointment_guid}/admit
+### 3. POST /admissions/appointment/{appointment_guid}/admit
 Admisiona una cita existente creando números de admisión y accession.
 
 #### Description
@@ -177,7 +231,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 ---
 
-### 3. DELETE /admissions/{admission_guid}
+### 4. DELETE /admissions/{admission_guid}
 Cancela una admisión (la marca como no admitida).
 
 #### Description
@@ -213,7 +267,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 ---
 
-### 4. POST /admission/create-order
+### 5. POST /admission/create-order
 Crea una nueva orden de admisión directamente desde datos de paciente y equipo.
 
 #### Description
@@ -487,6 +541,12 @@ curl -X DELETE http://localhost:5000/api/admissions/f39710b4-7914-44ba-ab72-ad4e
 ---
 
 ## Version History
+
+### Version 1.1.0 (2025-12-31) 🎉 **Appointments to Admit Endpoint**
+- ✅ Agregado endpoint GET /appointments_to_admit para obtener citas pendientes de admisión
+- ✅ Retorna lista de appointments no admitidas con información completa del paciente y equipo
+- ✅ Incluye test funcional en suite de tests de admissions
+- ✅ Documentación actualizada con ejemplos y respuestas
 
 ### Version 1.0.0 (2025-12-30) ✨ **Initial Release - Admissions API**
 - ✅ Agregado endpoint GET /admissions para listar admisiones con paginación
