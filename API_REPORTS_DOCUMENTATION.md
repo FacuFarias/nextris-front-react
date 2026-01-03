@@ -19,10 +19,17 @@ Retrieves a paginated list of executed examinations that are not yet reported, f
 #### Parameters
 **Query Parameters:**
 - `status` (optional): Filtrar por estado del examen
-- `show_reported` (optional): true para mostrar solo reportados, false o ausente para no reportados
+- `show_reported` (optional): true para incluir exámenes reportados (finalizados, isreported=1)
+- `show_ready` (optional): true para incluir exámenes listos para reportar (no reportados, isreported=0)
 - `assigned_to_me` (optional): true para mostrar solo exámenes asignados al usuario actual
 - `page` (optional): Número de página (default: 1)
 - `per_page` (optional): Items por página (default: 50, máximo: 100)
+
+**Nota sobre filtros de reporte:**
+- Si `show_reported=true` y `show_ready=true` están activos simultáneamente: se muestran AMBOS tipos (reportados y no reportados)
+- Si solo `show_reported=true`: muestra únicamente exámenes reportados
+- Si solo `show_ready=true`: muestra únicamente exámenes listos para reportar (no reportados)
+- Si ninguno está activo: se muestran todos los exámenes por defecto
 
 #### Request
 ```http
@@ -32,14 +39,20 @@ Authorization: Bearer <JWT_TOKEN>
 
 **Ejemplos de uso:**
 ```http
-# Exámenes pendientes de reportar
+# Todos los exámenes (por defecto)
 GET /api/examinations/for-reporting
 
-# Exámenes ya finalizados (checkbox activado)
+# Solo exámenes listos para reportar (no reportados)
+GET /api/examinations/for-reporting?show_ready=true
+
+# Solo exámenes ya finalizados/reportados
 GET /api/examinations/for-reporting?show_reported=true
 
-# Exámenes asignados a mí
-GET /api/examinations/for-reporting?assigned_to_me=true
+# Ambos: reportados y no reportados (todos)
+GET /api/examinations/for-reporting?show_reported=true&show_ready=true
+
+# Exámenes asignados a mí (listos para reportar)
+GET /api/examinations/for-reporting?assigned_to_me=true&show_ready=true
 
 # Exámenes reportados asignados a mí
 GET /api/examinations/for-reporting?assigned_to_me=true&show_reported=true
