@@ -3,7 +3,6 @@ import { InputSearch } from "@/components/InputSearch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TablaDynamic } from "@/components/TableDynamic"
 import { PrimaryButton } from "@/components/PrimaryButton"
-import { Modal } from "@/components/Modal"
 import { DireccionSelector } from "@/components/DireccionSelector"
 //hooks
 import { useDebounce } from "@uidotdev/usehooks"
@@ -25,13 +24,13 @@ export const NuevaCita = () => {
     const [activeTab, setActiveTab] = useState<string>("paciente");
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
     const [selectedEstudios, setSelectedEstudios] = useState<any[]>([]);
-    const [selectedAgenda, setSelectedAgenda] = useState<any>(null);
+    const [, setSelectedAgenda] = useState<any>(null);
     const [selectedEquipo, setSelectedEquipo] = useState<any>(null);
     const [allEvents, setAllEvents] = useState<{ [equipoGuid: string]: any[] }>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
     const { mutate: fetchPacientesDireccion, data: pacientesData, isPending } = usePacienteDireccion();
     //modal agregar paciente
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [, setIsModalOpen] = useState(false);
     //hook para crear paciente
 
     const handleDireccionChange = (direccionId: string) => {

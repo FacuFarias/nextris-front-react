@@ -9,6 +9,7 @@ import { Ejecucion } from "@/modules/ejecucion/Ejecucion";
 import { DetalleEjecucion } from "@/modules/ejecucion/detalle-ejecucion/DetalleEjecucion";
 import { Radiologia, InformePredefinidos } from "@/modules/redaccion";
 import { Distribucion } from "@/modules/distribucion";
+import { RedactarInforme } from "@/modules/redaccion/Radiologia/redactar-informe/RedactarInforme";
 
 const router = createBrowserRouter([
     {
@@ -113,6 +114,14 @@ const router = createBrowserRouter([
         element: (
             <ProtectedRoute>
                 <Radiologia />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/redaccion/radiologia/redactar-informe/:informeGuid",
+        element: (
+            <ProtectedRoute>
+                <RedactarInforme />
             </ProtectedRoute>
         ),
     },
