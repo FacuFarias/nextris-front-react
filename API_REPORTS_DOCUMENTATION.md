@@ -19,6 +19,8 @@ Retrieves a paginated list of executed examinations that are not yet reported, f
 #### Parameters
 **Query Parameters:**
 - `status` (optional): Filtrar por estado del examen
+- `show_reported` (optional): true para mostrar solo reportados, false o ausente para no reportados
+- `assigned_to_me` (optional): true para mostrar solo exámenes asignados al usuario actual
 - `page` (optional): Número de página (default: 1)
 - `per_page` (optional): Items por página (default: 50, máximo: 100)
 
@@ -28,31 +30,49 @@ GET /api/examinations/for-reporting?page=1&per_page=50
 Authorization: Bearer <JWT_TOKEN>
 ```
 
+**Ejemplos de uso:**
+```http
+# Exámenes pendientes de reportar
+GET /api/examinations/for-reporting
+
+# Exámenes ya finalizados (checkbox activado)
+GET /api/examinations/for-reporting?show_reported=true
+
+# Exámenes asignados a mí
+GET /api/examinations/for-reporting?assigned_to_me=true
+
+# Exámenes reportados asignados a mí
+GET /api/examinations/for-reporting?assigned_to_me=true&show_reported=true
+```
+
 #### Response
 **Status Code:** 200 OK
 
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "guid": "f39710b4-7914-44ba-ab72-ad4ed5e22e98",
-      "patient_name": "Juan García Pérez",
-      "patient_dni": "12345678",
-      "study_type": "Tomografía de Tórax",
-      "admission_number": "ADM001",
-      "accession_number": "ACC001",
-      "created_on": "2025-12-18T14:00:00",
-      "status": "A",
-      "is_reported": false,
-      "is_executed": true,
-      "equipment": "CT-01",
-      "location": "Sede Central"
-    }
-  ],
-  "total": 150,
-  "page": 1,
-  "per_page": 50
+  "data": {
+    "data": [
+      {
+        "guid": "f39710b4-7914-44ba-ab72-ad4ed5e22e98",
+        "patient_name": "Juan García Pérez",
+        "patient_dni": "12345678",
+        "study_type": "Tomografía de Tórax",
+        "admission_number": "ADM001",
+        "accession_number": "ACC001",
+        "created_on": "2025-12-18T14:00:00",
+        "status": "A",
+        "is_reported": false,
+        "is_executed": true,
+        "equipment": "CT-01",
+        "location": "Sede Central",
+        "assigned_to": "uuid-del-medico-asignado"
+      }
+    ],
+    "page": 1,
+    "per_page": 50,
+    "total": 150
+  }
 }
 ```
 
