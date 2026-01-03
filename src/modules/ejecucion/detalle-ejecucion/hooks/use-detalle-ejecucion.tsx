@@ -31,6 +31,7 @@ export const useDetalleEjecucionPost = (guid: string, onSuccessCallback?: () => 
                 position: 'top-right',
             });
             queryClient.invalidateQueries({ queryKey: ejecucionKeys.detail(guid) });
+            queryClient.invalidateQueries({ queryKey: ejecucionKeys.lists() });
 
             // Ejecutar el callback si existe
             if (onSuccessCallback) {

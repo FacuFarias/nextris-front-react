@@ -12,7 +12,7 @@ import type { Ejecucion as EjecucionType } from './types/ejecucion.type';
 export const Ejecucion = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [pageSize, setPageSize] = useState(8);
     const navigate = useNavigate();
     const { ejecucionData, isLoading } = useEjecucion();
 

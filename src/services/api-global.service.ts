@@ -40,9 +40,9 @@ export const getEstudios = async () => {
 };
 
 
-export const getEquiposPorLocacion = async (locationGuid: string) => {
+export const getEquiposPorLocacion = async (locationGuid: string, modalityId?: string) => {
     try {
-        const response = await api.get(`/config/equipment?location_id=${locationGuid}`);
+        const response = await api.get(`/config/equipment?location_id=${locationGuid}&modality_id=${modalityId || ''}`);
         return response.data.data;
     } catch (error) {
         throw error;

@@ -11,8 +11,8 @@ export const globalKeys = {
     estudios: () => [...globalKeys.all, "estudios-por-modalidad"] as const,
 
     // Por locación
-    equiposPorLocacion: (locationGuid: string) =>
-        [...globalKeys.all, "equipos-por-locacion", locationGuid] as const,
+    equiposPorLocacion: (locationGuid: string, modalityId?: string) =>
+        [...globalKeys.all, "equipos-por-locacion", locationGuid, modalityId] as const,
 
     medicosPorLocacion: (locationGuid: string) =>
         [...globalKeys.all, "medicos-por-locacion", locationGuid] as const,

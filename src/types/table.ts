@@ -45,7 +45,7 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     columns: TableColumn<T>[];
     actions?: TableAction<T>[];
     loading?: boolean;
-    emptyMessage?: string;
+    emptyMessage?: string | React.ReactNode;
     className?: string;
     showIndex?: boolean;
     onRowClick?: (row: T, index: number) => void;

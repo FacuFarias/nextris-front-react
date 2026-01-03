@@ -1,12 +1,50 @@
 
 import { DynamicBreadcrumb, InputSearch } from "@/components";
 import { MainLayout } from "@/layouts/layout"
-import { Calendar } from "lucide-react"
+import { Calendar, CheckCircle } from "lucide-react"
 import { useState } from "react"
+import { useAdmisionCita, useAdmisionConfirm } from "./hooks/use-admision-cita";
+import { admisionColumns, getAdmisionActions } from "./components/columns";
+import TablaDynamic from "@/components/TableDynamic";
+import { ModalAdmision } from "./components/ModalAdmision";
+import type { Admision } from "./types/admision.type";
 
 export const AdmisionCita = () => {
 
     const [searchTerm, setSearchTerm] = useState("");
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedAdmision, setSelectedAdmision] = useState<Admision | null>(null);
+
+    const { admisionData, isLoading } = useAdmisionCita();
+    const { postConfirmAdmision: confirmAdmision } = useAdmisionConfirm(selectedAdmision?.guid);
+
+    const handlePaginationChange = (newPage: number, newPageSize: number) => {
+        setPage(newPage);
+        setPageSize(newPageSize);
+    };
+
+    const handleOpenModal = (admision: Admision) => {
+        setSelectedAdmision(admision);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedAdmision(null);
+    };
+
+
+    const handleConfirmAdmision = async (admision: Admision) => {
+        const data = {
+            equipment_id: admision.equipo
+        }
+        confirmAdmision(data).then(() => {
+            handleCloseModal();
+        });
+    };
+
     return (
         <MainLayout>
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
@@ -35,26 +73,46 @@ export const AdmisionCita = () => {
                     <h2 className="text-base sm:text-lg font-semibold text-gray-700">Citas a admisionar</h2>
                 </div>
 
-                {/*  {isLoading ? (
+                {isLoading ? (
                     <div className='flex justify-center items-center h-40'>
                         <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
                     </div>
                 ) : (
-                    <TablaDynamic<Patient>
-                        data={(patientsData?.data?.data) || []}
-                        columns={patientColumns}
-                        showIndex
-                        onRowDoubleClick={handleViewHistory}
-                        actions={patientActions}
-                        pagination={pagination}
-                        onPaginationChange={(newPage) => {
-                            setPage(newPage);
-                        }}
+                    <>
+                        <TablaDynamic
+                            data={(admisionData?.data) || []}
+                            columns={admisionColumns}
+                            showIndex
+                            actions={getAdmisionActions(handleOpenModal)}
+                            pagination={{
+                                page,
+                                pageSize,
+                                serverSide: false,
+                                total: admisionData?.data?.length || 0,
+                            }}
+                            onPaginationChange={handlePaginationChange}
+                            emptyMessage={
+                                <div className='flex flex-col items-center justify-center py-12 space-y-4'>
+                                    <CheckCircle className='w-16 h-16 text-green-500' />
+                                    <div className='text-center'>
+                                        <h3 className='text-xl font-bold text-green-600'>¡Todo al día!</h3>
+                                        <p className='text-gray-600 mt-1'>No hay citas pendientes de admisión</p>
+                                    </div>
+                                </div>
+                            }
+                        />
+
+                    </>
+                )}
+                {
+                    isModalOpen &&
+                    <ModalAdmision
+                        isOpen={isModalOpen}
+                        onClose={handleCloseModal}
+                        admisionData={selectedAdmision}
+                        onConfirm={handleConfirmAdmision}
                     />
-                )} */}
-
-
-
+                }
 
             </div>
         </MainLayout>

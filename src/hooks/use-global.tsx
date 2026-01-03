@@ -50,10 +50,10 @@ export const useEstudiosPorModalidad = () => {
     return { data, isLoading };
 }
 
-export const useEquiposPorLocacion = (locationGuid: string) => {
+export const useEquiposPorLocacion = (locationGuid: string, modalityId?: string) => {
     const { data, isLoading } = useQuery<any[]>({
-        queryKey: globalKeys.equiposPorLocacion(locationGuid),
-        queryFn: () => getEquiposPorLocacion(locationGuid),
+        queryKey: globalKeys.equiposPorLocacion(locationGuid, modalityId),
+        queryFn: () => getEquiposPorLocacion(locationGuid, modalityId),
         enabled: !!locationGuid, // Ejecutar solo si locationGuid está definido
     });
     return { data, isLoading };
