@@ -118,7 +118,7 @@ const router = createBrowserRouter([
         ),
     },
     {
-        path: "/redaccion/radiologia/redactar-informe/:informeGuid",
+        path: "/redaccion/radiologia/redactar-informe/:informeGuid/:studyInstanceUID",
         element: (
             <ProtectedRoute>
                 <RedactarInforme />

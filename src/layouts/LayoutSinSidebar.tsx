@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Footer } from "./Footer";
 import fondoImage from "@/assets/fondo1.png";
 
 interface LayoutSinSidebarProps {
@@ -36,8 +35,7 @@ export const LayoutSinSidebar = ({ children }: LayoutSinSidebarProps) => {
                         {children}
                     </div>
 
-                    {/* Footer */}
-                    <Footer />
+
                 </main>
             </div>
         </div>

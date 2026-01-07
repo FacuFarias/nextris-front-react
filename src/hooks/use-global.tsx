@@ -1,4 +1,4 @@
-import { getEquiposPorLocacion, getEstudios, getMedicosAll, getMedicosPorLocacion, getModalidades, getObrasSocialesPorLocacion, getPartesCuerpo } from '@/services/api-global.service';
+import { getEquiposPorLocacion, getEstudios, getImagenesPorEstudio, getMedicosAll, getMedicosPorLocacion, getModalidades, getObrasSocialesPorLocacion, getPartesCuerpo } from '@/services/api-global.service';
 import { useQuery } from '@tanstack/react-query';
 import { globalKeys } from '@/constants/query-keys';
 
@@ -22,6 +22,17 @@ interface MedicosPorLocacion {
 interface MedicosAll {
     guid: string;
     name: string;
+}
+
+
+interface ImagenesPorEstudio {
+    images: Array<{
+        filename: string;
+        path: string;
+        size: number;
+    }>;
+    images_count: number;
+    study_uid: string;
 }
 export const usePartesDelCuerpo = () => {
     const { data, isLoading } = useQuery<ParteCuerpo[]>({
@@ -81,6 +92,15 @@ export const useObrasSocialesPorLocacion = (locationGuid: string) => {
         queryKey: globalKeys.obrasSocialesPorLocacion(locationGuid),
         queryFn: () => getObrasSocialesPorLocacion(locationGuid),
         enabled: !!locationGuid, // Ejecutar solo si locationGuid está definido
+    });
+    return { data, isLoading };
+}
+
+export const useImagenesPorEstudio = (studyGuid: string) => {
+    const { data, isLoading } = useQuery<ImagenesPorEstudio>({
+        queryKey: globalKeys.imagenesPorEstudio(studyGuid),
+        queryFn: () => getImagenesPorEstudio(studyGuid),
+        enabled: !!studyGuid, // Ejecutar solo si studyGuid está definido
     });
     return { data, isLoading };
 }

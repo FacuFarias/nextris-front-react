@@ -76,3 +76,12 @@ export const getObrasSocialesPorLocacion = async (locationGuid: string) => {
         throw error;
     }
 }
+
+export const getImagenesPorEstudio = async (studyGuid: string) => {
+    try {
+        const response = await api.get(`/images/study/${studyGuid}?format=list`);
+        return response.data.data;
+    } catch (error) {
+        throw error;
+    }
+}

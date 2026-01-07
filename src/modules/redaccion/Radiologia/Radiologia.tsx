@@ -27,7 +27,7 @@ export const Radiologia = () => {
     };
 
     const handleRedactarInforme = (informe: Informes) => {
-        const url = `/redaccion/radiologia/redactar-informe/${informe.guid}`;
+        const url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}`;
         // Abrir en una nueva ventana sin barras de herramientas y restricciones
         window.open(
             url,

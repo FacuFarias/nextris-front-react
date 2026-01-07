@@ -19,6 +19,9 @@ export const globalKeys = {
     medicosAll: () => [...globalKeys.all, "medicos-all"] as const,
     obrasSocialesPorLocacion: (locationGuid: string) =>
         [...globalKeys.all, "obras-sociales-por-locacion", locationGuid] as const,
+
+    imagenesPorEstudio: (studyGuid: string) =>
+        [...globalKeys.all, "imagenes-por-estudio", studyGuid] as const,
 };
 
 export const locationsKeys = {
