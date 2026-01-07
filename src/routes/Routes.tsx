@@ -10,6 +10,7 @@ import { DetalleEjecucion } from "@/modules/ejecucion/detalle-ejecucion/DetalleE
 import { Radiologia, InformePredefinidos } from "@/modules/redaccion";
 import { Distribucion } from "@/modules/distribucion";
 import { RedactarInforme } from "@/modules/redaccion/Radiologia/redactar-informe/RedactarInforme";
+import { ConfiguracionTablas } from "@/modules/configuracion/configuracion-tablas/ConfiguracionTablas";
 
 const router = createBrowserRouter([
     {
@@ -142,7 +143,17 @@ const router = createBrowserRouter([
                 <Distribucion />
             </ProtectedRoute>
         ),
-    }
+    },
+
+    {/*Configuraciones*/ },
+    {
+        path: "/configuraciones/tablas",
+        element: (
+            <ProtectedRoute>
+                <ConfiguracionTablas />
+            </ProtectedRoute>
+        ),
+    },
 
 ]);
 

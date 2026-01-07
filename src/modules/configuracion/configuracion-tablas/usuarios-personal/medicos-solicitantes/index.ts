@@ -1,0 +1,1 @@
+export { MedicosSolicitantes } from './MedicosSolicitantes';

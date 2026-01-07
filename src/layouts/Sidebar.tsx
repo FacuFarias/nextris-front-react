@@ -12,6 +12,7 @@ import {
     HandHelping,
     NotebookText,
     Navigation,
+    Table,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
@@ -97,13 +98,19 @@ const menuItems: MenuItem[] = [
             {
                 icon: UserCog,
                 label: "Unificación de Paciente",
-                path: "/pacientes/unificacion",
+                path: "/configuraciones/unificacion",
                 allowedRoles: ["Administrador"]
             },
             {
                 icon: ClipboardList,
                 label: "Reasignación de Exámenes",
-                path: "/pacientes/reasignacion",
+                path: "/configuraciones/reasignacion",
+                allowedRoles: ["Administrador"]
+            },
+            {
+                icon: Table,
+                label: "Configuracion de Tablas",
+                path: "/configuraciones/tablas",
                 allowedRoles: ["Administrador"]
             },
         ]
