@@ -1,9 +1,9 @@
 import type { TableAction, TableColumn } from "@/types/table";
-import type { Location } from "../types/locations.types";
+import type { Facility } from "../types/facilities.types";
 import { Edit } from "lucide-react";
 
 // Configuración de columnas para usuarios
-const locationColumns: TableColumn<Location>[] = [
+const facilityColumns: TableColumn<Facility>[] = [
     {
         key: "name",
         label: "NOMBRE",
@@ -20,29 +20,29 @@ const locationColumns: TableColumn<Location>[] = [
         className: "font-medium",
     },
     {
-        key: "address",
-        label: "DIRECCIÓN",
+        key: "contact_person",
+        label: "PERSONA DE CONTACTO",
         className: "font-medium",
     },
     {
-        key: "phone",
-        label: "TELÉFONO",
+        key: "status",
+        label: "ESTADO",
         className: "font-medium",
-    },
+    }
 ];
 
 // Función que genera las acciones con handlers personalizados
-export const getLocationActions = (
-    onEdit: (location: Location) => void,
-): TableAction<Location>[] => [
+export const getFacilityActions = (
+    onVerDetalle: (facilities: Facility) => void,
+): TableAction<Facility>[] => [
         {
-            label: "editar",
+            label: "Editar",
             icon: <Edit className="h-4 w-4 text-blue-900" />,
-            onClick: onEdit,
+            onClick: onVerDetalle,
         },
 
     ];
 
 
 
-export { locationColumns };
+export { facilityColumns };

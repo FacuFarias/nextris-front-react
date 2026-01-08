@@ -1,13 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { modalidadesService } from '../services/modalidades.service';
 import type { ModalidadFormData } from '../types/modalidades.types';
+import { ModalidadesKeys } from '../constants/query-keys';
 
 export const useModalidades = () => {
     const queryClient = useQueryClient();
 
     const { data: modalidades, isLoading, error } = useQuery({
-        queryKey: ['modalidades'],
+        queryKey: [ModalidadesKeys.all],
         queryFn: modalidadesService.getAll,
+        gcTime: 10 * 60 * 1000, // 10 minutos - mantener en caché
+        staleTime: 10 * 60 * 1000, // 10 minutos - datos considerados frescos
     });
 
     const createMutation = useMutation({

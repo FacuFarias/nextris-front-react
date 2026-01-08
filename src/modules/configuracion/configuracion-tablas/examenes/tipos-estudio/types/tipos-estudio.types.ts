@@ -1,15 +1,6 @@
 export interface TipoEstudio {
-    id: string;
-    code: string;
-    name: string;
+    guid: string;
     description: string;
-    modalityId: string;
-    modalityName?: string;
-    duration: number; // en minutos
-    price: number;
-    status: 'active' | 'inactive';
-    createdAt: string;
-    updatedAt: string;
 }
 
 export interface TipoEstudioFormData {
@@ -21,3 +12,9 @@ export interface TipoEstudioFormData {
     price: number;
     status: 'active' | 'inactive';
 }
+
+export interface TipoEstudioResponse {
+    success: boolean;
+    data: TipoEstudio;
+}
+

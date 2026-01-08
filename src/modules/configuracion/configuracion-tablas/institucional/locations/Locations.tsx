@@ -1,18 +1,64 @@
 import TablaDynamic from "@/components/TableDynamic";
 import { useLocations } from "./hooks/useLocations";
 import { useState } from "react";
-import { locationColumns } from "./components/columns";
+import { getLocationActions, locationColumns } from "./components/columns";
+import { PrimaryButton } from "@/components";
+import { LocationModal } from "./components/LocationModal";
+import type { LocationFormData } from "./types/locations.types";
+import { toast } from "sonner";
 
 export const Locations = () => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(8);
-    const { locations, isLoading } = useLocations();
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedLocation, setSelectedLocation] = useState<any>(null);
 
+    const { locations, isLoading, createLocation, updateLocation } = useLocations();
+
+    const handleOpenModal = (location?: any) => {
+        setSelectedLocation(location || null);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedLocation(null);
+    };
+
+    const handleSubmit = (data: LocationFormData) => {
+        if (selectedLocation) {
+            // Actualizar
+            updateLocation(
+                { id: selectedLocation.guid, data },
+                {
+                    onSuccess: () => {
+                        toast.success("Location actualizada exitosamente");
+                        handleCloseModal();
+                    },
+                    onError: () => {
+                        toast.error("Error al actualizar la location");
+                    },
+                }
+            );
+        } else {
+            // Crear
+            createLocation(data, {
+                onSuccess: () => {
+                    toast.success("Location creada exitosamente");
+                    handleCloseModal();
+                },
+                onError: () => {
+                    toast.error("Error al crear la location");
+                },
+            });
+        }
+    };
 
     const handlePaginationChange = (newPage: number, newPageSize: number) => {
         setPage(newPage);
         setPageSize(newPageSize);
     };
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -20,9 +66,9 @@ export const Locations = () => {
                     <h2 className="text-2xl font-bold">Locations</h2>
                     <p className="text-muted-foreground">Gestión de ubicaciones</p>
                 </div>
-                <button className="px-4 py-2 bg-brand-purple text-white rounded-md hover:bg-brand-purple/90">
+                <PrimaryButton onClick={() => handleOpenModal()}>
                     Nueva Location
-                </button>
+                </PrimaryButton>
             </div>
 
             {isLoading ? (
@@ -34,6 +80,7 @@ export const Locations = () => {
                     data={locations?.data || []}
                     columns={locationColumns}
                     showIndex
+                    actions={getLocationActions((location) => handleOpenModal(location))}
                     pagination={{
                         page,
                         pageSize,
@@ -43,6 +90,27 @@ export const Locations = () => {
                     onPaginationChange={handlePaginationChange}
                 />
             )}
+
+            {/* Modal de Crear/Editar */}
+            <LocationModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                onSubmit={handleSubmit}
+                initialData={selectedLocation ? {
+                    name: selectedLocation.name,
+                    facility_id: selectedLocation.facility_id,
+                    status: selectedLocation.status,
+                    address: selectedLocation.address,
+                    city: selectedLocation.city,
+                    state: selectedLocation.state,
+                    zip_code: selectedLocation.zip_code,
+                    country: selectedLocation.country,
+                    phone: selectedLocation.phone,
+                    email: selectedLocation.email,
+                    timezone: selectedLocation.timezone,
+                } : undefined}
+                isLoading={false}
+            />
         </div>
     )
 }

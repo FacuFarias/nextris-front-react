@@ -1,4 +1,19 @@
+import { useState } from "react";
+import { useModalidades } from "./hooks/useModalidades";
+import TablaDynamic from "@/components/TableDynamic";
+import { modalidadColumns } from "./components/columns";
+
 export const Modalidades = () => {
+
+
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(8);
+    const { modalidades, isLoading } = useModalidades();
+
+    const handlePaginationChange = (newPage: number, newPageSize: number) => {
+        setPage(newPage);
+        setPageSize(newPageSize);
+    };
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -11,9 +26,25 @@ export const Modalidades = () => {
                 </button>
             </div>
 
-            <div className="border rounded-lg p-4">
-                <p className="text-muted-foreground">Tabla de Modalidades</p>
-            </div>
+            {isLoading ? (
+                <div className='flex justify-center items-center h-40'>
+                    <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
+                </div>
+            ) : (
+                <TablaDynamic
+                    data={Array.isArray(modalidades?.data) ? modalidades.data : []}
+                    columns={modalidadColumns}
+                    showIndex
+                    pagination={{
+                        page,
+                        pageSize,
+                        serverSide: false,
+                        total: Array.isArray(modalidades?.data) ? modalidades.data.length : 0,
+                    }}
+                    onPaginationChange={handlePaginationChange}
+                />
+            )}
+
         </div>
     )
 }

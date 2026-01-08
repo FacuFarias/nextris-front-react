@@ -27,6 +27,7 @@ export const globalKeys = {
 export const locationsKeys = {
     all: ["locations"] as const,
     institutional: () => [...locationsKeys.all, "institutional"] as const,
+    create: () => [...locationsKeys.all, "create"] as const,
 };
 
 export const patientDomainsKeys = {

@@ -3,26 +3,26 @@ import type { Location, LocationFormData, LocationsResponse } from '../types/loc
 
 export const locationsService = {
     getAll: async (): Promise<LocationsResponse> => {
-        const { data } = await api.get('institutional/locations');
+        const { data } = await api.get('config/locations');
         return data;
     },
 
     getById: async (id: string): Promise<Location> => {
-        const { data } = await api.get(`/locations/${id}`);
+        const { data } = await api.get(`config/locations/${id}`);
         return data;
     },
 
     create: async (locationData: LocationFormData): Promise<Location> => {
-        const { data } = await api.post('/locations', locationData);
+        const { data } = await api.post('config/locations', locationData);
         return data;
     },
 
     update: async (id: string, locationData: Partial<LocationFormData>): Promise<Location> => {
-        const { data } = await api.put(`/locations/${id}`, locationData);
+        const { data } = await api.put(`config/locations/${id}`, locationData);
         return data;
     },
 
     delete: async (id: string): Promise<void> => {
-        await api.delete(`/locations/${id}`);
+        await api.delete(`config/locations/${id}`);
     },
 };

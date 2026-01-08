@@ -1,11 +1,6 @@
 export interface Modalidad {
-    id: string;
-    code: string;
-    name: string;
+    guid: string;
     description: string;
-    status: 'active' | 'inactive';
-    createdAt: string;
-    updatedAt: string;
 }
 
 export interface ModalidadFormData {
@@ -13,4 +8,9 @@ export interface ModalidadFormData {
     name: string;
     description: string;
     status: 'active' | 'inactive';
+}
+
+export interface ModalidadesResponse {
+    success: boolean;
+    data: Modalidad[];
 }

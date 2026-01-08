@@ -89,7 +89,7 @@ export const ConfiguracionTablas = () => {
                             </TabsContent>
 
                             <TabsContent value="informacion">
-                                <Card className="p-6">
+                                <Card className="flex items-center justify-center w-full p-6">
                                     <InformacionBasica />
                                 </Card>
                             </TabsContent>
