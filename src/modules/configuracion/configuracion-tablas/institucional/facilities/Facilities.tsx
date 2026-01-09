@@ -8,12 +8,12 @@ import type { FacilityFormData } from "./types/facilities.types";
 import { toast } from "sonner";
 
 export const Facilities = () => {
-
-    const { facilities, isLoading } = useFacilities();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(8);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedFacility, setSelectedFacility] = useState<any>(null);
+
+    const { facilities, isLoading, createFacility, updateFacility } = useFacilities();
 
     const handlePaginationChange = (newPage: number, newPageSize: number) => {
         setPage(newPage);
@@ -36,10 +36,29 @@ export const Facilities = () => {
         // Aquí irá la lógica para crear o actualizar la facility
         if (selectedFacility) {
             // Actualizar
-            toast.success("Facility actualizada exitosamente");
+            updateFacility(
+                { id: selectedFacility.guid, data: data as any },
+                {
+                    onSuccess: () => {
+                        toast.success("Facility actualizada exitosamente");
+                        handleCloseModal();
+                    },
+                    onError: () => {
+                        toast.error("Error al actualizar la facility");
+                    },
+                }
+            );
         } else {
             // Crear
-            toast.success("Facility creada exitosamente");
+            createFacility(data as any, {
+                onSuccess: () => {
+                    toast.success("Facility creada exitosamente");
+                    handleCloseModal();
+                },
+                onError: () => {
+                    toast.error("Error al crear la facility");
+                },
+            });
         }
 
         handleCloseModal();

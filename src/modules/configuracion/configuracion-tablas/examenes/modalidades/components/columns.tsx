@@ -1,5 +1,6 @@
-import type { TableColumn } from "@/types/table";
+import type { TableColumn, TableAction } from "@/types/table";
 import type { Modalidad } from "../types/modalidades.types";
+import { Edit } from "lucide-react";
 
 // Configuración de columnas para usuarios
 const modalidadColumns: TableColumn<Modalidad>[] = [
@@ -17,17 +18,14 @@ const modalidadColumns: TableColumn<Modalidad>[] = [
 ];
 
 // Función que genera las acciones con handlers personalizados
-/* export const getFacilityActions = (
-    onVerDetalle: (facilities: Facility) => void,
-): TableAction<Facility>[] => [
+export const getModalidadActions = (
+    onEditar: (modalidad: Modalidad) => void,
+): TableAction<Modalidad>[] => [
         {
             label: "Editar",
             icon: <Edit className="h-4 w-4 text-blue-900" />,
-            onClick: onVerDetalle,
+            onClick: onEditar,
         },
-
-    ]; */
-
-
+    ];
 
 export { modalidadColumns };

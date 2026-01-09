@@ -3,19 +3,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PrimaryButton, SecondaryButton } from "@/components";
 
-interface BodyPartFormProps {
+interface ModalidadFormProps {
     onSubmit: (data: { description: string }) => void;
     onCancel: () => void;
     initialData?: { description: string };
     isLoading?: boolean;
 }
 
-export const BodyPartForm = ({
+export const ModalidadForm = ({
     onSubmit,
     onCancel,
     initialData,
     isLoading = false,
-}: BodyPartFormProps) => {
+}: ModalidadFormProps) => {
     const [description, setDescription] = useState(initialData?.description || "");
 
     useEffect(() => {
@@ -37,7 +37,7 @@ export const BodyPartForm = ({
                     id="description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Ingrese la descripción de la parte del cuerpo"
+                    placeholder="Ingrese la descripción de la modalidad"
                     required
                 />
             </div>

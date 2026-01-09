@@ -77,45 +77,45 @@ export const ConfiguracionTablas = () => {
                             </TabsList>
 
                             <TabsContent value="facilities">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <Facilities />
-                                </Card>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="locations">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <Locations />
-                                </Card>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="informacion">
-                                <Card className="flex items-center justify-center w-full p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <InformacionBasica />
-                                </Card>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="flujo">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <FlujoTrabajo />
-                                </Card>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="smtp">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <ServidorSmtp />
-                                </Card>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="backend">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <DatosBackend />
-                                </Card>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="whatsapp">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <WhatsApp />
-                                </Card>
+                                </div>
                             </TabsContent>
                         </Tabs>
                     </TabsContent>
@@ -130,21 +130,21 @@ export const ConfiguracionTablas = () => {
                             </TabsList>
 
                             <TabsContent value="tipos-estudio">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <TiposEstudio />
-                                </Card>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="modalidades">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <Modalidades />
-                                </Card>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="partes-cuerpo">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <PartesCuerpo />
-                                </Card>
+                                </div>
                             </TabsContent>
                         </Tabs>
                     </TabsContent>
@@ -158,15 +158,15 @@ export const ConfiguracionTablas = () => {
                             </TabsList>
 
                             <TabsContent value="maquinas">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <Maquinas />
-                                </Card>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="agendas-maquinas">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <AgendasMaquinas />
-                                </Card>
+                                </div>
                             </TabsContent>
                         </Tabs>
                     </TabsContent>
@@ -182,27 +182,27 @@ export const ConfiguracionTablas = () => {
                             </TabsList>
 
                             <TabsContent value="gestion-usuarios">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <GestionUsuarios />
-                                </Card>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="gestion-pacientes">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <GestionPacientes />
-                                </Card>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="medicos-solicitantes">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <MedicosSolicitantes />
-                                </Card>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="agenda-medicos">
-                                <Card className="p-6">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <AgendaMedicos />
-                                </Card>
+                                </div>
                             </TabsContent>
                         </Tabs>
                     </TabsContent>

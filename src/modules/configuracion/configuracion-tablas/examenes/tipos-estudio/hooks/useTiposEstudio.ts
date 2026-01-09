@@ -16,7 +16,7 @@ export const useTiposEstudio = () => {
     const createMutation = useMutation({
         mutationFn: tiposEstudioService.create,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['tipos-estudio'] });
+            queryClient.invalidateQueries({ queryKey: [TipoEstudioKeys.all] });
         },
     });
 
@@ -24,14 +24,14 @@ export const useTiposEstudio = () => {
         mutationFn: ({ id, data }: { id: string; data: Partial<TipoEstudioFormData> }) =>
             tiposEstudioService.update(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['tipos-estudio'] });
+            queryClient.invalidateQueries({ queryKey: [TipoEstudioKeys.all] });
         },
     });
 
     const deleteMutation = useMutation({
         mutationFn: tiposEstudioService.delete,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['tipos-estudio'] });
+            queryClient.invalidateQueries({ queryKey: [TipoEstudioKeys.all] });
         },
     });
 

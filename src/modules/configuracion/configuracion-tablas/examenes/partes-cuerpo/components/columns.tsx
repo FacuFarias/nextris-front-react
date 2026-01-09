@@ -1,5 +1,6 @@
-import type { TableColumn } from "@/types/table";
+import type { TableColumn, TableAction } from "@/types/table";
 import type { BodyPart } from "../types/body-parts.types";
+import { Edit } from "lucide-react";
 
 // Configuración de columnas para usuarios
 const bodyPartColumns: TableColumn<BodyPart>[] = [
@@ -17,17 +18,14 @@ const bodyPartColumns: TableColumn<BodyPart>[] = [
 ];
 
 // Función que genera las acciones con handlers personalizados
-/* export const getFacilityActions = (
-    onVerDetalle: (facilities: Facility) => void,
-): TableAction<Facility>[] => [
+export const getBodyPartActions = (
+    onEditar: (bodyPart: BodyPart) => void,
+): TableAction<BodyPart>[] => [
         {
             label: "Editar",
             icon: <Edit className="h-4 w-4 text-blue-900" />,
-            onClick: onVerDetalle,
+            onClick: onEditar,
         },
-
-    ]; */
-
-
+    ];
 
 export { bodyPartColumns };
