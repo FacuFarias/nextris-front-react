@@ -454,10 +454,10 @@ Elimina un grupo de estudio.
 ## Equipos
 
 ### GET /config/equipment
-Obtiene todos los equipos del sistema.
+Obtiene todos los equipos.
 
 **Query Parameters:**
-- `location_id` (string, opcional): Filtrar por localización. Si no se proporciona, retorna equipos de todas las localizaciones.
+- `location_id` (string, opcional): Filtrar por localización
 
 **Response 200:**
 ```json
@@ -479,10 +479,6 @@ Obtiene todos los equipos del sistema.
   ]
 }
 ```
-
-**Notas:**
-- **Cambio importante**: `location_id` ahora es OPCIONAL. Si no se proporciona, retorna todos los equipos del sistema.
-- Útil para pantallas de configuración global que necesitan ver todos los equipos.
 
 ### POST /config/equipment
 Crea un nuevo equipo.
@@ -544,11 +540,11 @@ Elimina un equipo.
 
 ## Agendas de Equipos
 
-### GET /config/equipment-schedules
-Obtiene todas las agendas de equipos.
+### GET /config/equipment/:equipment_id/schedule
+Obtiene la agenda de un equipo específico.
 
-**Query Parameters:**
-- `equipment_id` (string, opcional): Filtrar por equipo
+**Path Parameters:**
+- `equipment_id` (string, requerido): UUID del equipo
 
 **Response 200:**
 ```json
@@ -557,26 +553,35 @@ Obtiene todas las agendas de equipos.
   "data": [
     {
       "guid": "uuid",
-      "equipment_id": "uuid",
-      "equipment_name": "Tomógrafo Siemens",
-      "day": "Lunes",
-      "time_from": "08:00:00",
-      "time_to": "16:00:00"
+      "day": 1,
+      "time_from": "08:00",
+      "time_to": "17:00"
     }
   ]
 }
 ```
 
-### POST /config/equipment-schedules
+**Nota sobre el campo `day`:**
+- `0` = Domingo
+- `1` = Lunes
+- `2` = Martes
+- `3` = Miércoles
+- `4` = Jueves
+- `5` = Viernes
+- `6` = Sábado
+
+### POST /config/equipment/:equipment_id/schedule
 Crea una nueva agenda para un equipo.
+
+**Path Parameters:**
+- `equipment_id` (string, requerido): UUID del equipo
 
 **Request Body:**
 ```json
 {
-  "equipment_id": "uuid",    // requerido
-  "day": "Lunes",            // requerido (Lunes-Domingo)
-  "time_from": "08:00",      // requerido
-  "time_to": "16:00"         // requerido
+  "day": 1,              // requerido (0-6, donde 0=Domingo, 6=Sábado)
+  "time_from": "08:00",  // requerido (formato HH:MM)
+  "time_to": "17:00"     // requerido (formato HH:MM)
 }
 ```
 
@@ -584,20 +589,34 @@ Crea una nueva agenda para un equipo.
 ```json
 {
   "success": true,
-  "data": { /* agenda creada */ },
-  "message": "Agenda creada exitosamente"
+  "message": "Agenda creada exitosamente",
+  "data": {
+    "schedule_id": "uuid",
+    "day": 1,
+    "time_from": "08:00",
+    "time_to": "17:00"
+  }
 }
 ```
 
-### PUT/PATCH /config/equipment-schedules/:schedule_id
-Actualiza una agenda de equipo.
+**Errores comunes:**
+- `400`: day debe ser un número entre 0 y 6
+- `400`: day, time_from y time_to son requeridos
+- `404`: Equipo no encontrado
+
+### PUT/PATCH /config/equipment/:equipment_id/schedule/:schedule_id
+Actualiza una agenda de equipo existente.
+
+**Path Parameters:**
+- `equipment_id` (string, requerido): UUID del equipo
+- `schedule_id` (string, requerido): UUID de la agenda
 
 **Request Body:** (todos los campos son opcionales)
 ```json
 {
-  "day": "Martes",
+  "day": 2,
   "time_from": "09:00",
-  "time_to": "17:00"
+  "time_to": "18:00"
 }
 ```
 
@@ -605,13 +624,21 @@ Actualiza una agenda de equipo.
 ```json
 {
   "success": true,
-  "data": { /* agenda actualizada */ },
   "message": "Agenda actualizada exitosamente"
 }
 ```
 
-### DELETE /config/equipment-schedules/:schedule_id
+**Errores comunes:**
+- `400`: day debe ser un número entre 0 y 6
+- `400`: No hay campos para actualizar
+- `404`: Agenda no encontrada
+
+### DELETE /config/equipment/:equipment_id/schedule/:schedule_id
 Elimina una agenda de equipo.
+
+**Path Parameters:**
+- `equipment_id` (string, requerido): UUID del equipo
+- `schedule_id` (string, requerido): UUID de la agenda
 
 **Response 200:**
 ```json
@@ -620,6 +647,9 @@ Elimina una agenda de equipo.
   "message": "Agenda eliminada exitosamente"
 }
 ```
+
+**Errores comunes:**
+- `404`: Agenda no encontrada
 
 ---
 
