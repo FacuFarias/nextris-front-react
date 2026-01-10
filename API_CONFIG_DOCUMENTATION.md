@@ -454,10 +454,10 @@ Elimina un grupo de estudio.
 ## Equipos
 
 ### GET /config/equipment
-Obtiene todos los equipos.
+Obtiene todos los equipos del sistema.
 
 **Query Parameters:**
-- `location_id` (string, opcional): Filtrar por localización
+- `location_id` (string, opcional): Filtrar por localización. Si no se proporciona, retorna equipos de todas las localizaciones.
 
 **Response 200:**
 ```json
@@ -479,6 +479,10 @@ Obtiene todos los equipos.
   ]
 }
 ```
+
+**Notas:**
+- **Cambio importante**: `location_id` ahora es OPCIONAL. Si no se proporciona, retorna todos los equipos del sistema.
+- Útil para pantallas de configuración global que necesitan ver todos los equipos.
 
 ### POST /config/equipment
 Crea un nuevo equipo.
