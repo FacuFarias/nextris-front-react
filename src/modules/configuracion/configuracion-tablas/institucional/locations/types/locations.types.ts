@@ -10,6 +10,7 @@ export interface Location {
     zip_code: string;
     country: string;
     phone: string;
+    name: string;
     email: string;
     timezone: string;
     created_at: string;

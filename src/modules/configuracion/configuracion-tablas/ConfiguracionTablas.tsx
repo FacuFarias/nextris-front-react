@@ -1,6 +1,5 @@
 import { MainLayout } from "@/layouts/layout"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card } from "@/components/ui/card"
 
 // Institucional
 import { Facilities } from "./institucional/facilities"
@@ -71,9 +70,6 @@ export const ConfiguracionTablas = () => {
                                 <TabsTrigger value="locations" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Locations</TabsTrigger>
                                 <TabsTrigger value="informacion" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Información Básica</TabsTrigger>
                                 <TabsTrigger value="flujo" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Flujo de Trabajo</TabsTrigger>
-                                <TabsTrigger value="smtp" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Servidor SMTP</TabsTrigger>
-                                <TabsTrigger value="backend" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Datos Backend</TabsTrigger>
-                                <TabsTrigger value="whatsapp" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">WhatsApp</TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="facilities">
