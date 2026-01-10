@@ -13,6 +13,8 @@ Esta documentación describe las APIs de distribución de informes médicos del 
 1. [Obtener Exámenes para Distribución](#obtener-exámenes-para-distribución)
 2. [Enviar Informe por Email](#enviar-informe-por-email)
 3. [Actualizar Email de Examen](#actualizar-email-de-examen)
+4. [Visualizar Informe PDF](#visualizar-informe-pdf)
+5. [Obtener Información del Visor DICOM](#obtener-información-del-visor-dicom)
 
 ---
 
@@ -42,33 +44,24 @@ Authorization: Bearer <jwt_token>
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "guid": "123e4567-e89b-12d3-a456-426614174000",
-      "fecha": "07/01/2025",
-      "examen": "ANGIOTOMOGRAFIA DE TORAX",
-      "paciente": "García Pérez, Ana María",
-      "mail": "ana.garcia@email.com",
-      "estado": "R",
-      "medico_autor": "Dr. Juan Carlos Smith",
-      "medico_solicitante": "Dr. Roberto Jones",
-      "urgencia": "N"
-    },
-    {
-      "guid": "234e5678-e89b-12d3-a456-426614174001",
-      "fecha": "06/01/2025",
-      "examen": "RESONANCIA MAGNETICA DE CEREBRO",
-      "paciente": "Rodríguez López, Carlos",
-      "mail": "carlos.rodriguez@email.com",
-      "estado": "E",
-      "medico_autor": "Dra. María González",
-      "medico_solicitante": "Dr. Pedro Martínez",
-      "urgencia": "S"
-    }
-  ],
-  "total": 25,
-  "page": 1,
-  "per_page": 50
+  "data": {
+    "data": [
+      {
+        "guid": "123e4567-e89b-12d3-a456-426614174000",
+        "fecha": "07/01/2025 14:30",
+        "examen": "ANGIOTOMOGRAFIA DE TORAX",
+        "paciente": "García Pérez, Ana María",
+        "mail": "ana.garcia@email.com",
+        "estado": "R",
+        "medico_autor": "Dr. Juan Carlos Smith",
+        "medico_solicitante": "Dr. Roberto Jones",
+        "urgencia": false
+      }
+    ],
+    "page": 1,
+    "per_page": 50,
+    "total": 25
+  }
 }
 ```
 
@@ -364,5 +357,143 @@ El email se actualiza en el campo `patient_email` de la tabla `tborder` (asociad
 ---
 
 ## Soporte
+
+---
+
+## 4. Visualizar Informe PDF
+
+Permite visualizar o descargar el informe PDF de un examen.
+
+**Endpoint:** `GET /examinations/<exam_id>/report/view`
+
+**Autenticación:** Requerida (JWT Token)
+
+**Parámetros de Ruta:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| exam_id | UUID | ID único del examen |
+
+**Parámetros de Query:**
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|-----------|-------------|
+| download | boolean | No | Si es `true`, descarga el PDF. Si es `false` o no está presente, lo visualiza en el navegador |
+
+**Ejemplo de Request:**
+```bash
+# Visualizar en navegador
+GET /api/examinations/123e4567-e89b-12d3-a456-426614174000/report/view
+Authorization: Bearer <token>
+
+# Descargar archivo
+GET /api/examinations/123e4567-e89b-12d3-a456-426614174000/report/view?download=true
+Authorization: Bearer <token>
+```
+
+**Response 200 - Success:**
+- Retorna el archivo PDF directamente
+- Content-Type: `application/pdf`
+- Si `download=true`: incluye header `Content-Disposition: attachment; filename="informe_<exam_id>.pdf"`
+- Si `download=false` o no especificado: el navegador intenta visualizar el PDF inline
+
+**Response 404 - No encontrado:**
+```json
+{
+  "success": false,
+  "error": "Informe no encontrado para este examen"
+}
+```
+
+**Response 500 - Error del servidor:**
+```json
+{
+  "success": false,
+  "error": "Error al obtener el informe"
+}
+```
+
+**Códigos de Error:**
+| Código | Descripción |
+|--------|-------------|
+| 404 | El examen no tiene un informe PDF asociado o el archivo no existe en el sistema |
+| 500 | Error al acceder al archivo o error de base de datos |
+
+**Notas:**
+- El archivo PDF debe existir en la ruta especificada en `tbreport.pdfpath`
+- El parámetro `download` es opcional y por defecto es `false`
+- Si el archivo no existe físicamente aunque esté registrado en la BD, retorna 404
+
+---
+
+## 5. Obtener Información del Visor DICOM
+
+Obtiene la información necesaria para abrir el visor DICOM de un examen.
+
+**Endpoint:** `GET /examinations/<exam_id>/dicom-viewer`
+
+**Autenticación:** Requerida (JWT Token)
+
+**Parámetros de Ruta:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| exam_id | UUID | ID único del examen |
+
+**Ejemplo de Request:**
+```bash
+GET /api/examinations/123e4567-e89b-12d3-a456-426614174000/dicom-viewer
+Authorization: Bearer <token>
+```
+
+**Response 200 - Success:**
+```json
+{
+  "success": true,
+  "data": {
+    "study_uid": "1.2.840.113619.2.55.3.2831869264.123.1234567890.1",
+    "viewer_url": "http://localhost/weasis-pacs-connector/viewer?studyUID=1.2.840.113619.2.55.3.2831869264.123.1234567890.1",
+    "patient_name": "García Pérez^Ana María",
+    "study_description": "ANGIOTOMOGRAFIA DE TORAX",
+    "study_date": "20250107"
+  }
+}
+```
+
+**Response 404 - No encontrado:**
+```json
+{
+  "success": false,
+  "error": "Examen no encontrado o sin imágenes DICOM"
+}
+```
+
+**Response 500 - Error del servidor:**
+```json
+{
+  "success": false,
+  "error": "Error al obtener información del visor DICOM"
+}
+```
+
+**Códigos de Error:**
+| Código | Descripción |
+|--------|-------------|
+| 404 | El examen no existe o no tiene studyinstanceuid asociado |
+| 500 | Error de base de datos o error interno del servidor |
+
+**Campos del Response:**
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| study_uid | string | UID del estudio DICOM (studyinstanceuid) |
+| viewer_url | string | URL completa para abrir en el visor Weasis |
+| patient_name | string | Nombre del paciente en formato DICOM |
+| study_description | string | Descripción del estudio |
+| study_date | string | Fecha del estudio en formato YYYYMMDD |
+
+**Notas:**
+- El `study_uid` es el campo `studyinstanceuid` de la tabla `tbexamination`
+- La URL del visor se construye automáticamente con el patrón: `http://localhost/weasis-pacs-connector/viewer?studyUID=<study_uid>`
+- Si el examen no tiene `studyinstanceuid`, retorna 404
+- El visor DICOM debe estar configurado y accesible en el servidor
+
+---
 
 Para preguntas o issues relacionados con estas APIs, contactar al equipo de desarrollo de NextRIS.
