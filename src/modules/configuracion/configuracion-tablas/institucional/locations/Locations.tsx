@@ -63,7 +63,7 @@ export const Locations = () => {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold">Locations</h2>
+                    <h2 className="text-2xl font-bold">UBICACIONES</h2>
                     <p className="text-muted-foreground">Gestión de ubicaciones</p>
                 </div>
                 <PrimaryButton onClick={() => handleOpenModal()}>

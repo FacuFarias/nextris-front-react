@@ -5,8 +5,8 @@ import { Edit } from "lucide-react";
 // Configuración de columnas para usuarios
 const modalidadColumns: TableColumn<Modalidad>[] = [
     {
-        key: "guid",
-        label: "GUID",
+        key: "externalcode",
+        label: "CÓDIGO",
         className: "font-medium",
     },
     {

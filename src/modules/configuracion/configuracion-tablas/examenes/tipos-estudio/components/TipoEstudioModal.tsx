@@ -1,11 +1,12 @@
 import { Modal } from "@/components";
 import { TipoEstudioForm } from "./TipoEstudioForm";
+import type { TipoEstudioFormData } from "../types/tipos-estudio.types";
 
 interface TipoEstudioModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: { description: string }) => void;
-    initialData?: { description: string };
+    onSubmit: (data: TipoEstudioFormData) => void;
+    initialData?: Partial<TipoEstudioFormData>;
     isLoading?: boolean;
 }
 
@@ -23,8 +24,8 @@ export const TipoEstudioModal = ({
             isOpen={isOpen}
             onClose={onClose}
             title={isEditing ? "Editar Tipo de Estudio" : "Nuevo Tipo de Estudio"}
-            description={isEditing ? "Modifique la descripción del tipo de estudio" : "Complete la descripción del nuevo tipo de estudio"}
-            size="md"
+            description={isEditing ? "Modifique los datos del tipo de estudio" : "Complete los datos del nuevo tipo de estudio"}
+            size="lg"
         >
             <TipoEstudioForm
                 onSubmit={onSubmit}

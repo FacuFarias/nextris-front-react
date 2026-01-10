@@ -1,10 +1,12 @@
 import TablaDynamic from "@/components/TableDynamic";
 import { useTiposEstudio } from "./hooks/useTiposEstudio";
 import { tipoEstudioColumns, getTipoEstudioActions } from "./components/columns";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { TipoEstudioModal } from "./components/TipoEstudioModal";
-import type { TipoEstudio } from "./types/tipos-estudio.types";
+import type { TipoEstudio, TipoEstudioFormData } from "./types/tipos-estudio.types";
 import { toast } from "sonner";
+import { useModalidades } from "../modalidades/hooks/useModalidades";
+import { useBodyParts } from "../partes-cuerpo/hooks/useBodyParts";
 
 export const TiposEstudio = () => {
     const [page, setPage] = useState(1);
@@ -13,6 +15,8 @@ export const TiposEstudio = () => {
     const [selectedTipoEstudio, setSelectedTipoEstudio] = useState<TipoEstudio | null>(null);
 
     const { tiposEstudio, isLoading, createTipoEstudio, updateTipoEstudio } = useTiposEstudio();
+    const { modalidades } = useModalidades();
+    const { bodyParts } = useBodyParts();
 
     const handlePaginationChange = (newPage: number, newPageSize: number) => {
         setPage(newPage);
@@ -29,11 +33,11 @@ export const TiposEstudio = () => {
         setSelectedTipoEstudio(null);
     };
 
-    const handleSubmit = (data: { description: string }) => {
+    const handleSubmit = (data: TipoEstudioFormData) => {
         if (selectedTipoEstudio) {
             // Actualizar
             updateTipoEstudio(
-                { id: selectedTipoEstudio.guid, data: data as any },
+                { id: selectedTipoEstudio.guid, data },
                 {
                     onSuccess: () => {
                         toast.success("Tipo de estudio actualizado exitosamente");
@@ -46,7 +50,7 @@ export const TiposEstudio = () => {
             );
         } else {
             // Crear
-            createTipoEstudio(data as any, {
+            createTipoEstudio(data, {
                 onSuccess: () => {
                     toast.success("Tipo de estudio creado exitosamente");
                     handleCloseModal();
@@ -59,6 +63,31 @@ export const TiposEstudio = () => {
     };
 
     const tipoEstudioActions = getTipoEstudioActions(handleOpenModal);
+
+    // Buscar IDs a partir de los nombres cuando se edita
+    const initialData = useMemo(() => {
+        if (!selectedTipoEstudio) return undefined;
+
+        // Buscar el ID de modalidad por nombre
+        const modalityId = modalidades?.data?.find(
+            (m: any) => m.description === selectedTipoEstudio.modality
+        )?.guid || selectedTipoEstudio.modality_id || "";
+
+        // Buscar el ID de parte del cuerpo por nombre
+        const bodypartId = bodyParts?.data?.find(
+            (b: any) => b.description === selectedTipoEstudio.bodypart
+        )?.guid || selectedTipoEstudio.bodypart_id || "";
+
+        return {
+            code: selectedTipoEstudio.code,
+            description: selectedTipoEstudio.description,
+            studygroup_id: selectedTipoEstudio.studygroup_id || "",
+            bodypart_id: bodypartId,
+            modality_id: modalityId,
+            rvu: selectedTipoEstudio.rvu,
+            nofviews: selectedTipoEstudio.nofviews,
+        };
+    }, [selectedTipoEstudio, modalidades, bodyParts]);
 
     return (
         <div className="space-y-4">
@@ -99,7 +128,7 @@ export const TiposEstudio = () => {
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
                 onSubmit={handleSubmit}
-                initialData={selectedTipoEstudio ? { description: selectedTipoEstudio.description } : undefined}
+                initialData={initialData}
                 isLoading={false}
             />
         </div>

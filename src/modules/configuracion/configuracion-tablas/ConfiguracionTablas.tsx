@@ -66,8 +66,8 @@ export const ConfiguracionTablas = () => {
                     <TabsContent value="institucional" className="space-y-4">
                         <Tabs defaultValue="facilities" className="w-full">
                             <TabsList className="w-full justify-start flex-wrap h-auto">
-                                <TabsTrigger value="facilities" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Facilities</TabsTrigger>
-                                <TabsTrigger value="locations" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Locations</TabsTrigger>
+                                <TabsTrigger value="facilities" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Instituciones</TabsTrigger>
+                                <TabsTrigger value="locations" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Ubicaciones</TabsTrigger>
                                 <TabsTrigger value="informacion" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Información Básica</TabsTrigger>
                                 <TabsTrigger value="flujo" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Flujo de Trabajo</TabsTrigger>
                             </TabsList>

@@ -9,7 +9,7 @@ const equipmentColumns: TableColumn<Equipment>[] = [
         className: "font-medium",
     },
     {
-        key: "modality_name",
+        key: "modality",
         label: "MODALIDAD",
         className: "font-medium",
     },
@@ -19,7 +19,7 @@ const equipmentColumns: TableColumn<Equipment>[] = [
         className: "font-medium",
     },
     {
-        key: "aetitle",
+        key: "aeTitle",
         label: "AE TITLE",
         className: "font-medium",
     },
@@ -33,19 +33,7 @@ const equipmentColumns: TableColumn<Equipment>[] = [
         label: "PUERTO",
         className: "font-medium",
     },
-    {
-        key: "status",
-        label: "ESTADO",
-        className: "font-medium",
-        render: (value) => (
-            <span className={`px-2 py-1 rounded-full text-xs ${value === 'active'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                {value === 'active' ? 'Activo' : 'Inactivo'}
-            </span>
-        ),
-    },
+
 ];
 
 export const getEquipmentActions = (

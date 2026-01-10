@@ -4,11 +4,7 @@ import { Edit } from "lucide-react";
 
 // Configuración de columnas para usuarios
 const bodyPartColumns: TableColumn<BodyPart>[] = [
-    {
-        key: "guid",
-        label: "GUID",
-        className: "font-medium",
-    },
+
     {
         key: "description",
         label: "DESCRIPCIÓN",

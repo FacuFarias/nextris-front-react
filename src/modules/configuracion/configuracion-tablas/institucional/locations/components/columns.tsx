@@ -15,6 +15,12 @@ const locationColumns: TableColumn<Location>[] = [
         className: "font-medium",
     },
     {
+        key: "facility_name",
+        label: "INSTITUCIÓN",
+        className: "font-medium",
+    },
+
+    {
         key: "email",
         label: "EMAIL",
         className: "font-medium",

@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/react-query"
 import { login } from "../services/login.service"
-import { getPatientDomains } from "../../../../services/patient-domains.service"
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -33,7 +32,10 @@ export const UseLogin = () => {
             toast.success(data?.message || "¡Inicio de sesión exitoso!", {
                 position: "top-right",
             });
-
+            if (data?.user?.user_type === "patient") {
+                navigate("/estudios");
+                return
+            }
             navigate("/inicio");
         },
         onError: (error) => {

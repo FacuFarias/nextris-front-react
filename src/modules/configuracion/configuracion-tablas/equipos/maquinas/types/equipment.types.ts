@@ -2,10 +2,10 @@ export interface Equipment {
     guid: string;
     description: string;
     modality_id: string;
-    modality_name: string;
+    modality: string;
     location_id: string | null;
     location_name: string | null;
-    aetitle: string | null;
+    aeTitle: string | null;
     ip: string | null;
     port: number | null;
     status: 'active' | 'inactive';

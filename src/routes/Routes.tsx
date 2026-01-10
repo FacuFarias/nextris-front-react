@@ -11,6 +11,8 @@ import { Radiologia, InformePredefinidos } from "@/modules/redaccion";
 import { Distribucion } from "@/modules/distribucion";
 import { RedactarInforme } from "@/modules/redaccion/Radiologia/redactar-informe/RedactarInforme";
 import { ConfiguracionTablas } from "@/modules/configuracion/configuracion-tablas/ConfiguracionTablas";
+import { Estudios } from "@/modules/estudios/Estudios";
+import { MisDatos } from "@/modules/mis-datos/MisDatos";
 
 const router = createBrowserRouter([
     {
@@ -154,7 +156,23 @@ const router = createBrowserRouter([
             </ProtectedRoute>
         ),
     },
-
+    {/*Mis estudios pacientes*/ },
+    {
+        path: "/estudios",
+        element: (
+            <ProtectedRoute>
+                <Estudios />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/mis-datos",
+        element: (
+            <ProtectedRoute>
+                <MisDatos />
+            </ProtectedRoute>
+        ),
+    }
 ]);
 
 export const AppRoutes = () => {

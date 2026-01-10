@@ -13,6 +13,8 @@ import {
     NotebookText,
     Navigation,
     Table,
+    BookPlus,
+    User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
@@ -37,9 +39,12 @@ const menuItems: MenuItem[] = [
         icon: Users,
         label: "Pacientes",
         path: "/pacientes",
+        allowedRoles: ["Sysadmin"]
+
     },
     {
         icon: Calendar, label: "Citas",
+        allowedRoles: ["Sysadmin"],
         subItems: [
             {
                 icon: Calendar,
@@ -55,7 +60,7 @@ const menuItems: MenuItem[] = [
     },
     {
         icon: CalendarPlus, label: "Admision",
-
+        allowedRoles: ["Sysadmin"],
         subItems: [
             {
                 icon: CalendarPlus,
@@ -74,7 +79,7 @@ const menuItems: MenuItem[] = [
             }
         ]
     },
-    { icon: HandHelping, label: "Ejecucion", path: "/ejecucion" },
+    { icon: HandHelping, label: "Ejecucion", path: "/ejecucion", allowedRoles: ["Sysadmin"] },
     {
         icon: NotebookText, label: "Redaccion", subItems: [
             {
@@ -87,9 +92,11 @@ const menuItems: MenuItem[] = [
                 label: "Inf.Predef",
                 path: "/redaccion/informes-predefinidos",
             }
-        ]
+        ],
+        allowedRoles: ["Sysadmin"],
+
     },
-    { icon: Navigation, label: "Distribucion", path: "/distribucion" },
+    { icon: Navigation, label: "Distribucion", path: "/distribucion", allowedRoles: ["Sysadmin"], },
     {
         icon: Settings,
         label: "Configuraciones",
@@ -99,21 +106,36 @@ const menuItems: MenuItem[] = [
                 icon: UserCog,
                 label: "Unificación de Paciente",
                 path: "/configuraciones/unificacion",
-                allowedRoles: ["Administrador"]
+                allowedRoles: ["Sysadmin"]
             },
             {
                 icon: ClipboardList,
                 label: "Reasignación de Exámenes",
                 path: "/configuraciones/reasignacion",
-                allowedRoles: ["Administrador"]
+                allowedRoles: ["Sysadmin"]
             },
             {
                 icon: Table,
                 label: "Configuracion de Tablas",
                 path: "/configuraciones/tablas",
-                allowedRoles: ["Administrador"]
+                allowedRoles: ["Sysadmin"]
             },
         ]
+    },
+
+    {
+        icon: BookPlus,
+        label: "Mis Estudios",
+        path: "/estudios",
+        allowedRoles: ["patient"]
+
+    },
+    {
+        icon: User,
+        label: "Mis datos",
+        path: "/mis-datos",
+        allowedRoles: ["patient"]
+
     },
 ];
 
@@ -124,8 +146,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const userRole = authData?.user?.name || "";
-
+    const userRole = authData?.user?.user_type || "";
+    console.log(userRole)
     // Función para verificar si el usuario tiene acceso
     const hasAccess = (allowedRoles?: string[]) => {
         if (!allowedRoles || allowedRoles.length === 0) return true;

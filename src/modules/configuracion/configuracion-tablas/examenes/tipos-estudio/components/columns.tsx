@@ -5,8 +5,8 @@ import { Edit } from "lucide-react";
 // Configuración de columnas para usuarios
 const tipoEstudioColumns: TableColumn<TipoEstudio>[] = [
     {
-        key: "guid",
-        label: "GUID",
+        key: "code",
+        label: "CÓDIGO",
         className: "font-medium",
     },
     {
@@ -14,7 +14,33 @@ const tipoEstudioColumns: TableColumn<TipoEstudio>[] = [
         label: "DESCRIPCIÓN",
         className: "font-medium",
     },
+    {
+        key: "studygroup",
+        label: "GRUPO DE ESTUDIO",
+        className: "font-medium",
+    },
+    {
+        key: "bodypart",
+        label: "PARTE DEL CUERPO",
+        className: "font-medium",
+    },
+    {
+        key: "modality",
+        label: "MODALIDAD",
+        className: "font-medium",
+    },
+    {
+        key: "rvu",
+        label: "RVU",
+        className: "font-medium",
+    },
+    {
+        key: "nofviews",
+        label: "NÚMERO DE VISTAS",
+        className: "font-medium",
+        render: (value) => Math.round(value)
 
+    },
 ];
 
 // Función que genera las acciones con handlers personalizados

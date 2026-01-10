@@ -12,7 +12,7 @@ export const getPatientColumns = (): TableColumn<Patient>[] => [
         key: "name",
         label: "NOMBRE",
         className: "font-medium",
-        render: (_value, row) => `${row.name} ${row.surname}`,
+        render: (_value, row) => `${row.name}`,
     },
     {
         key: "national_number",
