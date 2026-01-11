@@ -94,7 +94,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```json
 {
   "success": false,
-  "error": "Error de configuración de BD"
+  "message": "Error: <descripción del error>"
 }
 ```
 
@@ -135,7 +135,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```json
 {
   "success": false,
-  "error": "Plantilla no encontrada"
+  "message": "Plantilla no encontrada"
 }
 ```
 
@@ -201,7 +201,7 @@ Content-Type: application/json
 ```json
 {
   "success": false,
-  "error": "El título es requerido"
+  "message": "El título es requerido"
 }
 ```
 
@@ -209,7 +209,7 @@ Content-Type: application/json
 ```json
 {
   "success": false,
-  "error": "El tipo de estudio es requerido"
+  "message": "El tipo de estudio es requerido"
 }
 ```
 
@@ -267,7 +267,7 @@ Content-Type: application/json
 ```json
 {
   "success": false,
-  "error": "Plantilla no encontrada"
+  "message": "Plantilla no encontrada"
 }
 ```
 
@@ -302,7 +302,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```json
 {
   "success": false,
-  "error": "Plantilla no encontrada"
+  "message": "Plantilla no encontrada"
 }
 ```
 
@@ -376,7 +376,7 @@ const handleSelectTemplate = async (templateId: string) => {
 ```json
 {
   "success": false,
-  "error": "Plantilla no encontrada"
+  "message": "Plantilla no encontrada"
 }
 ```
 
@@ -495,7 +495,7 @@ const createTemplate = async (templateData: CreateTemplateRequest) => {
       // Recargar lista de plantillas
       await fetchTemplates();
     } else {
-      console.error('Error:', result.error);
+      console.error('Error:', result.message);
     }
   } catch (error) {
     console.error('Error al crear plantilla:', error);
