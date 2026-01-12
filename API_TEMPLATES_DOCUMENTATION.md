@@ -21,9 +21,8 @@ Authorization: Bearer <access_token>
 4. [Crear Plantilla](#crear-plantilla)
 5. [Editar Plantilla](#editar-plantilla)
 6. [Eliminar Plantilla](#eliminar-plantilla)
-7. [Seleccionar Plantilla](#seleccionar-plantilla)
-8. [Códigos de Respuesta](#códigos-de-respuesta)
-9. [Modelos de Datos](#modelos-de-datos)
+7. [Códigos de Respuesta](#códigos-de-respuesta)
+8. [Modelos de Datos](#modelos-de-datos)
 
 ---
 
@@ -31,37 +30,45 @@ Authorization: Bearer <access_token>
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `/api/templates` | Lista todas las plantillas (con filtro opcional) |
+| GET | `/api/templates` | Lista todas las plantillas (con filtros opcionales) |
 | GET | `/api/templates/<template_id>` | Obtiene una plantilla específica |
 | POST | `/api/templates` | Crea una nueva plantilla |
 | PUT | `/api/templates/<template_id>` | Edita una plantilla existente |
 | DELETE | `/api/templates/<template_id>` | Elimina una plantilla |
-| POST | `/api/templates/select/<template_id>` | Selecciona una plantilla para usar |
 
 ---
 
 ## Listar Plantillas
 
-Obtiene la lista de todas las plantillas de informes predefinidos con opción de filtrar por tipo de estudio.
+Obtiene la lista de todas las plantillas de informes predefinidos con opciones de filtrado.
 
 **Endpoint:** `GET /api/templates`
 
 **Query Parameters:**
 - `study_type_id` (string, opcional): UUID del tipo de estudio para filtrar
+- `modality_id` (string, opcional): UUID de la modalidad para filtrar
+- `bodypart_id` (string, opcional): UUID de la parte del cuerpo para filtrar
+- `simple` (boolean, opcional): Si es `true`, devuelve solo guid, title y study_type_description (más liviano)
 
-**Ejemplo de Petición:**
+**Ejemplo de Petición Simple:**
 ```bash
 GET /api/templates
 Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
-**Ejemplo con Filtro:**
+**Ejemplo con Filtro por Tipo de Estudio:**
 ```bash
 GET /api/templates?study_type_id=cb90d4eb-b298-4e6e-91ea-010a3e4dc8d9
 Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
-**Respuesta Exitosa (200):**
+**Ejemplo con Múltiples Filtros:**
+```bash
+GET /api/templates?study_type_id=cb90d4eb-b298-4e6e-91ea-010a3e4dc8d9&modality_id=abc123&simple=true
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+**Respuesta Exitosa (200) - Completa:**
 ```json
 {
   "success": true,
@@ -85,6 +92,25 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
       "technique": "Se realizó radiografía de tórax en proyección PA...",
       "impression": "Hallazgos compatibles con proceso infeccioso.",
       "conclusion": "Se sugiere correlación clínica y seguimiento."
+    }
+  ]
+}
+```
+
+**Respuesta Exitosa (200) - Modo Simple (`simple=true`):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Plantilla RX Tórax Normal",
+      "study_type_description": "RX TORAX"
+    },
+    {
+      "guid": "661e9500-f39c-52e5-b827-557766551111",
+      "title": "Plantilla RX Tórax Consolidación",
+      "study_type_description": "RX TORAX"
     }
   ]
 }
@@ -308,85 +334,11 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 ---
 
-## Seleccionar Plantilla
-
-Selecciona una plantilla para aplicar a un informe. Este endpoint es útil cuando el usuario elige una plantilla desde un modal o lista para completar automáticamente los campos del formulario de redacción de informes.
-
-**Endpoint:** `POST /api/templates/select/<template_id>`
-
-**Path Parameters:**
-- `template_id` (string, requerido): UUID de la plantilla a seleccionar
-
-**Ejemplo de Petición:**
-```bash
-POST /api/templates/select/550e8400-e29b-41d4-a716-446655440000
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
-```
-
-**Respuesta Exitosa (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "guid": "550e8400-e29b-41d4-a716-446655440000",
-    "title": "Plantilla RX Tórax Normal",
-    "study_type_id": "cb90d4eb-b298-4e6e-91ea-010a3e4dc8d9",
-    "findings": "Campos pulmonares de aspecto radiológico normal.\nNo se observan infiltrados ni consolidaciones.\nSilueta cardíaca de tamaño y morfología conservados.",
-    "technique": "Se realizó radiografía de tórax en proyección PA y lateral con técnica digital.",
-    "impression": "Sin alteraciones radiológicas evidentes.",
-    "conclusion": "Estudio dentro de parámetros normales."
-  }
-}
-```
-
-**Caso de Uso:**
-```javascript
-// React/TypeScript
-const handleSelectTemplate = async (templateId: string) => {
-  try {
-    const response = await fetch(`/api/templates/select/${templateId}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      // Aplicar datos al formulario
-      setFormData({
-        findings: result.data.findings,
-        technique: result.data.technique,
-        impression: result.data.impression,
-        conclusion: result.data.conclusion
-      });
-      
-      // Cerrar modal
-      setShowTemplatesModal(false);
-    }
-  } catch (error) {
-    console.error('Error al seleccionar plantilla:', error);
-  }
-};
-```
-
-**Respuesta de Error (404):**
-```json
-{
-  "success": false,
-  "message": "Plantilla no encontrada"
-}
-```
-
----
-
 ## Códigos de Respuesta
 
 | Código | Descripción |
 |--------|-------------|
-| 200 | Operación exitosa (GET, PUT, DELETE, POST select) |
+| 200 | Operación exitosa (GET, PUT, DELETE) |
 | 201 | Plantilla creada exitosamente (POST) |
 | 400 | Error de validación (campos requeridos faltantes) |
 | 404 | Plantilla no encontrada |
