@@ -3,14 +3,11 @@ import { useInformeDetalle } from "../hooks/use-informes";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronUp, Image as ImageIcon, Mic, MicOff, Trash2, Send, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Image as ImageIcon } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { toast } from "sonner";
-import { useAudioRecorder } from "@/hooks/use-audio-recorder";
-import { transcriptionService } from "@/services/transcription.service";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const RedactarInforme = () => {
 
@@ -28,20 +25,10 @@ export const RedactarInforme = () => {
 
     const [isSaving, setIsSaving] = useState(false);
 
-    // Estado para transcripción
-    const [showRecorder, setShowRecorder] = useState(false);
-    const [isTranscribing, setIsTranscribing] = useState(false);
-    const [activeEditor, setActiveEditor] = useState<any>(null);
-    const [activeEditorName, setActiveEditorName] = useState<string>('');
-    const {
-        isRecording,
-        audioBlob,
-        recordingTime,
-        startRecording,
-        stopRecording,
-        resetRecording,
-        formatTime
-    } = useAudioRecorder();
+    // Estado para trackear el último índice de placeholder encontrado
+    const lastPlaceholderIndexRef = useRef<number>(-1);
+    const currentFieldRef = useRef<string>('');
+    const findNextPlaceholderRef = useRef<(() => void) | null>(null);
 
     // Referencias a los editores usando useRef
     const editorsRef = useRef<{
@@ -58,34 +45,8 @@ export const RedactarInforme = () => {
 
     // Estado para las imágenes disponibles
     const [images, setImages] = useState<Array<{ id: number; url: string; name: string }>>([]);
-
     // Estado para guardar todas las imágenes originales
     const [allImages, setAllImages] = useState<Array<{ id: number; url: string; name: string }>>([]);
-    useEffect(() => {
-        if (imagenes?.images && imagenes.images.length > 0) {
-            const formattedImages = imagenes.images.map((img, index) => ({
-                id: index + 1,
-                url: img.path,
-                name: img.filename
-            }));
-            setImages(formattedImages);
-            setAllImages(formattedImages);
-        }
-    }, [imagenes]);
-
-    // Imágenes agregadas a cada campo
-    /*  const [fieldImages, setFieldImages] = useState<{
-         techniques: Array<{ id: number; url: string; name: string }>;
-         findings: Array<{ id: number; url: string; name: string }>;
-         impressions: Array<{ id: number; url: string; name: string }>;
-         conclusions: Array<{ id: number; url: string; name: string }>;
-     }>({
-         techniques: [],
-         findings: [],
-         impressions: [],
-         conclusions: []
-     }); */
-
     const [draggedImage, setDraggedImage] = useState<{ id: number; url: string; name: string } | null>(null);
     const [dragOverField, setDragOverField] = useState<string | null>(null);
 
@@ -108,12 +69,54 @@ export const RedactarInforme = () => {
     };
 
     const handleChange = (field: string, value: string) => {
+        // Obtener el valor anterior
+        const previousValue = formData[field as keyof typeof formData] || '';
+
+        // Detectar qué texto se está insertando (nuevo texto)
+        const parser = new DOMParser();
+        const prevDoc = parser.parseFromString(previousValue, 'text/html');
+        const newDoc = parser.parseFromString(value, 'text/html');
+
+        const prevText = prevDoc.body.textContent || '';
+        const newText = newDoc.body.textContent || '';
+
+        // Obtener solo el texto que se agregó
+        const insertedText = newText.replace(prevText, '').toLowerCase().trim();
+
+        // Detectar comandos de voz
+        const comandos = [
+            'siguiente campo',
+            'próximo campo',
+            'next field'
+        ];
+
+        const esComando = comandos.some(cmd => insertedText.includes(cmd));
+
+        if (esComando) {
+            // Es un comando, no insertar el texto, ejecutar la acción
+            console.log('🎤 Comando de voz detectado:', insertedText);
+
+            // Usar la referencia más reciente de la función
+            if (findNextPlaceholderRef.current) {
+                findNextPlaceholderRef.current();
+            }
+
+            // Revertir el cambio manteniendo el valor anterior
+            // Necesitamos hacerlo en el próximo tick para que el editor se actualice
+            setTimeout(() => {
+                const editor = editorsRef.current[field as keyof typeof editorsRef.current];
+                if (editor) {
+                    editor.commands.setContent(previousValue);
+                }
+            }, 0);
+            return;
+        }
+
+        // No es comando, procesar normalmente
         setFormData(prev => ({ ...prev, [field]: value }));
 
         // Extraer URLs de imágenes del contenido HTML
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(value, 'text/html');
-        const imgElements = doc.querySelectorAll('img');
+        const imgElements = newDoc.querySelectorAll('img');
         const usedImageUrls = Array.from(imgElements).map(img => img.src);
 
         // Restaurar imágenes que ya no están en el contenido
@@ -169,59 +172,142 @@ export const RedactarInforme = () => {
         editorsRef.current[fieldName as keyof typeof editorsRef.current] = editor;
 
         // Agregar listener de focus una sola vez
-        editor.on('focus', () => {
-            setActiveEditor(editor);
-            setActiveEditorName(fieldName);
-        });
+
     }, []);
 
-    // Función para manejar la transcripción
-    const handleTranscribe = async () => {
-        if (!audioBlob) return;
+    // Función para buscar y seleccionar el siguiente placeholder [[texto]]
+    const findNextPlaceholder = useCallback(() => {
+        // Orden de los campos para buscar
+        const fieldOrder: Array<keyof typeof editorsRef.current> = ['techniques', 'findings', 'impressions', 'conclusions'];
 
-        // Verificar si hay un editor activo
-        if (!activeEditor) {
-            toast.error('Por favor, haga clic en uno de los campos de texto antes de transcribir');
-            return;
-        }
+        // Encontrar el índice del campo actual
+        let currentFieldIndex = fieldOrder.indexOf(currentFieldRef.current as keyof typeof editorsRef.current);
+        if (currentFieldIndex === -1) currentFieldIndex = 0;
 
-        setIsTranscribing(true);
+        // Buscar en todos los campos empezando por el actual
+        for (let i = 0; i < fieldOrder.length; i++) {
+            const fieldIndex = (currentFieldIndex + i) % fieldOrder.length;
+            const fieldName = fieldOrder[fieldIndex];
+            const editor = editorsRef.current[fieldName];
 
-        try {
-            const result = await transcriptionService.transcribeAudio(audioBlob, {
-                language: 'es',
-                task: 'transcribe'
-            });
+            if (!editor) continue;
 
-            if (result.success) {
-                const transcribedText = result.data.text;
+            // Obtener el texto directo del editor (no del formData)
+            const text = editor.getText();
+            const regex = /\[\[([^\]]+)\]\]/g;
+            const matches = Array.from(text.matchAll(regex));
 
-                // Insertar la transcripción en la posición del cursor del editor activo
-                if (activeEditor && !activeEditor.isDestroyed) {
-                    activeEditor.chain().focus().insertContent(transcribedText).run();
-                    toast.success('Transcripción completada exitosamente');
-                } else {
-                    toast.error('El editor no está disponible');
-                }
+            if (matches.length === 0) continue;
 
-                resetRecording();
-                setShowRecorder(false);
+            // Determinar qué placeholder seleccionar
+            let targetIndex = 0;
+
+            // Si estamos en el mismo campo que la última vez
+            if (fieldName === currentFieldRef.current && i === 0) {
+                // Ir al siguiente placeholder
+                targetIndex = (lastPlaceholderIndexRef.current + 1) % matches.length;
             } else {
-                toast.error(result.message || 'Error en la transcripción');
+                // Si es un campo diferente o es la primera vez, empezar desde el principio
+                targetIndex = 0;
             }
-        } catch (err: any) {
-            toast.error(
-                err.response?.data?.message ||
-                'Error al transcribir el audio. Verifique que el servicio esté disponible.'
-            );
-        } finally {
-            setIsTranscribing(false);
-        }
-    };
 
-    const handleResetRecording = () => {
-        resetRecording();
-    };
+            const match = matches[targetIndex] as RegExpMatchArray;
+            if (!match || match.index === undefined) continue;
+
+            // Actualizar referencias
+            currentFieldRef.current = fieldName;
+            lastPlaceholderIndexRef.current = targetIndex;
+
+            // Calcular posiciones en el documento del editor
+            // La posición del texto dentro de [[ ]]
+            const startPos = match.index + 2; // Después de [[
+            const endPos = startPos + match[1].length; // Final del texto
+
+            // Hacer el focus y selección en pasos separados
+            editor.commands.focus();
+
+            // Usar setTimeout para asegurar que el focus se aplique primero
+            setTimeout(() => {
+                if (editor && !editor.isDestroyed) {
+                    editor.commands.setTextSelection({
+                        from: startPos + 1, // TipTap usa posiciones 1-based
+                        to: endPos + 1
+                    });
+
+                    // Scroll al elemento si es necesario
+                    const editorElement = editor.view.dom;
+                    if (editorElement) {
+                        editorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            }, 50); // Aumentar timeout para dar tiempo al focus
+
+            console.log(`✅ Placeholder encontrado: "${match[1]}" en campo ${fieldName}`);
+            return true;
+        }
+
+        // Si no se encontró ningún placeholder, reiniciar la búsqueda
+        lastPlaceholderIndexRef.current = -1;
+        toast.info('No se encontraron más placeholders [[texto]]');
+        return false;
+    }, []);
+
+
+    useEffect(() => {
+        if (imagenes?.images && imagenes.images.length > 0) {
+            const formattedImages = imagenes.images.map((img, index) => ({
+                id: index + 1,
+                url: img.path,
+                name: img.filename
+            }));
+            setImages(formattedImages);
+            setAllImages(formattedImages);
+        }
+    }, [imagenes]);
+
+    // Actualizar la referencia cuando cambia la función
+    useEffect(() => {
+        findNextPlaceholderRef.current = findNextPlaceholder;
+    }, [findNextPlaceholder]);
+
+    // Listener para detectar F3
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'F3') {
+                e.preventDefault();
+                findNextPlaceholder();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [findNextPlaceholder]);
+
+    // Sistema de detección de comandos de voz
+    useEffect(() => {
+        const handleVoiceCommand = (text: string) => {
+            const lowerText = text.toLowerCase().trim();
+
+            // Detectar comando "siguiente campo"
+            if (lowerText.includes('siguiente campo') ||
+                lowerText.includes('próximo campo') ||
+                lowerText.includes('next field')) {
+                findNextPlaceholder();
+                return true;
+            }
+
+            return false;
+        };
+
+        // Exponer función globalmente para que el sistema de transcripción pueda llamarla
+        (window as any).handleVoiceCommand = handleVoiceCommand;
+        (window as any).nextPlaceholder = findNextPlaceholder;
+
+        return () => {
+            delete (window as any).handleVoiceCommand;
+            delete (window as any).nextPlaceholder;
+        };
+    }, [findNextPlaceholder]);
 
     // Función para guardar el informe
     const handleGuardarInforme = async () => {
@@ -268,10 +354,6 @@ export const RedactarInforme = () => {
                         </p>
                     </div>
                     <div className="flex gap-3">
-                        <PrimaryButton onClick={() => setShowRecorder(true)}>
-                            <Mic className="w-4 h-4 mr-2" />
-                            GRABAR DICTADO
-                        </PrimaryButton>
                         <PrimaryButton >PDF</PrimaryButton>
                         <PrimaryButton >FIRMAR</PrimaryButton>
                         <PrimaryButton
@@ -572,133 +654,6 @@ export const RedactarInforme = () => {
                         </div>
                     </div>
                 </div>
-
-                {/* Modal de Grabación */}
-                <Dialog open={showRecorder} onOpenChange={setShowRecorder}>
-                    <DialogContent className="sm:max-w-[500px]">
-                        <DialogHeader>
-                            <DialogTitle>Grabar Dictado Médico</DialogTitle>
-                        </DialogHeader>
-
-                        <div className="space-y-4 py-4">
-                            {/* Indicador del campo activo */}
-                            {activeEditor && (
-                                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                                    <p className="text-sm text-purple-800">
-                                        ✓ <strong>Campo seleccionado:</strong> {
-                                            activeEditorName === 'techniques' ? 'Técnica de examen' :
-                                                activeEditorName === 'findings' ? 'Hallazgos' :
-                                                    activeEditorName === 'impressions' ? 'Impresiones' :
-                                                        activeEditorName === 'conclusions' ? 'Conclusiones' :
-                                                            'Desconocido'
-                                        }
-                                    </p>
-                                    <p className="text-xs text-purple-600 mt-1">
-                                        La transcripción se insertará en la posición del cursor
-                                    </p>
-                                </div>
-                            )}
-
-                            {!activeEditor && (
-                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                                    <p className="text-sm text-amber-800">
-                                        ⚠️ <strong>Importante:</strong> Haga clic en uno de los campos de texto (Técnica, Hallazgos, Impresiones o Conclusiones) antes de grabar
-                                    </p>
-                                </div>
-                            )}
-
-                            {/* Botón de Grabar/Detener */}
-                            {!audioBlob && (
-                                <div className="flex flex-col items-center gap-4">
-                                    <button
-                                        onClick={isRecording ? stopRecording : startRecording}
-                                        disabled={isTranscribing}
-                                        className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all ${isRecording
-                                            ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
-                                            : 'bg-blue-500 hover:bg-blue-600 text-white'
-                                            } disabled:opacity-50 disabled:cursor-not-allowed`}
-                                    >
-                                        {isRecording ? (
-                                            <>
-                                                <MicOff className="w-5 h-5" />
-                                                Detener
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Mic className="w-5 h-5" />
-                                                Iniciar Grabación
-                                            </>
-                                        )}
-                                    </button>
-
-                                    {/* Contador de tiempo */}
-                                    {isRecording && (
-                                        <div className="flex items-center gap-2 text-2xl font-bold text-red-500">
-                                            <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
-                                            {formatTime(recordingTime)}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Controles para audio grabado */}
-                            {audioBlob && (
-                                <div className="space-y-4">
-                                    {/* Reproductor de audio */}
-                                    <div className="bg-gray-50 p-4 rounded-lg">
-                                        <audio
-                                            controls
-                                            src={URL.createObjectURL(audioBlob)}
-                                            className="w-full"
-                                        />
-                                    </div>
-
-                                    {/* Botones de acción */}
-                                    <div className="flex gap-3 justify-center">
-                                        <button
-                                            onClick={handleTranscribe}
-                                            disabled={isTranscribing}
-                                            className="flex items-center gap-2 px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {isTranscribing ? (
-                                                <>
-                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                    Transcribiendo...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Send className="w-4 h-4" />
-                                                    Transcribir
-                                                </>
-                                            )}
-                                        </button>
-
-                                        <button
-                                            onClick={handleResetRecording}
-                                            disabled={isTranscribing}
-                                            className="flex items-center gap-2 px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                            Eliminar
-                                        </button>
-                                    </div>
-
-                                    {/* Información de la grabación */}
-                                    <div className="text-center text-sm text-gray-500">
-                                        Duración: {formatTime(recordingTime)}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Información adicional */}
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <p className="text-sm text-blue-800">
-                                    💡 <strong>Tip:</strong> Hable claramente y cerca del micrófono para mejores resultados.
-                                </p>
-                            </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
             </div>
         </LayoutSinSidebar>
     )

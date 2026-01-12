@@ -3,9 +3,9 @@ import { DynamicBreadcrumb } from "@/components";
 import { useState } from "react";
 import { useMisDatos } from "./hooks/use-mis-datos";
 import { useUpdateProfile } from "./hooks/use-update-profile";
-import { EditProfileModal } from "./components/EditProfileModal";
 import type { UpdateProfilePayload } from "./types";
 import { toast } from "sonner";
+import { useForm } from "react-hook-form";
 import {
     User,
     Mail,
@@ -18,25 +18,43 @@ import {
     Loader2,
     UserCircle,
     Home,
-    Building2,
     MapPin,
     CheckCircle2,
     Clock,
+    Save,
+    X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const MisDatos = () => {
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
     const { profile, isLoading, refetch } = useMisDatos();
     const updateProfileMutation = useUpdateProfile();
+
+    const {
+        register,
+        handleSubmit,
+        reset,
+    } = useForm<UpdateProfilePayload>({
+        values: {
+            phone: profile?.phone || "",
+            email: profile?.email || "",
+            address: profile?.address || "",
+            city: profile?.city || "",
+            state: profile?.state || "",
+            zip_code: profile?.zip_code || "",
+        },
+    });
 
     const handleUpdateProfile = async (data: UpdateProfilePayload) => {
         try {
             await updateProfileMutation.mutateAsync(data);
             toast.success("Perfil actualizado correctamente");
-            setIsEditModalOpen(false);
+            setIsEditing(false);
             refetch();
         } catch (error) {
             toast.error("Error al actualizar el perfil");
@@ -44,11 +62,16 @@ export const MisDatos = () => {
         }
     };
 
+    const handleCancel = () => {
+        reset();
+        setIsEditing(false);
+    };
+
     if (isLoading) {
         return (
             <MainLayout>
                 <div className="flex justify-center items-center h-96">
-                    <Loader2 className="h-10 w-10 animate-spin text-purple-600" />
+                    <Loader2 className="h-10 w-10 animate-spin text-brand-purple" />
                 </div>
             </MainLayout>
         );
@@ -88,10 +111,7 @@ export const MisDatos = () => {
                                         <IdCard className="w-3 h-3 mr-1" />
                                         DNI: {profile?.national_code || "-"}
                                     </Badge>
-                                    <Badge className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border-white/30 text-white">
-                                        <Calendar className="w-3 h-3 mr-1" />
-                                        {profile?.age || "-"} años
-                                    </Badge>
+
                                     <Badge className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border-white/30 text-white">
                                         <Users className="w-3 h-3 mr-1" />
                                         {profile?.sex || "-"}
@@ -100,14 +120,42 @@ export const MisDatos = () => {
                             </div>
 
                             {/* Button */}
-                            <Button
-                                onClick={() => setIsEditModalOpen(true)}
-                                size="lg"
-                                className="bg-white text-purple-600 hover:bg-white/90 shadow-lg"
-                            >
-                                <Edit className="w-4 h-4 mr-2" />
-                                Editar Perfil
-                            </Button>
+                            {!isEditing ? (
+                                <Button
+                                    onClick={() => setIsEditing(true)}
+                                    size="lg"
+                                    className="bg-white text-brand-purple hover:bg-white/90 shadow-lg"
+                                >
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Editar Perfil
+                                </Button>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <Button
+                                        onClick={handleCancel}
+                                        size="lg"
+                                        variant="outline"
+                                        className="bg-white/90 border-white text-gray-700 hover:bg-white shadow-lg"
+                                        disabled={updateProfileMutation.isPending}
+                                    >
+                                        <X className="w-4 h-4 mr-2" />
+                                        Cancelar
+                                    </Button>
+                                    <Button
+                                        onClick={handleSubmit(handleUpdateProfile)}
+                                        size="lg"
+                                        className="bg-white text-brand-purple hover:bg-white/90 shadow-lg"
+                                        disabled={updateProfileMutation.isPending}
+                                    >
+                                        {updateProfileMutation.isPending ? (
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        ) : (
+                                            <Save className="w-4 h-4 mr-2" />
+                                        )}
+                                        Guardar
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -144,9 +192,7 @@ export const MisDatos = () => {
                                                 ? new Date(profile.birthdate).toLocaleDateString("es-AR")
                                                 : "-"}
                                         </p>
-                                        <p className="text-xs text-gray-500 mt-0.5">
-                                            {profile?.age} años
-                                        </p>
+
                                     </div>
                                 </div>
 
@@ -187,43 +233,113 @@ export const MisDatos = () => {
                                 <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-blue-50 transition-colors">
                                     <Phone className="w-5 h-5 text-blue-600 mt-0.5" />
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-xs text-gray-500 font-medium uppercase">Teléfono</p>
-                                        <p className="text-sm font-semibold text-gray-900">
-                                            {profile?.phone || "No registrado"}
-                                        </p>
+                                        <Label htmlFor="phone" className="text-xs text-gray-500 font-medium uppercase">
+                                            Teléfono
+                                        </Label>
+                                        {isEditing ? (
+                                            <Input
+                                                id="phone"
+                                                {...register("phone")}
+                                                placeholder="+54 11 1234-5678"
+                                                className="mt-1"
+                                            />
+                                        ) : (
+                                            <p className="text-sm font-semibold text-gray-900">
+                                                {profile?.phone || "No registrado"}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-blue-50 transition-colors">
                                     <Mail className="w-5 h-5 text-blue-600 mt-0.5" />
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-xs text-gray-500 font-medium uppercase">Email</p>
-                                        <p className="text-sm font-semibold text-gray-900 break-all">
-                                            {profile?.email || "No registrado"}
-                                        </p>
+                                        <Label htmlFor="email" className="text-xs text-gray-500 font-medium uppercase">
+                                            Email
+                                        </Label>
+                                        {isEditing ? (
+                                            <Input
+                                                id="email"
+                                                type="email"
+                                                {...register("email")}
+                                                placeholder="ejemplo@email.com"
+                                                className="mt-1"
+                                            />
+                                        ) : (
+                                            <p className="text-sm font-semibold text-gray-900 break-all">
+                                                {profile?.email || "No registrado"}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-blue-50 transition-colors">
                                     <Home className="w-5 h-5 text-blue-600 mt-0.5" />
                                     <div className="flex-1">
-                                        <p className="text-xs text-gray-500 font-medium uppercase">Dirección</p>
-                                        <p className="text-sm font-semibold text-gray-900">
-                                            {profile?.address || "No registrada"}
-                                        </p>
+                                        <Label htmlFor="address" className="text-xs text-gray-500 font-medium uppercase">
+                                            Dirección
+                                        </Label>
+                                        {isEditing ? (
+                                            <Input
+                                                id="address"
+                                                {...register("address")}
+                                                placeholder="Calle 123"
+                                                className="mt-1"
+                                            />
+                                        ) : (
+                                            <p className="text-sm font-semibold text-gray-900">
+                                                {profile?.address || "No registrada"}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-blue-50 transition-colors">
                                     <MapPin className="w-5 h-5 text-blue-600 mt-0.5" />
                                     <div className="flex-1">
-                                        <p className="text-xs text-gray-500 font-medium uppercase">Ubicación</p>
-                                        <p className="text-sm font-semibold text-gray-900">
-                                            {profile?.city || "-"}, {profile?.state || "-"}
-                                        </p>
-                                        <p className="text-xs text-gray-500 mt-0.5">
-                                            CP: {profile?.zip_code || "-"}
-                                        </p>
+                                        <p className="text-xs text-gray-500 font-medium uppercase mb-2">Ubicación</p>
+                                        {isEditing ? (
+                                            <div className="space-y-2">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <Label htmlFor="city" className="text-xs">Ciudad</Label>
+                                                        <Input
+                                                            id="city"
+                                                            {...register("city")}
+                                                            placeholder="Buenos Aires"
+                                                            className="mt-1"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label htmlFor="state" className="text-xs">Provincia</Label>
+                                                        <Input
+                                                            id="state"
+                                                            {...register("state")}
+                                                            placeholder="CABA"
+                                                            className="mt-1"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <Label htmlFor="zip_code" className="text-xs">Código Postal</Label>
+                                                    <Input
+                                                        id="zip_code"
+                                                        {...register("zip_code")}
+                                                        placeholder="1000"
+                                                        className="mt-1"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <p className="text-sm font-semibold text-gray-900">
+                                                    {profile?.city || "-"}, {profile?.state || "-"}
+                                                </p>
+                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                    CP: {profile?.zip_code || "-"}
+                                                </p>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -290,15 +406,6 @@ export const MisDatos = () => {
                         </CardContent>
                     </Card>
                 </div>
-
-                {/* Modal de Edición */}
-                <EditProfileModal
-                    isOpen={isEditModalOpen}
-                    onClose={() => setIsEditModalOpen(false)}
-                    onSubmit={handleUpdateProfile}
-                    profile={profile}
-                    isLoading={updateProfileMutation.isPending}
-                />
             </div>
         </MainLayout>
     );

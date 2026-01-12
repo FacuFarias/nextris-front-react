@@ -1,29 +1,42 @@
 import { api } from '@/lib/api';
-import type { EquipmentSchedule, EquipmentScheduleFormData, EquipmentScheduleResponse } from '../types/equipment-schedules.types';
+import type {
+    EquipmentResponse,
+    EquipmentSchedule,
+    EquipmentScheduleFormData,
+    EquipmentScheduleResponse
+} from '../types/equipment-schedules.types';
 
 export const equipmentScheduleService = {
-    getAll: async (equipmentId?: string): Promise<EquipmentScheduleResponse> => {
-        const params = equipmentId ? { equipment_id: equipmentId } : {};
-        const response = await api.get('/config/equipment-schedules', { params });
+    // Obtener todos los equipos
+    getAllEquipment: async (): Promise<EquipmentResponse> => {
+        const response = await api.get('/config/equipment');
         return response.data;
     },
 
-    getById: async (id: string): Promise<EquipmentSchedule> => {
-        const response = await api.get(`/config/equipment-schedules/${id}`);
+    // Obtener agendas de un equipo específico
+    getSchedulesByEquipment: async (equipmentId: string): Promise<EquipmentScheduleResponse> => {
+        const response = await api.get(`/config/equipment/${equipmentId}/schedule`);
         return response.data;
     },
 
-    create: async (scheduleData: EquipmentScheduleFormData): Promise<EquipmentSchedule> => {
-        const response = await api.post('/config/equipment-schedules', scheduleData);
+    // Crear nueva agenda para un equipo
+    create: async (equipmentId: string, scheduleData: EquipmentScheduleFormData): Promise<EquipmentSchedule> => {
+        const response = await api.post(`/config/equipment/${equipmentId}/schedule`, scheduleData);
         return response.data;
     },
 
-    update: async (id: string, scheduleData: Partial<EquipmentScheduleFormData>): Promise<EquipmentSchedule> => {
-        const response = await api.put(`/config/equipment-schedules/${id}`, scheduleData);
+    // Actualizar agenda
+    update: async (
+        equipmentId: string,
+        scheduleId: string,
+        scheduleData: Partial<EquipmentScheduleFormData>
+    ): Promise<void> => {
+        const response = await api.put(`/config/equipment/${equipmentId}/schedule/${scheduleId}`, scheduleData);
         return response.data;
     },
 
-    delete: async (id: string): Promise<void> => {
-        await api.delete(`/config/equipment-schedules/${id}`);
+    // Eliminar agenda
+    delete: async (equipmentId: string, scheduleId: string): Promise<void> => {
+        await api.delete(`/config/equipment/${equipmentId}/schedule/${scheduleId}`);
     },
 };

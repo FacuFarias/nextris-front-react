@@ -12,7 +12,6 @@ import {
     HandHelping,
     NotebookText,
     Navigation,
-    Table,
     BookPlus,
     User,
 } from "lucide-react";
@@ -100,29 +99,29 @@ const menuItems: MenuItem[] = [
     {
         icon: Settings,
         label: "Configuraciones",
-        path: "/configuraciones",
+        path: "/configuraciones/tablas",
+        allowedRoles: ["Sysadmin"],
+    },
+    {
+        icon: Settings,
+        label: "Administración",
+        path: "/administracion",
         subItems: [
             {
                 icon: UserCog,
                 label: "Unificación de Paciente",
-                path: "/configuraciones/unificacion",
+                path: "/administracion/unificacion",
                 allowedRoles: ["Sysadmin"]
             },
             {
                 icon: ClipboardList,
                 label: "Reasignación de Exámenes",
-                path: "/configuraciones/reasignacion",
+                path: "/administracion/reasignacion",
                 allowedRoles: ["Sysadmin"]
             },
-            {
-                icon: Table,
-                label: "Configuracion de Tablas",
-                path: "/configuraciones/tablas",
-                allowedRoles: ["Sysadmin"]
-            },
+
         ]
     },
-
     {
         icon: BookPlus,
         label: "Mis Estudios",
@@ -147,7 +146,6 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const location = useLocation();
 
     const userRole = authData?.user?.user_type || "";
-    console.log(userRole)
     // Función para verificar si el usuario tiene acceso
     const hasAccess = (allowedRoles?: string[]) => {
         if (!allowedRoles || allowedRoles.length === 0) return true;

@@ -4,8 +4,8 @@ import { ModalidadForm } from "./ModalidadForm";
 interface ModalidadModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: { description: string }) => void;
-    initialData?: { description: string };
+    onSubmit: (data: { description: string, externalcode: string }) => void;
+    initialData?: { description: string, externalcode: string };
     isLoading?: boolean;
 }
 

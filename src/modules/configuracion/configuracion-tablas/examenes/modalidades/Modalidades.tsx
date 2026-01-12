@@ -99,7 +99,7 @@ export const Modalidades = () => {
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
                 onSubmit={handleSubmit}
-                initialData={selectedModalidad ? { description: selectedModalidad.description } : undefined}
+                initialData={selectedModalidad ? { description: selectedModalidad.description, externalcode: selectedModalidad.externalcode } : undefined}
                 isLoading={false}
             />
         </div>

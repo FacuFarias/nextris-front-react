@@ -340,12 +340,12 @@ export const EditarFecha = () => {
             }
         }
 
-        console.log("Evento movido exitosamente:", {
-            id: event.id,
-            title: event.title,
-            start: event.start,
-            end: event.end
-        });
+        /*  console.log("Evento movido exitosamente:", {
+             id: event.id,
+             title: event.title,
+             start: event.start,
+             end: event.end
+         }); */
 
         // Actualizar el estado de eventos
         setEvents(prevEvents =>
