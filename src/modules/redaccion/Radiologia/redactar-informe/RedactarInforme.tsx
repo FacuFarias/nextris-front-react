@@ -1,13 +1,18 @@
 import { useParams } from "react-router-dom"
-import { useInformeDetalle } from "../hooks/use-informes";
+import { useInformeDetalle, useUpdateReport } from "../hooks/use-informes";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronUp, Image as ImageIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, Lock, X, AlertCircle, Search, ShieldCheck } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
+import { Modal } from "@/components/Modal";
 import { toast } from "sonner";
+import { SecondaryButton } from "@/components";
+import { api } from "@/lib/api";
+import { useTemplates } from "@/modules/redaccion/informe-predefinidos/hooks/use-templates";
+import type { Template } from "@/modules/redaccion/informe-predefinidos/types/informe-pred.types";
 
 export const RedactarInforme = () => {
 
@@ -15,15 +20,50 @@ export const RedactarInforme = () => {
     /* const navigate = useNavigate(); */
     const { informeDetalle, isLoading } = useInformeDetalle(informeGuid);
     const { data: imagenes } = useImagenesPorEstudio(studyInstanceUID || '');
-
+    const updateReportMutation = useUpdateReport(informeGuid || '');
     const [formData, setFormData] = useState({
-        techniques: informeDetalle?.data?.techniques || '',
-        findings: informeDetalle?.data?.findings || '',
-        impressions: informeDetalle?.data?.impressions || '',
-        conclusions: informeDetalle?.data?.conclusions || ''
+        techniques: '',
+        findings: '',
+        impressions: '',
+        conclusions: ''
     });
+    const [isSignModalOpen, setIsSignModalOpen] = useState(false);
+    const [password, setPassword] = useState('');
+    const [isSigning, setIsSigning] = useState(false);
+    const [isSigned, setIsSigned] = useState(false);
 
-    const [isSaving, setIsSaving] = useState(false);
+    // Estados para el modal de plantillas
+    const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+    const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+    const [studyTypeFilter, setStudyTypeFilter] = useState<string>("");
+    const [searchTerm, setSearchTerm] = useState("");
+
+    // Hooks para plantillas
+    const { data: templatesData } = useTemplates(studyTypeFilter || undefined);
+
+
+    // Filtrar plantillas por búsqueda local
+    const filteredTemplates = templatesData?.data?.filter((template) => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+            template.title.toLowerCase().includes(searchLower) ||
+            template.study_type_description?.toLowerCase().includes(searchLower)
+        );
+    }) || [];
+
+    // Actualizar formData cuando informeDetalle cambie
+    useEffect(() => {
+        if (informeDetalle?.data) {
+            setFormData({
+                techniques: informeDetalle.data.techniques || '',
+                findings: informeDetalle.data.findings || '',
+                impressions: informeDetalle.data.impressions || '',
+                conclusions: informeDetalle.data.conclusions || ''
+            });
+            // Verificar si el informe ya está firmado
+            setIsSigned((informeDetalle.data as any).is_signed || false);
+        }
+    }, [informeDetalle]);
 
     // Estado para trackear el último índice de placeholder encontrado
     const lastPlaceholderIndexRef = useRef<number>(-1);
@@ -171,7 +211,11 @@ export const RedactarInforme = () => {
     const handleEditorReady = useCallback((editor: any, fieldName: string) => {
         editorsRef.current[fieldName as keyof typeof editorsRef.current] = editor;
 
-        // Agregar listener de focus una sola vez
+        // Agregar listener de focus para actualizar el campo actual
+        editor.on('focus', () => {
+            currentFieldRef.current = fieldName;
+            console.log(`📝 Campo activo: ${fieldName}`);
+        });
 
     }, []);
 
@@ -310,31 +354,21 @@ export const RedactarInforme = () => {
     }, [findNextPlaceholder]);
 
     // Función para guardar el informe
-    const handleGuardarInforme = async () => {
-        setIsSaving(true);
-        try {
-            // Los datos en formData ya contienen el HTML completo con las imágenes insertadas
-            // Por ejemplo: formData.techniques = "<p>Se realizó tomografía <img src='url-imagen.jpg' alt='imagen1' /> con contraste</p>"
-
-            const dataToSave = {
-                techniques: formData.techniques,      // HTML con texto e imágenes
-                findings: formData.findings,          // HTML con texto e imágenes
-                impressions: formData.impressions,    // HTML con texto e imágenes
-                conclusions: formData.conclusions     // HTML con texto e imágenes
-            };
-            console.log(dataToSave)
-            // Llamada al endpoint para guardar/actualizar el informe
-            /*  const response = await api.put(`/examinations/${informeGuid}/report`, dataToSave);
- 
-             toast.success('Informe guardado exitosamente');
-             console.log('Respuesta del servidor:', response.data); */
-
-        } catch (error) {
-            console.error('Error al guardar:', error);
-            toast.error('Error al guardar el informe');
-        } finally {
-            setIsSaving(false);
+    const handleGuardarInforme = () => {
+        if (!informeGuid) {
+            toast.error('No se encontró el ID del examen');
+            return;
         }
+
+        const dataToSave = {
+            techniques: formData.techniques,
+            findings: formData.findings,
+            impressions: formData.impressions,
+            conclusions: formData.conclusions,
+            mark_as_reported: false
+        };
+
+        updateReportMutation.mutate(dataToSave);
     };
     if (isLoading) {
         return <LayoutSinSidebar>Cargando...</LayoutSinSidebar>;
@@ -354,13 +388,20 @@ export const RedactarInforme = () => {
                         </p>
                     </div>
                     <div className="flex gap-3">
-                        <PrimaryButton >PDF</PrimaryButton>
-                        <PrimaryButton >FIRMAR</PrimaryButton>
+                        <PrimaryButton >
+                            <FileMinus />
+                            PDF
+                        </PrimaryButton>
+                        <PrimaryButton onClick={() => setIsSignModalOpen(true)} disabled={isSigned}>
+                            <Signature />
+                            {isSigned ? 'FIRMADO' : 'FIRMAR'}
+                        </PrimaryButton>
                         <PrimaryButton
                             onClick={handleGuardarInforme}
-                            disabled={isSaving}
+                            disabled={updateReportMutation.isPending || isSigned}
                         >
-                            {isSaving ? 'GUARDANDO...' : 'GUARDAR'}
+                            <Save />
+                            {updateReportMutation.isPending ? 'GUARDANDO...' : 'GUARDAR'}
                         </PrimaryButton>
                     </div>
                 </div>
@@ -435,9 +476,12 @@ export const RedactarInforme = () => {
                                 <div className="p-6">
                                     <label className="text-xs text-gray-600 font-medium">Predef Seleccionado</label>
                                     <p className="text-sm font-medium mt-1 text-purple-400">
-                                        ANGIOTOMOGRAFÍA PELVIANA O VASOS ILÍACOS
+                                        {selectedTemplate?.title || 'Ninguna plantilla seleccionada'}
                                     </p>
-                                    <button className="text-purple-600 text-sm mt-3 hover:underline">
+                                    <button
+                                        className="text-purple-600 text-sm mt-3 hover:underline"
+                                        onClick={() => setIsTemplateModalOpen(true)}
+                                    >
                                         Cambiar plantilla
                                     </button>
                                 </div>
@@ -563,8 +607,7 @@ export const RedactarInforme = () => {
                                         onDragOver={(e) => handleDragOver(e, 'impressions')}
                                         onDragLeave={handleDragLeave}
                                         onDrop={(e) => handleDrop(e, 'impressions', editorsRef.current.impressions)}
-                                        onEditorReady={(editor) => handleEditorReady(editor, 'impressions')}
-                                    />
+                                        onEditorReady={(editor) => handleEditorReady(editor, 'impressions')} />
                                 </div>
                             </div>
                         </div>
@@ -589,8 +632,7 @@ export const RedactarInforme = () => {
                                         onDragOver={(e) => handleDragOver(e, 'conclusions')}
                                         onDragLeave={handleDragLeave}
                                         onDrop={(e) => handleDrop(e, 'conclusions', editorsRef.current.conclusions)}
-                                        onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')}
-                                    />
+                                        onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')} />
                                 </div>
                             </div>
                         </div>
@@ -655,6 +697,244 @@ export const RedactarInforme = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Modal de Firma */}
+            <Modal
+                isOpen={isSignModalOpen}
+                onClose={() => {
+                    setIsSignModalOpen(false);
+                    setPassword('');
+                }}
+                title="Firmar Informe"
+                size="md"
+            >
+                <div className="space-y-6">
+
+
+                    {/* Alerta informativa */}
+                    <div className="bg-linear-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-blue-900">
+                                Atención:
+                            </p>
+                            <p className="text-sm text-blue-700 mt-1">
+                                Esta acción requiere verificación de su identidad mediante contraseña.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Input de contraseña */}
+                    <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                            <Lock className="h-4 w-4 text-gray-500" />
+                            Contraseña
+                        </label>
+                        <div className="relative">
+                            <Input
+                                type="password"
+                                placeholder="Ingrese su contraseña"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="pl-10 h-12 text-base border-gray-300 focus:border-brand-purple focus:ring-brand-purple"
+                                onKeyDown={async (e) => {
+                                    if (e.key === 'Enter' && password.trim() && !isSigning) {
+                                        if (!password.trim()) {
+                                            toast.error('Por favor ingrese su contraseña');
+                                            return;
+                                        }
+
+                                        setIsSigning(true);
+
+                                        try {
+                                            // 1. Verificar credenciales
+                                            await api.post('/verify-credentials', {
+                                                password: password
+                                            });
+
+                                            // 2. Si las credenciales son correctas, firmar el informe
+                                            await api.post(`/reports/${informeGuid}/sign`);
+
+                                            // 3. Actualizar estado
+                                            setIsSigned(true);
+                                            setIsSignModalOpen(false);
+                                            setPassword('');
+                                            toast.success('Informe firmado exitosamente');
+                                        } catch (error: any) {
+                                            if (error.response?.status === 401 || error.response?.status === 403) {
+                                                toast.error('Contraseña incorrecta');
+                                            } else {
+                                                toast.error('Error al firmar el informe');
+                                            }
+                                            console.error('Error al firmar:', error);
+                                        } finally {
+                                            setIsSigning(false);
+                                        }
+                                    }
+                                }}
+                                autoFocus
+                            />
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        </div>
+                    </div>
+
+                    {/* Botones de acción */}
+                    <div className="flex gap-3 pt-2 justify-end">
+                        <SecondaryButton
+                            onClick={() => {
+                                setIsSignModalOpen(false);
+                                setPassword('');
+                            }}
+                        >
+                            <X className="h-5 w-5 mr-2" />
+                            Cancelar
+                        </SecondaryButton>
+                        <PrimaryButton
+                            onClick={async () => {
+                                if (!password.trim()) {
+                                    toast.error('Por favor ingrese su contraseña');
+                                    return;
+                                }
+
+                                setIsSigning(true);
+
+                                try {
+                                    // 1. Verificar credenciales
+                                    await api.post('/verify-credentials', {
+                                        password: password
+                                    });
+
+                                    // 2. Si las credenciales son correctas, firmar el informe
+                                    await api.post(`/reports/${informeGuid}/sign`);
+
+                                    // 3. Actualizar estado
+                                    setIsSigned(true);
+                                    setIsSignModalOpen(false);
+                                    setPassword('');
+                                    toast.success('Informe firmado exitosamente');
+                                } catch (error: any) {
+                                    if (error.response?.status === 401 || error.response?.status === 403) {
+                                        toast.error('Contraseña incorrecta');
+                                    } else {
+                                        toast.error('Error al firmar el informe');
+                                    }
+                                    console.error('Error al firmar:', error);
+                                } finally {
+                                    setIsSigning(false);
+                                }
+                            }}
+                            disabled={!password.trim() || isSigning}
+                        >
+                            <Signature className="h-5 w-5 mr-2" />
+                            {isSigning ? 'Firmando...' : 'Confirmar y Firmar'}
+                        </PrimaryButton>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Modal de Selección de Plantilla */}
+            <Modal
+                isOpen={isTemplateModalOpen}
+                onClose={() => {
+                    setIsTemplateModalOpen(false);
+                    setSearchTerm('');
+                    setStudyTypeFilter('');
+                }}
+                title="Seleccionar informe predefinido"
+                size="xxl"
+            >
+                <div className="space-y-4">
+                    {/* Filtros */}
+                    <div className="flex gap-4 items-center">
+                        <div className="flex-1 relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                                type="text"
+                                placeholder="Buscar por tipo de estudio..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10"
+                            />
+                        </div>
+                        <div className="w-64">
+                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                                <input
+                                    type="checkbox"
+                                    className="rounded"
+                                />
+                                Mi tipo de estudio
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Lista de plantillas */}
+                    <div className="border rounded-lg max-h-[400px] overflow-y-auto">
+                        {filteredTemplates.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500">
+                                No se encontraron plantillas
+                            </div>
+                        ) : (
+                            <div className="divide-y">
+                                {filteredTemplates.map((template) => (
+                                    <div
+                                        key={template.guid}
+                                        className={`p-4 cursor-pointer transition-all grid grid-cols-2 gap-4 relative ${selectedTemplate?.guid === template.guid
+                                            ? 'bg-purple-100 border-2 border-brand-purple shadow-md'
+                                            : 'hover:bg-gray-50 border-2 border-transparent'
+                                            }`}
+                                        onClick={() => setSelectedTemplate(template)}
+                                    >
+                                        {selectedTemplate?.guid === template.guid && (
+                                            <div className="absolute top-2 right-2 bg-brand-purple text-white rounded-full p-1">
+                                                <ShieldCheck className="h-4 w-4" />
+                                            </div>
+                                        )}
+                                        <div className={`font-medium ${selectedTemplate?.guid === template.guid ? 'text-brand-purple' : 'text-gray-700'}`}>
+                                            {template.title}
+                                        </div>
+                                        <div className={`font-medium ${selectedTemplate?.guid === template.guid ? 'text-brand-purple' : 'text-gray-700'}`}>
+                                            {template.title}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Botones */}
+                    <div className="flex gap-3 pt-2 justify-end">
+                        <SecondaryButton
+                            onClick={() => {
+                                setIsTemplateModalOpen(false);
+                                setSearchTerm('');
+                                setStudyTypeFilter('');
+                            }}
+                        >
+                            Cancelar
+                        </SecondaryButton>
+                        <PrimaryButton
+                            onClick={() => {
+                                if (selectedTemplate) {
+                                    // Reemplazar todos los campos del formulario
+                                    setFormData({
+                                        techniques: selectedTemplate.technique || '',
+                                        findings: selectedTemplate.findings || '',
+                                        impressions: selectedTemplate.impression || '',
+                                        conclusions: selectedTemplate.conclusion || ''
+                                    });
+                                    setIsTemplateModalOpen(false);
+                                    toast.success('Plantilla aplicada exitosamente');
+                                } else {
+                                    toast.error('Por favor seleccione una plantilla');
+                                }
+                            }}
+                            disabled={!selectedTemplate}
+                        >
+                            ACEPTAR
+                        </PrimaryButton>
+                    </div>
+                </div>
+            </Modal>
         </LayoutSinSidebar>
     )
 }

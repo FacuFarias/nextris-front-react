@@ -17,3 +17,21 @@ export const getInformeDetalle = async (guid: string | undefined) => {
         throw error;
     }
 }
+
+
+export interface UpdateReportPayload {
+    findings?: string;
+    impressions?: string;
+    techniques?: string;
+    conclusions?: string;
+    mark_as_reported?: boolean;
+}
+
+export const putRedactarInforme = async (exam_id: string, data: UpdateReportPayload) => {
+    try {
+        const response = await api.put(`/examinations/${exam_id}/report`, data);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}

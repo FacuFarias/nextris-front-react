@@ -16,7 +16,7 @@ export const Radiologia = () => {
     const [page, setPage] = useState(1);
     const [verFinalizados, setVerFinalizados] = useState(false);
     const [asignadosAMi, setAsignadosAMi] = useState(false);
-    const [listoParaLeer, setListoParaLeer] = useState(false);
+    const [listoParaLeer, setListoParaLeer] = useState(true);
     const useDebounceSearch = useDebounce(searchTerm, 500);
     const { informesData, isLoading: isLoadingInformes } = useInformes({ page, per_page: 8, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer });
 
@@ -70,20 +70,38 @@ export const Radiologia = () => {
 
                     {/* Filtros con checkboxes */}
                     <div className="flex flex-wrap items-center gap-4 sm:gap-6 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200">
-                        <div className="flex items-center space-x-2">
-                            <Checkbox
-                                id="finalizados"
-                                checked={verFinalizados}
-                                onCheckedChange={(checked) => setVerFinalizados(checked as boolean)}
-                                className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
-                            />
-                            <Label
-                                htmlFor="finalizados"
-                                className="text-sm font-medium text-gray-700 cursor-pointer"
-                            >
-                                Ver finalizados
-                            </Label>
+                        <div className="flex flex-col gap-3">
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="listo-leer"
+                                    checked={listoParaLeer}
+                                    onCheckedChange={(checked) => setListoParaLeer(checked as boolean)}
+                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
+                                />
+                                <Label
+                                    htmlFor="listo-leer"
+                                    className="text-sm font-medium text-gray-700 cursor-pointer"
+                                >
+                                    Listo para leer
+                                </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="finalizados"
+                                    checked={verFinalizados}
+                                    onCheckedChange={(checked) => setVerFinalizados(checked as boolean)}
+                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
+                                />
+                                <Label
+                                    htmlFor="finalizados"
+                                    className="text-sm font-medium text-gray-700 cursor-pointer"
+                                >
+                                    Ver finalizados
+                                </Label>
+                            </div>
+
                         </div>
+
 
                         <div className="flex items-center space-x-2">
                             <Checkbox
@@ -100,20 +118,8 @@ export const Radiologia = () => {
                             </Label>
                         </div>
 
-                        <div className="flex items-center space-x-2">
-                            <Checkbox
-                                id="listo-leer"
-                                checked={listoParaLeer}
-                                onCheckedChange={(checked) => setListoParaLeer(checked as boolean)}
-                                className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
-                            />
-                            <Label
-                                htmlFor="listo-leer"
-                                className="text-sm font-medium text-gray-700 cursor-pointer"
-                            >
-                                Listo para leer
-                            </Label>
-                        </div>
+
+
                     </div>
                 </div>
 

@@ -13,6 +13,7 @@ import { RedactarInforme } from "@/modules/redaccion/Radiologia/redactar-informe
 import { ConfiguracionTablas } from "@/modules/configuracion/configuracion-tablas/ConfiguracionTablas";
 import { Estudios } from "@/modules/estudios/Estudios";
 import { MisDatos } from "@/modules/mis-datos/MisDatos";
+import { CrearInforme } from "@/modules/redaccion/informe-predefinidos/crear-informe/CrearInforme";
 
 const router = createBrowserRouter([
     {
@@ -133,6 +134,14 @@ const router = createBrowserRouter([
         element: (
             <ProtectedRoute>
                 <InformePredefinidos />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/redaccion/crear-informe",
+        element: (
+            <ProtectedRoute>
+                <CrearInforme />
             </ProtectedRoute>
         ),
     },
