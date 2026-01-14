@@ -11,11 +11,11 @@ import {
     ClipboardList
 } from "lucide-react";
 import type { Template } from "../types/informe-pred.types";
+import { stripHtmlTags } from "@/lib/utils";
 
 interface TemplateCardProps {
     template: Template;
     onView: (template: Template) => void;
-    onSelect: (template: Template) => void;
     onEdit: (template: Template) => void;
     onDelete: (template: Template) => void;
     onModalityClick?: (modalityId: string) => void;
@@ -27,7 +27,6 @@ interface TemplateCardProps {
 export const TemplateCard = ({
     template,
     onView,
-    onSelect,
     onEdit,
     onDelete,
     onModalityClick,
@@ -62,8 +61,8 @@ export const TemplateCard = ({
                             <Badge
                                 variant="outline"
                                 className={`transition-all cursor-pointer hover:shadow-md ${isModalityActive
-                                        ? 'bg-green-600 text-white border-green-600 ring-2 ring-green-300'
-                                        : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                                    ? 'bg-green-600 text-white border-green-600 ring-2 ring-green-300'
+                                    : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
                                     }`}
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -79,8 +78,8 @@ export const TemplateCard = ({
                             <Badge
                                 variant="outline"
                                 className={`transition-all cursor-pointer hover:shadow-md ${isBodypartActive
-                                        ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-300'
-                                        : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                    ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-300'
+                                    : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
                                     }`}
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -108,7 +107,7 @@ export const TemplateCard = ({
                                 <span className="text-xs font-medium text-gray-600">Hallazgos</span>
                             </div>
                             <p className="text-sm text-gray-700 line-clamp-2">
-                                {template.findings}
+                                {stripHtmlTags(template.findings)}
                             </p>
                         </div>
                     )}
@@ -120,7 +119,7 @@ export const TemplateCard = ({
                                 <span className="text-xs font-medium text-blue-600">Impresión</span>
                             </div>
                             <p className="text-sm text-gray-700 line-clamp-2">
-                                {template.impression}
+                                {stripHtmlTags(template.impression)}
                             </p>
                         </div>
                     )}
@@ -138,7 +137,7 @@ export const TemplateCard = ({
                         Ver Detalles
                     </Button>
 
-                    <Button
+                    {/*  <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onSelect(template)}
@@ -146,7 +145,7 @@ export const TemplateCard = ({
                     >
                         <FileCheck className="h-4 w-4 mr-1.5" />
                         Seleccionar
-                    </Button>
+                    </Button> */}
 
                     <Button
                         variant="outline"

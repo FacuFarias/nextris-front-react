@@ -3,7 +3,7 @@ import { useInformeDetalle, useUpdateReport } from "../hooks/use-informes";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, Lock, X, AlertCircle, Search, ShieldCheck } from "lucide-react";
+import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, Lock, X, AlertCircle, Search, ShieldCheck, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -103,6 +103,10 @@ export const RedactarInforme = () => {
         conclusiones: true,
         imagenes: true
     });
+
+    // Estados para controlar la visibilidad de los sidebars
+    const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
+    const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
 
     const toggleSection = (section: keyof typeof openSections) => {
         setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -406,294 +410,342 @@ export const RedactarInforme = () => {
                     </div>
                 </div>
 
-                {/* Layout de tres columnas */}
-                <div className={`grid grid-cols-1 gap-6 items-start transition-all duration-300 ${openSections.imagenes ? 'lg:grid-cols-[320px_1fr_320px]' : 'lg:grid-cols-[320px_1fr_auto]'}`}>
-                    {/* Columna izquierda */}
-                    <div className="space-y-4 self-start sticky top-6">
-                        {/* Datos del examen */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                            <div
-                                className="cursor-pointer bg-brand-purple px-4 py-3 flex justify-between items-center"
-                                onClick={() => toggleSection('datosExamen')}
-                            >
-                                <h3 className="text-white font-semibold">Datos del examen</h3>
-                                {openSections.datosExamen ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                            </div>
-                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.datosExamen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                }`}>
-                                <div className="p-4 space-y-4">
-                                    <div>
-                                        <label className="text-xs text-gray-600 font-medium">Estudio</label>
-                                        <p className="text-sm font-medium mt-1">ANGIOTOMOGRAFÍA PELVIANA O VASOS ILÍACOS</p>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="text-xs text-gray-600 font-medium">Fecha</label>
-                                            <p className="text-sm font-medium mt-1">13/12/2025</p>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-600 font-medium">Modalidad</label>
-                                            <p className="text-sm font-medium mt-1">CT</p>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-gray-600 font-medium">Médico Referente</label>
-                                        <p className="text-sm font-medium mt-1">-</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                {/* Layout de tres columnas con sidebars colapsables */}
+                <div className="relative">
+                    {/* Botón flotante para toggle del sidebar izquierdo */}
+                    {!leftSidebarOpen && (
+                        <button
+                            onClick={() => setLeftSidebarOpen(true)}
+                            className="fixed left-4 top-1/2 -translate-y-1/2 z-50 bg-brand-purple hover:bg-brand-purple/90 text-white p-3 rounded-r-lg shadow-lg transition-all duration-300 hover:scale-110"
+                            title="Mostrar panel de información"
+                        >
+                            <PanelLeftOpen className="w-5 h-5" />
+                        </button>
+                    )}
 
-                        {/* Datos técnicos */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                            <div
-                                className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                onClick={() => toggleSection('datosTecnicos')}
-                            >
-                                <h3 className="text-white font-semibold">Datos técnicos</h3>
-                                {openSections.datosTecnicos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                            </div>
-                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.datosTecnicos ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                }`}>
-                                <div className="p-6">
-                                    <label className="text-xs text-gray-600 font-medium">Stat</label>
-                                    <p className="text-sm font-medium mt-1">A</p>
-                                </div>
-                            </div>
-                        </div>
+                    {/* Botón flotante para toggle del sidebar derecho */}
+                    {!rightSidebarOpen && (
+                        <button
+                            onClick={() => setRightSidebarOpen(true)}
+                            className="fixed right-4 top-1/2 -translate-y-1/2 z-50 bg-brand-purple hover:bg-brand-purple/90 text-white p-3 rounded-l-lg shadow-lg transition-all duration-300 hover:scale-110"
+                            title="Mostrar panel de imágenes"
+                        >
+                            <PanelRightOpen className="w-5 h-5" />
+                        </button>
+                    )}
 
-                        {/* Informes predefinidos */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                            <div
-                                className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                onClick={() => toggleSection('informesPredefinidos')}
-                            >
-                                <h3 className="text-white font-semibold">Informes predefinidos</h3>
-                                {openSections.informesPredefinidos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                            </div>
-                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.informesPredefinidos ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                }`}>
-                                <div className="p-6">
-                                    <label className="text-xs text-gray-600 font-medium">Predef Seleccionado</label>
-                                    <p className="text-sm font-medium mt-1 text-purple-400">
-                                        {selectedTemplate?.title || 'Ninguna plantilla seleccionada'}
-                                    </p>
+                    <div className={`grid grid-cols-1  gap-6 items-start transition-all duration-300 ${leftSidebarOpen && rightSidebarOpen
+                        ? 'lg:grid-cols-[320px_1fr_320px]'
+                        : leftSidebarOpen && !rightSidebarOpen
+                            ? 'lg:grid-cols-[320px_1fr]'
+                            : !leftSidebarOpen && rightSidebarOpen
+                                ? 'lg:grid-cols-[1fr_320px]'
+                                : 'lg:grid-cols-1'
+                        }`}>
+                        {/* Columna izquierda */}
+                        {leftSidebarOpen && (
+                            <div className="space-y-6 self-start sticky top-6 animate-in slide-in-from-left-10 fade-in duration-500">
+                                <div className="relative space-y-4">
+                                    {/* Botón de cierre en el sidebar izquierdo */}
                                     <button
-                                        className="text-purple-600 text-sm mt-3 hover:underline"
-                                        onClick={() => setIsTemplateModalOpen(true)}
+                                        onClick={() => setLeftSidebarOpen(false)}
+                                        className="absolute -right-3 top-4 z-10 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+                                        title="Ocultar panel de información"
                                     >
-                                        Cambiar plantilla
+                                        <PanelLeftClose className="w-4 h-4" />
                                     </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Historia clínica */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                            <div
-                                className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                onClick={() => toggleSection('historiaClinicaSidebar')}
-                            >
-                                <h3 className="text-white font-semibold">Historia clínica</h3>
-                                {openSections.historiaClinicaSidebar ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                            </div>
-                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinicaSidebar ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                }`}>
-                                <div className="p-6">
-                                    <Input value="sin info" disabled className="bg-gray-50" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Columna central */}
-                    <div className="space-y-4">
-                        {/* Historia Clínica */}
-                        <div className="bg-white rounded-xl shadow-sm border border-red-300 overflow-hidden relative">
-                            <div
-                                className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                onClick={() => toggleSection('historiaClinica')}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <h3 className="text-white font-semibold">Historia Clínica</h3>
-                                    <span className="text-xs bg-red-500 text-white px-3 py-1 rounded-full font-medium flex items-center gap-1">
-                                        🔒 Campo Bloqueado
-                                    </span>
-                                </div>
-                                {openSections.historiaClinica ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                            </div>
-                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinica ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                }`}>
-                                <div className="p-2">
-                                    <textarea
-                                        className="w-full h-20 p-3 border-2 border-red-200 rounded-md bg-red-50 text-gray-500 resize-none cursor-not-allowed"
-                                        placeholder="Historia clínica escrita por el técnico..."
-                                        disabled
-                                        value={informeDetalle?.data?.history}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Técnica de examen */}
-                        <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
-                            <div
-                                className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                onClick={() => toggleSection('tecnica')}
-                            >
-                                <h3 className="text-white font-semibold">Técnica de examen</h3>
-                                {openSections.tecnica ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                            </div>
-                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.tecnica ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-                                }`}>
-                                <div className="p-2 space-y-2">
-                                    <RichTextEditor
-                                        value={formData.techniques}
-                                        onChange={(value) => handleChange('techniques', value)}
-                                        placeholder="Descripción de la técnica utilizada... (Arrastra imágenes aquí)"
-                                        dragOver={dragOverField === 'techniques'}
-                                        onDragOver={(e) => handleDragOver(e, 'techniques')}
-                                        onDragLeave={handleDragLeave}
-                                        onDrop={(e) => handleDrop(e, 'techniques', editorsRef.current.techniques)}
-                                        onEditorReady={(editor) => handleEditorReady(editor, 'techniques')}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Hallazgos */}
-                        <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
-                            <div
-                                className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                onClick={() => toggleSection('hallazgos')}
-                            >
-                                <h3 className="text-white font-semibold">Hallazgos</h3>
-                                {openSections.hallazgos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                            </div>
-                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.hallazgos ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
-                                }`}>
-                                <div className="p-2 space-y-2">
-                                    <RichTextEditor
-                                        value={formData.findings}
-                                        onChange={(value) => handleChange('findings', value)}
-                                        placeholder="Descripción de hallazgos... (Arrastra imágenes aquí)"
-                                        dragOver={dragOverField === 'findings'}
-                                        onDragOver={(e) => handleDragOver(e, 'findings')}
-                                        onDragLeave={handleDragLeave}
-                                        onDrop={(e) => handleDrop(e, 'findings', editorsRef.current.findings)}
-                                        onEditorReady={(editor) => handleEditorReady(editor, 'findings')}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Impresiones */}
-                        <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
-                            <div
-                                className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                onClick={() => toggleSection('impresiones')}
-                            >
-                                <h3 className="text-white font-semibold">Impresiones</h3>
-                                {openSections.impresiones ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                            </div>
-                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.impresiones ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-                                }`}>
-                                <div className="p-2 space-y-2">
-                                    <RichTextEditor
-                                        value={formData.impressions}
-                                        onChange={(value) => handleChange('impressions', value)}
-                                        placeholder="Impresiones del estudio... (Arrastra imágenes aquí)"
-                                        dragOver={dragOverField === 'impressions'}
-                                        onDragOver={(e) => handleDragOver(e, 'impressions')}
-                                        onDragLeave={handleDragLeave}
-                                        onDrop={(e) => handleDrop(e, 'impressions', editorsRef.current.impressions)}
-                                        onEditorReady={(editor) => handleEditorReady(editor, 'impressions')} />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Conclusiones */}
-                        <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
-                            <div
-                                className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                onClick={() => toggleSection('conclusiones')}
-                            >
-                                <h3 className="text-white font-semibold">Conclusiones</h3>
-                                {openSections.conclusiones ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                            </div>
-                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.conclusiones ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-                                }`}>
-                                <div className="p-2 space-y-2">
-                                    <RichTextEditor
-                                        value={formData.conclusions}
-                                        onChange={(value) => handleChange('conclusions', value)}
-                                        placeholder="Conclusiones del estudio... (Arrastra imágenes aquí)"
-                                        dragOver={dragOverField === 'conclusions'}
-                                        onDragOver={(e) => handleDragOver(e, 'conclusions')}
-                                        onDragLeave={handleDragLeave}
-                                        onDrop={(e) => handleDrop(e, 'conclusions', editorsRef.current.conclusions)}
-                                        onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Columna derecha - Imágenes */}
-                    <div className={`self-start sticky top-6 ${openSections.imagenes ? 'space-y-4' : ''}`}>
-                        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${openSections.imagenes ? '' : 'h-fit'}`}>
-                            <div
-                                className={`cursor-pointer bg-brand-purple flex items-center ${openSections.imagenes
-                                    ? 'px-4 py-3 justify-between'
-                                    : 'px-2 py-6 justify-center writing-mode-vertical'
-                                    }`}
-                                onClick={() => toggleSection('imagenes')}
-                            >
-                                {openSections.imagenes ? (
-                                    <>
-                                        <div className="flex items-center gap-2 animate-accordion-up">
-                                            <ImageIcon className="w-5 h-5 text-white" />
-                                            <h3 className="text-white font-semibold whitespace-nowrap">Imágenes</h3>
+                                    {/* Datos del examen */}
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                        <div
+                                            className="cursor-pointer bg-brand-purple px-4 py-3 flex justify-between items-center"
+                                            onClick={() => toggleSection('datosExamen')}
+                                        >
+                                            <h3 className="text-white font-semibold">Datos del examen</h3>
+                                            {openSections.datosExamen ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
                                         </div>
-                                        <ChevronUp className="w-5 h-5 text-white" />
-                                    </>
-                                ) : (
-                                    <div className="flex items-center gap-2 animate-accordion-down" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                                        <h3 className="text-white font-semibold whitespace-nowrap">Imágenes</h3>
-                                        <ImageIcon className="w-5 h-5 text-white" />
-                                    </div>
-                                )}
-                            </div>
-                            {openSections.imagenes && (
-                                <div className="transition-all duration-300 ease-in-out">
-                                    <div className="p-4">
-                                        <p className="text-xs text-gray-500 text-center mb-4">
-                                            Arrastra las imágenes a los campos de texto
-                                        </p>
-                                        <div className="max-h-[700px] overflow-y-auto space-y-4 pr-2">
-                                            {images.map((image) => (
-                                                <div
-                                                    key={image.id}
-                                                    draggable
-                                                    onDragStart={() => handleDragStart(image)}
-                                                    onDragEnd={handleDragEnd}
-                                                    className={`cursor-grab active:cursor-grabbing rounded-lg overflow-hidden border-2 border-gray-200 hover:border-purple-400 transition-all ${draggedImage?.id === image.id ? 'opacity-50 scale-95' : ''
-                                                        }`}
-                                                >
-                                                    <img
-                                                        src={image.url}
-                                                        alt={image.name}
-                                                        className="w-full h-auto object-cover"
-                                                    />
-                                                    <div className="p-2 bg-gray-50 text-center">
-                                                        <p className="text-sm font-medium text-gray-700">{image.name}</p>
+                                        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.datosExamen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                            }`}>
+                                            <div className="p-4 space-y-4">
+                                                <div>
+                                                    <label className="text-xs text-gray-600 font-medium">Estudio</label>
+                                                    <p className="text-sm font-medium mt-1">ANGIOTOMOGRAFÍA PELVIANA O VASOS ILÍACOS</p>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="text-xs text-gray-600 font-medium">Fecha</label>
+                                                        <p className="text-sm font-medium mt-1">13/12/2025</p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs text-gray-600 font-medium">Modalidad</label>
+                                                        <p className="text-sm font-medium mt-1">CT</p>
                                                     </div>
                                                 </div>
-                                            ))}
+                                                <div>
+                                                    <label className="text-xs text-gray-600 font-medium">Médico Referente</label>
+                                                    <p className="text-sm font-medium mt-1">-</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Datos técnicos */}
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                        <div
+                                            className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                            onClick={() => toggleSection('datosTecnicos')}
+                                        >
+                                            <h3 className="text-white font-semibold">Datos técnicos</h3>
+                                            {openSections.datosTecnicos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                        </div>
+                                        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.datosTecnicos ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                            }`}>
+                                            <div className="p-6">
+                                                <label className="text-xs text-gray-600 font-medium">Stat</label>
+                                                <p className="text-sm font-medium mt-1">A</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Informes predefinidos */}
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                        <div
+                                            className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                            onClick={() => toggleSection('informesPredefinidos')}
+                                        >
+                                            <h3 className="text-white font-semibold">Informes predefinidos</h3>
+                                            {openSections.informesPredefinidos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                        </div>
+                                        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.informesPredefinidos ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                            }`}>
+                                            <div className="p-6">
+                                                <label className="text-xs text-gray-600 font-medium">Predef Seleccionado</label>
+                                                <p className="text-sm font-medium mt-1 text-purple-400">
+                                                    {selectedTemplate?.title || 'Ninguna plantilla seleccionada'}
+                                                </p>
+                                                <button
+                                                    className="text-purple-600 text-sm mt-3 hover:underline"
+                                                    onClick={() => setIsTemplateModalOpen(true)}
+                                                >
+                                                    Cambiar plantilla
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Historia clínica */}
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                        <div
+                                            className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                            onClick={() => toggleSection('historiaClinicaSidebar')}
+                                        >
+                                            <h3 className="text-white font-semibold">Historia clínica</h3>
+                                            {openSections.historiaClinicaSidebar ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                        </div>
+                                        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinicaSidebar ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                            }`}>
+                                            <div className="p-6">
+                                                <Input value="sin info" disabled className="bg-gray-50" />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                            </div>
+                        )}
+
+                        {/* Columna central */}
+                        <div className="space-y-4">
+                            {/* Historia Clínica */}
+                            <div className="bg-white rounded-xl shadow-sm border border-red-300 overflow-hidden relative">
+                                <div
+                                    className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                    onClick={() => toggleSection('historiaClinica')}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <h3 className="text-white font-semibold">Historia Clínica</h3>
+                                        <span className="text-xs bg-red-500 text-white px-3 py-1 rounded-full font-medium flex items-center gap-1">
+                                            🔒 Campo Bloqueado
+                                        </span>
+                                    </div>
+                                    {openSections.historiaClinica ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                </div>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinica ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                    }`}>
+                                    <div className="p-2">
+                                        <textarea
+                                            className="w-full h-20 p-3 border-2 border-red-200 rounded-md bg-red-50 text-gray-500 resize-none cursor-not-allowed"
+                                            placeholder="Historia clínica escrita por el técnico..."
+                                            disabled
+                                            value={informeDetalle?.data?.history}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Técnica de examen */}
+                            <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
+                                <div
+                                    className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                    onClick={() => toggleSection('tecnica')}
+                                >
+                                    <h3 className="text-white font-semibold">Técnica de examen</h3>
+                                    {openSections.tecnica ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                </div>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.tecnica ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                                    }`}>
+                                    <div className="p-2 space-y-2">
+                                        <RichTextEditor
+                                            value={formData.techniques}
+                                            onChange={(value) => handleChange('techniques', value)}
+                                            placeholder="Descripción de la técnica utilizada... (Arrastra imágenes aquí)"
+                                            dragOver={dragOverField === 'techniques'}
+                                            onDragOver={(e) => handleDragOver(e, 'techniques')}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={(e) => handleDrop(e, 'techniques', editorsRef.current.techniques)}
+                                            onEditorReady={(editor) => handleEditorReady(editor, 'techniques')}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Hallazgos */}
+                            <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
+                                <div
+                                    className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                    onClick={() => toggleSection('hallazgos')}
+                                >
+                                    <h3 className="text-white font-semibold">Hallazgos</h3>
+                                    {openSections.hallazgos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                </div>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.hallazgos ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+                                    }`}>
+                                    <div className="p-2 space-y-2">
+                                        <RichTextEditor
+                                            value={formData.findings}
+                                            onChange={(value) => handleChange('findings', value)}
+                                            placeholder="Descripción de hallazgos... (Arrastra imágenes aquí)"
+                                            dragOver={dragOverField === 'findings'}
+                                            onDragOver={(e) => handleDragOver(e, 'findings')}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={(e) => handleDrop(e, 'findings', editorsRef.current.findings)}
+                                            onEditorReady={(editor) => handleEditorReady(editor, 'findings')}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Impresiones */}
+                            <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
+                                <div
+                                    className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                    onClick={() => toggleSection('impresiones')}
+                                >
+                                    <h3 className="text-white font-semibold">Impresiones</h3>
+                                    {openSections.impresiones ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                </div>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.impresiones ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                                    }`}>
+                                    <div className="p-2 space-y-2">
+                                        <RichTextEditor
+                                            value={formData.impressions}
+                                            onChange={(value) => handleChange('impressions', value)}
+                                            placeholder="Impresiones del estudio... (Arrastra imágenes aquí)"
+                                            dragOver={dragOverField === 'impressions'}
+                                            onDragOver={(e) => handleDragOver(e, 'impressions')}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={(e) => handleDrop(e, 'impressions', editorsRef.current.impressions)}
+                                            onEditorReady={(editor) => handleEditorReady(editor, 'impressions')} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Conclusiones */}
+                            <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
+                                <div
+                                    className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                    onClick={() => toggleSection('conclusiones')}
+                                >
+                                    <h3 className="text-white font-semibold">Conclusiones</h3>
+                                    {openSections.conclusiones ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                </div>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.conclusiones ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                                    }`}>
+                                    <div className="p-2 space-y-2">
+                                        <RichTextEditor
+                                            value={formData.conclusions}
+                                            onChange={(value) => handleChange('conclusions', value)}
+                                            placeholder="Conclusiones del estudio... (Arrastra imágenes aquí)"
+                                            dragOver={dragOverField === 'conclusions'}
+                                            onDragOver={(e) => handleDragOver(e, 'conclusions')}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={(e) => handleDrop(e, 'conclusions', editorsRef.current.conclusions)}
+                                            onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')} />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
+                        {/* Columna derecha - Imágenes */}
+                        {rightSidebarOpen && (
+                            <div className="self-start sticky top-6 space-y-4 animate-in slide-in-from-right-10 fade-in duration-500">
+                                <div className="relative">
+                                    {/* Botón de cierre en el sidebar derecho */}
+                                    <button
+                                        onClick={() => setRightSidebarOpen(false)}
+                                        className="absolute -left-3 top-4 z-10 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+                                        title="Ocultar panel de imágenes"
+                                    >
+                                        <PanelRightClose className="w-4 h-4" />
+                                    </button>
+
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                        <div
+                                            className="cursor-pointer bg-brand-purple px-4 py-3 flex items-center justify-between"
+                                            onClick={() => toggleSection('imagenes')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <ImageIcon className="w-5 h-5 text-white" />
+                                                <h3 className="text-white font-semibold whitespace-nowrap">Imágenes</h3>
+                                            </div>
+                                            {openSections.imagenes ? (
+                                                <ChevronUp className="w-5 h-5 text-white" />
+                                            ) : (
+                                                <ChevronDown className="w-5 h-5 text-white" />
+                                            )}
+                                        </div>
+                                        {openSections.imagenes && (
+                                            <div className="transition-all duration-300 ease-in-out">
+                                                <div className="p-4">
+                                                    <p className="text-xs text-gray-500 text-center mb-4">
+                                                        Arrastra las imágenes a los campos de texto
+                                                    </p>
+                                                    <div className="max-h-[700px] overflow-y-auto space-y-4 pr-2">
+                                                        {images.map((image) => (
+                                                            <div
+                                                                key={image.id}
+                                                                draggable
+                                                                onDragStart={() => handleDragStart(image)}
+                                                                onDragEnd={handleDragEnd}
+                                                                className={`cursor-grab active:cursor-grabbing rounded-lg overflow-hidden border-2 border-gray-200 hover:border-purple-400 transition-all ${draggedImage?.id === image.id ? 'opacity-50 scale-95' : ''
+                                                                    }`}
+                                                            >
+                                                                <img
+                                                                    src={image.url}
+                                                                    alt={image.name}
+                                                                    className="w-full h-auto object-cover"
+                                                                />
+                                                                <div className="p-2 bg-gray-50 text-center">
+                                                                    <p className="text-sm font-medium text-gray-700">{image.name}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

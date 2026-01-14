@@ -25,8 +25,6 @@ interface TemplateListProps {
 }
 
 export const TemplateList = ({
-    onSelect,
-    onEdit,
     modalityId,
     bodypartId,
     onModalityClick,
@@ -135,23 +133,17 @@ export const TemplateList = ({
         setIsDetailModalOpen(true);
     };
 
-    const handleSelect = (template: Template) => {
-        if (onSelect) {
-            onSelect(template);
-        }
-    };
+
 
     const handleEdit = (template: Template) => {
-        if (onEdit) {
-            onEdit(template);
-        }
+        // Navegar a la página de edición con el ID de la plantilla
+        navigate(`/redaccion/editar-informe/${template.guid}`);
     };
 
     const handleDelete = async (template: Template) => {
         if (window.confirm(`¿Estás seguro de eliminar la plantilla "${template.title}"?`)) {
             try {
                 await deleteMutation.mutateAsync(template.guid);
-                console.log("Plantilla eliminada exitosamente");
             } catch (error) {
                 console.error("Error al eliminar plantilla:", error);
             }
@@ -276,7 +268,6 @@ export const TemplateList = ({
                                 key={template.guid}
                                 template={template}
                                 onView={handleView}
-                                onSelect={handleSelect}
                                 onEdit={handleEdit}
                                 onDelete={handleDelete}
                                 onModalityClick={onModalityClick}

@@ -145,6 +145,14 @@ const router = createBrowserRouter([
             </ProtectedRoute>
         ),
     },
+    {
+        path: "/redaccion/editar-informe/:id",
+        element: (
+            <ProtectedRoute>
+                <CrearInforme />
+            </ProtectedRoute>
+        ),
+    },
 
     {/*Distribucion*/ },
     {
