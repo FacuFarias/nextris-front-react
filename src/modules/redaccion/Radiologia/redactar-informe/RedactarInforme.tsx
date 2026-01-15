@@ -11,6 +11,7 @@ import { Modal } from "@/components/Modal";
 import { toast } from "sonner";
 import { SecondaryButton } from "@/components";
 import { api } from "@/lib/api";
+import { ConfirmationModal } from "@/modules/redaccion/Radiologia/components/ConfirmationModal";
 import { useTemplates } from "@/modules/redaccion/informe-predefinidos/hooks/use-templates";
 import type { Template } from "@/modules/redaccion/informe-predefinidos/types/informe-pred.types";
 
@@ -35,6 +36,7 @@ export const RedactarInforme = () => {
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
     const [studyTypeFilter, setStudyTypeFilter] = useState<string>("");
     const [searchTerm, setSearchTerm] = useState("");
+    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
 
     // Hooks para plantillas
     const { data: templatesData } = useTemplates(studyTypeFilter || undefined);
@@ -930,14 +932,24 @@ export const RedactarInforme = () => {
                         <PrimaryButton
                             onClick={() => {
                                 if (selectedTemplate) {
-                                    setFormData({
-                                        techniques: selectedTemplate.technique || '',
-                                        findings: selectedTemplate.findings || '',
-                                        impressions: selectedTemplate.impression || '',
-                                        conclusions: selectedTemplate.conclusion || ''
-                                    });
-                                    setIsTemplateModalOpen(false);
-                                    toast.success('Plantilla aplicada exitosamente');
+                                    // Verificar si hay cambios en los campos
+                                    const hasChanges = formData.techniques || formData.findings ||
+                                        formData.impressions || formData.conclusions;
+
+                                    if (hasChanges) {
+                                        // Mostrar modal de confirmación si hay cambios
+                                        setIsConfirmationModalOpen(true);
+                                    } else {
+                                        // Aplicar plantilla directamente si no hay cambios
+                                        setFormData({
+                                            techniques: selectedTemplate.technique || '',
+                                            findings: selectedTemplate.findings || '',
+                                            impressions: selectedTemplate.impression || '',
+                                            conclusions: selectedTemplate.conclusion || ''
+                                        });
+                                        setIsTemplateModalOpen(false);
+                                        toast.success('Plantilla aplicada exitosamente');
+                                    }
                                 } else {
                                     toast.error('Por favor seleccione una plantilla');
                                 }
@@ -949,6 +961,30 @@ export const RedactarInforme = () => {
                     </div>
                 </div>
             </Modal>
+
+            {/* Modal de Confirmación */}
+            <ConfirmationModal
+                isOpen={isConfirmationModalOpen}
+                onClose={() => setIsConfirmationModalOpen(false)}
+                onConfirm={() => {
+                    if (selectedTemplate) {
+                        setFormData({
+                            techniques: selectedTemplate.technique || '',
+                            findings: selectedTemplate.findings || '',
+                            impressions: selectedTemplate.impression || '',
+                            conclusions: selectedTemplate.conclusion || ''
+                        });
+                        setIsConfirmationModalOpen(false);
+                        setIsTemplateModalOpen(false);
+                        toast.success('Plantilla aplicada exitosamente');
+                    }
+                }}
+                title="Confirmar cambio de plantilla"
+                message="Si cambia la plantilla, se perderán todos los cambios realizados en el informe. ¿Está seguro que desea continuar?"
+                confirmText="Sí, cambiar plantilla"
+                cancelText="No, mantener cambios"
+                variant="warning"
+            />
         </LayoutSinSidebar>
     )
 }

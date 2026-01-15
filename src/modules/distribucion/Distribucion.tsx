@@ -17,7 +17,7 @@ import { distribucionService } from "./services/distribucion.service";
 export const Distribucion = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(50);
+    const [pageSize, setPageSize] = useState(8);
     const [allReported, setAllReported] = useState(false);
 
     // Modals state
@@ -33,6 +33,7 @@ export const Distribucion = () => {
         updateEmailAsync,
         isUpdatingEmail
     } = useDistribucion(allReported, page, pageSize);
+
     const pagination = examenes && {
         page: examenes?.data?.page || 1,
         pageSize: examenes?.data?.per_page || 5,
