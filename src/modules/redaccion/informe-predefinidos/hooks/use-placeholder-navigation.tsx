@@ -5,6 +5,12 @@ interface EditorRef {
     getText: () => string;
     isFocused: boolean;
     isDestroyed: boolean;
+    state: {
+        selection: {
+            from: number;
+            to: number;
+        };
+    };
     commands: {
         focus: () => void;
         setTextSelection: (selection: { from: number; to: number }) => void;
@@ -18,11 +24,11 @@ type EditorsRef<T extends string> = Record<T, EditorRef | null>;
 
 /**
  * Hook para navegar entre placeholders [[texto]] usando F3
+ * Navega desde la posición del cursor hacia adelante, saltando entre campos
  * @param fieldOrder - Array con el orden de los campos a navegar
  * @returns Objeto con la función findNextPlaceholder y editorsRef
  */
 export const usePlaceholderNavigation = <T extends string>(fieldOrder: T[]) => {
-    const lastPlaceholderIndexRef = useRef<number>(-1);
     const currentFieldRef = useRef<string>('');
     const findNextPlaceholderRef = useRef<(() => void) | null>(null);
 
@@ -33,25 +39,46 @@ export const usePlaceholderNavigation = <T extends string>(fieldOrder: T[]) => {
         }, {} as EditorsRef<T>)
     );
 
-    const findNextPlaceholder = useCallback(() => {
-        // Detectar en qué campo está el foco actualmente
-        let focusedFieldName: string | null = null;
-        for (const fieldName of fieldOrder) {
-            const editor = editorsRef.current[fieldName];
-            if (editor && editor.isFocused) {
-                focusedFieldName = fieldName;
-                break;
+    // Función auxiliar para seleccionar un placeholder
+    const selectPlaceholder = useCallback((editor: EditorRef, match: { text: string; index: number }, fieldName: string) => {
+        currentFieldRef.current = fieldName;
+
+        const startPos = match.index + 2; // Después de [[
+        const endPos = startPos + match.text.length;
+
+        editor.commands.focus();
+
+        setTimeout(() => {
+            if (editor && !editor.isDestroyed) {
+                editor.commands.setTextSelection({
+                    from: startPos + 1,
+                    to: endPos + 1
+                });
+
+                const editorElement = editor.view.dom;
+                if (editorElement) {
+                    editorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             }
-        }
+        }, 50);
 
-        // Si hay un campo con foco y es diferente al último usado, reiniciar desde ese campo
-        if (focusedFieldName && focusedFieldName !== currentFieldRef.current) {
-            currentFieldRef.current = focusedFieldName;
-            lastPlaceholderIndexRef.current = -1;
-        }
+        console.log(`✅ Placeholder encontrado: "${match.text}" en campo ${fieldName}`);
+    }, []);
 
+    const findNextPlaceholder = useCallback(() => {
+        // Encontrar el índice del campo actual
         let currentFieldIndex = fieldOrder.indexOf(currentFieldRef.current as T);
         if (currentFieldIndex === -1) currentFieldIndex = 0;
+
+        // Obtener el editor actual y la posición del cursor
+        const currentEditor = editorsRef.current[currentFieldRef.current as T];
+        let currentCursorPos = 0;
+
+        if (currentEditor && !currentEditor.isDestroyed) {
+            // Obtener la posición actual del cursor
+            const { from } = currentEditor.state.selection;
+            currentCursorPos = from;
+        }
 
         // Buscar en todos los campos empezando por el actual
         for (let i = 0; i < fieldOrder.length; i++) {
@@ -63,51 +90,45 @@ export const usePlaceholderNavigation = <T extends string>(fieldOrder: T[]) => {
 
             const text = editor.getText();
             const regex = /\[\[([^\]]+)\]\]/g;
-            const matches = Array.from(text.matchAll(regex));
+            let match;
+            const matches = [];
+
+            // Recopilar todos los matches con sus posiciones
+            while ((match = regex.exec(text)) !== null) {
+                matches.push({
+                    text: match[1],
+                    index: match.index,
+                    fullMatch: match[0]
+                });
+            }
 
             if (matches.length === 0) continue;
 
-            let targetIndex = 0;
+            // Si estamos en el mismo campo, buscar desde la posición del cursor
+            if (i === 0 && fieldName === currentFieldRef.current) {
+                // Buscar el primer placeholder después de la posición del cursor
+                const nextMatch = matches.find(m => m.index >= currentCursorPos);
 
-            if (fieldName === currentFieldRef.current && i === 0) {
-                targetIndex = (lastPlaceholderIndexRef.current + 1) % matches.length;
-            } else {
-                targetIndex = 0;
-            }
-
-            const match = matches[targetIndex] as RegExpMatchArray;
-            if (!match || match.index === undefined) continue;
-
-            currentFieldRef.current = fieldName;
-            lastPlaceholderIndexRef.current = targetIndex;
-
-            const startPos = match.index + 2;
-            const endPos = startPos + match[1].length;
-
-            editor.commands.focus();
-
-            setTimeout(() => {
-                if (editor && !editor.isDestroyed) {
-                    editor.commands.setTextSelection({
-                        from: startPos + 1,
-                        to: endPos + 1
-                    });
-
-                    const editorElement = editor.view.dom;
-                    if (editorElement) {
-                        editorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
+                if (nextMatch) {
+                    // Encontramos un placeholder después del cursor en el mismo campo
+                    selectPlaceholder(editor, nextMatch, fieldName);
+                    return true;
                 }
-            }, 50);
-
-            console.log(`✅ Placeholder encontrado: "${match[1]}" en campo ${fieldName}`);
-            return true;
+                // Si no hay más placeholders después del cursor, continuar al siguiente campo
+                continue;
+            } else {
+                // En campos diferentes, seleccionar el primer placeholder
+                if (matches.length > 0) {
+                    selectPlaceholder(editor, matches[0], fieldName);
+                    return true;
+                }
+            }
         }
 
-        lastPlaceholderIndexRef.current = -1;
+        // No se encontraron más placeholders
         toast.info('No se encontraron más placeholders [[texto]]');
         return false;
-    }, [fieldOrder]);
+    }, [fieldOrder, selectPlaceholder]);
 
     // Actualizar la referencia cuando cambia la función
     useEffect(() => {

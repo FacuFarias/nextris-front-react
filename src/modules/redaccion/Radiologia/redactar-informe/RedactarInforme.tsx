@@ -190,9 +190,22 @@ export const RedactarInforme = () => {
 
     const findNextPlaceholder = useCallback(() => {
         const fieldOrder: Array<keyof typeof editorsRef.current> = ['techniques', 'findings', 'impressions', 'conclusions'];
+
+        // Encontrar el índice del campo actual
         let currentFieldIndex = fieldOrder.indexOf(currentFieldRef.current as keyof typeof editorsRef.current);
         if (currentFieldIndex === -1) currentFieldIndex = 0;
 
+        // Obtener el editor actual y la posición del cursor
+        const currentEditor = editorsRef.current[currentFieldRef.current as keyof typeof editorsRef.current];
+        let currentCursorPos = 0;
+
+        if (currentEditor && !currentEditor.isDestroyed) {
+            // Obtener la posición actual del cursor
+            const { from } = currentEditor.state.selection;
+            currentCursorPos = from;
+        }
+
+        // Buscar en todos los campos empezando por el actual
         for (let i = 0; i < fieldOrder.length; i++) {
             const fieldIndex = (currentFieldIndex + i) % fieldOrder.length;
             const fieldName = fieldOrder[fieldIndex];
@@ -202,50 +215,72 @@ export const RedactarInforme = () => {
 
             const text = editor.getText();
             const regex = /\[\[([^\]]+)\]\]/g;
-            const matches = Array.from(text.matchAll(regex));
+            let match;
+            const matches = [];
+
+            // Recopilar todos los matches con sus posiciones
+            while ((match = regex.exec(text)) !== null) {
+                matches.push({
+                    text: match[1],
+                    index: match.index,
+                    fullMatch: match[0]
+                });
+            }
 
             if (matches.length === 0) continue;
 
-            let targetIndex = 0;
-            if (fieldName === currentFieldRef.current && i === 0) {
-                targetIndex = (lastPlaceholderIndexRef.current + 1) % matches.length;
-            } else {
-                targetIndex = 0;
-            }
+            // Si estamos en el mismo campo, buscar desde la posición del cursor
+            if (i === 0 && fieldName === currentFieldRef.current) {
+                // Buscar el primer placeholder después de la posición del cursor
+                const nextMatch = matches.find(m => m.index >= currentCursorPos);
 
-            const match = matches[targetIndex] as RegExpMatchArray;
-            if (!match || match.index === undefined) continue;
-
-            currentFieldRef.current = fieldName;
-            lastPlaceholderIndexRef.current = targetIndex;
-
-            const startPos = match.index + 2;
-            const endPos = startPos + match[1].length;
-
-            editor.commands.focus();
-
-            setTimeout(() => {
-                if (editor && !editor.isDestroyed) {
-                    editor.commands.setTextSelection({
-                        from: startPos + 1,
-                        to: endPos + 1
-                    });
-
-                    const editorElement = editor.view.dom;
-                    if (editorElement) {
-                        editorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
+                if (nextMatch) {
+                    // Encontramos un placeholder después del cursor en el mismo campo
+                    selectPlaceholder(editor, nextMatch, fieldName);
+                    return true;
                 }
-            }, 50);
-
-            console.log(`✅ Placeholder encontrado: "${match[1]}" en campo ${fieldName}`);
-            return true;
+                // Si no hay más placeholders después del cursor, continuar al siguiente campo
+                continue;
+            } else {
+                // En campos diferentes, seleccionar el primer placeholder
+                if (matches.length > 0) {
+                    selectPlaceholder(editor, matches[0], fieldName);
+                    return true;
+                }
+            }
         }
 
+        // No se encontraron más placeholders
         lastPlaceholderIndexRef.current = -1;
         toast.info('No se encontraron más placeholders [[texto]]');
         return false;
     }, []);
+
+    // Función auxiliar para seleccionar un placeholder
+    const selectPlaceholder = (editor: any, match: { text: string; index: number }, fieldName: string) => {
+        currentFieldRef.current = fieldName;
+
+        const startPos = match.index + 2; // Después de [[
+        const endPos = startPos + match.text.length;
+
+        editor.commands.focus();
+
+        setTimeout(() => {
+            if (editor && !editor.isDestroyed) {
+                editor.commands.setTextSelection({
+                    from: startPos + 1,
+                    to: endPos + 1
+                });
+
+                const editorElement = editor.view.dom;
+                if (editorElement) {
+                    editorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }, 50);
+
+        console.log(`✅ Placeholder encontrado: "${match.text}" en campo ${fieldName}`);
+    };
 
     useEffect(() => {
         if (imagenes?.images && imagenes.images.length > 0) {
@@ -378,8 +413,8 @@ export const RedactarInforme = () => {
                     <div className="flex gap-6 items-start">
                         {/* Columna izquierda */}
                         <div className={`space-y-6 self-start sticky top-6 transition-all duration-700 ease-in-out ${leftSidebarOpen
-                                ? 'w-[320px] opacity-100 translate-x-0'
-                                : 'w-0 opacity-0 -translate-x-full overflow-hidden'
+                            ? 'w-[320px] opacity-100 translate-x-0'
+                            : 'w-0 opacity-0 -translate-x-full overflow-hidden'
                             }`}>
                             <div className={`relative space-y-4 min-w-[320px] transition-opacity duration-700 ease-in-out ${leftSidebarOpen ? 'opacity-100' : 'opacity-0'
                                 }`}>
@@ -616,8 +651,8 @@ export const RedactarInforme = () => {
 
                         {/* Columna derecha - Imágenes */}
                         <div className={`self-start sticky top-6 space-y-4 transition-all duration-700 ease-in-out ${rightSidebarOpen
-                                ? 'w-[320px] opacity-100'
-                                : 'w-0 opacity-0 overflow-hidden'
+                            ? 'w-[320px] opacity-100'
+                            : 'w-0 opacity-0 overflow-hidden'
                             }`}>
                             <div className={`relative min-w-[320px] transition-opacity duration-700 ease-in-out ${rightSidebarOpen ? 'opacity-100' : 'opacity-0'
                                 }`}>
