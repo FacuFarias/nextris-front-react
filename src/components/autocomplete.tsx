@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -73,92 +73,112 @@ export function Autocomplete({
         setOpen(false);
     };
 
+    const handleClear = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onValueChange?.("");
+        setOpen(false);
+    };
+
     return (
         <div className={cn("w-full", className)}>
-            <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={open}
-                        disabled={disabled || isLoading}
-                        className={cn(
-                            "w-full justify-between font-normal transition-all cursor-pointer",
-                            !selectedOption && "text-muted-foreground",
-                            error && "border-destructive focus-visible:ring-destructive",
-                            "hover:bg-accent hover:border-primary/50"
-                        )}
+            <div className="relative w-full">
+                <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={open}
+                            disabled={disabled || isLoading}
+                            className={cn(
+                                "w-full justify-between font-normal transition-all cursor-pointer",
+                                !selectedOption && "text-muted-foreground",
+                                error && "border-destructive focus-visible:ring-destructive",
+                                "hover:bg-accent hover:border-primary/50",
+                                selectedOption && !disabled && !isLoading && "pr-16"
+                            )}
+                        >
+                            {isLoading ? (
+                                <span className="flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Cargando...
+                                </span>
+                            ) : selectedOption ? (
+                                <span
+                                    className="block max-w-full truncate"
+                                    title={selectedOption.label}
+                                >
+                                    {selectedOption.label}
+                                </span>
+                            ) : (
+                                placeholder
+                            )}
+
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                        className="p-0 shadow-medium z-100"
+                        align="start"
+                        style={{ width: 'var(--radix-popover-trigger-width)' }}
                     >
-                        {isLoading ? (
-                            <span className="flex items-center gap-2">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Cargando...
-                            </span>
-                        ) : selectedOption ? (
-                            <span
-                                className="block max-w-full truncate"
-                                title={selectedOption.label}
-                            >
-                                {selectedOption.label}
-                            </span>
-                        ) : (
-                            placeholder
-                        )}
+                        <Command shouldFilter={false} className="min-h-[200px]">
+                            <CommandInput
+                                placeholder={searchPlaceholder}
+                                value={search}
+                                onValueChange={handleSearchChange}
+                                className="h-9"
+                            />
+                            <CommandList>
+                                <CommandEmpty>
+                                    {isLoading ? (
+                                        <div className="flex justify-center items-center p-4">
+                                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                        </div>
+                                    ) : (
+                                        <div className="py-6 text-center text-sm">{emptyMessage}</div>
+                                    )}
+                                </CommandEmpty>
 
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                    className="p-0 shadow-medium z-100"
-                    align="start"
-                    style={{ width: 'var(--radix-popover-trigger-width)' }}
-                >
-                    <Command shouldFilter={false} className="min-h-[200px]">
-                        <CommandInput
-                            placeholder={searchPlaceholder}
-                            value={search}
-                            onValueChange={handleSearchChange}
-                            className="h-9"
-                        />
-                        <CommandList>
-                            <CommandEmpty>
-                                {isLoading ? (
-                                    <div className="flex justify-center items-center p-4">
-                                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                                    </div>
-                                ) : (
-                                    <div className="py-6 text-center text-sm">{emptyMessage}</div>
-                                )}
-                            </CommandEmpty>
-
-                            <CommandGroup>
-                                {options
-                                    .filter((option) => {
-                                        if (!option || !option.label) return false;
-                                        return option.label
-                                            .toLowerCase()
-                                            .includes(search.toLowerCase());
-                                    })
-                                    .map((option) => (
-                                        <CommandItem
-                                            key={option.value}
-                                            value={option.label}
-                                            onSelect={() => handleSelect(option.value)}
-                                        >
-                                            <Check
-                                                className={cn(
-                                                    "mr-2 h-4 w-4 text-primary",
-                                                    value === option.value ? "opacity-100" : "opacity-0"
-                                                )}
-                                            />
-                                            {option.label}
-                                        </CommandItem>
-                                    ))}
-                            </CommandGroup>
-                        </CommandList>
-                    </Command>
-                </PopoverContent>
-            </Popover>
+                                <CommandGroup>
+                                    {options
+                                        .filter((option) => {
+                                            if (!option || !option.label) return false;
+                                            return option.label
+                                                .toLowerCase()
+                                                .includes(search.toLowerCase());
+                                        })
+                                        .map((option) => (
+                                            <CommandItem
+                                                key={option.value}
+                                                value={option.label}
+                                                onSelect={() => handleSelect(option.value)}
+                                            >
+                                                <Check
+                                                    className={cn(
+                                                        "mr-2 h-4 w-4 text-primary",
+                                                        value === option.value ? "opacity-100" : "opacity-0"
+                                                    )}
+                                                />
+                                                {option.label}
+                                            </CommandItem>
+                                        ))}
+                                </CommandGroup>
+                            </CommandList>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
+                {selectedOption && !disabled && !isLoading && (
+                    <button
+                        type="button"
+                        onClick={handleClear}
+                        className="cursor-pointer absolute right-8 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded-sm transition-colors"
+                        aria-label="Limpiar selección"
+                    >
+                        <X className="h-4 w-4 opacity-50 hover:opacity-100 transition-opacity" />
+                    </button>
+                )}
+            </div>
             {error && (
                 <p className="mt-1.5 text-sm text-destructive animate-in fade-in-50 slide-in-from-top-1">
                     {error}

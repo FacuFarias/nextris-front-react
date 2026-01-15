@@ -15,9 +15,7 @@ import { useTemplates } from "@/modules/redaccion/informe-predefinidos/hooks/use
 import type { Template } from "@/modules/redaccion/informe-predefinidos/types/informe-pred.types";
 
 export const RedactarInforme = () => {
-
     const { informeGuid, studyInstanceUID } = useParams();
-    /* const navigate = useNavigate(); */
     const { informeDetalle, isLoading } = useInformeDetalle(informeGuid);
     const { data: imagenes } = useImagenesPorEstudio(studyInstanceUID || '');
     const updateReportMutation = useUpdateReport(informeGuid || '');
@@ -41,7 +39,6 @@ export const RedactarInforme = () => {
     // Hooks para plantillas
     const { data: templatesData } = useTemplates(studyTypeFilter || undefined);
 
-
     // Filtrar plantillas por búsqueda local
     const filteredTemplates = templatesData?.data?.filter((template) => {
         const searchLower = searchTerm.toLowerCase();
@@ -60,7 +57,6 @@ export const RedactarInforme = () => {
                 impressions: informeDetalle.data.impressions || '',
                 conclusions: informeDetalle.data.conclusions || ''
             });
-            // Verificar si el informe ya está firmado
             setIsSigned((informeDetalle.data as any).is_signed || false);
         }
     }, [informeDetalle]);
@@ -85,7 +81,6 @@ export const RedactarInforme = () => {
 
     // Estado para las imágenes disponibles
     const [images, setImages] = useState<Array<{ id: number; url: string; name: string }>>([]);
-    // Estado para guardar todas las imágenes originales
     const [allImages, setAllImages] = useState<Array<{ id: number; url: string; name: string }>>([]);
     const [draggedImage, setDraggedImage] = useState<{ id: number; url: string; name: string } | null>(null);
     const [dragOverField, setDragOverField] = useState<string | null>(null);
@@ -113,40 +108,22 @@ export const RedactarInforme = () => {
     };
 
     const handleChange = (field: string, value: string) => {
-        // Obtener el valor anterior
         const previousValue = formData[field as keyof typeof formData] || '';
-
-        // Detectar qué texto se está insertando (nuevo texto)
         const parser = new DOMParser();
         const prevDoc = parser.parseFromString(previousValue, 'text/html');
         const newDoc = parser.parseFromString(value, 'text/html');
-
         const prevText = prevDoc.body.textContent || '';
         const newText = newDoc.body.textContent || '';
-
-        // Obtener solo el texto que se agregó
         const insertedText = newText.replace(prevText, '').toLowerCase().trim();
 
-        // Detectar comandos de voz
-        const comandos = [
-            'siguiente campo',
-            'próximo campo',
-            'next field'
-        ];
-
+        const comandos = ['siguiente campo', 'próximo campo', 'next field'];
         const esComando = comandos.some(cmd => insertedText.includes(cmd));
 
         if (esComando) {
-            // Es un comando, no insertar el texto, ejecutar la acción
             console.log('🎤 Comando de voz detectado:', insertedText);
-
-            // Usar la referencia más reciente de la función
             if (findNextPlaceholderRef.current) {
                 findNextPlaceholderRef.current();
             }
-
-            // Revertir el cambio manteniendo el valor anterior
-            // Necesitamos hacerlo en el próximo tick para que el editor se actualice
             setTimeout(() => {
                 const editor = editorsRef.current[field as keyof typeof editorsRef.current];
                 if (editor) {
@@ -156,14 +133,10 @@ export const RedactarInforme = () => {
             return;
         }
 
-        // No es comando, procesar normalmente
         setFormData(prev => ({ ...prev, [field]: value }));
 
-        // Extraer URLs de imágenes del contenido HTML
         const imgElements = newDoc.querySelectorAll('img');
         const usedImageUrls = Array.from(imgElements).map(img => img.src);
-
-        // Restaurar imágenes que ya no están en el contenido
         const currentImages = new Set(images.map(img => img.url));
         const missingImages = allImages.filter(img =>
             !usedImageUrls.includes(img.url) && !currentImages.has(img.url)
@@ -171,7 +144,6 @@ export const RedactarInforme = () => {
 
         if (missingImages.length > 0) {
             setImages(prev => [...prev, ...missingImages]);
-            // Limpiar draggedImage si alguna de las imágenes restauradas coincide
             if (draggedImage && missingImages.some(img => img.id === draggedImage.id)) {
                 setDraggedImage(null);
             }
@@ -199,40 +171,28 @@ export const RedactarInforme = () => {
     const handleDrop = (e: React.DragEvent, _field: string, editor: any) => {
         e.preventDefault();
         if (draggedImage && editor) {
-            // Insertar la imagen directamente en el editor
             editor.chain().focus().setImage({
                 src: draggedImage.url,
                 alt: draggedImage.name,
                 title: draggedImage.name
             }).run();
-
-            // Eliminar la imagen de la lista disponible
             setImages(prev => prev.filter(img => img.id !== draggedImage.id));
         }
     };
 
-    // Callbacks para manejar los editores sin causar re-renders
     const handleEditorReady = useCallback((editor: any, fieldName: string) => {
         editorsRef.current[fieldName as keyof typeof editorsRef.current] = editor;
-
-        // Agregar listener de focus para actualizar el campo actual
         editor.on('focus', () => {
             currentFieldRef.current = fieldName;
             console.log(`📝 Campo activo: ${fieldName}`);
         });
-
     }, []);
 
-    // Función para buscar y seleccionar el siguiente placeholder [[texto]]
     const findNextPlaceholder = useCallback(() => {
-        // Orden de los campos para buscar
         const fieldOrder: Array<keyof typeof editorsRef.current> = ['techniques', 'findings', 'impressions', 'conclusions'];
-
-        // Encontrar el índice del campo actual
         let currentFieldIndex = fieldOrder.indexOf(currentFieldRef.current as keyof typeof editorsRef.current);
         if (currentFieldIndex === -1) currentFieldIndex = 0;
 
-        // Buscar en todos los campos empezando por el actual
         for (let i = 0; i < fieldOrder.length; i++) {
             const fieldIndex = (currentFieldIndex + i) % fieldOrder.length;
             const fieldName = fieldOrder[fieldIndex];
@@ -240,66 +200,52 @@ export const RedactarInforme = () => {
 
             if (!editor) continue;
 
-            // Obtener el texto directo del editor (no del formData)
             const text = editor.getText();
             const regex = /\[\[([^\]]+)\]\]/g;
             const matches = Array.from(text.matchAll(regex));
 
             if (matches.length === 0) continue;
 
-            // Determinar qué placeholder seleccionar
             let targetIndex = 0;
-
-            // Si estamos en el mismo campo que la última vez
             if (fieldName === currentFieldRef.current && i === 0) {
-                // Ir al siguiente placeholder
                 targetIndex = (lastPlaceholderIndexRef.current + 1) % matches.length;
             } else {
-                // Si es un campo diferente o es la primera vez, empezar desde el principio
                 targetIndex = 0;
             }
 
             const match = matches[targetIndex] as RegExpMatchArray;
             if (!match || match.index === undefined) continue;
 
-            // Actualizar referencias
             currentFieldRef.current = fieldName;
             lastPlaceholderIndexRef.current = targetIndex;
 
-            // Calcular posiciones en el documento del editor
-            // La posición del texto dentro de [[ ]]
-            const startPos = match.index + 2; // Después de [[
-            const endPos = startPos + match[1].length; // Final del texto
+            const startPos = match.index + 2;
+            const endPos = startPos + match[1].length;
 
-            // Hacer el focus y selección en pasos separados
             editor.commands.focus();
 
-            // Usar setTimeout para asegurar que el focus se aplique primero
             setTimeout(() => {
                 if (editor && !editor.isDestroyed) {
                     editor.commands.setTextSelection({
-                        from: startPos + 1, // TipTap usa posiciones 1-based
+                        from: startPos + 1,
                         to: endPos + 1
                     });
 
-                    // Scroll al elemento si es necesario
                     const editorElement = editor.view.dom;
                     if (editorElement) {
                         editorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                 }
-            }, 50); // Aumentar timeout para dar tiempo al focus
+            }, 50);
 
             console.log(`✅ Placeholder encontrado: "${match[1]}" en campo ${fieldName}`);
             return true;
         }
 
-        // Si no se encontró ningún placeholder, reiniciar la búsqueda
         lastPlaceholderIndexRef.current = -1;
         toast.info('No se encontraron más placeholders [[texto]]');
         return false;
     }, []);
-
 
     useEffect(() => {
         if (imagenes?.images && imagenes.images.length > 0) {
@@ -313,12 +259,10 @@ export const RedactarInforme = () => {
         }
     }, [imagenes]);
 
-    // Actualizar la referencia cuando cambia la función
     useEffect(() => {
         findNextPlaceholderRef.current = findNextPlaceholder;
     }, [findNextPlaceholder]);
 
-    // Listener para detectar F3
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'F3') {
@@ -331,12 +275,10 @@ export const RedactarInforme = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [findNextPlaceholder]);
 
-    // Sistema de detección de comandos de voz
     useEffect(() => {
         const handleVoiceCommand = (text: string) => {
             const lowerText = text.toLowerCase().trim();
 
-            // Detectar comando "siguiente campo"
             if (lowerText.includes('siguiente campo') ||
                 lowerText.includes('próximo campo') ||
                 lowerText.includes('next field')) {
@@ -347,7 +289,6 @@ export const RedactarInforme = () => {
             return false;
         };
 
-        // Exponer función globalmente para que el sistema de transcripción pueda llamarla
         (window as any).handleVoiceCommand = handleVoiceCommand;
         (window as any).nextPlaceholder = findNextPlaceholder;
 
@@ -357,7 +298,6 @@ export const RedactarInforme = () => {
         };
     }, [findNextPlaceholder]);
 
-    // Función para guardar el informe
     const handleGuardarInforme = () => {
         if (!informeGuid) {
             toast.error('No se encontró el ID del examen');
@@ -374,6 +314,7 @@ export const RedactarInforme = () => {
 
         updateReportMutation.mutate(dataToSave);
     };
+
     if (isLoading) {
         return <LayoutSinSidebar>Cargando...</LayoutSinSidebar>;
     }
@@ -392,7 +333,7 @@ export const RedactarInforme = () => {
                         </p>
                     </div>
                     <div className="flex gap-3">
-                        <PrimaryButton >
+                        <PrimaryButton>
                             <FileMinus />
                             PDF
                         </PrimaryButton>
@@ -434,126 +375,118 @@ export const RedactarInforme = () => {
                         </button>
                     )}
 
-                    <div className={`grid grid-cols-1  gap-6 items-start transition-all duration-300 ${leftSidebarOpen && rightSidebarOpen
-                        ? 'lg:grid-cols-[320px_1fr_320px]'
-                        : leftSidebarOpen && !rightSidebarOpen
-                            ? 'lg:grid-cols-[320px_1fr]'
-                            : !leftSidebarOpen && rightSidebarOpen
-                                ? 'lg:grid-cols-[1fr_320px]'
-                                : 'lg:grid-cols-1'
-                        }`}>
+                    <div className="flex gap-6 items-start">
                         {/* Columna izquierda */}
-                        {leftSidebarOpen && (
-                            <div className="space-y-6 self-start sticky top-6 animate-in slide-in-from-left-10 fade-in duration-500">
-                                <div className="relative space-y-4">
-                                    {/* Botón de cierre en el sidebar izquierdo */}
-                                    <button
-                                        onClick={() => setLeftSidebarOpen(false)}
-                                        className="absolute -right-3 top-4 z-10 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
-                                        title="Ocultar panel de información"
+                        <div className={`space-y-6 self-start sticky top-6 transition-all duration-700 ease-in-out ${leftSidebarOpen
+                                ? 'w-[320px] opacity-100 translate-x-0'
+                                : 'w-0 opacity-0 -translate-x-full overflow-hidden'
+                            }`}>
+                            <div className={`relative space-y-4 min-w-[320px] transition-opacity duration-700 ease-in-out ${leftSidebarOpen ? 'opacity-100' : 'opacity-0'
+                                }`}>
+                                {/* Botón de cierre en el sidebar izquierdo */}
+                                <button
+                                    onClick={() => setLeftSidebarOpen(false)}
+                                    className="absolute -right-3 top-4 z-10 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+                                    title="Ocultar panel de información"
+                                >
+                                    <PanelLeftClose className="w-4 h-4" />
+                                </button>
+
+                                {/* Datos del examen */}
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                    <div
+                                        className="cursor-pointer bg-brand-purple px-4 py-3 flex justify-between items-center"
+                                        onClick={() => toggleSection('datosExamen')}
                                     >
-                                        <PanelLeftClose className="w-4 h-4" />
-                                    </button>
-                                    {/* Datos del examen */}
-                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                        <div
-                                            className="cursor-pointer bg-brand-purple px-4 py-3 flex justify-between items-center"
-                                            onClick={() => toggleSection('datosExamen')}
-                                        >
-                                            <h3 className="text-white font-semibold">Datos del examen</h3>
-                                            {openSections.datosExamen ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                                        </div>
-                                        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.datosExamen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                            }`}>
-                                            <div className="p-4 space-y-4">
+                                        <h3 className="text-white font-semibold">Datos del examen</h3>
+                                        {openSections.datosExamen ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                    </div>
+                                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.datosExamen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                        <div className="p-4 space-y-4">
+                                            <div>
+                                                <label className="text-xs text-gray-600 font-medium">Estudio</label>
+                                                <p className="text-sm font-medium mt-1">ANGIOTOMOGRAFÍA PELVIANA O VASOS ILÍACOS</p>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="text-xs text-gray-600 font-medium">Estudio</label>
-                                                    <p className="text-sm font-medium mt-1">ANGIOTOMOGRAFÍA PELVIANA O VASOS ILÍACOS</p>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="text-xs text-gray-600 font-medium">Fecha</label>
-                                                        <p className="text-sm font-medium mt-1">13/12/2025</p>
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-xs text-gray-600 font-medium">Modalidad</label>
-                                                        <p className="text-sm font-medium mt-1">CT</p>
-                                                    </div>
+                                                    <label className="text-xs text-gray-600 font-medium">Fecha</label>
+                                                    <p className="text-sm font-medium mt-1">13/12/2025</p>
                                                 </div>
                                                 <div>
-                                                    <label className="text-xs text-gray-600 font-medium">Médico Referente</label>
-                                                    <p className="text-sm font-medium mt-1">-</p>
+                                                    <label className="text-xs text-gray-600 font-medium">Modalidad</label>
+                                                    <p className="text-sm font-medium mt-1">CT</p>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Datos técnicos */}
-                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                        <div
-                                            className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                            onClick={() => toggleSection('datosTecnicos')}
-                                        >
-                                            <h3 className="text-white font-semibold">Datos técnicos</h3>
-                                            {openSections.datosTecnicos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                                        </div>
-                                        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.datosTecnicos ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                            }`}>
-                                            <div className="p-6">
-                                                <label className="text-xs text-gray-600 font-medium">Stat</label>
-                                                <p className="text-sm font-medium mt-1">A</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Informes predefinidos */}
-                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                        <div
-                                            className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                            onClick={() => toggleSection('informesPredefinidos')}
-                                        >
-                                            <h3 className="text-white font-semibold">Informes predefinidos</h3>
-                                            {openSections.informesPredefinidos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                                        </div>
-                                        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.informesPredefinidos ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                            }`}>
-                                            <div className="p-6">
-                                                <label className="text-xs text-gray-600 font-medium">Predef Seleccionado</label>
-                                                <p className="text-sm font-medium mt-1 text-purple-400">
-                                                    {selectedTemplate?.title || 'Ninguna plantilla seleccionada'}
-                                                </p>
-                                                <button
-                                                    className="text-purple-600 text-sm mt-3 hover:underline"
-                                                    onClick={() => setIsTemplateModalOpen(true)}
-                                                >
-                                                    Cambiar plantilla
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Historia clínica */}
-                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                        <div
-                                            className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                            onClick={() => toggleSection('historiaClinicaSidebar')}
-                                        >
-                                            <h3 className="text-white font-semibold">Historia clínica</h3>
-                                            {openSections.historiaClinicaSidebar ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                                        </div>
-                                        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinicaSidebar ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                            }`}>
-                                            <div className="p-6">
-                                                <Input value="sin info" disabled className="bg-gray-50" />
+                                            <div>
+                                                <label className="text-xs text-gray-600 font-medium">Médico Referente</label>
+                                                <p className="text-sm font-medium mt-1">-</p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Datos técnicos */}
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                    <div
+                                        className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                        onClick={() => toggleSection('datosTecnicos')}
+                                    >
+                                        <h3 className="text-white font-semibold">Datos técnicos</h3>
+                                        {openSections.datosTecnicos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                    </div>
+                                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.datosTecnicos ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                        <div className="p-6">
+                                            <label className="text-xs text-gray-600 font-medium">Stat</label>
+                                            <p className="text-sm font-medium mt-1">A</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Informes predefinidos */}
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                    <div
+                                        className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                        onClick={() => toggleSection('informesPredefinidos')}
+                                    >
+                                        <h3 className="text-white font-semibold">Informes predefinidos</h3>
+                                        {openSections.informesPredefinidos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                    </div>
+                                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.informesPredefinidos ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                        <div className="p-6">
+                                            <label className="text-xs text-gray-600 font-medium">Predef Seleccionado</label>
+                                            <p className="text-sm font-medium mt-1 text-purple-400">
+                                                {selectedTemplate?.title || 'Ninguna plantilla seleccionada'}
+                                            </p>
+                                            <button
+                                                className="text-purple-600 text-sm mt-3 hover:underline"
+                                                onClick={() => setIsTemplateModalOpen(true)}
+                                            >
+                                                Cambiar plantilla
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Historia clínica */}
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                    <div
+                                        className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                        onClick={() => toggleSection('historiaClinicaSidebar')}
+                                    >
+                                        <h3 className="text-white font-semibold">Historia clínica</h3>
+                                        {openSections.historiaClinicaSidebar ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                    </div>
+                                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinicaSidebar ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                        <div className="p-6">
+                                            <Input value="sin info" disabled className="bg-gray-50" />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        )}
+                        </div>
 
                         {/* Columna central */}
-                        <div className="space-y-4">
+                        <div className="flex-1 space-y-4 transition-all duration-700 ease-in-out min-w-0">
                             {/* Historia Clínica */}
                             <div className="bg-white rounded-xl shadow-sm border border-red-300 overflow-hidden relative">
                                 <div
@@ -568,8 +501,7 @@ export const RedactarInforme = () => {
                                     </div>
                                     {openSections.historiaClinica ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
                                 </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinica ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                    }`}>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinica ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2">
                                         <textarea
                                             className="w-full h-20 p-3 border-2 border-red-200 rounded-md bg-red-50 text-gray-500 resize-none cursor-not-allowed"
@@ -590,8 +522,7 @@ export const RedactarInforme = () => {
                                     <h3 className="text-white font-semibold">Técnica de examen</h3>
                                     {openSections.tecnica ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
                                 </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.tecnica ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-                                    }`}>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.tecnica ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2 space-y-2">
                                         <RichTextEditor
                                             value={formData.techniques}
@@ -616,8 +547,7 @@ export const RedactarInforme = () => {
                                     <h3 className="text-white font-semibold">Hallazgos</h3>
                                     {openSections.hallazgos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
                                 </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.hallazgos ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
-                                    }`}>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.hallazgos ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2 space-y-2">
                                         <RichTextEditor
                                             value={formData.findings}
@@ -642,8 +572,7 @@ export const RedactarInforme = () => {
                                     <h3 className="text-white font-semibold">Impresiones</h3>
                                     {openSections.impresiones ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
                                 </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.impresiones ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-                                    }`}>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.impresiones ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2 space-y-2">
                                         <RichTextEditor
                                             value={formData.impressions}
@@ -653,7 +582,8 @@ export const RedactarInforme = () => {
                                             onDragOver={(e) => handleDragOver(e, 'impressions')}
                                             onDragLeave={handleDragLeave}
                                             onDrop={(e) => handleDrop(e, 'impressions', editorsRef.current.impressions)}
-                                            onEditorReady={(editor) => handleEditorReady(editor, 'impressions')} />
+                                            onEditorReady={(editor) => handleEditorReady(editor, 'impressions')}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -667,8 +597,7 @@ export const RedactarInforme = () => {
                                     <h3 className="text-white font-semibold">Conclusiones</h3>
                                     {openSections.conclusiones ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
                                 </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.conclusiones ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-                                    }`}>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.conclusiones ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2 space-y-2">
                                         <RichTextEditor
                                             value={formData.conclusions}
@@ -678,74 +607,77 @@ export const RedactarInforme = () => {
                                             onDragOver={(e) => handleDragOver(e, 'conclusions')}
                                             onDragLeave={handleDragLeave}
                                             onDrop={(e) => handleDrop(e, 'conclusions', editorsRef.current.conclusions)}
-                                            onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')} />
+                                            onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')}
+                                        />
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Columna derecha - Imágenes */}
-                        {rightSidebarOpen && (
-                            <div className="self-start sticky top-6 space-y-4 animate-in slide-in-from-right-10 fade-in duration-500">
-                                <div className="relative">
-                                    {/* Botón de cierre en el sidebar derecho */}
-                                    <button
-                                        onClick={() => setRightSidebarOpen(false)}
-                                        className="absolute -left-3 top-4 z-10 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
-                                        title="Ocultar panel de imágenes"
-                                    >
-                                        <PanelRightClose className="w-4 h-4" />
-                                    </button>
+                        <div className={`self-start sticky top-6 space-y-4 transition-all duration-700 ease-in-out ${rightSidebarOpen
+                                ? 'w-[320px] opacity-100'
+                                : 'w-0 opacity-0 overflow-hidden'
+                            }`}>
+                            <div className={`relative min-w-[320px] transition-opacity duration-700 ease-in-out ${rightSidebarOpen ? 'opacity-100' : 'opacity-0'
+                                }`}>
+                                {/* Botón de cierre en el sidebar derecho */}
+                                <button
+                                    onClick={() => setRightSidebarOpen(false)}
+                                    className="absolute -left-3 top-4 z-10 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+                                    title="Ocultar panel de imágenes"
+                                >
+                                    <PanelRightClose className="w-4 h-4" />
+                                </button>
 
-                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                        <div
-                                            className="cursor-pointer bg-brand-purple px-4 py-3 flex items-center justify-between"
-                                            onClick={() => toggleSection('imagenes')}
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <ImageIcon className="w-5 h-5 text-white" />
-                                                <h3 className="text-white font-semibold whitespace-nowrap">Imágenes</h3>
-                                            </div>
-                                            {openSections.imagenes ? (
-                                                <ChevronUp className="w-5 h-5 text-white" />
-                                            ) : (
-                                                <ChevronDown className="w-5 h-5 text-white" />
-                                            )}
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                    <div
+                                        className="cursor-pointer bg-brand-purple px-4 py-3 flex items-center justify-between"
+                                        onClick={() => toggleSection('imagenes')}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <ImageIcon className="w-5 h-5 text-white" />
+                                            <h3 className="text-white font-semibold whitespace-nowrap">Imágenes</h3>
                                         </div>
-                                        {openSections.imagenes && (
-                                            <div className="transition-all duration-300 ease-in-out">
-                                                <div className="p-4">
-                                                    <p className="text-xs text-gray-500 text-center mb-4">
-                                                        Arrastra las imágenes a los campos de texto
-                                                    </p>
-                                                    <div className="max-h-[700px] overflow-y-auto space-y-4 pr-2">
-                                                        {images.map((image) => (
-                                                            <div
-                                                                key={image.id}
-                                                                draggable
-                                                                onDragStart={() => handleDragStart(image)}
-                                                                onDragEnd={handleDragEnd}
-                                                                className={`cursor-grab active:cursor-grabbing rounded-lg overflow-hidden border-2 border-gray-200 hover:border-purple-400 transition-all ${draggedImage?.id === image.id ? 'opacity-50 scale-95' : ''
-                                                                    }`}
-                                                            >
-                                                                <img
-                                                                    src={image.url}
-                                                                    alt={image.name}
-                                                                    className="w-full h-auto object-cover"
-                                                                />
-                                                                <div className="p-2 bg-gray-50 text-center">
-                                                                    <p className="text-sm font-medium text-gray-700">{image.name}</p>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        {openSections.imagenes ? (
+                                            <ChevronUp className="w-5 h-5 text-white" />
+                                        ) : (
+                                            <ChevronDown className="w-5 h-5 text-white" />
                                         )}
                                     </div>
+                                    {openSections.imagenes && (
+                                        <div className="transition-all duration-300 ease-in-out">
+                                            <div className="p-4">
+                                                <p className="text-xs text-gray-500 text-center mb-4">
+                                                    Arrastra las imágenes a los campos de texto
+                                                </p>
+                                                <div className="max-h-[700px] overflow-y-auto space-y-4 pr-2">
+                                                    {images.map((image) => (
+                                                        <div
+                                                            key={image.id}
+                                                            draggable
+                                                            onDragStart={() => handleDragStart(image)}
+                                                            onDragEnd={handleDragEnd}
+                                                            className={`cursor-grab active:cursor-grabbing rounded-lg overflow-hidden border-2 border-gray-200 hover:border-purple-400 transition-all ${draggedImage?.id === image.id ? 'opacity-50 scale-95' : ''
+                                                                }`}
+                                                        >
+                                                            <img
+                                                                src={image.url}
+                                                                alt={image.name}
+                                                                className="w-full h-auto object-cover"
+                                                            />
+                                                            <div className="p-2 bg-gray-50 text-center">
+                                                                <p className="text-sm font-medium text-gray-700">{image.name}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -761,8 +693,6 @@ export const RedactarInforme = () => {
                 size="md"
             >
                 <div className="space-y-6">
-
-
                     {/* Alerta informativa */}
                     <div className="bg-linear-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
                         <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
@@ -799,15 +729,12 @@ export const RedactarInforme = () => {
                                         setIsSigning(true);
 
                                         try {
-                                            // 1. Verificar credenciales
                                             await api.post('/verify-credentials', {
                                                 password: password
                                             });
 
-                                            // 2. Si las credenciales son correctas, firmar el informe
                                             await api.post(`/reports/${informeGuid}/sign`);
 
-                                            // 3. Actualizar estado
                                             setIsSigned(true);
                                             setIsSignModalOpen(false);
                                             setPassword('');
@@ -851,15 +778,12 @@ export const RedactarInforme = () => {
                                 setIsSigning(true);
 
                                 try {
-                                    // 1. Verificar credenciales
                                     await api.post('/verify-credentials', {
                                         password: password
                                     });
 
-                                    // 2. Si las credenciales son correctas, firmar el informe
                                     await api.post(`/reports/${informeGuid}/sign`);
 
-                                    // 3. Actualizar estado
                                     setIsSigned(true);
                                     setIsSignModalOpen(false);
                                     setPassword('');
@@ -945,7 +869,7 @@ export const RedactarInforme = () => {
                                             {template.title}
                                         </div>
                                         <div className={`font-medium ${selectedTemplate?.guid === template.guid ? 'text-brand-purple' : 'text-gray-700'}`}>
-                                            {template.title}
+                                            {template.study_type_description}
                                         </div>
                                     </div>
                                 ))}
@@ -967,7 +891,6 @@ export const RedactarInforme = () => {
                         <PrimaryButton
                             onClick={() => {
                                 if (selectedTemplate) {
-                                    // Reemplazar todos los campos del formulario
                                     setFormData({
                                         techniques: selectedTemplate.technique || '',
                                         findings: selectedTemplate.findings || '',
