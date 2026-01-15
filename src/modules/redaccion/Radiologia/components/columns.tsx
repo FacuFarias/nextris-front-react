@@ -1,7 +1,8 @@
 import type { TableAction, TableColumn } from "@/types/table";
 import type { Informes } from "../types/informes.types";
 import { fechaYhora } from "@/lib/fechaYhora";
-import { ClipboardPlus, Image } from "lucide-react";
+import { ClipboardPlus, FileText, Image } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 // Configuración de columnas para usuarios
 const informeColumns: TableColumn<Informes>[] = [
@@ -52,9 +53,16 @@ const informeColumns: TableColumn<Informes>[] = [
         key: "is_reported",
         label: "REPORTADO",
         className: "font-medium",
-        render: (value: boolean) => {
-            return value ? "FINALIZADO" : "PENDIENTE";
-        }
+        render: (value) => (
+            <div className="flex justify-center">
+                {value ? (
+                    <Badge variant="success">FINALIZADO</Badge>
+                ) : (
+                    <Badge variant="destructive">PENDIENTE</Badge>
+                )}
+            </div>
+        ),
+
 
     },
 ];
@@ -63,6 +71,7 @@ const informeColumns: TableColumn<Informes>[] = [
 export const getInformesActions = (
     onViewInforme: (informe: Informes) => void,
     onViewImagenes: (informe: Informes) => void,
+    onViewPdf: (informe: Informes) => void,
 ): TableAction<Informes>[] => [
         {
             label: "Redactar Informe",
@@ -74,6 +83,12 @@ export const getInformesActions = (
             icon: <Image className="h-4 w-4 text-green-900" />,
             onClick: onViewImagenes,
             hidden: (informe) => !informe.is_image, // Solo mostrar si is_image es true
+        },
+        {
+            label: "Ver Pdf",
+            icon: <FileText className="h-4 w-4 text-red-900" />,
+            onClick: onViewPdf,
+            hidden: (informe) => !(informe.pdf_path), // Solo mostrar si is_image es true
         }
     ];
 

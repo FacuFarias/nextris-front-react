@@ -11,6 +11,7 @@ import { useDebounce } from "@uidotdev/usehooks"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { PrimaryButton } from "@/components"
+import { toast } from "sonner"
 
 export const Radiologia = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -42,6 +43,12 @@ export const Radiologia = () => {
         //abrir en otra pestaña
         window.open(
             `https://viewer.nextris.cloud/viewer?StudyInstanceUIDs=${informe.study_instance_uid}`,
+            '_blank',
+        );
+    };
+    const handleViewPdf = (informe: Informes) => {
+        window.open(
+            `http://148.230.72.8:5001/api/pdfs/${informe.pdf_path}`,
             '_blank',
         );
     };
@@ -121,7 +128,10 @@ export const Radiologia = () => {
 
                         </div>
 
-                        <PrimaryButton onClick={refetchInformes}>
+                        <PrimaryButton onClick={() => {
+                            refetchInformes();
+                            toast.success('Lista actualizada exitosamente');
+                        }}>
                             <div className="flex items-center">
                                 <RefreshCcw className="h-4 w-4" />
 
@@ -146,7 +156,7 @@ export const Radiologia = () => {
                         columns={informeColumns}
                         showIndex
                         pagination={pagination}
-                        actions={getInformesActions(handleRedactarInforme, handleViewImagenes)}
+                        actions={getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf)}
                         onPaginationChange={(newPage) => {
                             setPage(newPage);
                         }}

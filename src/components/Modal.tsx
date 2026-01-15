@@ -15,6 +15,8 @@ interface ModalProps {
     description?: string;
     size?: "sm" | "md" | "lg" | "xl" | "full" | "xxl";
     className?: string;
+    showCloseButton?: boolean;
+    closeOnOutsideClick?: boolean;
 }
 
 const sizeClasses = {
@@ -34,10 +36,12 @@ export const Modal = ({
     description,
     size = "md",
     className,
+    showCloseButton = true,
+    closeOnOutsideClick = true,
 }: ModalProps) => {
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className={cn(sizeClasses[size], className)}>
+        <Dialog open={isOpen} onOpenChange={closeOnOutsideClick ? onClose : undefined}>
+            <DialogContent className={cn(sizeClasses[size], className)} showCloseButton={showCloseButton}>
                 {(title || description) && (
                     <DialogHeader className="bg-brand-purple text-white p-4 rounded-t-lg -m-6 mb-6">
                         {title && <DialogTitle className="text-white">{title}</DialogTitle>}

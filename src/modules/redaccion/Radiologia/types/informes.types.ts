@@ -13,6 +13,7 @@ export type Informes = {
     is_image: boolean;
     study_instance_uid: string;
     location: string;
+    pdf_path: string;
 }
 
 
