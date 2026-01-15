@@ -79,7 +79,8 @@ GET /api/examinations/for-reporting?assigned_to_me=true&show_reported=true
         "is_executed": true,
         "equipment": "CT-01",
         "location": "Sede Central",
-        "assigned_to": "uuid-del-medico-asignado"
+        "assigned_to": "uuid-del-medico-asignado",
+        "pdf_path": "output_pdfs/ACC001_NR00000001_García_Juan.pdf"
       }
     ],
     "page": 1,
@@ -429,118 +430,6 @@ curl -X PUT "http://localhost:5001/api/examinations/f39710b4-7914-44ba-ab72-ad4e
   }'
 ```
 
-#### 7. Verificar credenciales antes de firmar (acción crítica)
-```bash
-curl -X POST "http://localhost:5001/api/verify-credentials" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "password": "mi_contraseña"
-  }'
-```
-
----
-
-## Endpoint de Seguridad
-
-### 8. POST /verify-credentials
-Verifica las credenciales del usuario actual. Útil para acciones críticas como firmar reportes.
-
-#### Description
-Este endpoint permite verificar la contraseña del usuario autenticado sin necesidad de generar un nuevo token. Se utiliza principalmente antes de ejecutar acciones críticas como firmar reportes médicos.
-
-#### Headers
-```
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-```
-
-#### Request Body
-```json
-{
-  "password": "string (required)"
-}
-```
-
-#### Request Example
-```http
-POST /api/verify-credentials
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-
-{
-  "password": "mi_contraseña_segura"
-}
-```
-
-#### Success Response
-**Status Code:** 200 OK
-
-```json
-{
-  "success": true,
-  "message": "Credenciales válidas"
-}
-```
-
-#### Error Responses
-
-**Invalid Credentials (401):**
-```json
-{
-  "success": false,
-  "message": "Credenciales inválidas"
-}
-```
-
-**Missing Password (400):**
-```json
-{
-  "success": false,
-  "message": "La contraseña es requerida"
-}
-```
-
-**User Not Found (404):**
-```json
-{
-  "success": false,
-  "message": "Usuario no encontrado"
-}
-```
-
-#### Caso de Uso
-Este endpoint se utiliza típicamente antes de firmar un reporte:
-
-```javascript
-// 1. Primero verificar credenciales
-const verifyResponse = await fetch('/api/verify-credentials', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ password: userPassword })
-});
-
-if (verifyResponse.ok) {
-  // 2. Si las credenciales son válidas, proceder a firmar
-  const signResponse = await fetch(`/api/reports/${examId}/sign`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  
-  if (signResponse.ok) {
-    console.log('Reporte firmado exitosamente');
-  }
-} else {
-  console.error('Credenciales inválidas');
-}
-```
-
 ---
 
 ## Tablas de Base de Datos Relacionadas
@@ -597,6 +486,12 @@ Catálogo de lateralidades (Izquierda, Derecha, Bilateral, etc.)
 
 ## Changelog
 
+### Version 1.1.0 (2026-01-15)
+- Agregado campo `pdf_path` en GET /examinations/for-reporting
+- Nuevo endpoint público GET /pdfs/{filename} para servir PDFs sin autenticación
+- Mejoras en la generación automática de PDFs al firmar reportes
+- Formato de nombres de PDF: `{ACC}_{PatientID}_{Surname}_{Name}.pdf`
+
 ### Version 1.0.0 (2026-01-03)
 - Endpoints iniciales para redacción de informes
 - GET /examinations/for-reporting
@@ -604,3 +499,62 @@ Catálogo de lateralidades (Izquierda, Derecha, Bilateral, etc.)
 - PUT/PATCH /examinations/{exam_id}/report
 - GET /examinations/{exam_id}/notes
 - PUT/PATCH /examinations/{exam_id}/notes
+
+---
+
+## Endpoints de Visualización de PDFs
+
+### 11. GET /pdfs/{filename}
+Sirve archivos PDF directamente desde el servidor.
+
+#### Description
+Endpoint público (sin autenticación) para servir archivos PDF de reportes médicos. Permite abrir PDFs directamente en el navegador o en nuevas pestañas.
+
+#### Parameters
+**Path Parameters:**
+- `filename` (required): Nombre del archivo PDF
+
+#### Request
+```http
+GET /api/pdfs/ACC001_NR00000001_García_Juan.pdf
+```
+
+**Nota:** No requiere token de autenticación.
+
+#### Response
+**Status Code:** 200 OK
+**Content-Type:** application/pdf
+
+Devuelve el archivo PDF directamente.
+
+#### Errors
+```json
+{
+  "success": false,
+  "message": "PDF no encontrado"
+}
+```
+
+**Status Codes:**
+- `200`: Success - PDF encontrado y servido
+- `400`: Bad Request - Archivo no válido (no es PDF)
+- `404`: Not Found - PDF no encontrado
+- `500`: Internal Server Error
+
+#### Uso desde Frontend
+```javascript
+// Extraer nombre del archivo desde pdf_path
+const pdfPath = "output_pdfs/ACC001_NR00000001_García_Juan.pdf";
+const filename = pdfPath.split('/').pop();
+
+// Construir URL completa
+const pdfUrl = `${API_BASE_URL}/api/pdfs/${filename}`;
+
+// Abrir en nueva pestaña
+window.open(pdfUrl, '_blank');
+```
+
+#### Seguridad
+- El endpoint sanitiza el nombre del archivo para prevenir path traversal
+- Solo sirve archivos con extensión `.pdf`
+- Los archivos se sirven desde `/var/www/nextris-dev-react/output_pdfs/`
