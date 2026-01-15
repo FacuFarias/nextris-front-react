@@ -39,6 +39,7 @@ const informeColumns: TableColumn<Informes>[] = [
         className: "font-medium",
 
     },
+
     {
         key: "created_on",
         label: "FECHA Y HORA DE ADMISION",
@@ -47,7 +48,15 @@ const informeColumns: TableColumn<Informes>[] = [
             return fechaYhora(value);
         }
     },
+    {
+        key: "is_reported",
+        label: "REPORTADO",
+        className: "font-medium",
+        render: (value: boolean) => {
+            return value ? "FINALIZADO" : "PENDIENTE";
+        }
 
+    },
 ];
 
 // Función que genera las acciones con handlers personalizados

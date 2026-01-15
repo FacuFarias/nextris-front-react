@@ -22,12 +22,7 @@ interface EditorRef {
 
 type EditorsRef<T extends string> = Record<T, EditorRef | null>;
 
-/**
- * Hook para navegar entre placeholders [[texto]] usando F3
- * Navega desde la posición del cursor hacia adelante, saltando entre campos
- * @param fieldOrder - Array con el orden de los campos a navegar
- * @returns Objeto con la función findNextPlaceholder y editorsRef
- */
+
 export const usePlaceholderNavigation = <T extends string>(fieldOrder: T[]) => {
     const currentFieldRef = useRef<string>('');
     const findNextPlaceholderRef = useRef<(() => void) | null>(null);

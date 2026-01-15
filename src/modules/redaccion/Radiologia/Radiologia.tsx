@@ -1,7 +1,7 @@
 import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
 import { InputSearch } from "@/components/InputSearch"
 import { MainLayout } from "@/layouts/layout"
-import { HandHelping } from "lucide-react"
+import { HandHelping, RefreshCcw } from "lucide-react"
 import { useState } from "react"
 import { useInformes } from "./hooks/use-informes"
 import { getInformesActions, informeColumns } from "./components/columns"
@@ -10,6 +10,7 @@ import type { Informes } from "./types/informes.types"
 import { useDebounce } from "@uidotdev/usehooks"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { PrimaryButton } from "@/components"
 
 export const Radiologia = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -18,7 +19,7 @@ export const Radiologia = () => {
     const [asignadosAMi, setAsignadosAMi] = useState(false);
     const [listoParaLeer, setListoParaLeer] = useState(true);
     const useDebounceSearch = useDebounce(searchTerm, 500);
-    const { informesData, isLoading: isLoadingInformes } = useInformes({ page, per_page: 8, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer });
+    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: 8, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer });
 
     const pagination = informesData && {
         page: informesData?.data?.page || 1,
@@ -116,9 +117,16 @@ export const Radiologia = () => {
                             >
                                 Asignados a mí
                             </Label>
+
+
                         </div>
 
+                        <PrimaryButton onClick={refetchInformes}>
+                            <div className="flex items-center">
+                                <RefreshCcw className="h-4 w-4" />
 
+                            </div>
+                        </PrimaryButton>
 
                     </div>
                 </div>

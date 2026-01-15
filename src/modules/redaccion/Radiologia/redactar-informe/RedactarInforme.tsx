@@ -3,7 +3,7 @@ import { useInformeDetalle, useUpdateReport } from "../hooks/use-informes";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, Lock, X, AlertCircle, Search, ShieldCheck, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, Lock, X, AlertCircle, Search, ShieldCheck, PanelLeftClose, PanelLeftOpen, PanelRightClose, Image } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -388,44 +388,14 @@ export const RedactarInforme = () => {
 
                 {/* Layout de tres columnas con sidebars colapsables */}
                 <div className="relative">
-                    {/* Botón flotante para toggle del sidebar izquierdo */}
-                    {!leftSidebarOpen && (
-                        <button
-                            onClick={() => setLeftSidebarOpen(true)}
-                            className="fixed left-4 top-1/2 -translate-y-1/2 z-50 bg-brand-purple hover:bg-brand-purple/90 text-white p-3 rounded-r-lg shadow-lg transition-all duration-300 hover:scale-110"
-                            title="Mostrar panel de información"
-                        >
-                            <PanelLeftOpen className="w-5 h-5" />
-                        </button>
-                    )}
-
-                    {/* Botón flotante para toggle del sidebar derecho */}
-                    {!rightSidebarOpen && (
-                        <button
-                            onClick={() => setRightSidebarOpen(true)}
-                            className="fixed right-4 top-1/2 -translate-y-1/2 z-50 bg-brand-purple hover:bg-brand-purple/90 text-white p-3 rounded-l-lg shadow-lg transition-all duration-300 hover:scale-110"
-                            title="Mostrar panel de imágenes"
-                        >
-                            <PanelRightOpen className="w-5 h-5" />
-                        </button>
-                    )}
-
-                    <div className="flex gap-6 items-start">
+                    <div className="flex gap-2 items-start">
                         {/* Columna izquierda */}
                         <div className={`space-y-6 self-start sticky top-6 transition-all duration-700 ease-in-out ${leftSidebarOpen
                             ? 'w-[320px] opacity-100 translate-x-0'
                             : 'w-0 opacity-0 -translate-x-full overflow-hidden'
                             }`}>
-                            <div className={`relative space-y-4 min-w-[320px] transition-opacity duration-700 ease-in-out ${leftSidebarOpen ? 'opacity-100' : 'opacity-0'
+                            <div className={`min-w-[320px] space-y-4 transition-opacity duration-700 ease-in-out ${leftSidebarOpen ? 'opacity-100' : 'opacity-0'
                                 }`}>
-                                {/* Botón de cierre en el sidebar izquierdo */}
-                                <button
-                                    onClick={() => setLeftSidebarOpen(false)}
-                                    className="absolute -right-3 top-4 z-10 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
-                                    title="Ocultar panel de información"
-                                >
-                                    <PanelLeftClose className="w-4 h-4" />
-                                </button>
 
                                 {/* Datos del examen */}
                                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -518,6 +488,27 @@ export const RedactarInforme = () => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Botón toggle sidebar izquierdo */}
+                        <div className="self-stretch sticky top-6">
+                            {leftSidebarOpen ? (
+                                <button
+                                    onClick={() => setLeftSidebarOpen(false)}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg shadow-lg transition-all duration-300 hover:scale-110 mt-4"
+                                    title="Ocultar panel de información"
+                                >
+                                    <PanelLeftClose className="w-4 h-4" />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => setLeftSidebarOpen(true)}
+                                    className="h-[calc(100vh-120px)] bg-brand-purple hover:bg-purple-800 text-white p-2 rounded-lg shadow-lg transition-all duration-300  flex items-center justify-center"
+                                    title="Mostrar panel de información"
+                                >
+                                    <PanelLeftOpen className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
 
                         {/* Columna central */}
@@ -649,25 +640,38 @@ export const RedactarInforme = () => {
                             </div>
                         </div>
 
+                        {/* Botón toggle sidebar derecho */}
+                        <div className="self-stretch sticky top-6">
+                            {rightSidebarOpen ? (
+                                <button
+                                    onClick={() => setRightSidebarOpen(false)}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg shadow-lg transition-all duration-300 hover:scale-110 mt-4"
+                                    title="Ocultar panel de imágenes"
+                                >
+                                    <PanelRightClose className="w-4 h-4" />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => setRightSidebarOpen(true)}
+                                    className="h-[calc(100vh-120px)] bg-brand-purple hover:bg-purple-800 text-white p-2 rounded-lg shadow-lg transition-all duration-300  flex items-center justify-center"
+                                    title="Mostrar panel de imágenes"
+                                >
+                                    <Image className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+
                         {/* Columna derecha - Imágenes */}
                         <div className={`self-start sticky top-6 space-y-4 transition-all duration-700 ease-in-out ${rightSidebarOpen
                             ? 'w-[320px] opacity-100'
                             : 'w-0 opacity-0 overflow-hidden'
                             }`}>
-                            <div className={`relative min-w-[320px] transition-opacity duration-700 ease-in-out ${rightSidebarOpen ? 'opacity-100' : 'opacity-0'
+                            <div className={`min-w-[320px] transition-opacity duration-700 ease-in-out ${rightSidebarOpen ? 'opacity-100' : 'opacity-0'
                                 }`}>
-                                {/* Botón de cierre en el sidebar derecho */}
-                                <button
-                                    onClick={() => setRightSidebarOpen(false)}
-                                    className="absolute -left-3 top-4 z-10 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
-                                    title="Ocultar panel de imágenes"
-                                >
-                                    <PanelRightClose className="w-4 h-4" />
-                                </button>
 
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full">
                                     <div
-                                        className="cursor-pointer bg-brand-purple px-4 py-3 flex items-center justify-between"
+                                        className="cursor-pointer bg-brand-purple px-4 py-3 flex items-center justify-between shrink-0"
                                         onClick={() => toggleSection('imagenes')}
                                     >
                                         <div className="flex items-center gap-2">
@@ -681,9 +685,9 @@ export const RedactarInforme = () => {
                                         )}
                                     </div>
                                     {openSections.imagenes && (
-                                        <div className="transition-all duration-300 ease-in-out">
-                                            <div className="p-4">
-                                                <p className="text-xs text-gray-500 text-center mb-4">
+                                        <div className="transition-all duration-300 ease-in-out  flex-1 overflow-hidden">
+                                            <div className="p-4 h-[calc(100vh-120px)] flex flex-col">
+                                                <p className="text-xs text-gray-500 text-center mb-4 shrink-0">
                                                     Arrastra las imágenes a los campos de texto
                                                 </p>
                                                 <div className="max-h-[700px] overflow-y-auto space-y-4 pr-2">
