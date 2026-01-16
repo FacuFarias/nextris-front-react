@@ -11,10 +11,9 @@ import { Modal } from "@/components/Modal";
 import { toast } from "sonner";
 import { SecondaryButton } from "@/components";
 import { api } from "@/lib/api";
-import { ConfirmationModal } from "@/modules/redaccion/Radiologia/components/ConfirmationModal";
-import { AddendumAlert } from "@/modules/redaccion/Radiologia/components/AddendumAlert";
 import { useTemplates } from "@/modules/redaccion/informe-predefinidos/hooks/use-templates";
 import type { Template } from "@/modules/redaccion/informe-predefinidos/types/informe-pred.types";
+import { ConfirmationModal } from "../components/ConfirmationModal";
 
 export const RedactarInforme = () => {
     const { informeGuid, studyInstanceUID } = useParams();
@@ -38,8 +37,6 @@ export const RedactarInforme = () => {
     const [studyTypeFilter, setStudyTypeFilter] = useState<string>("");
     const [searchTerm, setSearchTerm] = useState("");
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
-    const [isAddendumAlertOpen, setIsAddendumAlertOpen] = useState(false);
-    const [hasCheckedWasSaved, setHasCheckedWasSaved] = useState(false);
 
     // Hooks para plantillas
     const { data: templatesData } = useTemplates(studyTypeFilter || undefined);
@@ -64,13 +61,9 @@ export const RedactarInforme = () => {
             });
             setIsSigned((informeDetalle.data as any).is_signed || false);
 
-            // Verificar si was_saved es true y mostrar la alerta solo una vez
-            if (informeDetalle.data.was_saved && !hasCheckedWasSaved) {
-                setIsAddendumAlertOpen(true);
-                setHasCheckedWasSaved(true);
-            }
+
         }
-    }, [informeDetalle, hasCheckedWasSaved]);
+    }, [informeDetalle]);
 
     // Estado para trackear el último índice de placeholder encontrado
     const lastPlaceholderIndexRef = useRef<number>(-1);
@@ -344,19 +337,7 @@ export const RedactarInforme = () => {
         };
     }, [findNextPlaceholder]);
 
-    const handleAddendumAccept = () => {
-        setIsAddendumAlertOpen(false);
-        toast.info('Puede continuar editando el informe como addendum');
-        // Aquí puedes agregar lógica adicional si necesitas marcar que es un addendum
-    };
 
-    const handleAddendumDecline = () => {
-        setIsAddendumAlertOpen(false);
-        // quiero cerrar la ventana 
-        window.close();
-
-        toast.info('Puede revisar el informe sin realizar cambios');
-    };
 
     const handleGuardarInforme = () => {
         if (!informeGuid) {
@@ -1009,12 +990,7 @@ export const RedactarInforme = () => {
                 variant="warning"
             />
 
-            {/* Modal de Alerta de Addendum */}
-            <AddendumAlert
-                isOpen={isAddendumAlertOpen}
-                onAccept={handleAddendumAccept}
-                onDecline={handleAddendumDecline}
-            />
+
         </LayoutSinSidebar>
     )
 }

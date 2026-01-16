@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { PrimaryButton } from "@/components"
 import { toast } from "sonner"
+import { ConfirmationModal } from "./components/ConfirmationModal"
 
 export const Radiologia = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -19,6 +20,8 @@ export const Radiologia = () => {
     const [verFinalizados, setVerFinalizados] = useState(false);
     const [asignadosAMi, setAsignadosAMi] = useState(false);
     const [listoParaLeer, setListoParaLeer] = useState(true);
+    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+    const [selectedInforme, setSelectedInforme] = useState<Informes | null>(null);
     const useDebounceSearch = useDebounce(searchTerm, 500);
     const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: 8, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer });
 
@@ -29,6 +32,17 @@ export const Radiologia = () => {
     };
 
     const handleRedactarInforme = (informe: Informes) => {
+        if (informe.is_reported) {
+            // Si el informe ya está reportado, mostrar modal de confirmación
+            setSelectedInforme(informe);
+            setIsConfirmationModalOpen(true);
+        } else {
+            // Si no está reportado, abrir directamente
+            openReportWindow(informe);
+        }
+    };
+
+    const openReportWindow = (informe: Informes) => {
         const url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}`;
         // Abrir en una nueva ventana sin barras de herramientas y restricciones
         window.open(
@@ -165,6 +179,27 @@ export const Radiologia = () => {
 
 
             </div>
+
+            {/* Modal de Confirmación */}
+            <ConfirmationModal
+                isOpen={isConfirmationModalOpen}
+                onClose={() => {
+                    setIsConfirmationModalOpen(false);
+                    setSelectedInforme(null);
+                }}
+                onConfirm={() => {
+                    if (selectedInforme) {
+                        openReportWindow(selectedInforme);
+                        setIsConfirmationModalOpen(false);
+                        setSelectedInforme(null);
+                    }
+                }}
+                title="Informe ya finalizado"
+                message="Este informe ya ha sido finalizado y reportado. Si continúa, podrá realizar cambios que afectarán el informe original. ¿Está seguro que desea continuar?"
+                confirmText="Sí, abrir informe"
+                cancelText="Cancelar"
+                variant="warning"
+            />
         </MainLayout>
     )
 }
