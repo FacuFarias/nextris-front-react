@@ -7,6 +7,7 @@ import type { TipoEstudio, TipoEstudioFormData } from "./types/tipos-estudio.typ
 import { toast } from "sonner";
 import { useModalidades } from "../modalidades/hooks/useModalidades";
 import { useBodyParts } from "../partes-cuerpo/hooks/useBodyParts";
+import { useGrupoEstudio } from "../grupos-estudio";
 
 export const TiposEstudio = () => {
     const [page, setPage] = useState(1);
@@ -17,7 +18,7 @@ export const TiposEstudio = () => {
     const { tiposEstudio, isLoading, createTipoEstudio, updateTipoEstudio } = useTiposEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
-
+    const { gruposEstudio } = useGrupoEstudio();
     const handlePaginationChange = (newPage: number, newPageSize: number) => {
         setPage(newPage);
         setPageSize(newPageSize);
@@ -78,16 +79,20 @@ export const TiposEstudio = () => {
             (b: any) => b.description === selectedTipoEstudio.bodypart
         )?.guid || selectedTipoEstudio.bodypart_id || "";
 
+        // Buscar el ID del grupo de estudio por nombre
+        const studygroupId = gruposEstudio?.data?.find(
+            (g: any) => g.description === selectedTipoEstudio.studygroup
+        )?.guid || selectedTipoEstudio.studygroup_id || "";
         return {
             code: selectedTipoEstudio.code,
             description: selectedTipoEstudio.description,
-            studygroup_id: selectedTipoEstudio.studygroup_id || "",
+            studygroup_id: studygroupId,
             bodypart_id: bodypartId,
             modality_id: modalityId,
             rvu: selectedTipoEstudio.rvu,
             nofviews: selectedTipoEstudio.nofviews,
         };
-    }, [selectedTipoEstudio, modalidades, bodyParts]);
+    }, [selectedTipoEstudio, modalidades, bodyParts, gruposEstudio]);
 
     return (
         <div className="space-y-4">

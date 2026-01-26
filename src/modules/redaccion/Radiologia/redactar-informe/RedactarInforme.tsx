@@ -501,7 +501,7 @@ export const RedactarInforme = () => {
                             {leftSidebarOpen ? (
                                 <button
                                     onClick={() => setLeftSidebarOpen(false)}
-                                    className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg shadow-lg transition-all duration-300 hover:scale-110 mt-4"
+                                    className="bg-blue-500 h-[calc(100vh-120px)] hover:bg-blue-600 text-white p-2 rounded-lg shadow-lg transition-all duration-300 "
                                     title="Ocultar panel de información"
                                 >
                                     <PanelLeftClose className="w-4 h-4" />
@@ -651,7 +651,7 @@ export const RedactarInforme = () => {
                             {rightSidebarOpen ? (
                                 <button
                                     onClick={() => setRightSidebarOpen(false)}
-                                    className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg shadow-lg transition-all duration-300 hover:scale-110 mt-4"
+                                    className="bg-blue-500 h-[calc(100vh-120px)] hover:bg-blue-600 text-white p-2 rounded-lg shadow-lg transition-all duration-300 "
                                     title="Ocultar panel de imágenes"
                                 >
                                     <PanelRightClose className="w-4 h-4" />

@@ -58,7 +58,7 @@ const informeColumns: TableColumn<Informes>[] = [
                 {value ? (
                     <Badge variant="success">FINALIZADO</Badge>
                 ) : (
-                    <Badge variant="destructive">PENDIENTE</Badge>
+                    <Badge className="bg-yellow-500 hover:bg-yellow-600">PENDIENTE</Badge>
                 )}
             </div>
         ),

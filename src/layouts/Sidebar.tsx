@@ -110,13 +110,13 @@ const menuItems: MenuItem[] = [
             {
                 icon: UserCog,
                 label: "Unificación de Paciente",
-                path: "/administracion/unificacion",
+                path: "/administracion/unificacion-paciente",
                 allowedRoles: ["Sysadmin"]
             },
             {
                 icon: ClipboardList,
                 label: "Reasignación de Exámenes",
-                path: "/administracion/reasignacion",
+                path: "/administracion/reasignacion-examenes",
                 allowedRoles: ["Sysadmin"]
             },
 

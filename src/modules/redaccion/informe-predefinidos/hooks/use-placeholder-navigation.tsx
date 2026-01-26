@@ -57,7 +57,6 @@ export const usePlaceholderNavigation = <T extends string>(fieldOrder: T[]) => {
             }
         }, 50);
 
-        console.log(`✅ Placeholder encontrado: "${match.text}" en campo ${fieldName}`);
     }, []);
 
     const findNextPlaceholder = useCallback(() => {

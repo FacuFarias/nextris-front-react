@@ -14,6 +14,7 @@ import { ConfiguracionTablas } from "@/modules/configuracion/configuracion-tabla
 import { Estudios } from "@/modules/estudios/Estudios";
 import { MisDatos } from "@/modules/mis-datos/MisDatos";
 import { CrearInforme } from "@/modules/redaccion/informe-predefinidos/crear-informe/CrearInforme";
+import { UnificacionPaciente } from "@/modules/administracion/unificacion-paciente/UnificacionPaciente";
 
 const router = createBrowserRouter([
     {
@@ -170,6 +171,16 @@ const router = createBrowserRouter([
         element: (
             <ProtectedRoute>
                 <ConfiguracionTablas />
+            </ProtectedRoute>
+        ),
+    },
+    {/*Administracion*/ },
+
+    {
+        path: "/administracion/unificacion-paciente",
+        element: (
+            <ProtectedRoute>
+                <UnificacionPaciente />
             </ProtectedRoute>
         ),
     },

@@ -24,6 +24,7 @@ import { GestionUsuarios } from "./usuarios-personal/gestion-usuarios"
 import { GestionPacientes } from "./usuarios-personal/gestion-pacientes"
 import { MedicosSolicitantes } from "./usuarios-personal/medicos-solicitantes"
 import { AgendaMedicos } from "./usuarios-personal/agenda-medicos"
+import { GruposEstudio } from "./examenes/grupos-estudio/GruposEstudio"
 
 export const ConfiguracionTablas = () => {
     return (
@@ -123,6 +124,7 @@ export const ConfiguracionTablas = () => {
                                 <TabsTrigger value="tipos-estudio" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Tipos de Estudio</TabsTrigger>
                                 <TabsTrigger value="modalidades" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Modalidades</TabsTrigger>
                                 <TabsTrigger value="partes-cuerpo" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Partes del Cuerpo</TabsTrigger>
+                                <TabsTrigger value="grupos-estudio" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Grupos de Estudio</TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="tipos-estudio">
@@ -140,6 +142,12 @@ export const ConfiguracionTablas = () => {
                             <TabsContent value="partes-cuerpo">
                                 <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <PartesCuerpo />
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="grupos-estudio">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+                                    <GruposEstudio />
                                 </div>
                             </TabsContent>
                         </Tabs>
