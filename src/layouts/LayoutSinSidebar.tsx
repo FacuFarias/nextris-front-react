@@ -31,7 +31,7 @@ export const LayoutSinSidebar = ({ children }: LayoutSinSidebarProps) => {
                     />
 
                     {/* Content Area */}
-                    <div className="flex-1 p-4 md:p-6 lg:p-8 relative z-10">
+                    <div className="flex-1 p-4 md:p-6 lg:p-3 relative z-10">
                         {children}
                     </div>
 

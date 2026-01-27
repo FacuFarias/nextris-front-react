@@ -337,6 +337,16 @@ export const RedactarInforme = () => {
         };
     }, [findNextPlaceholder]);
 
+    const handleOpenPdf = () => {
+        if (!informeGuid) {
+            toast.error('No se encontró el ID del examen');
+            return;
+        }
+        window.open(
+            `http://148.230.72.8:5001/api/pdfs/${informeDetalle?.data?.pdf_path}`,
+            '_blank',
+        );
+    };
 
 
     const handleGuardarInforme = () => {
@@ -364,7 +374,7 @@ export const RedactarInforme = () => {
             <div className="">
                 {/* Header con botones de acción */}
                 <div className="flex justify-between items-center mb-6">
-                    <div className="relative bg-white rounded-xl p-4 shadow-md border-l-4 border-brand-purple">
+                    <div className="relative bg-white rounded-xl p-4 shadow-md border-l-4 border-brand-purple flex items-center justify-between gap-4 w-full">
                         <div className="flex items-start gap-4">
                             <div className="bg-purple-100 rounded-full p-3">
                                 <User className="w-7 h-7 text-brand-purple" />
@@ -386,24 +396,26 @@ export const RedactarInforme = () => {
                                 </div>
                             </div>
                         </div>
+
+                        <div className="flex gap-3">
+                            <PrimaryButton onClick={handleOpenPdf}>
+                                <FileMinus />
+                                PDF
+                            </PrimaryButton>
+                            <PrimaryButton onClick={() => setIsSignModalOpen(true)} disabled={isSigned}>
+                                <Signature />
+                                {isSigned ? 'FIRMADO' : 'FIRMAR'}
+                            </PrimaryButton>
+                            <PrimaryButton
+                                onClick={handleGuardarInforme}
+                                disabled={updateReportMutation.isPending || isSigned}
+                            >
+                                <Save />
+                                {updateReportMutation.isPending ? 'GUARDANDO...' : 'GUARDAR'}
+                            </PrimaryButton>
+                        </div>
                     </div>
-                    <div className="flex gap-3">
-                        <PrimaryButton>
-                            <FileMinus />
-                            PDF
-                        </PrimaryButton>
-                        <PrimaryButton onClick={() => setIsSignModalOpen(true)} disabled={isSigned}>
-                            <Signature />
-                            {isSigned ? 'FIRMADO' : 'FIRMAR'}
-                        </PrimaryButton>
-                        <PrimaryButton
-                            onClick={handleGuardarInforme}
-                            disabled={updateReportMutation.isPending || isSigned}
-                        >
-                            <Save />
-                            {updateReportMutation.isPending ? 'GUARDANDO...' : 'GUARDAR'}
-                        </PrimaryButton>
-                    </div>
+
                 </div>
 
                 {/* Layout de tres columnas con sidebars colapsables */}
@@ -532,7 +544,7 @@ export const RedactarInforme = () => {
                         </div>
 
                         {/* Columna central */}
-                        <div className="flex-1 space-y-4 p-5 transition-all duration-700  ease-in-out min-w-0  bg-white rounded-xl shadow-sm border border-gray-200 overflow-y-auto h-[calc(100vh-120px)]">
+                        <div className="flex-1 space-y-4 p-5 transition-all duration-700  ease-in-out min-w-0  bg-white rounded-xl shadow-sm border border-gray-200 overflow-y-auto h-[calc(100vh-160px)]">
 
                             {/* Historia Clínica */}
                             <div className="bg-white rounded-xl shadow-sm border border-red-300 overflow-hidden relative">
@@ -707,7 +719,7 @@ export const RedactarInforme = () => {
                                     </div>
                                     {openSections.imagenes && (
                                         <div className="transition-all duration-300 ease-in-out  flex-1 overflow-hidden">
-                                            <div className="p-4 h-[calc(100vh-170px)] flex flex-col">
+                                            <div className="p-4 h-[calc(100vh-210px)] flex flex-col">
                                                 <p className="text-xs text-gray-500 text-center mb-4 shrink-0">
                                                     Arrastra las imágenes a los campos de texto
                                                 </p>
