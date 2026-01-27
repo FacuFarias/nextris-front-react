@@ -3,7 +3,7 @@ import { useInformeDetalle, useUpdateReport } from "../hooks/use-informes";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, Lock, X, AlertCircle, Search, ShieldCheck, PanelLeftClose, PanelLeftOpen, PanelRightClose, Image } from "lucide-react";
+import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, Lock, X, AlertCircle, Search, ShieldCheck, PanelLeftClose, PanelLeftOpen, PanelRightClose, Image, User } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -359,19 +359,33 @@ export const RedactarInforme = () => {
     if (isLoading) {
         return <LayoutSinSidebar>Cargando...</LayoutSinSidebar>;
     }
-
     return (
         <LayoutSinSidebar>
             <div className="">
                 {/* Header con botones de acción */}
                 <div className="flex justify-between items-center mb-6">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-800">
-                            {informeDetalle?.data?.patient_name || 'Carlos Fernández'}
-                        </h1>
-                        <p className="text-sm text-gray-500">
-                            NR{informeDetalle?.data?.admission_number}
-                        </p>
+                    <div className="relative bg-white rounded-xl p-4 shadow-md border-l-4 border-brand-purple">
+                        <div className="flex items-start gap-4">
+                            <div className="bg-purple-100 rounded-full p-3">
+                                <User className="w-7 h-7 text-brand-purple" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-gray-800 mb-1">
+                                    {informeDetalle?.data?.patient_name || 'Carlos Fernández'}
+                                </h1>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                        Número de Registro
+                                    </span>
+                                    <span className="text-sm font-bold text-brand-purple bg-purple-50 px-3 py-1 rounded-lg">
+                                        NR {informeDetalle?.data?.admission_number}
+                                    </span>
+                                    <span className="text-sm font-bold text-brand-purple bg-purple-50 px-3 py-1 rounded-lg">
+                                        {informeDetalle?.data?.sex === 'M' ? 'Masculino' : 'Femenino'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div className="flex gap-3">
                         <PrimaryButton>

@@ -7,7 +7,8 @@ export interface Examen {
     estado: "R" | "E";          // R = Reportado (pendiente), E = Enviado
     medico_autor: string;       // Médico que realizó el informe
     medico_solicitante: string; // Médico que solicitó el estudio
-    urgencia: "S" | "N";        // S = Sí, N = No
+    urgencia: "S" | "N";
+    isimage: boolean      // S = Sí, N = No
 }
 
 

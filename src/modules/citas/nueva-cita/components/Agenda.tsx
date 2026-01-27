@@ -64,6 +64,14 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
         );
     }, [equipos, modalidadesSeleccionadas]);
 
+    // Seleccionar automáticamente el equipo si solo hay uno disponible
+    useEffect(() => {
+        if (equiposFiltrados.length === 1 && !selectedEquipoLocal) {
+            const unicoEquipo = equiposFiltrados[0];
+            handleEquipoChange(unicoEquipo.guid);
+        }
+    }, [equiposFiltrados]);
+
     // Sincronizar estudiosAgendados con los eventos existentes cuando se monta o cambia allEvents
     useEffect(() => {
         const todosLosEventos = Object.values(allEvents).flat();

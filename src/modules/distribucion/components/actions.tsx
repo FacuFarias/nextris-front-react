@@ -17,6 +17,7 @@ export const getDistribucionActions = (
             label: "Visor DICOM",
             icon: <Image className="h-4 w-4 text-green-600" />,
             onClick: onOpenDicomViewer,
+            hidden: (examen) => !(examen.isimage),
         },
         {
             label: "Actualizar Email",

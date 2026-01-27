@@ -2,7 +2,7 @@ import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPa
 
 import { Button } from "@/components/ui/button";
 import { Modal, PrimaryButton } from "@/components";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle, XCircle } from "lucide-react";
 
 interface ModalUnificacionProps {
     isOpen: boolean;
@@ -28,30 +28,36 @@ export const ModalUnificacion = ({ isOpen, onClose, patients, handleSubmitUnific
                 "Confirma la unificación de los siguientes dos pacientes en uno solo."
             }
         >
-            <div className="grid grid-cols-1 gap-6 mt-4">
-                {/* Primer Paciente */}
-                <div className="border border-purple-200 rounded-lg p-4 bg-purple-50/30">
-                    <h3 className="text-lg font-semibold text-brand-purple mb-4 text-center">
-                        Paciente que se Mantiene
-                    </h3>
+            <div className="grid grid-cols-1 gap-6">
+                {/* Primer Paciente - SE MANTIENE (VERDE) */}
+                <div className="border-2 border-green-500 rounded-lg p-4 bg-green-50/50 shadow-md">
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                        <CheckCircle className="w-6 h-6 text-green-600" />
+                        <h3 className="text-lg font-bold text-green-700">
+                            Paciente que se Mantiene
+                        </h3>
+                    </div>
                     <div className="space-y-3 flex justify-between flex-wrap">
-                        <DataRow label="Nombre" value={patient1.name} />
-                        <DataRow label="Apellido" value={patient1.surname} />
-                        <DataRow label="Fecha de Nacimiento" value={patient1.birthdate} />
-                        <DataRow label="DNI" value={patient1.nationalcode} />
+                        <DataRow label="Nombre" value={patient1.name} color="green" />
+                        <DataRow label="Apellido" value={patient1.surname} color="green" />
+                        <DataRow label="Fecha de Nacimiento" value={patient1.birthdate} color="green" />
+                        <DataRow label="DNI" value={patient1.nationalcode} color="green" />
                     </div>
                 </div>
 
-                {/* Segundo Paciente */}
-                <div className="border border-purple-200 rounded-lg p-4 bg-purple-50/30">
-                    <h3 className="text-lg font-semibold text-brand-purple mb-4 text-center">
-                        Paciente que se Unifica
-                    </h3>
+                {/* Segundo Paciente - SE UNIFICA (ROJO) */}
+                <div className="border-2 border-red-800 rounded-lg p-4 bg-red-50/50 shadow-md">
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                        <XCircle className="w-6 h-6 text-red-700" />
+                        <h3 className="text-lg font-bold text-red-800">
+                            Paciente que se Unifica (será eliminado)
+                        </h3>
+                    </div>
                     <div className="space-y-3 flex justify-between flex-wrap">
-                        <DataRow label="Nombre" value={patient2.name} />
-                        <DataRow label="Apellido" value={patient2.surname} />
-                        <DataRow label="Fecha de Nacimiento" value={patient2.birthdate} />
-                        <DataRow label="DNI" value={patient2.nationalcode} />
+                        <DataRow label="Nombre" value={patient2.name} color="red" />
+                        <DataRow label="Apellido" value={patient2.surname} color="red" />
+                        <DataRow label="Fecha de Nacimiento" value={patient2.birthdate} color="red" />
+                        <DataRow label="DNI" value={patient2.nationalcode} color="red" />
                     </div>
                 </div>
             </div>
@@ -62,6 +68,7 @@ export const ModalUnificacion = ({ isOpen, onClose, patients, handleSubmitUnific
                     variant="outline"
                     onClick={onClose}
                     className="border-gray-300"
+                    disabled={isLoading}
                 >
                     Cancelar
                 </Button>
@@ -87,11 +94,17 @@ export const ModalUnificacion = ({ isOpen, onClose, patients, handleSubmitUnific
 };
 
 // Componente auxiliar para mostrar cada fila de datos
-const DataRow = ({ label, value }: { label: string; value: string | null | undefined }) => (
-    <div className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-gray-500 uppercase">{label}</span>
-        <span className="text-sm text-gray-900 font-medium">
-            {value || <span className="text-gray-400 italic">Sin dato</span>}
-        </span>
-    </div>
-);
+const DataRow = ({ label, value, color }: { label: string; value: string | null | undefined; color: 'green' | 'red' }) => {
+    const colorClasses = color === 'green'
+        ? 'text-green-700'
+        : 'text-red-700';
+
+    return (
+        <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-600 uppercase">{label}</span>
+            <span className={`text-sm font-semibold ${colorClasses}`}>
+                {value || <span className="text-gray-400 italic">Sin dato</span>}
+            </span>
+        </div>
+    );
+};

@@ -31,6 +31,7 @@ export type InformeDetalle = {
         conclusions: string;
         was_saved: boolean;
         created_on: string;
+        sex: string;
         history: string;
         updated_on: string;
         patient_name: string;

@@ -17,20 +17,40 @@ export const distribucionColumns: TableColumn<Examen>[] = [
         key: "examen",
         label: "EXAMEN",
         className: "font-medium",
+        render: (value) => (
+            <div className="max-w-[150px] truncate" title={value}>
+                {value}
+            </div>
+        ),
     },
     {
         key: "medico_solicitante",
         label: "MÉDICO SOLICITANTE",
         className: "font-medium text-sm",
+        render: (value) => (
+            <div className="max-w-[150px] truncate" title={value}>
+                {value}
+            </div>
+        ),
     },
     {
         key: "medico_autor",
         label: "MÉDICO AUTOR",
         className: "font-medium text-sm",
+        render: (value) => (
+            <div className="max-w-[150px] truncate" title={value}>
+                {value}
+            </div>
+        ),
     },
     {
         key: "mail",
         label: "EMAIL",
+        className: "font-medium text-sm",
+    },
+    {
+        key: "accession_number",
+        label: "ACC. Nº",
         className: "font-medium text-sm",
     },
     {

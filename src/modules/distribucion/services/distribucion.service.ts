@@ -85,7 +85,7 @@ export const distribucionService = {
         );
 
         if (response.data.success && response.data.data.viewer_url) {
-            window.open(`https://viewer.nextris.cloud/${response.data.data.viewer_url}`, '_blank');
+            window.open(`https://viewer.nextris.cloud${response.data.data.viewer_url}`, '_blank');
         } else {
             throw new Error('No se pudo obtener la URL del visor DICOM');
         }

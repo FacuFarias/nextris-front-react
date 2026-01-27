@@ -69,7 +69,7 @@ export const NuevaCita = () => {
      }, [debouncedSearch, selectedDireccion]); */
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10  overflow-y-auto">
                 {/* Header con Tabs integrados */}
                 <div className="mb-6">
                     <div className="flex items-center gap-3 mb-4">
