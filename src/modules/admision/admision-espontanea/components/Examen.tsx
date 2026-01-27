@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPaciente"
 import { useState } from "react";
 import { useEquiposPorLocacion, useEstudiosPorModalidad, useModalidades, usePartesDelCuerpo } from "@/hooks/use-global";
+import { InputSearch } from "@/components"
 
 interface ExamenProps {
     selectedPatient: Patient | null;
@@ -21,6 +22,7 @@ export const Examen = ({
     const [selectedEstudio, setSelectedEstudio] = useState<any>(null);
     const [selectedEquipo, setSelectedEquipo] = useState<any>(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [searchTerm, setSearchTerm] = useState<string>("");
     const itemsPerPage = 10;
     const { data: tiposExamenData, isLoading: isLoadingTiposExamen } = useModalidades();
     const { data: partesDelCuerpoData, isLoading: isLoadingPartesCuerpo } = usePartesDelCuerpo();
@@ -34,13 +36,24 @@ export const Examen = ({
         equipo.modality === selectedEstudio.modalityName
     ) || [];
 
-    // Filtrar estudios por modalidad y parte del cuerpo
+    // Filtrar estudios por modalidad, parte del cuerpo y búsqueda
     const filteredEstudios = (() => {
         if (!estudiosData) return [];
 
         // Aplicar filtros si están seleccionados
         return estudiosData.filter((estudio: any) => {
             let matches = true;
+
+            // Filtro por búsqueda de descripción
+            if (searchTerm) {
+                const searchLower = searchTerm.toLowerCase();
+                const descriptionMatches = estudio.description?.toLowerCase().includes(searchLower);
+                const codeMatches = estudio.externalcode?.toLowerCase().includes(searchLower);
+
+                if (!descriptionMatches && !codeMatches) {
+                    matches = false;
+                }
+            }
 
             if (selectedTipoExamen && selectedTipoExamen !== 'all' && estudio.modality !== selectedTipoExamen) {
                 matches = false;
@@ -65,6 +78,7 @@ export const Examen = ({
         setSelectedEstudio(null);
         setCurrentPage(1);
     }
+
 
     // Paginación
     const totalPages = Math.ceil(filteredEstudios.length / itemsPerPage);
@@ -100,6 +114,20 @@ export const Examen = ({
                             <ClipboardList className="w-5 h-5 text-brand-purple" />
                             ESTUDIOS DISPONIBLES
                         </h3>
+
+                        {/* Buscador */}
+                        <div className="mb-6">
+                            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 block">
+                                Buscar estudio
+                            </label>
+                            <div className="relative">
+                                <InputSearch
+                                    searchTerm={searchTerm}
+                                    setSearchTerm={setSearchTerm}
+                                    placeholder="Buscar por código o descripción..."
+                                />
+                            </div>
+                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             {/* Select Modalidad */}
