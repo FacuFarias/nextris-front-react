@@ -410,7 +410,7 @@ export const RedactarInforme = () => {
                 <div className="relative">
                     <div className="flex gap-2 items-start">
                         {/* Columna izquierda */}
-                        <div className={`space-y-6 self-start sticky top-6 transition-all duration-700 ease-in-out ${leftSidebarOpen
+                        <div className={`space-y-6 self-start transition-all duration-700 ease-in-out ${leftSidebarOpen
                             ? 'w-[320px] opacity-100 translate-x-0'
                             : 'w-0 opacity-0 -translate-x-full overflow-hidden'
                             }`}>
@@ -511,11 +511,11 @@ export const RedactarInforme = () => {
                         </div>
 
                         {/* Botón toggle sidebar izquierdo */}
-                        <div className="self-stretch sticky top-6">
+                        <div className="self-stretch ">
                             {leftSidebarOpen ? (
                                 <button
                                     onClick={() => setLeftSidebarOpen(false)}
-                                    className="bg-blue-500 h-[calc(100vh-120px)] hover:bg-blue-600 text-white p-2 rounded-lg shadow-lg transition-all duration-300 "
+                                    className="bg-blue-500 h-[calc(100vh-160px)] hover:bg-blue-600 text-white p-2 rounded-lg shadow-lg transition-all duration-300 "
                                     title="Ocultar panel de información"
                                 >
                                     <PanelLeftClose className="w-4 h-4" />
@@ -523,7 +523,7 @@ export const RedactarInforme = () => {
                             ) : (
                                 <button
                                     onClick={() => setLeftSidebarOpen(true)}
-                                    className="h-[calc(100vh-120px)] bg-brand-purple hover:bg-purple-800 text-white p-2 rounded-lg shadow-lg transition-all duration-300  flex items-center justify-center"
+                                    className="h-[calc(100vh-160px)] bg-brand-purple hover:bg-purple-800 text-white p-2 rounded-lg shadow-lg transition-all duration-300  flex items-center justify-center"
                                     title="Mostrar panel de información"
                                 >
                                     <PanelLeftOpen className="w-4 h-4" />
@@ -532,7 +532,8 @@ export const RedactarInforme = () => {
                         </div>
 
                         {/* Columna central */}
-                        <div className="flex-1 space-y-4 transition-all duration-700 ease-in-out min-w-0">
+                        <div className="flex-1 space-y-4 p-5 transition-all duration-700  ease-in-out min-w-0  bg-white rounded-xl shadow-sm border border-gray-200 overflow-y-auto h-[calc(100vh-120px)]">
+
                             {/* Historia Clínica */}
                             <div className="bg-white rounded-xl shadow-sm border border-red-300 overflow-hidden relative">
                                 <div
@@ -661,11 +662,11 @@ export const RedactarInforme = () => {
                         </div>
 
                         {/* Botón toggle sidebar derecho */}
-                        <div className="self-stretch sticky top-6">
+                        <div className="self-stretch ">
                             {rightSidebarOpen ? (
                                 <button
                                     onClick={() => setRightSidebarOpen(false)}
-                                    className="bg-blue-500 h-[calc(100vh-120px)] hover:bg-blue-600 text-white p-2 rounded-lg shadow-lg transition-all duration-300 "
+                                    className="bg-blue-500 h-[calc(100vh-160px)] hover:bg-blue-600 text-white p-2 rounded-lg shadow-lg transition-all duration-300 "
                                     title="Ocultar panel de imágenes"
                                 >
                                     <PanelRightClose className="w-4 h-4" />
@@ -673,7 +674,7 @@ export const RedactarInforme = () => {
                             ) : (
                                 <button
                                     onClick={() => setRightSidebarOpen(true)}
-                                    className="h-[calc(100vh-120px)] bg-brand-purple hover:bg-purple-800 text-white p-2 rounded-lg shadow-lg transition-all duration-300  flex items-center justify-center"
+                                    className="h-[calc(100vh-160px)] bg-brand-purple hover:bg-purple-800 text-white p-2 rounded-lg shadow-lg transition-all duration-300  flex items-center justify-center"
                                     title="Mostrar panel de imágenes"
                                 >
                                     <Image className="w-4 h-4" />
@@ -682,7 +683,7 @@ export const RedactarInforme = () => {
                         </div>
 
                         {/* Columna derecha - Imágenes */}
-                        <div className={`self-start sticky top-6 space-y-4 transition-all duration-700 ease-in-out ${rightSidebarOpen
+                        <div className={`self-start  space-y-4 transition-all duration-700 ease-in-out ${rightSidebarOpen
                             ? 'w-[320px] opacity-100'
                             : 'w-0 opacity-0 overflow-hidden'
                             }`}>
@@ -706,7 +707,7 @@ export const RedactarInforme = () => {
                                     </div>
                                     {openSections.imagenes && (
                                         <div className="transition-all duration-300 ease-in-out  flex-1 overflow-hidden">
-                                            <div className="p-4 h-[calc(100vh-120px)] flex flex-col">
+                                            <div className="p-4 h-[calc(100vh-170px)] flex flex-col">
                                                 <p className="text-xs text-gray-500 text-center mb-4 shrink-0">
                                                     Arrastra las imágenes a los campos de texto
                                                 </p>

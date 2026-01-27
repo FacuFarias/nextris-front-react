@@ -31,7 +31,6 @@ export const Facilities = () => {
     };
 
     const handleSubmit = (data: FacilityFormData) => {
-        console.log('Datos a guardar:', data);
 
         // Aquí irá la lógica para crear o actualizar la facility
         if (selectedFacility) {

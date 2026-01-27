@@ -97,7 +97,6 @@ export const AgendasMaquinas = () => {
     };
 
     const handleEdit = (schedule: EquipmentSchedule) => {
-        console.log('Editando schedule:', schedule);
         setEditingSchedule(schedule);
         setFormData({
             day: schedule.day,
