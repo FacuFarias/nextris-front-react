@@ -41,7 +41,7 @@ export const usePostReasignacionExamenes = () => {
     const createMutation = useMutation({
         mutationFn: reasignacionExamenesService.postReasignacion,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: reasignacionExamenesKeys.postPacientes() });
+            queryClient.invalidateQueries({ queryKey: reasignacionExamenesKeys.lists() });
         },
     });
     return {
