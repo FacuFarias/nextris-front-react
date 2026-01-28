@@ -15,6 +15,7 @@ import { Estudios } from "@/modules/estudios/Estudios";
 import { MisDatos } from "@/modules/mis-datos/MisDatos";
 import { CrearInforme } from "@/modules/redaccion/informe-predefinidos/crear-informe/CrearInforme";
 import { UnificacionPaciente } from "@/modules/administracion/unificacion-paciente/UnificacionPaciente";
+import { ReasignacionExamenes } from "@/modules/administracion/reasignacion-examenes/ReasignacionExamenes";
 
 const router = createBrowserRouter([
     {
@@ -181,6 +182,14 @@ const router = createBrowserRouter([
         element: (
             <ProtectedRoute>
                 <UnificacionPaciente />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/administracion/reasignacion-examenes",
+        element: (
+            <ProtectedRoute>
+                <ReasignacionExamenes />
             </ProtectedRoute>
         ),
     },
