@@ -75,6 +75,10 @@ export const Ejecucion = () => {
                         columns={ejecucionColumns}
                         showIndex
                         actions={getEjecucionActions(handleVerDetalle)}
+                        onRowDoubleClick={(ejecucion: EjecucionType) => {
+                            handleVerDetalle(ejecucion);
+                        }
+                        }
                         pagination={{
                             page,
                             pageSize,
