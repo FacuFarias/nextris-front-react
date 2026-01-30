@@ -22,6 +22,9 @@ Retrieves a paginated list of executed examinations that are not yet reported, f
 - `show_reported` (optional): true para incluir exámenes reportados (finalizados, isreported=1)
 - `show_ready` (optional): true para incluir exámenes listos para reportar (no reportados, isreported=0)
 - `assigned_to_me` (optional): true para mostrar solo exámenes asignados al usuario actual
+- `modality_id` (optional): GUID de la modalidad para filtrar
+- `body_part_id` (optional): GUID de la parte del cuerpo para filtrar
+- `study_group_id` (optional): GUID del grupo de estudio para filtrar
 - `page` (optional): Número de página (default: 1)
 - `per_page` (optional): Items por página (default: 50, máximo: 100)
 
@@ -56,6 +59,18 @@ GET /api/examinations/for-reporting?assigned_to_me=true&show_ready=true
 
 # Exámenes reportados asignados a mí
 GET /api/examinations/for-reporting?assigned_to_me=true&show_reported=true
+
+# Filtrar por modalidad específica
+GET /api/examinations/for-reporting?show_ready=true&modality_id=abc-123-guid
+
+# Filtrar por parte del cuerpo
+GET /api/examinations/for-reporting?show_ready=true&body_part_id=xyz-789-guid
+
+# Filtrar por grupo de estudio
+GET /api/examinations/for-reporting?show_ready=true&study_group_id=def-456-guid
+
+# Combinar múltiples filtros
+GET /api/examinations/for-reporting?show_ready=true&modality_id=abc-123&body_part_id=xyz-789&study_group_id=def-456&assigned_to_me=true
 ```
 
 #### Response
