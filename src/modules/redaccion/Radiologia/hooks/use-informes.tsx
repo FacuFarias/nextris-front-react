@@ -5,10 +5,10 @@ import { getInformeDetalle, getInformes, putRedactarInforme, type UpdateReportPa
 import { informesKeys } from "../constants/query-keys";
 import { toast } from "sonner";
 
-export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false }) => {
+export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, bodypart_id = "", modality_id = "", study_group_id = "" }) => {
     const { data, isLoading, error, refetch } = useQuery<ApiPaginatedResponse<Informes>>({
-        queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready),
-        queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready }),
+        queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready, bodypart_id, modality_id, study_group_id),
+        queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready, bodypart_id, modality_id, study_group_id }),
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
     });

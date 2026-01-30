@@ -99,6 +99,9 @@ export const ReasignacionExamenes = () => {
                                         showIndex
                                         selectedRow={selectedEstudio}
                                         rowIdKey="guid"
+                                        onRowClick={(estudio) => {
+                                            setSelectedEstudio(estudio);
+                                        }}
                                         onRowDoubleClick={(estudio) => {
                                             setSelectedEstudio(estudio);
                                             setActiveTab("pacientes");

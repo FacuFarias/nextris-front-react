@@ -76,7 +76,7 @@ export const getInformesActions = (
         {
             label: "Redactar Informe",
             icon: <ClipboardPlus className="h-4 w-4 text-blue-900" />,
-            onClick: onViewInforme,
+            onClick: (informe: Informes) => onViewInforme(informe),
         },
         {
             label: "Ver Imágenes",

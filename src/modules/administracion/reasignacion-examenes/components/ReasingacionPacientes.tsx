@@ -50,6 +50,9 @@ export const ReasingacionPacientes = ({ selectedEstudio, handleSubmit }: Reasing
                     showIndex
                     selectedRow={selectedPatient}
                     rowIdKey="guid"
+                    onRowClick={(estudioPacientes: ReasignacionExamenesPacientes) => {
+                        setSelectedPatient(estudioPacientes);
+                    }}
                     onRowDoubleClick={(estudioPacientes: ReasignacionExamenesPacientes) => {
                         setSelectedPatient(estudioPacientes);
                     }}

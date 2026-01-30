@@ -2,7 +2,7 @@ import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
 import { InputSearch } from "@/components/InputSearch"
 import { MainLayout } from "@/layouts/layout"
 import { HandHelping, RefreshCcw } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useInformes } from "./hooks/use-informes"
 import { getInformesActions, informeColumns } from "./components/columns"
 import TablaDynamic from "@/components/TableDynamic"
@@ -13,8 +13,15 @@ import { Label } from "@/components/ui/label"
 import { PrimaryButton } from "@/components"
 import { toast } from "sonner"
 import { ConfirmationModal } from "./components/ConfirmationModal"
+import { Autocomplete } from "@/components/autocomplete"
+import { useBodyParts } from "@/modules/configuracion/configuracion-tablas/examenes/partes-cuerpo"
+import { useModalidades } from "@/modules/configuracion/configuracion-tablas/examenes/modalidades"
+import { useGrupoEstudio } from "@/modules/configuracion/configuracion-tablas/examenes/grupos-estudio"
 
 export const Radiologia = () => {
+    const [studioTypeId, setStudioTypeId] = useState<string | undefined>(undefined);
+    const [bodyPartId, setBodyPartId] = useState<string | undefined>(undefined);
+    const [modalityId, setModalityId] = useState<string | undefined>(undefined);
     const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
     const [verFinalizados, setVerFinalizados] = useState(false);
@@ -23,7 +30,10 @@ export const Radiologia = () => {
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [selectedInforme, setSelectedInforme] = useState<Informes | null>(null);
     const useDebounceSearch = useDebounce(searchTerm, 500);
-    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: 8, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer });
+    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: 8, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId });
+    const { gruposEstudio } = useGrupoEstudio();
+    const { modalidades } = useModalidades();
+    const { bodyParts } = useBodyParts();
 
     const pagination = informesData && {
         page: informesData?.data?.page || 1,
@@ -43,7 +53,11 @@ export const Radiologia = () => {
     };
 
     const openReportWindow = (informe: Informes) => {
-        const url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}`;
+        let url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}`;
+
+        if (modalityId || bodyPartId || studioTypeId) {
+            url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?modality_id=${modalityId}?bodypart_id=${bodyPartId}?study_group_id=${studioTypeId}`;
+        }
         // Abrir en una nueva ventana sin barras de herramientas y restricciones
         window.open(
             url,
@@ -66,6 +80,30 @@ export const Radiologia = () => {
             '_blank',
         );
     };
+
+    const gruposEstudioOptions = useMemo(() => {
+        if (!Array.isArray(gruposEstudio?.data)) return [];
+        return gruposEstudio.data.map((estudio: any) => ({
+            value: estudio.guid,
+            label: estudio.description
+        }));
+    }, [gruposEstudio]);
+
+    const modalidadesOptions = useMemo(() => {
+        if (!Array.isArray(modalidades?.data)) return [];
+        return modalidades.data.map((modalidad: any) => ({
+            value: modalidad.guid,
+            label: modalidad.description
+        }));
+    }, [modalidades]);
+
+    const bodyPartsOptions = useMemo(() => {
+        if (!Array.isArray(bodyParts?.data)) return [];
+        return bodyParts.data.map((bodyPart: any) => ({
+            value: bodyPart.guid,
+            label: bodyPart.description
+        }));
+    }, [bodyParts]);
     return (
         <MainLayout>
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
@@ -81,7 +119,7 @@ export const Radiologia = () => {
                 </div>
 
                 {/* Barra de búsqueda y filtros */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4  mb-4 sm:mb-2">
                     <div className="flex-1">
                         <InputSearch
                             searchTerm={searchTerm}
@@ -154,9 +192,39 @@ export const Radiologia = () => {
 
                     </div>
                 </div>
+                <div className="w-full flex flex-col sm:flex-row gap-3 ">
+                    <Autocomplete
+                        options={gruposEstudioOptions}
+                        value={studioTypeId}
+                        onValueChange={setStudioTypeId}
+                        placeholder="Filtrar por grupo de estudio"
+                        emptyMessage="No se encontraron grupos de estudio."
+                        searchPlaceholder="Buscar grupo de estudio..."
+                    />
+
+                    {/* Filtro por modalidad */}
+                    <Autocomplete
+                        options={modalidadesOptions}
+                        value={modalityId}
+                        onValueChange={setModalityId}
+                        placeholder="Filtrar por modalidad"
+                        emptyMessage="No se encontraron modalidades."
+                        searchPlaceholder="Buscar modalidad..."
+                    />
+
+                    {/* Filtro por parte del cuerpo */}
+                    <Autocomplete
+                        options={bodyPartsOptions}
+                        value={bodyPartId}
+                        onValueChange={setBodyPartId}
+                        placeholder="Filtrar por parte del cuerpo"
+                        emptyMessage="No se encontraron partes del cuerpo."
+                        searchPlaceholder="Buscar parte del cuerpo..."
+                    />
+                </div>
 
                 {/* Resultados */}
-                <div>
+                <div className="mt-2">
                     <h2 className="text-base sm:text-lg font-semibold text-gray-700">Resultados</h2>
                 </div>
 
