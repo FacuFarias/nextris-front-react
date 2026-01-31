@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom"
+import { useParams, useSearchParams } from "react-router-dom"
 import { useInformeDetalle, useUpdateReport } from "../hooks/use-informes";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -14,9 +14,21 @@ import { api } from "@/lib/api";
 import { useTemplates } from "@/modules/redaccion/informe-predefinidos/hooks/use-templates";
 import type { Template } from "@/modules/redaccion/informe-predefinidos/types/informe-pred.types";
 import { ConfirmationModal } from "../components/ConfirmationModal";
+import { useVerifyCredentials } from "./hooks/use-verify-credentials";
+import { useSignReport } from "./hooks/use-sing-report";
+import { useNextExam } from "./hooks/use-next-exam";
+import { useQueryClient } from "@tanstack/react-query";
+import { informesKeys } from "../constants/query-keys";
 
 export const RedactarInforme = () => {
     const { informeGuid, studyInstanceUID } = useParams();
+    const [searchParams] = useSearchParams();
+
+    // Obtener los parámetros
+    const modalityId = searchParams.get('modality_id');
+    const bodypartId = searchParams.get('bodypart_id');
+    const studyGroupId = searchParams.get('study_group_id');
+
     const { informeDetalle, isLoading } = useInformeDetalle(informeGuid);
     const { data: imagenes } = useImagenesPorEstudio(studyInstanceUID || '');
     const updateReportMutation = useUpdateReport(informeGuid || '');
@@ -40,6 +52,11 @@ export const RedactarInforme = () => {
 
     // Hooks para plantillas
     const { data: templatesData } = useTemplates(studyTypeFilter || undefined);
+    // En tu componente
+    const { mutateAsync: verifyCredentials } = useVerifyCredentials();
+    const { mutateAsync: signReport } = useSignReport();
+    const { mutateAsync: getNextExam } = useNextExam();
+    const queryClient = useQueryClient();
 
     // Filtrar plantillas por búsqueda local
     const filteredTemplates = templatesData?.data?.filter((template) => {
@@ -366,6 +383,54 @@ export const RedactarInforme = () => {
         updateReportMutation.mutate(dataToSave);
     };
 
+    const handleVerifyCredentials = async () => {
+        if (!password.trim()) {
+            toast.error('Por favor ingrese su contraseña');
+            return;
+        }
+
+        setIsSigning(true);
+
+        try {
+            // 1. Verificar credenciales
+            await verifyCredentials({ password });
+
+            // 2. Preparar payload limpio
+            const cleanModalityId = modalityId && modalityId !== 'undefined' ? modalityId : null;
+            const cleanBodypartId = bodypartId && bodypartId !== 'undefined' ? bodypartId : null;
+            const cleanStudyGroupId = studyGroupId && studyGroupId !== 'undefined' ? studyGroupId : null;
+
+            const payload = {
+                modality_id: cleanModalityId,
+                body_part_id: cleanBodypartId,
+                study_group_id: cleanStudyGroupId
+            };
+
+            // 3. Firmar reporte
+            await signReport({
+                informeGuid: informeGuid || '',
+                ...payload
+            });
+
+            // 4. Obtener siguiente examen
+            await getNextExam(payload).then((data) => {
+                console.log(data)
+            });
+            queryClient.invalidateQueries({
+                queryKey: informesKeys.lists()
+            });
+            // 5. Actualizar estados locales
+            setIsSigned(true);
+            setIsSignModalOpen(false);
+            setPassword('');
+
+        } catch (error) {
+            // Los errores ya se manejan en cada hook individual
+            console.error('Error en el proceso de firma:', error);
+        } finally {
+            setIsSigning(false);
+        }
+    };
     if (isLoading) {
         return <LayoutSinSidebar>Cargando...</LayoutSinSidebar>;
     }
@@ -841,36 +906,7 @@ export const RedactarInforme = () => {
                             Cancelar
                         </SecondaryButton>
                         <PrimaryButton
-                            onClick={async () => {
-                                if (!password.trim()) {
-                                    toast.error('Por favor ingrese su contraseña');
-                                    return;
-                                }
-
-                                setIsSigning(true);
-
-                                try {
-                                    await api.post('/verify-credentials', {
-                                        password: password
-                                    });
-
-                                    await api.post(`/reports/${informeGuid}/sign`);
-
-                                    setIsSigned(true);
-                                    setIsSignModalOpen(false);
-                                    setPassword('');
-                                    toast.success('Informe firmado exitosamente');
-                                } catch (error: any) {
-                                    if (error.response?.status === 401 || error.response?.status === 403) {
-                                        toast.error('Contraseña incorrecta');
-                                    } else {
-                                        toast.error('Error al firmar el informe');
-                                    }
-                                    console.error('Error al firmar:', error);
-                                } finally {
-                                    setIsSigning(false);
-                                }
-                            }}
+                            onClick={handleVerifyCredentials}
                             disabled={!password.trim() || isSigning}
                         >
                             <Signature className="h-5 w-5 mr-2" />

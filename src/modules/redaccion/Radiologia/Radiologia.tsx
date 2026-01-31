@@ -56,7 +56,7 @@ export const Radiologia = () => {
         let url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}`;
 
         if (modalityId || bodyPartId || studioTypeId) {
-            url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?modality_id=${modalityId}?bodypart_id=${bodyPartId}?study_group_id=${studioTypeId}`;
+            url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?modality_id=${modalityId}&bodypart_id=${bodyPartId}&study_group_id=${studioTypeId}`;
         }
         // Abrir en una nueva ventana sin barras de herramientas y restricciones
         window.open(
@@ -215,7 +215,7 @@ export const Radiologia = () => {
                     {/* Filtro por parte del cuerpo */}
                     <Autocomplete
                         options={bodyPartsOptions}
-                        value={bodyPartId}
+                        value={bodyPartId || ''}
                         onValueChange={setBodyPartId}
                         placeholder="Filtrar por parte del cuerpo"
                         emptyMessage="No se encontraron partes del cuerpo."

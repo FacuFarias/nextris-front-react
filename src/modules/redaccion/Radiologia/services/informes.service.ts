@@ -36,3 +36,4 @@ export const putRedactarInforme = async (exam_id: string, data: UpdateReportPayl
         throw error;
     }
 }
+
