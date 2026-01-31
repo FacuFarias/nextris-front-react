@@ -95,7 +95,13 @@ GET /api/examinations/for-reporting?show_ready=true&modality_id=abc-123&body_par
         "equipment": "CT-01",
         "location": "Sede Central",
         "assigned_to": "uuid-del-medico-asignado",
-        "pdf_path": "output_pdfs/ACC001_NR00000001_García_Juan.pdf"
+        "pdf_path": "output_pdfs/ACC001_NR00000001_García_Juan.pdf",
+        "modality_id": "abc-123-guid",
+        "modality_description": "CT",
+        "study_group_id": "def-456-guid",
+        "study_group_description": "Radiología",
+        "bodypart_id": "xyz-789-guid",
+        "bodypart_description": "Tórax"
       }
     ],
     "page": 1,
@@ -501,6 +507,11 @@ Catálogo de lateralidades (Izquierda, Derecha, Bilateral, etc.)
 
 ## Changelog
 
+### Version 1.2.0 (2026-01-31)
+- Agregados endpoints POST /examinations/{exam_id}/block y POST /examinations/{exam_id}/unblock
+- Sistema de bloqueo de exámenes para prevenir edición concurrente
+- Campo `blocked_by` incluido en GET /examinations/for-reporting
+
 ### Version 1.1.0 (2026-01-15)
 - Agregado campo `pdf_path` en GET /examinations/for-reporting
 - Nuevo endpoint público GET /pdfs/{filename} para servir PDFs sin autenticación
@@ -517,9 +528,170 @@ Catálogo de lateralidades (Izquierda, Derecha, Bilateral, etc.)
 
 ---
 
+## Endpoints de Bloqueo de Exámenes
+
+### 11. POST /examinations/{exam_id}/block
+Bloquea un examen para edición exclusiva del usuario actual.
+
+#### Description
+Permite al usuario bloquear un examen para evitar que otros usuarios lo editen simultáneamente. Útil para prevenir conflictos al redactar reportes.
+
+#### Parameters
+**Path Parameters:**
+- `exam_id` (required): GUID del examen a bloquear
+
+#### Request
+```http
+POST /api/examinations/{exam_id}/block
+Authorization: Bearer <JWT_TOKEN>
+```
+
+#### Response
+**Status Code:** 200 OK
+
+```json
+{
+  "success": true,
+  "message": "Examen bloqueado exitosamente",
+  "blocked_by": "uuid-del-usuario-actual"
+}
+```
+
+#### Errors
+```json
+// Examen no encontrado
+{
+  "success": false,
+  "message": "Examen no encontrado"
+}
+
+// Ya bloqueado por otro usuario
+{
+  "success": false,
+  "message": "El examen está bloqueado por otro usuario",
+  "blocked_by": "uuid-del-otro-usuario"
+}
+```
+
+**Status Codes:**
+- `200`: Success - Examen bloqueado exitosamente
+- `404`: Not Found - Examen no encontrado
+- `409`: Conflict - Examen bloqueado por otro usuario
+- `500`: Internal Server Error
+
+#### Comportamiento
+- Si el examen no está bloqueado: lo bloquea para el usuario actual
+- Si el examen ya está bloqueado por el mismo usuario: permite re-bloquear (no da error)
+- Si el examen está bloqueado por otro usuario: retorna error 409
+
+---
+
+### 12. POST /examinations/{exam_id}/unblock
+Desbloquea un examen previamente bloqueado.
+
+#### Description
+Permite al usuario desbloquear un examen que previamente bloqueó, permitiendo que otros usuarios puedan editarlo.
+
+#### Parameters
+**Path Parameters:**
+- `exam_id` (required): GUID del examen a desbloquear
+
+#### Request
+```http
+POST /api/examinations/{exam_id}/unblock
+Authorization: Bearer <JWT_TOKEN>
+```
+
+#### Response
+**Status Code:** 200 OK
+
+```json
+{
+  "success": true,
+  "message": "Examen desbloqueado exitosamente"
+}
+```
+
+#### Errors
+```json
+// Examen no encontrado
+{
+  "success": false,
+  "message": "Examen no encontrado"
+}
+
+// Bloqueado por otro usuario
+{
+  "success": false,
+  "message": "Solo el usuario que bloqueó el examen puede desbloquearlo"
+}
+```
+
+**Status Codes:**
+- `200`: Success - Examen desbloqueado exitosamente
+- `403`: Forbidden - Solo el usuario que bloqueó puede desbloquear
+- `404`: Not Found - Examen no encontrado
+- `500`: Internal Server Error
+
+#### Comportamiento
+- Solo el usuario que bloqueó el examen puede desbloquearlo
+- Si el examen no está bloqueado: no genera error (retorna success)
+
+#### Uso Recomendado desde Frontend
+```javascript
+// Al abrir un examen para editar
+const blockExam = async (examId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/examinations/${examId}/block`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    const data = await response.json();
+    
+    if (response.status === 409) {
+      alert('Este examen está siendo editado por otro usuario');
+      return false;
+    }
+    
+    return data.success;
+  } catch (error) {
+    console.error('Error bloqueando examen:', error);
+    return false;
+  }
+};
+
+// Al cerrar el editor o guardar
+const unblockExam = async (examId) => {
+  try {
+    await fetch(`${API_BASE_URL}/api/examinations/${examId}/unblock`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+  } catch (error) {
+    console.error('Error desbloqueando examen:', error);
+  }
+};
+
+// Uso en componente
+useEffect(() => {
+  blockExam(examId);
+  
+  // Cleanup al desmontar
+  return () => {
+    unblockExam(examId);
+  };
+}, [examId]);
+```
+
+---
+
 ## Endpoints de Visualización de PDFs
 
-### 11. GET /pdfs/{filename}
+### 13. GET /pdfs/{filename}
 Sirve archivos PDF directamente desde el servidor.
 
 #### Description
