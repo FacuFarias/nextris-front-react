@@ -14,7 +14,8 @@ import {
     AlignRight,
     AlignJustify,
     Undo,
-    Redo
+    Redo,
+    Lock
 } from 'lucide-react';
 import { useEffect } from 'react';
 
@@ -28,6 +29,7 @@ interface RichTextEditorProps {
     onDragLeave?: () => void;
     onDrop?: (e: React.DragEvent) => void;
     onEditorReady?: (editor: any) => void;
+    readOnly?: boolean;
 }
 
 export const RichTextEditor = ({
@@ -39,12 +41,12 @@ export const RichTextEditor = ({
     onDragOver,
     onDragLeave,
     onDrop,
-    onEditorReady
+    onEditorReady,
+    readOnly = false
 }: RichTextEditorProps) => {
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
-                // Deshabilitamos las extensiones que vamos a personalizar
                 underline: false,
             }),
             Underline,
@@ -87,6 +89,16 @@ export const RichTextEditor = ({
 
     return (
         <div className={`border rounded-md bg-white ${dragOver ? 'border-purple-500 border-2 bg-purple-50' : ''} ${className}`}>
+            {/* Indicador de solo lectura */}
+            {readOnly && (
+                <div className="flex items-center gap-2 p-2 bg-yellow-50 border-b border-yellow-200">
+                    <Lock className="w-4 h-4 text-yellow-700" />
+                    <span className="text-xs font-medium text-yellow-700">
+                        Campo bloqueado - Documento firmado
+                    </span>
+                </div>
+            )}
+
             {/* Barra de herramientas */}
             <div className="flex items-center gap-1 p-2 border-b bg-gray-50 flex-wrap">
                 {/* Formato de texto */}
@@ -95,6 +107,7 @@ export const RichTextEditor = ({
                     className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('bold') ? 'bg-gray-300' : ''}`}
                     type="button"
                     title="Negrita"
+                    disabled={readOnly}
                 >
                     <Bold className="w-4 h-4" />
                 </button>
@@ -103,6 +116,7 @@ export const RichTextEditor = ({
                     className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('italic') ? 'bg-gray-300' : ''}`}
                     type="button"
                     title="Cursiva"
+                    disabled={readOnly}
                 >
                     <Italic className="w-4 h-4" />
                 </button>
@@ -111,6 +125,7 @@ export const RichTextEditor = ({
                     className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('underline') ? 'bg-gray-300' : ''}`}
                     type="button"
                     title="Subrayado"
+                    disabled={readOnly}
                 >
                     <UnderlineIcon className="w-4 h-4" />
                 </button>
@@ -122,6 +137,7 @@ export const RichTextEditor = ({
                     className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('orderedList') ? 'bg-gray-300' : ''}`}
                     type="button"
                     title="Lista numerada"
+                    disabled={readOnly}
                 >
                     <ListOrdered className="w-4 h-4" />
                 </button>
@@ -134,6 +150,7 @@ export const RichTextEditor = ({
                     className={`p-2 rounded hover:bg-gray-200 ${editor.isActive({ textAlign: 'left' }) ? 'bg-gray-300' : ''}`}
                     type="button"
                     title="Alinear a la izquierda"
+                    disabled={readOnly}
                 >
                     <AlignLeft className="w-4 h-4" />
                 </button>
@@ -142,6 +159,7 @@ export const RichTextEditor = ({
                     className={`p-2 rounded hover:bg-gray-200 ${editor.isActive({ textAlign: 'center' }) ? 'bg-gray-300' : ''}`}
                     type="button"
                     title="Centrar"
+                    disabled={readOnly}
                 >
                     <AlignCenter className="w-4 h-4" />
                 </button>
@@ -150,6 +168,7 @@ export const RichTextEditor = ({
                     className={`p-2 rounded hover:bg-gray-200 ${editor.isActive({ textAlign: 'right' }) ? 'bg-gray-300' : ''}`}
                     type="button"
                     title="Alinear a la derecha"
+                    disabled={readOnly}
                 >
                     <AlignRight className="w-4 h-4" />
                 </button>
@@ -158,6 +177,7 @@ export const RichTextEditor = ({
                     className={`p-2 rounded hover:bg-gray-200 ${editor.isActive({ textAlign: 'justify' }) ? 'bg-gray-300' : ''}`}
                     type="button"
                     title="Justificar"
+                    disabled={readOnly}
                 >
                     <AlignJustify className="w-4 h-4" />
                 </button>
@@ -170,7 +190,7 @@ export const RichTextEditor = ({
                     className="p-2 rounded hover:bg-gray-200"
                     type="button"
                     title="Deshacer"
-                    disabled={!editor.can().undo()}
+                    disabled={!editor.can().undo() || readOnly}
                 >
                     <Undo className="w-4 h-4" />
                 </button>
@@ -179,19 +199,25 @@ export const RichTextEditor = ({
                     className="p-2 rounded hover:bg-gray-200"
                     type="button"
                     title="Rehacer"
-                    disabled={!editor.can().redo()}
+                    disabled={!editor.can().redo() || readOnly}
                 >
                     <Redo className="w-4 h-4" />
                 </button>
             </div>
 
-            {/* Editor */}
-            <div
-                onDragOver={onDragOver}
-                onDragLeave={onDragLeave}
-                onDrop={onDrop}
-            >
-                <EditorContent editor={editor} />
+            {/* Editor con overlay cuando está bloqueado */}
+            <div className="relative">
+                {readOnly && (
+                    <div className="absolute inset-0 bg-transparent bg-opacity-50 cursor-not-allowed z-10" />
+                )}
+                <div
+                    className={readOnly ? 'opacity-70' : ''}
+                    onDragOver={readOnly ? undefined : onDragOver}
+                    onDragLeave={readOnly ? undefined : onDragLeave}
+                    onDrop={readOnly ? undefined : onDrop}
+                >
+                    <EditorContent editor={editor} />
+                </div>
             </div>
         </div>
     );

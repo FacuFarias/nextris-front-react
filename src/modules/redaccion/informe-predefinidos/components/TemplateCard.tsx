@@ -15,6 +15,7 @@ import { stripHtmlTags } from "@/lib/utils";
 
 interface TemplateCardProps {
     template: Template;
+    index?: number;
     onView: (template: Template) => void;
     onEdit: (template: Template) => void;
     onDelete: (template: Template) => void;
@@ -26,6 +27,7 @@ interface TemplateCardProps {
 
 export const TemplateCard = ({
     template,
+    index = 0,
     onView,
     onEdit,
     onDelete,
@@ -35,7 +37,13 @@ export const TemplateCard = ({
     isBodypartActive
 }: TemplateCardProps) => {
     return (
-        <Card className="group hover:shadow-lg transition-all duration-300 border-gray-200 hover:border-brand-purple/50">
+        <Card
+            className="group hover:shadow-lg transition-all  border-gray-200 hover:border-brand-purple/50 animate-in fade-in slide-in-from-bottom-3 zoom-in-95 duration-500 ease-out"
+            style={{
+                animationDelay: `${index * 80}ms`,
+                animationFillMode: 'both'
+            }}
+        >
             <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">

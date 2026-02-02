@@ -1,9 +1,9 @@
 import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
 import { InputSearch } from "@/components/InputSearch"
 import { MainLayout } from "@/layouts/layout"
-import { HandHelping, RefreshCcw } from "lucide-react"
+import { HandHelping, RefreshCcw, Loader2 } from "lucide-react"
 import { useMemo, useState } from "react"
-import { useInformes } from "./hooks/use-informes"
+import { useInformes, useBlockExam, useUnblockExam } from "./hooks/use-informes"
 import { getInformesActions, informeColumns } from "./components/columns"
 import TablaDynamic from "@/components/TableDynamic"
 import type { Informes } from "./types/informes.types"
@@ -29,7 +29,10 @@ export const Radiologia = () => {
     const [listoParaLeer, setListoParaLeer] = useState(true);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [selectedInforme, setSelectedInforme] = useState<Informes | null>(null);
+    const [isBlocking, setIsBlocking] = useState(false);
     const useDebounceSearch = useDebounce(searchTerm, 500);
+    const { mutateAsync: blockExam } = useBlockExam();
+    const { mutateAsync: unblockExam } = useUnblockExam();
     const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: 8, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
@@ -41,30 +44,64 @@ export const Radiologia = () => {
         total: informesData?.data?.total || 0,
     };
 
-    const handleRedactarInforme = (informe: Informes) => {
+    const handleRedactarInforme = async (informe: Informes) => {
+        // Verificar si el informe está bloqueado por otro usuario
+        if (informe.blocked_by && informe.blocked_by_name) {
+            toast.error(`Este informe está siendo editado por ${informe.blocked_by_name}`);
+            return;
+        }
+
         if (informe.is_reported) {
             // Si el informe ya está reportado, mostrar modal de confirmación
             setSelectedInforme(informe);
             setIsConfirmationModalOpen(true);
         } else {
-            // Si no está reportado, abrir directamente
-            openReportWindow(informe);
+            // Si no está reportado, bloquear y abrir directamente
+            await blockAndOpenReport(informe);
         }
     };
 
-    const openReportWindow = (informe: Informes) => {
+    const blockAndOpenReport = async (informe: Informes) => {
+        setIsBlocking(true);
+        try {
+            await blockExam(informe.guid);
+            openReportWindow(informe);
+        } catch (error) {
+            // El error ya se maneja en el hook
+            console.error('Error al bloquear el informe:', error);
+        } finally {
+            setIsBlocking(false);
+        }
+    };
+
+    const openReportWindow = async (informe: Informes) => {
         let url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}`;
 
         if (modalityId || bodyPartId || studioTypeId) {
             url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?modality_id=${modalityId}&bodypart_id=${bodyPartId}&study_group_id=${studioTypeId}`;
         }
-        // Abrir en una nueva ventana sin barras de herramientas y restricciones
-        window.open(
+        // 2️⃣ Abrir ventana Y GUARDAR LA REFERENCIA
+        const reportWindow = window.open(
             url,
-            '_blank',
-            'toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=1400,height=900,top=50,left=100'
+            "_blank",
+            "toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=no,width=1400,height=900,top=50,left=100,titlebar=no"
         );
+
+        // 3️⃣ Si el navegador bloquea el popup
+        if (!reportWindow) {
+            await unblockExam(informe.guid);
+            return;
+        }
+
+        // 4️⃣ Detectar cuando se cierra
+        const interval = setInterval(async () => {
+            if (reportWindow.closed) {
+                clearInterval(interval);
+                await unblockExam(informe.guid);
+            }
+        }, 300);
     };
+
 
     const handleViewImagenes = (informe: Informes) => {
 
@@ -255,19 +292,29 @@ export const Radiologia = () => {
                     setIsConfirmationModalOpen(false);
                     setSelectedInforme(null);
                 }}
-                onConfirm={() => {
+                onConfirm={async () => {
                     if (selectedInforme) {
-                        openReportWindow(selectedInforme);
                         setIsConfirmationModalOpen(false);
+                        await blockAndOpenReport(selectedInforme);
                         setSelectedInforme(null);
                     }
                 }}
                 title="Informe ya finalizado"
-                message="Este informe ya ha sido finalizado y reportado. Si continúa, podrá realizar cambios que afectarán el informe original. ¿Está seguro que desea continuar?"
-                confirmText="Sí, abrir informe"
+                message="Este informe ya ha sido finalizado y reportado. Al continuar, se bloqueará el informe para que nadie más pueda editarlo mientras usted trabaja en él. ¿Está seguro que desea continuar?"
+                confirmText="Sí, abrir y bloquear informe"
                 cancelText="Cancelar"
                 variant="warning"
             />
+
+            {/* Modal de carga mientras bloquea */}
+            {isBlocking && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-xl flex flex-col items-center gap-3">
+                        <Loader2 className="w-8 h-8 animate-spin text-brand-purple" />
+                        <p className="text-gray-700 font-medium">Bloqueando informe...</p>
+                    </div>
+                </div>
+            )}
         </MainLayout>
     )
 }

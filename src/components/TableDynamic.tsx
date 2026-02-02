@@ -188,8 +188,13 @@ export function TablaDynamic<T extends Record<string, any>>({
                                         key={getRowIndex(index)}
                                         className={cn(
                                             (onRowClick || onRowDoubleClick) && "cursor-pointer hover:bg-muted/50",
-                                            isSelected && "bg-purple-100 hover:bg-purple-100/80 border-l-4 border-l-brand-purple"
+                                            isSelected && "bg-purple-100 hover:bg-purple-100/80 border-l-4 border-l-brand-purple",
+                                            "animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-500 ease-out"
                                         )}
+                                        style={{
+                                            animationDelay: `${index * 60}ms`,
+                                            animationFillMode: 'both'
+                                        }}
                                         onClick={() => onRowClick?.(row, getRowIndex(index))}
                                         onDoubleClick={() => onRowDoubleClick?.(row, getRowIndex(index))}
                                     >

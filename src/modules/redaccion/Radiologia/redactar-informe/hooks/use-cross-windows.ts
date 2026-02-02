@@ -14,6 +14,7 @@ export const useCrossWindowSync = () => {
                 case 'INFORME_SIGNED':
                 case 'INFORME_UPDATED':
                 case 'INFORME_DELETED':
+                case 'INFORME_UNBLOCKED':
                     queryClient.invalidateQueries({
                         queryKey: informesKeys.lists()
                     });
@@ -28,7 +29,7 @@ export const useCrossWindowSync = () => {
 };
 
 // Función helper para notificar cambios
-export const notifyInformeChange = (type: 'INFORME_SIGNED' | 'INFORME_UPDATED' | 'INFORME_DELETED') => {
+export const notifyInformeChange = (type: 'INFORME_SIGNED' | 'INFORME_UPDATED' | 'INFORME_DELETED' | 'INFORME_UNBLOCKED') => {
     const channel = new BroadcastChannel('informe-updates');
     channel.postMessage({ type });
     channel.close();

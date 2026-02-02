@@ -1,7 +1,7 @@
 import type { TableAction, TableColumn } from "@/types/table";
 import type { Informes } from "../types/informes.types";
 import { fechaYhora } from "@/lib/fechaYhora";
-import { ClipboardPlus, FileText, Image } from "lucide-react";
+import { ClipboardPlus, FileText, Image, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 // Configuración de columnas para usuarios
@@ -10,6 +10,17 @@ const informeColumns: TableColumn<Informes>[] = [
         key: "patient_name",
         label: "PACIENTE",
         className: "font-medium",
+        render: (value: string, informe: Informes) => (
+            <div className="flex items-center gap-2">
+                {informe.blocked_by && informe.blocked_by_name && (
+                    <div className="relative group">
+                        <Lock className="w-4 h-4 text-yellow-600" />
+
+                    </div>
+                )}
+                <span>{value}</span>
+            </div>
+        ),
     },
     {
         key: "patient_dni",

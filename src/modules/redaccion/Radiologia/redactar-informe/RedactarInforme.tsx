@@ -1,16 +1,13 @@
-import { useParams, useSearchParams } from "react-router-dom"
-import { useInformeDetalle, useUpdateReport } from "../hooks/use-informes";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { useInformeDetalle, useUpdateReport, useUnblockExam, useBlockExam } from "../hooks/use-informes";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, Lock, X, AlertCircle, Search, ShieldCheck, PanelLeftClose, PanelLeftOpen, PanelRightClose, Image, User } from "lucide-react";
+import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, PanelLeftClose, PanelLeftOpen, PanelRightClose, Image, User, Loader2, X } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
-import { Modal } from "@/components/Modal";
 import { toast } from "sonner";
-import { SecondaryButton } from "@/components";
-import { api } from "@/lib/api";
 import { useTemplates } from "@/modules/redaccion/informe-predefinidos/hooks/use-templates";
 import type { Template } from "@/modules/redaccion/informe-predefinidos/types/informe-pred.types";
 import { ConfirmationModal } from "../components/ConfirmationModal";
@@ -19,6 +16,7 @@ import { useSignReport } from "./hooks/use-sing-report";
 import { useNextExam } from "./hooks/use-next-exam";
 import { useQueryClient } from "@tanstack/react-query";
 import { informesKeys } from "../constants/query-keys";
+import { CloseTabModal, NextExamModal, SignModal, TemplateModal } from "../components/modals";
 
 export const RedactarInforme = () => {
     const { informeGuid, studyInstanceUID } = useParams();
@@ -56,7 +54,22 @@ export const RedactarInforme = () => {
     const { mutateAsync: verifyCredentials } = useVerifyCredentials();
     const { mutateAsync: signReport } = useSignReport();
     const { mutateAsync: getNextExam } = useNextExam();
+    const { mutateAsync: unblockExam } = useUnblockExam();
+    const { mutateAsync: blockExam } = useBlockExam();
+
     const queryClient = useQueryClient();
+    const [isNextExamModalOpen, setIsNextExamModalOpen] = useState(false);
+    const [nextExamData, setNextExamData] = useState<any>(null);
+    const [isCloseTabModalOpen, setIsCloseTabModalOpen] = useState(false);
+    const navigate = useNavigate();
+
+    // Ref para mantener el informeGuid actual actualizado en el listener
+    const currentInformeGuidRef = useRef(informeGuid);
+
+    // Actualizar la ref cuando cambie el informeGuid
+    useEffect(() => {
+        currentInformeGuidRef.current = informeGuid;
+    }, [informeGuid]);
 
     // Filtrar plantillas por búsqueda local
     const filteredTemplates = templatesData?.data?.filter((template) => {
@@ -71,16 +84,14 @@ export const RedactarInforme = () => {
     useEffect(() => {
         if (informeDetalle?.data) {
             setFormData({
-                techniques: informeDetalle.data.techniques || '',
-                findings: informeDetalle.data.findings || '',
-                impressions: informeDetalle.data.impressions || '',
-                conclusions: informeDetalle.data.conclusions || ''
+                techniques: informeDetalle.data ? informeDetalle.data.techniques || '' : '',
+                findings: informeDetalle.data ? informeDetalle.data.findings || '' : '',
+                impressions: informeDetalle.data ? informeDetalle.data.impressions || '' : '',
+                conclusions: informeDetalle.data ? informeDetalle.data.conclusions || '' : ''
             });
-            setIsSigned((informeDetalle.data as any).is_signed || false);
-
-
+            setIsSigned(informeDetalle.data.is_reported || false);
         }
-    }, [informeDetalle]);
+    }, [informeDetalle?.data]);
 
     // Estado para trackear el último índice de placeholder encontrado
     const lastPlaceholderIndexRef = useRef<number>(-1);
@@ -319,6 +330,8 @@ export const RedactarInforme = () => {
         findNextPlaceholderRef.current = findNextPlaceholder;
     }, [findNextPlaceholder]);
 
+
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'F3') {
@@ -395,16 +408,20 @@ export const RedactarInforme = () => {
             // 1. Verificar credenciales
             await verifyCredentials({ password });
 
-            // 2. Preparar payload limpio
-            const cleanModalityId = modalityId && modalityId !== 'undefined' ? modalityId : null;
-            const cleanBodypartId = bodypartId && bodypartId !== 'undefined' ? bodypartId : null;
-            const cleanStudyGroupId = studyGroupId && studyGroupId !== 'undefined' ? studyGroupId : null;
+            // 2. Preparar payload
+            const payload: Record<string, string> = {};
 
-            const payload = {
-                modality_id: cleanModalityId,
-                body_part_id: cleanBodypartId,
-                study_group_id: cleanStudyGroupId
-            };
+            if (modalityId && modalityId !== 'undefined') {
+                payload.modality_id = modalityId;
+            }
+
+            if (bodypartId && bodypartId !== 'undefined') {
+                payload.body_part_id = bodypartId;
+            }
+
+            if (studyGroupId && studyGroupId !== 'undefined') {
+                payload.study_group_id = studyGroupId;
+            }
 
             // 3. Firmar reporte
             await signReport({
@@ -413,27 +430,100 @@ export const RedactarInforme = () => {
             });
 
             // 4. Obtener siguiente examen
-            await getNextExam(payload).then((data) => {
-                console.log(data)
-            });
-            queryClient.invalidateQueries({
-                queryKey: informesKeys.lists()
-            });
+            const nextExam = await getNextExam(payload);
+
             // 5. Actualizar estados locales
             setIsSigned(true);
             setIsSignModalOpen(false);
             setPassword('');
 
+            // 6. Desbloquear el informe después de firmar
+            if (informeGuid) {
+                await unblockExam(informeGuid);
+            }
+
+            // 7. Invalidar cache DESPUÉS del unblock para que se actualice
+            queryClient.invalidateQueries({
+                queryKey: informesKeys.lists()
+            });
+
+            // 8. Si hay siguiente examen, mostrar modal
+            if (nextExam?.data) {
+                setNextExamData(nextExam.data);
+                setIsNextExamModalOpen(true);
+
+            } else {
+                // 9. Si NO hay siguiente examen, mostrar modal de cerrar pestaña
+                setIsCloseTabModalOpen(true);
+            }
+
         } catch (error) {
-            // Los errores ya se manejan en cada hook individual
             console.error('Error en el proceso de firma:', error);
         } finally {
             setIsSigning(false);
         }
     };
+    const handleCloseTab = () => {
+        unblockExam(informeGuid || '').finally(() => {
+            window.close();
+        });
+        // redirigir a una página de confirmación o al dashboard
+        setTimeout(() => {
+            toast.info('Por favor cierra la pestaña manualmente');
+        }, 100);
+    };
+
+    const handleStayOnPage = () => {
+        setIsCloseTabModalOpen(false);
+        toast.success('Informe firmado exitosamente');
+    };
+    const handleOpenNextExam = () => {
+        if (nextExamData) {
+            const params = new URLSearchParams();
+            if (modalityId) params.set('modality_id', modalityId);
+            if (bodypartId) params.set('bodypart_id', bodypartId);
+            if (studyGroupId) params.set('study_group_id', studyGroupId);
+            const newUrl = `/redaccion/radiologia/redactar-informe/${nextExamData.guid}/${nextExamData.study_instance_uid}?${params.toString()}`;
+            navigate(newUrl)
+            blockExam(nextExamData.guid);
+            setIsNextExamModalOpen(false);
+        }
+    };
+
+    const handleSkipNextExam = () => {
+        setIsNextExamModalOpen(false);
+        setNextExamData(null);
+        toast.success('Informe firmado exitosamente');
+    };
+
+    // Función para cerrar la ventana de forma segura (desbloqueando primero)
+    const handleCloseWindow = async () => {
+        if (currentInformeGuidRef.current) {
+            try {
+                await unblockExam(currentInformeGuidRef.current);
+                queryClient.invalidateQueries({
+                    queryKey: informesKeys.lists()
+                });
+                // Esperar un momento para que se complete
+                setTimeout(() => {
+                    window.close();
+                }, 300);
+            } catch (error) {
+                console.error('Error al desbloquear:', error);
+                window.close();
+            }
+        } else {
+            window.close();
+        }
+    };
     if (isLoading) {
-        return <LayoutSinSidebar>Cargando...</LayoutSinSidebar>;
+        return <LayoutSinSidebar>
+            <div className="flex justify-center items-center h-40">
+                <Loader2 className="animate-spin w-8 h-8 text-brand-purple" />
+            </div>
+        </LayoutSinSidebar>;
     }
+
     return (
         <LayoutSinSidebar>
             <div className="">
@@ -441,21 +531,21 @@ export const RedactarInforme = () => {
                 <div className="flex justify-between items-center mb-6">
                     <div className="relative bg-white rounded-xl p-4 shadow-md border-l-4 border-brand-purple flex items-center justify-between gap-4 w-full">
                         <div className="flex items-start gap-4">
-                            <div className="bg-purple-100 rounded-full p-3">
+                            <div className="bg-purple-100 rounded-full p-3 animate-in zoom-in duration-500">
                                 <User className="w-7 h-7 text-brand-purple" />
                             </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-gray-800 mb-1">
+                            <div className="flex-1">
+                                <h1 className="text-2xl font-bold text-gray-800 mb-1 animate-in fade-in slide-in-from-left-3 duration-500 delay-100">
                                     {informeDetalle?.data?.patient_name || 'Carlos Fernández'}
                                 </h1>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide animate-in fade-in duration-500 delay-200">
                                         Número de Registro
                                     </span>
-                                    <span className="text-sm font-bold text-brand-purple bg-purple-50 px-3 py-1 rounded-lg">
+                                    <span className="text-sm font-bold text-brand-purple bg-purple-50 px-3 py-1 rounded-lg animate-in fade-in zoom-in-95 duration-500 delay-300">
                                         NR {informeDetalle?.data?.admission_number}
                                     </span>
-                                    <span className="text-sm font-bold text-brand-purple bg-purple-50 px-3 py-1 rounded-lg">
+                                    <span className="text-sm font-bold text-brand-purple bg-purple-50 px-3 py-1 rounded-lg animate-in fade-in zoom-in-95 duration-500 delay-500">
                                         {informeDetalle?.data?.sex === 'M' ? 'Masculino' : 'Femenino'}
                                     </span>
                                 </div>
@@ -467,9 +557,12 @@ export const RedactarInforme = () => {
                                 <FileMinus />
                                 PDF
                             </PrimaryButton>
-                            <PrimaryButton onClick={() => setIsSignModalOpen(true)} disabled={isSigned}>
+                            <PrimaryButton
+                                onClick={() => setIsSignModalOpen(true)}
+
+                            >
                                 <Signature />
-                                {isSigned ? 'FIRMADO' : 'FIRMAR'}
+                                {isSigned ? 'QUITAR FIRMA' : 'FIRMAR'}
                             </PrimaryButton>
                             <PrimaryButton
                                 onClick={handleGuardarInforme}
@@ -478,6 +571,13 @@ export const RedactarInforme = () => {
                                 <Save />
                                 {updateReportMutation.isPending ? 'GUARDANDO...' : 'GUARDAR'}
                             </PrimaryButton>
+                            <PrimaryButton
+                                onClick={handleCloseWindow}
+                            >
+                                <X />
+                                CERRAR
+                            </PrimaryButton>
+
                         </div>
                     </div>
 
@@ -495,7 +595,7 @@ export const RedactarInforme = () => {
                                 }`}>
 
                                 {/* Datos del examen */}
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all  hover:-translate-y-1 animate-in fade-in slide-in-from-left-4 duration-500">
                                     <div
                                         className="cursor-pointer bg-brand-purple px-4 py-3 flex justify-between items-center"
                                         onClick={() => toggleSection('datosExamen')}
@@ -528,7 +628,7 @@ export const RedactarInforme = () => {
                                 </div>
 
                                 {/* Datos técnicos */}
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all  hover:-translate-y-1 animate-in fade-in slide-in-from-left-4 duration-700" style={{ animationDelay: '100ms' }}>
                                     <div
                                         className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
                                         onClick={() => toggleSection('datosTecnicos')}
@@ -545,7 +645,7 @@ export const RedactarInforme = () => {
                                 </div>
 
                                 {/* Informes predefinidos */}
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all  hover:-translate-y-1 animate-in fade-in slide-in-from-left-4 duration-700" style={{ animationDelay: '200ms' }}>
                                     <div
                                         className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
                                         onClick={() => toggleSection('informesPredefinidos')}
@@ -570,7 +670,7 @@ export const RedactarInforme = () => {
                                 </div>
 
                                 {/* Historia clínica */}
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all  hover:-translate-y-1 animate-in fade-in slide-in-from-left-4 duration-700" style={{ animationDelay: '300ms' }}>
                                     <div
                                         className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
                                         onClick={() => toggleSection('historiaClinicaSidebar')}
@@ -588,11 +688,11 @@ export const RedactarInforme = () => {
                         </div>
 
                         {/* Botón toggle sidebar izquierdo */}
-                        <div className="self-stretch ">
+                        <div className="self-stretch">
                             {leftSidebarOpen ? (
                                 <button
                                     onClick={() => setLeftSidebarOpen(false)}
-                                    className="bg-blue-500 h-[calc(100vh-160px)] hover:bg-blue-600 text-white p-2 rounded-lg shadow-lg transition-all duration-300 "
+                                    className="bg-blue-500 h-[calc(100vh-160px)] hover:bg-blue-600 hover:scale-100 text-white p-2 rounded-lg shadow-lg transition-all  animate-in fade-in zoom-in duration-500"
                                     title="Ocultar panel de información"
                                 >
                                     <PanelLeftClose className="w-4 h-4" />
@@ -600,7 +700,7 @@ export const RedactarInforme = () => {
                             ) : (
                                 <button
                                     onClick={() => setLeftSidebarOpen(true)}
-                                    className="h-[calc(100vh-160px)] bg-brand-purple hover:bg-purple-800 text-white p-2 rounded-lg shadow-lg transition-all duration-300  flex items-center justify-center"
+                                    className="h-[calc(100vh-160px)] bg-brand-purple hover:bg-purple-800 hover:scale-100 text-white p-2 rounded-lg shadow-lg transition-all  flex items-center justify-center animate-in fade-in zoom-in duration-500"
                                     title="Mostrar panel de información"
                                 >
                                     <PanelLeftOpen className="w-4 h-4" />
@@ -609,10 +709,10 @@ export const RedactarInforme = () => {
                         </div>
 
                         {/* Columna central */}
-                        <div className="flex-1 space-y-4 p-5 transition-all duration-700  ease-in-out min-w-0  bg-white rounded-xl shadow-sm border border-gray-200 overflow-y-auto h-[calc(100vh-160px)]">
+                        <div className="flex-1 space-y-4 p-5 transition-all  ease-in-out min-w-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-y-auto h-[calc(100vh-160px)] animate-in fade-in zoom-in-95 duration-500">
 
                             {/* Historia Clínica */}
-                            <div className="bg-white rounded-xl shadow-sm border border-red-300 overflow-hidden relative">
+                            <div className="bg-white rounded-xl shadow-sm border border-red-300 overflow-hidden relative hover:shadow-md transition-all duration-300 hover:-translate-y-1">
                                 <div
                                     className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
                                     onClick={() => toggleSection('historiaClinica')}
@@ -638,7 +738,7 @@ export const RedactarInforme = () => {
                             </div>
 
                             {/* Técnica de examen */}
-                            <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
+                            <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden hover:shadow-md transition-all duration-300 hover:-translate-y-1">
                                 <div
                                     className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
                                     onClick={() => toggleSection('tecnica')}
@@ -657,6 +757,8 @@ export const RedactarInforme = () => {
                                             onDragLeave={handleDragLeave}
                                             onDrop={(e) => handleDrop(e, 'techniques', editorsRef.current.techniques)}
                                             onEditorReady={(editor) => handleEditorReady(editor, 'techniques')}
+                                            readOnly={isSigned}
+
                                         />
                                     </div>
                                 </div>
@@ -682,6 +784,7 @@ export const RedactarInforme = () => {
                                             onDragLeave={handleDragLeave}
                                             onDrop={(e) => handleDrop(e, 'findings', editorsRef.current.findings)}
                                             onEditorReady={(editor) => handleEditorReady(editor, 'findings')}
+                                            readOnly={isSigned}
                                         />
                                     </div>
                                 </div>
@@ -707,6 +810,7 @@ export const RedactarInforme = () => {
                                             onDragLeave={handleDragLeave}
                                             onDrop={(e) => handleDrop(e, 'impressions', editorsRef.current.impressions)}
                                             onEditorReady={(editor) => handleEditorReady(editor, 'impressions')}
+                                            readOnly={isSigned}
                                         />
                                     </div>
                                 </div>
@@ -732,18 +836,19 @@ export const RedactarInforme = () => {
                                             onDragLeave={handleDragLeave}
                                             onDrop={(e) => handleDrop(e, 'conclusions', editorsRef.current.conclusions)}
                                             onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')}
+                                            readOnly={isSigned}
                                         />
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Botón toggle sidebar derecho */}
-                        <div className="self-stretch ">
+                        {/* Botón toggle derecho con animación */}
+                        <div className="self-stretch">
                             {rightSidebarOpen ? (
                                 <button
                                     onClick={() => setRightSidebarOpen(false)}
-                                    className="bg-blue-500 h-[calc(100vh-160px)] hover:bg-blue-600 text-white p-2 rounded-lg shadow-lg transition-all duration-300 "
+                                    className="bg-blue-500 h-[calc(100vh-160px)] hover:bg-blue-600 hover:scale-100 text-white p-2 rounded-lg shadow-lg transition-all  animate-in fade-in zoom-in duration-500"
                                     title="Ocultar panel de imágenes"
                                 >
                                     <PanelRightClose className="w-4 h-4" />
@@ -751,7 +856,7 @@ export const RedactarInforme = () => {
                             ) : (
                                 <button
                                     onClick={() => setRightSidebarOpen(true)}
-                                    className="h-[calc(100vh-160px)] bg-brand-purple hover:bg-purple-800 text-white p-2 rounded-lg shadow-lg transition-all duration-300  flex items-center justify-center"
+                                    className="h-[calc(100vh-160px)] bg-brand-purple hover:bg-purple-800 hover:scale-100 text-white p-2 rounded-lg shadow-lg transition-all  flex items-center justify-center animate-in fade-in zoom-in duration-500"
                                     title="Mostrar panel de imágenes"
                                 >
                                     <Image className="w-4 h-4" />
@@ -760,43 +865,42 @@ export const RedactarInforme = () => {
                         </div>
 
                         {/* Columna derecha - Imágenes */}
-                        <div className={`self-start  space-y-4 transition-all duration-700 ease-in-out ${rightSidebarOpen
+                        <div className={`self-start space-y-4 transition-all duration-700 ease-in-out ${rightSidebarOpen
                             ? 'w-[320px] opacity-100'
                             : 'w-0 opacity-0 overflow-hidden'
                             }`}>
                             <div className={`min-w-[320px] transition-opacity duration-700 ease-in-out ${rightSidebarOpen ? 'opacity-100' : 'opacity-0'
                                 }`}>
 
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full">
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full animate-in fade-in slide-in-from-right-4 duration-700  hover:shadow-md transition-shadow">
                                     <div
-                                        className="cursor-pointer bg-brand-purple px-4 py-3 flex items-center justify-between shrink-0"
+                                        className="cursor-pointer bg-brand-purple px-4 py-3 flex items-center justify-between shrink-0  transition-colors duration-200"
                                         onClick={() => toggleSection('imagenes')}
                                     >
                                         <div className="flex items-center gap-2">
                                             <ImageIcon className="w-5 h-5 text-white" />
                                             <h3 className="text-white font-semibold whitespace-nowrap">Imágenes</h3>
                                         </div>
-                                        {openSections.imagenes ? (
-                                            <ChevronUp className="w-5 h-5 text-white" />
-                                        ) : (
+                                        <div className={`transition-transform duration-300 ${openSections.imagenes ? 'rotate-180' : ''}`}>
                                             <ChevronDown className="w-5 h-5 text-white" />
-                                        )}
+                                        </div>
                                     </div>
                                     {openSections.imagenes && (
-                                        <div className="transition-all duration-300 ease-in-out  flex-1 overflow-hidden">
+                                        <div className="transition-all duration-300 ease-in-out flex-1 overflow-hidden">
                                             <div className="p-4 h-[calc(100vh-210px)] flex flex-col">
                                                 <p className="text-xs text-gray-500 text-center mb-4 shrink-0">
                                                     Arrastra las imágenes a los campos de texto
                                                 </p>
                                                 <div className="max-h-[700px] overflow-y-auto space-y-4 pr-2">
-                                                    {images.map((image) => (
+                                                    {images.map((image, index) => (
                                                         <div
                                                             key={image.id}
                                                             draggable
                                                             onDragStart={() => handleDragStart(image)}
                                                             onDragEnd={handleDragEnd}
-                                                            className={`cursor-grab active:cursor-grabbing rounded-lg overflow-hidden border-2 border-gray-200 hover:border-purple-400 transition-all ${draggedImage?.id === image.id ? 'opacity-50 scale-95' : ''
+                                                            className={`cursor-grab active:cursor-grabbing rounded-lg overflow-hidden border-2 border-gray-200 hover:border-purple-400 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 ${draggedImage?.id === image.id ? 'opacity-50 scale-95' : ''
                                                                 }`}
+                                                            style={{ animationDelay: `${index * 50}ms` }}
                                                         >
                                                             <img
                                                                 src={image.url}
@@ -820,214 +924,54 @@ export const RedactarInforme = () => {
             </div>
 
             {/* Modal de Firma */}
-            <Modal
+            <SignModal
                 isOpen={isSignModalOpen}
                 onClose={() => {
                     setIsSignModalOpen(false);
                     setPassword('');
                 }}
-                title="Firmar Informe"
-                size="md"
-            >
-                <div className="space-y-6">
-                    {/* Alerta informativa */}
-                    <div className="bg-linear-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-                        <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                            <p className="text-sm font-medium text-blue-900">
-                                Atención:
-                            </p>
-                            <p className="text-sm text-blue-700 mt-1">
-                                Esta acción requiere verificación de su identidad mediante contraseña.
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Input de contraseña */}
-                    <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                            <Lock className="h-4 w-4 text-gray-500" />
-                            Contraseña
-                        </label>
-                        <div className="relative">
-                            <Input
-                                type="password"
-                                placeholder="Ingrese su contraseña"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="pl-10 h-12 text-base border-gray-300 focus:border-brand-purple focus:ring-brand-purple"
-                                onKeyDown={async (e) => {
-                                    if (e.key === 'Enter' && password.trim() && !isSigning) {
-                                        if (!password.trim()) {
-                                            toast.error('Por favor ingrese su contraseña');
-                                            return;
-                                        }
-
-                                        setIsSigning(true);
-
-                                        try {
-                                            await api.post('/verify-credentials', {
-                                                password: password
-                                            });
-
-                                            await api.post(`/reports/${informeGuid}/sign`);
-
-                                            setIsSigned(true);
-                                            setIsSignModalOpen(false);
-                                            setPassword('');
-                                            toast.success('Informe firmado exitosamente');
-                                        } catch (error: any) {
-                                            if (error.response?.status === 401 || error.response?.status === 403) {
-                                                toast.error('Contraseña incorrecta');
-                                            } else {
-                                                toast.error('Error al firmar el informe');
-                                            }
-                                            console.error('Error al firmar:', error);
-                                        } finally {
-                                            setIsSigning(false);
-                                        }
-                                    }
-                                }}
-                                autoFocus
-                            />
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                        </div>
-                    </div>
-
-                    {/* Botones de acción */}
-                    <div className="flex gap-3 pt-2 justify-end">
-                        <SecondaryButton
-                            onClick={() => {
-                                setIsSignModalOpen(false);
-                                setPassword('');
-                            }}
-                        >
-                            <X className="h-5 w-5 mr-2" />
-                            Cancelar
-                        </SecondaryButton>
-                        <PrimaryButton
-                            onClick={handleVerifyCredentials}
-                            disabled={!password.trim() || isSigning}
-                        >
-                            <Signature className="h-5 w-5 mr-2" />
-                            {isSigning ? 'Firmando...' : 'Confirmar y Firmar'}
-                        </PrimaryButton>
-                    </div>
-                </div>
-            </Modal>
+                isSigned={isSigned}
+                password={password}
+                setPassword={setPassword}
+                isSigning={isSigning}
+                onVerifyCredentials={handleVerifyCredentials}
+            />
 
             {/* Modal de Selección de Plantilla */}
-            <Modal
+            <TemplateModal
                 isOpen={isTemplateModalOpen}
                 onClose={() => {
                     setIsTemplateModalOpen(false);
                     setSearchTerm('');
                     setStudyTypeFilter('');
                 }}
-                title="Seleccionar informe predefinido"
-                size="xxl"
-            >
-                <div className="space-y-4">
-                    {/* Filtros */}
-                    <div className="flex gap-4 items-center">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                                type="text"
-                                placeholder="Buscar por tipo de estudio..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-                        <div className="w-64">
-                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                <input
-                                    type="checkbox"
-                                    className="rounded"
-                                />
-                                Mi tipo de estudio
-                            </label>
-                        </div>
-                    </div>
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                filteredTemplates={filteredTemplates}
+                selectedTemplate={selectedTemplate}
+                setSelectedTemplate={setSelectedTemplate}
+                onAccept={() => {
+                    if (selectedTemplate) {
+                        const hasChanges = formData.techniques || formData.findings ||
+                            formData.impressions || formData.conclusions;
 
-                    {/* Lista de plantillas */}
-                    <div className="border rounded-lg max-h-[400px] overflow-y-auto">
-                        {filteredTemplates.length === 0 ? (
-                            <div className="p-8 text-center text-gray-500">
-                                No se encontraron plantillas
-                            </div>
-                        ) : (
-                            <div className="divide-y">
-                                {filteredTemplates.map((template) => (
-                                    <div
-                                        key={template.guid}
-                                        className={`p-4 cursor-pointer transition-all grid grid-cols-2 gap-4 relative ${selectedTemplate?.guid === template.guid
-                                            ? 'bg-purple-100 border-2 border-brand-purple shadow-md'
-                                            : 'hover:bg-gray-50 border-2 border-transparent'
-                                            }`}
-                                        onClick={() => setSelectedTemplate(template)}
-                                    >
-                                        {selectedTemplate?.guid === template.guid && (
-                                            <div className="absolute top-2 right-2 bg-brand-purple text-white rounded-full p-1">
-                                                <ShieldCheck className="h-4 w-4" />
-                                            </div>
-                                        )}
-                                        <div className={`font-medium ${selectedTemplate?.guid === template.guid ? 'text-brand-purple' : 'text-gray-700'}`}>
-                                            {template.title}
-                                        </div>
-                                        <div className={`font-medium ${selectedTemplate?.guid === template.guid ? 'text-brand-purple' : 'text-gray-700'}`}>
-                                            {template.study_type_description}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Botones */}
-                    <div className="flex gap-3 pt-2 justify-end">
-                        <SecondaryButton
-                            onClick={() => {
-                                setIsTemplateModalOpen(false);
-                                setSearchTerm('');
-                                setStudyTypeFilter('');
-                            }}
-                        >
-                            Cancelar
-                        </SecondaryButton>
-                        <PrimaryButton
-                            onClick={() => {
-                                if (selectedTemplate) {
-                                    // Verificar si hay cambios en los campos
-                                    const hasChanges = formData.techniques || formData.findings ||
-                                        formData.impressions || formData.conclusions;
-
-                                    if (hasChanges) {
-                                        // Mostrar modal de confirmación si hay cambios
-                                        setIsConfirmationModalOpen(true);
-                                    } else {
-                                        // Aplicar plantilla directamente si no hay cambios
-                                        setFormData({
-                                            techniques: selectedTemplate.technique || '',
-                                            findings: selectedTemplate.findings || '',
-                                            impressions: selectedTemplate.impression || '',
-                                            conclusions: selectedTemplate.conclusion || ''
-                                        });
-                                        setIsTemplateModalOpen(false);
-                                        toast.success('Plantilla aplicada exitosamente');
-                                    }
-                                } else {
-                                    toast.error('Por favor seleccione una plantilla');
-                                }
-                            }}
-                            disabled={!selectedTemplate}
-                        >
-                            ACEPTAR
-                        </PrimaryButton>
-                    </div>
-                </div>
-            </Modal>
+                        if (hasChanges) {
+                            setIsConfirmationModalOpen(true);
+                        } else {
+                            setFormData({
+                                techniques: selectedTemplate.technique || '',
+                                findings: selectedTemplate.findings || '',
+                                impressions: selectedTemplate.impression || '',
+                                conclusions: selectedTemplate.conclusion || ''
+                            });
+                            setIsTemplateModalOpen(false);
+                            toast.success('Plantilla aplicada exitosamente');
+                        }
+                    } else {
+                        toast.error('Por favor seleccione una plantilla');
+                    }
+                }}
+            />
 
             {/* Modal de Confirmación */}
             <ConfirmationModal
@@ -1053,7 +997,22 @@ export const RedactarInforme = () => {
                 variant="warning"
             />
 
+            <NextExamModal
+                isOpen={isNextExamModalOpen}
+                onClose={() => setIsNextExamModalOpen(false)}
+                nextExamData={nextExamData}
+                onOpenNextExam={handleOpenNextExam}
+                onSkip={handleSkipNextExam}
+            />
 
+
+            {/* Modal de Cerrar Pestaña */}
+            <CloseTabModal
+                isOpen={isCloseTabModalOpen}
+                onClose={() => setIsCloseTabModalOpen(false)}
+                onCloseTab={handleCloseTab}
+                onStay={handleStayOnPage}
+            />
         </LayoutSinSidebar>
     )
 }

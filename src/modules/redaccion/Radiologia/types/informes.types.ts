@@ -11,6 +11,8 @@ export type Informes = {
     is_executed: boolean;
     equipment: string;
     is_image: boolean;
+    blocked_by: string;
+    blocked_by_name: string;
     study_instance_uid: string;
     location: string;
     pdf_path: string;
@@ -31,6 +33,7 @@ export type InformeDetalle = {
         conclusions: string;
         was_saved: boolean;
         created_on: string;
+        is_reported: boolean;
         sex: string;
         pdf_path: string;
         history: string;
