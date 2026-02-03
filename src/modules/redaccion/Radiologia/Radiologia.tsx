@@ -4,6 +4,7 @@ import { MainLayout } from "@/layouts/layout"
 import { HandHelping, RefreshCcw, Loader2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useInformes, useBlockExam, useUnblockExam } from "./hooks/use-informes"
+import { useCrossWindowSync } from "./redactar-informe/hooks/use-cross-windows"
 import { getInformesActions, informeColumns } from "./components/columns"
 import TablaDynamic from "@/components/TableDynamic"
 import type { Informes } from "./types/informes.types"
@@ -19,6 +20,9 @@ import { useModalidades } from "@/modules/configuracion/configuracion-tablas/exa
 import { useGrupoEstudio } from "@/modules/configuracion/configuracion-tablas/examenes/grupos-estudio"
 
 export const Radiologia = () => {
+    // Hook para sincronizar entre ventanas
+    useCrossWindowSync();
+
     const [studioTypeId, setStudioTypeId] = useState<string | undefined>(undefined);
     const [bodyPartId, setBodyPartId] = useState<string | undefined>(undefined);
     const [modalityId, setModalityId] = useState<string | undefined>(undefined);
@@ -80,24 +84,38 @@ export const Radiologia = () => {
         if (modalityId || bodyPartId || studioTypeId) {
             url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?modality_id=${modalityId}&bodypart_id=${bodyPartId}&study_group_id=${studioTypeId}`;
         }
-        // 2️⃣ Abrir ventana Y GUARDAR LA REFERENCIA
+
+        // Generar un ID único para esta ventana
+        const windowId = `report_window_${Date.now()}`;
+
+        // Guardar el GUID inicial en localStorage con el ID de la ventana
+        localStorage.setItem(windowId, informe.guid);
+
+        // 2️⃣ Abrir ventana Y GUARDAR LA REFERENCIA, pasando el windowId en la URL
         const reportWindow = window.open(
-            url,
+            `${url}&windowId=${windowId}`,
             "_blank",
             "toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=no,width=1400,height=900,top=50,left=100,titlebar=no"
         );
 
         // 3️⃣ Si el navegador bloquea el popup
         if (!reportWindow) {
+            localStorage.removeItem(windowId);
             await unblockExam(informe.guid);
             return;
         }
 
-        // 4️⃣ Detectar cuando se cierra
+        // 4️⃣ Detectar cuando se cierra - lee el GUID del localStorage (actualizado automáticamente por BroadcastChannel)
         const interval = setInterval(async () => {
             if (reportWindow.closed) {
                 clearInterval(interval);
-                await unblockExam(informe.guid);
+
+                // Leer el último GUID guardado en localStorage
+                const currentGuid = localStorage.getItem(windowId);
+                if (currentGuid) {
+                    await unblockExam(currentGuid);
+                    localStorage.removeItem(windowId);
+                }
             }
         }, 300);
     };

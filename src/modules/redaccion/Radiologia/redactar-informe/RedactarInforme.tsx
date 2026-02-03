@@ -13,10 +13,12 @@ import type { Template } from "@/modules/redaccion/informe-predefinidos/types/in
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import { useVerifyCredentials } from "./hooks/use-verify-credentials";
 import { useSignReport } from "./hooks/use-sing-report";
+import { useQuitarFirma } from "./hooks/use-quitar-firma";
 import { useNextExam } from "./hooks/use-next-exam";
 import { useQueryClient } from "@tanstack/react-query";
 import { informesKeys } from "../constants/query-keys";
 import { CloseTabModal, NextExamModal, SignModal, TemplateModal } from "../components/modals";
+import { clearWindowStorage, notifyGuidChange } from "./hooks/use-cross-windows";
 
 export const RedactarInforme = () => {
     const { informeGuid, studyInstanceUID } = useParams();
@@ -26,6 +28,7 @@ export const RedactarInforme = () => {
     const modalityId = searchParams.get('modality_id');
     const bodypartId = searchParams.get('bodypart_id');
     const studyGroupId = searchParams.get('study_group_id');
+    const windowId = searchParams.get('windowId'); // ID único de la ventana
 
     const { informeDetalle, isLoading } = useInformeDetalle(informeGuid);
     const { data: imagenes } = useImagenesPorEstudio(studyInstanceUID || '');
@@ -53,6 +56,7 @@ export const RedactarInforme = () => {
     // En tu componente
     const { mutateAsync: verifyCredentials } = useVerifyCredentials();
     const { mutateAsync: signReport } = useSignReport();
+    const { mutateAsync: quitarFirma } = useQuitarFirma();
     const { mutateAsync: getNextExam } = useNextExam();
     const { mutateAsync: unblockExam } = useUnblockExam();
     const { mutateAsync: blockExam } = useBlockExam();
@@ -69,7 +73,35 @@ export const RedactarInforme = () => {
     // Actualizar la ref cuando cambie el informeGuid
     useEffect(() => {
         currentInformeGuidRef.current = informeGuid;
-    }, [informeGuid]);
+
+        // Actualizar el localStorage con el GUID actual si tenemos windowId
+        if (windowId && informeGuid) {
+            const currentValue = localStorage.getItem(windowId);
+
+            // Solo actualizar si cambió
+            if (currentValue !== informeGuid) {
+                localStorage.setItem(windowId, informeGuid);
+                console.log('✅ useEffect - localStorage actualizado:', windowId, currentValue, '→', informeGuid);
+
+                // También notificar a otras ventanas
+                notifyGuidChange(windowId, informeGuid);
+            }
+        }
+    }, [informeGuid, windowId]);
+
+    useEffect(() => {
+        if (!windowId) return;
+
+        const checkStorage = () => {
+            const currentValue = localStorage.getItem(windowId);
+            console.log('🔍 localStorage actual:', windowId, '=', currentValue);
+        };
+
+        // Revisar cada segundo
+        const interval = setInterval(checkStorage, 1000);
+
+        return () => clearInterval(interval);
+    }, [windowId]);
 
     // Filtrar plantillas por búsqueda local
     const filteredTemplates = templatesData?.data?.filter((template) => {
@@ -408,55 +440,76 @@ export const RedactarInforme = () => {
             // 1. Verificar credenciales
             await verifyCredentials({ password });
 
-            // 2. Preparar payload
-            const payload: Record<string, string> = {};
+            // Si el informe ya está firmado, quitar la firma
+            if (isSigned) {
+                // Quitar firma del informe
+                await quitarFirma({ examId: informeGuid || '' });
 
-            if (modalityId && modalityId !== 'undefined') {
-                payload.modality_id = modalityId;
-            }
+                // Bloquear el informe nuevamente porque sigue trabajando en él
+                if (informeGuid) {
+                    await blockExam(informeGuid);
+                }
 
-            if (bodypartId && bodypartId !== 'undefined') {
-                payload.body_part_id = bodypartId;
-            }
+                // Actualizar estados locales
+                setIsSigned(false);
+                setIsSignModalOpen(false);
+                setPassword('');
 
-            if (studyGroupId && studyGroupId !== 'undefined') {
-                payload.study_group_id = studyGroupId;
-            }
-
-            // 3. Firmar reporte
-            await signReport({
-                informeGuid: informeGuid || '',
-                ...payload
-            });
-
-            // 4. Obtener siguiente examen
-            const nextExam = await getNextExam(payload);
-
-            // 5. Actualizar estados locales
-            setIsSigned(true);
-            setIsSignModalOpen(false);
-            setPassword('');
-
-            // 6. Desbloquear el informe después de firmar
-            if (informeGuid) {
-                await unblockExam(informeGuid);
-            }
-
-            // 7. Invalidar cache DESPUÉS del unblock para que se actualice
-            queryClient.invalidateQueries({
-                queryKey: informesKeys.lists()
-            });
-
-            // 8. Si hay siguiente examen, mostrar modal
-            if (nextExam?.data) {
-                setNextExamData(nextExam.data);
-                setIsNextExamModalOpen(true);
-
+                // Invalidar cache
+                queryClient.invalidateQueries({
+                    queryKey: informesKeys.lists()
+                });
             } else {
-                // 9. Si NO hay siguiente examen, mostrar modal de cerrar pestaña
-                setIsCloseTabModalOpen(true);
-            }
+                // 2. Preparar payload para firmar
+                const payload: Record<string, string> = {};
 
+                if (modalityId && modalityId !== 'undefined') {
+                    payload.modality_id = modalityId;
+                }
+
+                if (bodypartId && bodypartId !== 'undefined') {
+                    payload.body_part_id = bodypartId;
+                }
+
+                if (studyGroupId && studyGroupId !== 'undefined') {
+                    payload.study_group_id = studyGroupId;
+                }
+
+                // 3. Firmar reporte
+                await signReport({
+                    informeGuid: informeGuid || '',
+                    ...payload
+                });
+
+                // 4. Obtener siguiente examen
+                const nextExam = await getNextExam(payload);
+
+                // 5. Actualizar estados locales
+                setIsSigned(true);
+                setIsSignModalOpen(false);
+                setPassword('');
+
+                // 6. Desbloquear el informe después de firmar
+                if (informeGuid) {
+                    await unblockExam(informeGuid);
+                }
+
+                // 7. Invalidar cache DESPUÉS del unblock para que se actualice
+                queryClient.invalidateQueries({
+                    queryKey: informesKeys.lists()
+                });
+
+                // 8. Si hay siguiente examen, mostrar modal
+                if (nextExam?.data) {
+                    setNextExamData(nextExam.data);
+                    setIsNextExamModalOpen(true);
+                    //setear localStorage
+
+                } else {
+                    // 9. Si NO hay siguiente examen, mostrar modal de cerrar pestaña
+                    setIsCloseTabModalOpen(true);
+                }
+            }
         } catch (error) {
             console.error('Error en el proceso de firma:', error);
         } finally {
@@ -465,6 +518,10 @@ export const RedactarInforme = () => {
     };
     const handleCloseTab = () => {
         unblockExam(informeGuid || '').finally(() => {
+            // Limpiar localStorage antes de cerrar
+            if (windowId) {
+                localStorage.removeItem(windowId);
+            }
             window.close();
         });
         // redirigir a una página de confirmación o al dashboard
@@ -475,18 +532,47 @@ export const RedactarInforme = () => {
 
     const handleStayOnPage = () => {
         setIsCloseTabModalOpen(false);
-        toast.success('Informe firmado exitosamente');
     };
-    const handleOpenNextExam = () => {
+    const handleOpenNextExam = async () => {
         if (nextExamData) {
-            const params = new URLSearchParams();
-            if (modalityId) params.set('modality_id', modalityId);
-            if (bodypartId) params.set('bodypart_id', bodypartId);
-            if (studyGroupId) params.set('study_group_id', studyGroupId);
-            const newUrl = `/redaccion/radiologia/redactar-informe/${nextExamData.guid}/${nextExamData.study_instance_uid}?${params.toString()}`;
-            navigate(newUrl)
-            blockExam(nextExamData.guid);
-            setIsNextExamModalOpen(false);
+            try {
+                // 1. PRIMERO: Actualizar localStorage localmente
+                if (windowId) {
+                    localStorage.setItem(windowId, nextExamData.guid);
+                    console.log('🔄 localStorage actualizado localmente:', windowId, '→', nextExamData.guid);
+                }
+                console.log(nextExamData)
+                // 2. SEGUNDO: Notificar a todas las ventanas (incluyendo la padre)
+                if (windowId) {
+                    notifyGuidChange(windowId, nextExamData.guid);
+                    console.log('📡 Notificación enviada via BroadcastChannel');
+                }
+
+                // 3. TERCERO: Esperar un momento para que se propague el mensaje
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                // 4. CUARTO: Bloquear el nuevo examen
+                console.log('🔒 Bloqueando nuevo examen:', nextExamData.guid);
+                await blockExam(nextExamData.guid);
+
+                // 5. QUINTO: Construir la URL
+                const params = new URLSearchParams();
+                if (modalityId) params.set('modality_id', modalityId);
+                if (bodypartId) params.set('bodypart_id', bodypartId);
+                if (studyGroupId) params.set('study_group_id', studyGroupId);
+                if (windowId) params.set('windowId', windowId);
+
+                const newUrl = `/redaccion/radiologia/redactar-informe/${nextExamData.guid}/${nextExamData.study_instance_uid}?${params.toString()}`;
+
+
+                // 6. SEXTO: Navegar
+                navigate(newUrl);
+
+                setIsNextExamModalOpen(false);
+            } catch (error) {
+                console.error('❌ Error al abrir siguiente examen:', error);
+                toast.error('Error al abrir el siguiente examen');
+            }
         }
     };
 
@@ -497,6 +583,7 @@ export const RedactarInforme = () => {
     };
 
     // Función para cerrar la ventana de forma segura (desbloqueando primero)
+    // Al cerrar la ventana
     const handleCloseWindow = async () => {
         if (currentInformeGuidRef.current) {
             try {
@@ -504,15 +591,24 @@ export const RedactarInforme = () => {
                 queryClient.invalidateQueries({
                     queryKey: informesKeys.lists()
                 });
-                // Esperar un momento para que se complete
-                setTimeout(() => {
-                    window.close();
-                }, 300);
+
+                // Limpiar y notificar
+                if (windowId) {
+                    clearWindowStorage(windowId); // Usa la función helper
+                }
+
+                setTimeout(() => window.close(), 300);
             } catch (error) {
                 console.error('Error al desbloquear:', error);
+                if (windowId) {
+                    clearWindowStorage(windowId);
+                }
                 window.close();
             }
         } else {
+            if (windowId) {
+                clearWindowStorage(windowId);
+            }
             window.close();
         }
     };

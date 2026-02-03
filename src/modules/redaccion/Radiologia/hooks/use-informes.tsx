@@ -62,10 +62,9 @@ export const useBlockExam = () => {
 
     return useMutation({
         mutationFn: (examId: string) => blockExam(examId),
-        onSuccess: (response) => {
+        onSuccess: () => {
             // Invalidar las queries para refrescar la lista
             queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
-            toast.success(response.message || 'Informe bloqueado para edición');
             notifyInformeChange('INFORME_UNBLOCKED');
 
         },

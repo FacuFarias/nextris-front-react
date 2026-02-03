@@ -1,16 +1,51 @@
-// hooks/useCrossWindowSync.ts
-import { useEffect } from 'react';
+// hooks/use-cross-windows.ts
+import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { informesKeys } from '../../constants/query-keys';
 
+const CHANNEL_NAME = 'informe-updates';
+
+type InformeEventType =
+    | 'INFORME_SIGNED'
+    | 'INFORME_UPDATED'
+    | 'INFORME_DELETED'
+    | 'INFORME_UNBLOCKED'
+    | 'GUID_UPDATE';
+
+interface BroadcastMessage {
+    type: InformeEventType;
+    windowId?: string;
+    guid?: string;
+    timestamp?: number;
+}
+
+// ✅ SINGLETON - Canal compartido para toda la aplicación
+let broadcastChannel: BroadcastChannel | null = null;
+
+const getBroadcastChannel = (): BroadcastChannel => {
+    if (!broadcastChannel) {
+        broadcastChannel = new BroadcastChannel(CHANNEL_NAME);
+    }
+    return broadcastChannel;
+};
+
+/**
+ * Hook para sincronizar cambios entre ventanas/pestañas
+ */
 export const useCrossWindowSync = () => {
     const queryClient = useQueryClient();
+    const listenerAdded = useRef(false);
 
     useEffect(() => {
-        const channel = new BroadcastChannel('informe-updates');
+        // Evitar agregar el listener múltiples veces
 
-        channel.onmessage = (event) => {
-            switch (event.data.type) {
+        const channel = getBroadcastChannel();
+
+        const handleMessage = (event: MessageEvent<BroadcastMessage>) => {
+            const { type, windowId, guid } = event.data;
+
+
+            switch (type) {
                 case 'INFORME_SIGNED':
                 case 'INFORME_UPDATED':
                 case 'INFORME_DELETED':
@@ -19,18 +54,59 @@ export const useCrossWindowSync = () => {
                         queryKey: informesKeys.lists()
                     });
                     break;
+
+                case 'GUID_UPDATE':
+                    if (windowId) {
+                        if (guid) {
+                            localStorage.setItem(windowId, guid);
+                        } else {
+                            localStorage.removeItem(windowId);
+                        }
+
+                    }
+                    break;
             }
         };
 
+        channel.addEventListener('message', handleMessage);
+        listenerAdded.current = true;
+
         return () => {
-            channel.close();
+            channel.removeEventListener('message', handleMessage);
+            listenerAdded.current = false;
         };
     }, [queryClient]);
 };
 
-// Función helper para notificar cambios
-export const notifyInformeChange = (type: 'INFORME_SIGNED' | 'INFORME_UPDATED' | 'INFORME_DELETED' | 'INFORME_UNBLOCKED') => {
-    const channel = new BroadcastChannel('informe-updates');
-    channel.postMessage({ type });
-    channel.close();
+/**
+ * Notifica cambio de GUID
+ */
+export const notifyGuidChange = (windowId: string, guid: string) => {
+    console.group('📤 ENVIANDO GUID_UPDATE');
+    console.log('WindowId:', windowId);
+    console.log('GUID:', guid || '(vacío)');
+
+
+
+};
+
+/**
+ * Notifica eventos de informe
+ */
+export const notifyInformeChange = (
+    type: 'INFORME_SIGNED' | 'INFORME_UPDATED' | 'INFORME_DELETED' | 'INFORME_UNBLOCKED'
+) => {
+    const channel = getBroadcastChannel();
+    channel.postMessage({
+        type,
+        timestamp: Date.now()
+    });
+};
+
+/**
+ * Limpia storage y notifica
+ */
+export const clearWindowStorage = (windowId: string) => {
+    localStorage.removeItem(windowId);
+    notifyGuidChange(windowId, '');
 };

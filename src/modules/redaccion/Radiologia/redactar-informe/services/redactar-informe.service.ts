@@ -30,3 +30,9 @@ export const postNextExam = async (payload: {
     const response = await api.post('/reports/next-exam', payload);
     return response.data;
 };
+
+
+export const postQuitarFirma = async ({ examId }: { examId: string }) => {
+    const response = await api.post(`/quitar_firma/${examId}`);
+    return response.data;
+};
