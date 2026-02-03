@@ -689,9 +689,116 @@ useEffect(() => {
 
 ---
 
+## Endpoints de Firma de Reportes
+
+### 13. POST /quitar_firma/{exam_id}
+Quita la firma de un reporte (desmarca como reportado y elimina el PDF).
+
+#### Description
+Revierte completamente el proceso de firma de un reporte. Esta función es lo contrario de `sign_report`:
+- Marca el examen como NO reportado (`IsReported=0`)
+- Limpia la fecha de reporte (`reportdate=NULL`)
+- Elimina la referencia al PDF en la base de datos (`pdfpath=NULL`)
+- Elimina el archivo PDF físico del servidor
+- Actualiza el estado del examen
+
+#### Parameters
+**Path Parameters:**
+- `exam_id` (required): GUID del examen cuya firma se quiere remover
+
+#### Request
+```http
+POST /api/quitar_firma/{exam_id}
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
+
+#### Response
+**Status Code:** 200 OK
+
+```json
+{
+  "success": true,
+  "message": "Firma removida exitosamente, PDF eliminado"
+}
+```
+
+**Posibles mensajes:**
+- `"Firma removida exitosamente, PDF eliminado"` - Todo se eliminó correctamente
+- `"Firma removida exitosamente, pero el PDF no se pudo eliminar"` - La firma se removió pero el PDF no existía o no se pudo eliminar
+- `"Firma removida exitosamente"` - No había PDF asociado
+
+#### Errors
+```json
+// Examen no encontrado
+{
+  "success": false,
+  "message": "Examen no encontrado: {exam_id}"
+}
+
+// Error general
+{
+  "success": false,
+  "message": "Error: {descripción del error}"
+}
+```
+
+**Status Codes:**
+- `200`: Success - Firma removida exitosamente
+- `404`: Not Found - Examen no encontrado
+- `500`: Internal Server Error
+
+#### Comportamiento
+1. Busca el path del PDF en la base de datos antes de eliminarlo
+2. Actualiza el examen: `IsReported=0`, `reportdate=NULL`
+3. Actualiza el reporte: `pdfpath=NULL`
+4. Elimina el archivo PDF físico del sistema si existe
+5. Actualiza el estado del examen mediante `updatestatus()`
+
+#### Uso desde Frontend
+```javascript
+// Quitar firma de un reporte
+const quitarFirmaReporte = async (examId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/quitar_firma/${examId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      console.log('Firma removida:', data.message);
+      // Actualizar UI, recargar lista de exámenes, etc.
+    } else {
+      console.error('Error:', data.message);
+    }
+  } catch (error) {
+    console.error('Error al quitar firma:', error);
+  }
+};
+```
+
+#### Casos de Uso
+- **Corrección de errores**: Cuando se firmó un reporte por error y necesita ser revisado
+- **Re-edición**: Cuando se necesita volver a editar un reporte ya firmado
+- **Anulación de firma**: Para deshacer completamente la firma de un informe
+
+#### Notas Importantes
+- Esta acción es **reversible** - se puede volver a firmar el reporte después
+- El PDF se elimina permanentemente del servidor
+- Los datos del informe (findings, impressions, etc.) **NO se eliminan** de la base de datos, solo se marca como no reportado
+- Se recomienda solicitar confirmación al usuario antes de ejecutar esta acción
+- Actualiza automáticamente el estado del examen en el sistema
+
+---
+
 ## Endpoints de Visualización de PDFs
 
-### 13. GET /pdfs/{filename}
+### 14. GET /pdfs/{filename}
 Sirve archivos PDF directamente desde el servidor.
 
 #### Description
