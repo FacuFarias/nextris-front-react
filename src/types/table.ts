@@ -52,4 +52,11 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     onRowDoubleClick?: (row: T, index: number) => void;
     selectedRow?: T | null;
     rowIdKey?: keyof T;
+    maxHeight?: string; // Altura máxima para hacer scroll solo en la tabla
+    perPageValue?: number;
+    onPerPageChange?: (value: number) => void;
+    perPageOptions?: number[];
+    allColumns?: TableColumn<T>[]; // Todas las columnas para el selector
+    visibleColumns?: string[];
+    onToggleColumn?: (columnKey: string) => void;
 }

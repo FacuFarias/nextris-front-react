@@ -1,4 +1,12 @@
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import type { PaginationConfig } from "@/types/table";
 
 import {
@@ -11,11 +19,23 @@ import {
 interface TablePaginationProps {
     pagination: PaginationConfig;
     onPaginationChange: (page: number, pageSize: number) => void;
+    perPageValue?: number;
+    onPerPageChange?: (value: number) => void;
+    perPageOptions?: number[];
+    columns?: Array<{ key: string; label: string }>;
+    visibleColumns?: string[];
+    onToggleColumn?: (columnKey: string) => void;
 }
 
 export function TablePagination({
     pagination,
     onPaginationChange,
+    perPageValue,
+    onPerPageChange,
+    perPageOptions = [5, 10, 15, 20, 25, 30],
+    columns,
+    visibleColumns,
+    onToggleColumn,
 }: TablePaginationProps) {
     const { page, pageSize, total } = pagination;
 
@@ -61,7 +81,65 @@ export function TablePagination({
 
     return (
         <div className="flex items-center justify-between px-2 py-4">
-            <div className="w-full flex justify-end space-x-2">
+            {/* Selector de filas por página y columnas */}
+            <div className="flex items-center gap-4">
+                {onPerPageChange && perPageValue && (
+                    <>
+                        <div className="flex items-center gap-2">
+                            <Label htmlFor="per-page" className="text-sm font-medium text-gray-700">
+                                Filas:
+                            </Label>
+                            <Select
+                                value={perPageValue.toString()}
+                                onValueChange={(value) => onPerPageChange(Number(value))}
+                            >
+                                <SelectTrigger className="w-20">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {perPageOptions.map((option) => (
+                                        <SelectItem key={option} value={option.toString()}>
+                                            {option}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Selector de columnas visibles */}
+                        {columns && visibleColumns && onToggleColumn && (
+                            <div className="flex items-center gap-2">
+                                <Label htmlFor="column-selector" className="text-sm font-medium text-gray-700">
+                                    Columnas:
+                                </Label>
+                                <Select
+                                    value=""
+                                    onValueChange={(value) => {
+                                        if (value) {
+                                            onToggleColumn(value);
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger className="w-[220px]">
+                                        <SelectValue placeholder="Seleccionar columna..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {columns.map((column) => (
+                                            <SelectItem key={column.key} value={column.key}>
+                                                {visibleColumns.includes(column.key) ? '✓ ' : '✗ '}
+                                                {column.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+
+            {/* Paginación - siempre a la derecha */}
+            <div className="flex justify-end space-x-2">
                 <div className="flex items-center space-x-2">
                     <Button
                         variant="outline"

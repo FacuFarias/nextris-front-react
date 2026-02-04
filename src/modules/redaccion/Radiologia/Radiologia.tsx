@@ -28,16 +28,20 @@ export const Radiologia = () => {
     const [modalityId, setModalityId] = useState<string | undefined>(undefined);
     const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(10);
     const [verFinalizados, setVerFinalizados] = useState(false);
     const [asignadosAMi, setAsignadosAMi] = useState(false);
     const [listoParaLeer, setListoParaLeer] = useState(true);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [selectedInforme, setSelectedInforme] = useState<Informes | null>(null);
     const [isBlocking, setIsBlocking] = useState(false);
+    const [visibleColumns, setVisibleColumns] = useState<string[]>(
+        informeColumns.map(col => col.key as string)
+    );
     const useDebounceSearch = useDebounce(searchTerm, 500);
     const { mutateAsync: blockExam } = useBlockExam();
     const { mutateAsync: unblockExam } = useUnblockExam();
-    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: 8, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId });
+    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
@@ -160,6 +164,25 @@ export const Radiologia = () => {
             label: bodyPart.description
         }));
     }, [bodyParts]);
+
+    const filteredColumns = useMemo(() => {
+        return informeColumns.filter(col => visibleColumns.includes(col.key as string));
+    }, [visibleColumns]);
+
+    const toggleColumn = (columnKey: string) => {
+        setVisibleColumns(prev => {
+            if (prev.includes(columnKey)) {
+                // No permitir que se desmarquen todas las columnas
+                if (prev.length === 1) {
+                    toast.error('Debe mantener al menos una columna visible');
+                    return prev;
+                }
+                return prev.filter(key => key !== columnKey);
+            } else {
+                return [...prev, columnKey];
+            }
+        });
+    };
     return (
         <MainLayout>
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
@@ -242,7 +265,6 @@ export const Radiologia = () => {
                         }}>
                             <div className="flex items-center">
                                 <RefreshCcw className="h-4 w-4" />
-
                             </div>
                         </PrimaryButton>
 
@@ -291,13 +313,22 @@ export const Radiologia = () => {
                 ) : (
                     <TablaDynamic<Informes>
                         data={(informesData?.data?.data) || []}
-                        columns={informeColumns}
+                        columns={filteredColumns}
                         showIndex
                         pagination={pagination}
                         actions={getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf)}
                         onPaginationChange={(newPage) => {
                             setPage(newPage);
                         }}
+                        maxHeight="600px"
+                        perPageValue={perPage}
+                        onPerPageChange={(value) => {
+                            setPerPage(value);
+                            setPage(1);
+                        }}
+                        allColumns={informeColumns}
+                        visibleColumns={visibleColumns}
+                        onToggleColumn={toggleColumn}
                     />
                 )}
 

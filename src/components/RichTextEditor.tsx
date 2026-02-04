@@ -88,10 +88,33 @@ export const RichTextEditor = ({
     }
 
     return (
-        <div className={`border rounded-md bg-white ${dragOver ? 'border-purple-500 border-2 bg-purple-50' : ''} ${className}`}>
+        <div className={`relative border rounded-md bg-white ${dragOver ? 'border-purple-500 border-2 bg-purple-50' : ''} ${className}`}>
+            {/* Marca de agua BLOQUEADO - detrás de todo */}
+            {readOnly && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                    <span
+                        className="text-white font-bold text-[40px] select-none transform -rotate-45"
+                        style={{
+                            textShadow: `
+                                -2px -2px 0 #eab308,
+                                2px -2px 0 #eab308,
+                                -2px 2px 0 #eab308,
+                                2px 2px 0 #eab308,
+                                -2px 0 0 #eab308,
+                                2px 0 0 #eab308,
+                                0 -2px 0 #eab308,
+                                0 2px 0 #eab308
+                            `
+                        }}
+                    >
+                        BLOQUEADO
+                    </span>
+                </div>
+            )}
+
             {/* Indicador de solo lectura */}
             {readOnly && (
-                <div className="flex items-center gap-2 p-2 bg-yellow-50 border-b border-yellow-200">
+                <div className="relative z-10 flex items-center gap-2 p-2 bg-yellow-50 border-b border-yellow-200">
                     <Lock className="w-4 h-4 text-yellow-700" />
                     <span className="text-xs font-medium text-yellow-700">
                         Campo bloqueado - Documento firmado
@@ -100,7 +123,7 @@ export const RichTextEditor = ({
             )}
 
             {/* Barra de herramientas */}
-            <div className="flex items-center gap-1 p-2 border-b bg-gray-50 flex-wrap">
+            <div className="relative z-10 flex items-center gap-1 p-2 border-b bg-gray-50 flex-wrap">
                 {/* Formato de texto */}
                 <button
                     onClick={() => editor.chain().focus().toggleBold().run()}
@@ -206,12 +229,20 @@ export const RichTextEditor = ({
             </div>
 
             {/* Editor con overlay cuando está bloqueado */}
-            <div className="relative">
+            <div className={`relative ${readOnly ? 'bg-yellow-50' : ''}`}>
+                {/* Marca de agua BLOQUEADO - detrás del texto */}
+                {readOnly && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                        <span className="text-white font-bold text-[40px] select-none transform -rotate-30 text-shadow-md">
+                            BLOQUEADO
+                        </span>
+                    </div>
+                )}
                 {readOnly && (
                     <div className="absolute inset-0 bg-transparent bg-opacity-50 cursor-not-allowed z-10" />
                 )}
                 <div
-                    className={readOnly ? 'opacity-70' : ''}
+                    className={`relative z-1 ${readOnly ? 'opacity-70' : ''}`}
                     onDragOver={readOnly ? undefined : onDragOver}
                     onDragLeave={readOnly ? undefined : onDragLeave}
                     onDrop={readOnly ? undefined : onDrop}

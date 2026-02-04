@@ -37,6 +37,13 @@ export function TablaDynamic<T extends Record<string, any>>({
     onPaginationChange,
     selectedRow,
     rowIdKey = 'guid' as keyof T,
+    maxHeight,
+    perPageValue,
+    onPerPageChange,
+    perPageOptions,
+    allColumns,
+    visibleColumns,
+    onToggleColumn,
 }: DynamicTableProps<T>) {
     const [sortConfig, setSortConfig] = useState<{
         key: keyof T | string;
@@ -139,7 +146,7 @@ export function TablaDynamic<T extends Record<string, any>>({
 
     return (
         <div className={cn("space-y-4 mt-5", className)}>
-            <div className="rounded-md border overflow-hidden">
+            <div className={cn("rounded-md border", maxHeight ? "overflow-auto" : "overflow-hidden")} style={maxHeight ? { maxHeight } : undefined}>
                 <Table /* style={{ tableLayout: "fixed" }} */>
                     <TableHeader className="bg-brand-purple">
                         <TableRow className="hover:bg-brand-purple border-b-0">
@@ -253,6 +260,12 @@ export function TablaDynamic<T extends Record<string, any>>({
                 <TablePagination
                     pagination={pagination}
                     onPaginationChange={onPaginationChange}
+                    perPageValue={perPageValue}
+                    onPerPageChange={onPerPageChange}
+                    perPageOptions={perPageOptions}
+                    columns={allColumns?.map(col => ({ key: col.key as string, label: col.label }))}
+                    visibleColumns={visibleColumns}
+                    onToggleColumn={onToggleColumn}
                 />
             )}
         </div>
