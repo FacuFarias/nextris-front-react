@@ -28,7 +28,7 @@ export const RedactarInforme = () => {
     const modalityId = searchParams.get('modality_id');
     const bodypartId = searchParams.get('bodypart_id');
     const studyGroupId = searchParams.get('study_group_id');
-    const windowId = searchParams.get('windowId'); // ID único de la ventana
+    const windowId = searchParams.get('windowId');
 
     const { informeDetalle, isLoading } = useInformeDetalle(informeGuid);
     const { data: imagenes } = useImagenesPorEstudio(studyInstanceUID || '');
@@ -81,7 +81,6 @@ export const RedactarInforme = () => {
             // Solo actualizar si cambió
             if (currentValue !== informeGuid) {
                 localStorage.setItem(windowId, informeGuid);
-                console.log('✅ useEffect - localStorage actualizado:', windowId, currentValue, '→', informeGuid);
 
                 // También notificar a otras ventanas
                 notifyGuidChange(windowId, informeGuid);
@@ -89,19 +88,7 @@ export const RedactarInforme = () => {
         }
     }, [informeGuid, windowId]);
 
-    useEffect(() => {
-        if (!windowId) return;
 
-        const checkStorage = () => {
-            const currentValue = localStorage.getItem(windowId);
-            console.log('🔍 localStorage actual:', windowId, '=', currentValue);
-        };
-
-        // Revisar cada segundo
-        const interval = setInterval(checkStorage, 1000);
-
-        return () => clearInterval(interval);
-    }, [windowId]);
 
     // Filtrar plantillas por búsqueda local
     const filteredTemplates = templatesData?.data?.filter((template) => {
@@ -343,7 +330,6 @@ export const RedactarInforme = () => {
             }
         }, 50);
 
-        console.log(`✅ Placeholder encontrado: "${match.text}" en campo ${fieldName}`);
     };
 
     useEffect(() => {
@@ -539,13 +525,10 @@ export const RedactarInforme = () => {
                 // 1. PRIMERO: Actualizar localStorage localmente
                 if (windowId) {
                     localStorage.setItem(windowId, nextExamData.guid);
-                    console.log('🔄 localStorage actualizado localmente:', windowId, '→', nextExamData.guid);
                 }
-                console.log(nextExamData)
                 // 2. SEGUNDO: Notificar a todas las ventanas (incluyendo la padre)
                 if (windowId) {
                     notifyGuidChange(windowId, nextExamData.guid);
-                    console.log('📡 Notificación enviada via BroadcastChannel');
                 }
 
                 // 3. TERCERO: Esperar un momento para que se propague el mensaje
@@ -570,7 +553,6 @@ export const RedactarInforme = () => {
 
                 setIsNextExamModalOpen(false);
             } catch (error) {
-                console.error('❌ Error al abrir siguiente examen:', error);
                 toast.error('Error al abrir el siguiente examen');
             }
         }

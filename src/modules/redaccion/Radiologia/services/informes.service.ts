@@ -63,8 +63,6 @@ export const unblockExamOnUnload = (exam_id: string): void => {
 
     const url = `${baseURL}/examinations/${exam_id}/unblock`;
 
-    console.log('🔓 Intentando desbloquear examen:', exam_id);
-    console.log('URL:', url);
 
     try {
         // fetch con keepalive: true garantiza que el request se complete incluso si la página se cierra
@@ -79,7 +77,6 @@ export const unblockExamOnUnload = (exam_id: string): void => {
             keepalive: true // Esta es la clave - mantiene la request viva al cerrar la página
         })
             .then(response => {
-                console.log('✅ Response status:', response.status);
                 if (response.ok) {
                     console.log('✅ Informe desbloqueado exitosamente');
                 } else {
@@ -90,7 +87,6 @@ export const unblockExamOnUnload = (exam_id: string): void => {
                 console.error('❌ Error en fetch:', error);
             });
 
-        console.log('📤 Request de desbloqueo enviado con keepalive');
     } catch (error) {
         console.error('❌ Excepción al desbloquear:', error);
     }

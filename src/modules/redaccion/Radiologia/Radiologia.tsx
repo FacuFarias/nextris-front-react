@@ -79,21 +79,22 @@ export const Radiologia = () => {
     };
 
     const openReportWindow = async (informe: Informes) => {
-        let url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}`;
+        const windowId = `report_window_${Date.now()}`;
+
+        let url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?windowId=${windowId}`;
 
         if (modalityId || bodyPartId || studioTypeId) {
-            url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?modality_id=${modalityId}&bodypart_id=${bodyPartId}&study_group_id=${studioTypeId}`;
+            url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?windowId=${windowId}&modality_id=${modalityId}&bodypart_id=${bodyPartId}&study_group_id=${studioTypeId}`;
         }
 
         // Generar un ID único para esta ventana
-        const windowId = `report_window_${Date.now()}`;
 
         // Guardar el GUID inicial en localStorage con el ID de la ventana
         localStorage.setItem(windowId, informe.guid);
 
         // 2️⃣ Abrir ventana Y GUARDAR LA REFERENCIA, pasando el windowId en la URL
         const reportWindow = window.open(
-            `${url}&windowId=${windowId}`,
+            `${url}`,
             "_blank",
             "toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=no,width=1400,height=900,top=50,left=100,titlebar=no"
         );

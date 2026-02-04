@@ -82,13 +82,14 @@ export const useCrossWindowSync = () => {
  * Notifica cambio de GUID
  */
 export const notifyGuidChange = (windowId: string, guid: string) => {
-    console.group('📤 ENVIANDO GUID_UPDATE');
-    console.log('WindowId:', windowId);
-    console.log('GUID:', guid || '(vacío)');
-
-
-
-};
+    const channel = getBroadcastChannel();
+    channel.postMessage({
+        type: 'GUID_UPDATE',
+        windowId,
+        guid: guid || undefined,
+        timestamp: Date.now(),
+    });
+}
 
 /**
  * Notifica eventos de informe
