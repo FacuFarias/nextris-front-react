@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor de Imágenes Médicas</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #viewer-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+
+<body>
+    <iframe id="viewer-frame" src="" allow="fullscreen"></iframe>
+
+    <script>
+        const iframe = document.getElementById('viewer-frame');
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialStudyUID = urlParams.get('StudyInstanceUIDs');
+
+        // Cargar el estudio inicial
+        if (initialStudyUID) {
+            iframe.src = `https://viewer.nextris.cloud/viewer?StudyInstanceUIDs=${initialStudyUID}`;
+        }
+
+        // Escuchar mensajes de la ventana padre (la aplicación principal)
+        window.addEventListener('message', function (event) {
+            // Verificar que el mensaje venga del mismo origen (seguridad)
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+            if (event.data && event.data.type === 'UPDATE_VIEWER') {
+                const { newUrl, studyInstanceUid } = event.data;
+                if (newUrl) {
+                    iframe.src = newUrl;
+                    // Actualizar también la URL de esta ventana
+                    const newWrapperUrl = `${window.location.pathname}?StudyInstanceUIDs=${studyInstanceUid}`;
+                    window.history.pushState({}, '', newWrapperUrl);
+                } else if (studyInstanceUid) {
+                    const url = `https://viewer.nextris.cloud/viewer?StudyInstanceUIDs=${studyInstanceUid}`;
+                    iframe.src = url;
+                    // Actualizar también la URL de esta ventana
+                    const newWrapperUrl = `${window.location.pathname}?StudyInstanceUIDs=${studyInstanceUid}`;
+                    window.history.pushState({}, '', newWrapperUrl);
+                }
+            }
+        });
+
+        // Log cuando el iframe carga
+        iframe.addEventListener('load', function () {
+            console.log('✅ Iframe cargado:', iframe.src);
+        });
+
+        console.log('✅ Wrapper del visor configurado y escuchando mensajes');
+        console.log('👂 Esperando mensajes de tipo "UPDATE_VIEWER"...');
+    </script>

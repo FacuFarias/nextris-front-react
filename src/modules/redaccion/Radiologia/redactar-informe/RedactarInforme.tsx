@@ -18,7 +18,7 @@ import { useNextExam } from "./hooks/use-next-exam";
 import { useQueryClient } from "@tanstack/react-query";
 import { informesKeys } from "../constants/query-keys";
 import { CloseTabModal, NextExamModal, SignModal, TemplateModal } from "../components/modals";
-import { clearWindowStorage, notifyGuidChange } from "./hooks/use-cross-windows";
+import { clearWindowStorage, notifyGuidChange, notifyViewerUpdate } from "./hooks/use-cross-windows";
 
 export const RedactarInforme = () => {
     const { informeGuid, studyInstanceUID } = useParams();
@@ -29,6 +29,7 @@ export const RedactarInforme = () => {
     const bodypartId = searchParams.get('bodypart_id');
     const studyGroupId = searchParams.get('study_group_id');
     const windowId = searchParams.get('windowId');
+    const siguientePaso = searchParams.get('siguiente_paso');
 
     const { informeDetalle, isLoading } = useInformeDetalle(informeGuid);
     const { data: imagenes } = useImagenesPorEstudio(studyInstanceUID || '');
@@ -485,14 +486,12 @@ export const RedactarInforme = () => {
                     queryKey: informesKeys.lists()
                 });
 
-                // 8. Si hay siguiente examen, mostrar modal
-                if (nextExam?.data) {
+                // 8. Si hay siguiente examen Y siguientePaso está activado, mostrar modal
+                if (nextExam?.data && siguientePaso === 'true') {
                     setNextExamData(nextExam.data);
                     setIsNextExamModalOpen(true);
-                    //setear localStorage
-
                 } else {
-                    // 9. Si NO hay siguiente examen, mostrar modal de cerrar pestaña
+                    // 9. Si NO hay siguiente examen O siguientePaso es false, mostrar modal de cerrar pestaña
                     setIsCloseTabModalOpen(true);
                 }
             }
@@ -531,24 +530,29 @@ export const RedactarInforme = () => {
                     notifyGuidChange(windowId, nextExamData.guid);
                 }
 
-                // 3. TERCERO: Esperar un momento para que se propague el mensaje
+                // 3. TERCERO: Notificar actualización del visor con el nuevo study_instance_uid
+                if (windowId && nextExamData.study_instance_uid) {
+                    notifyViewerUpdate(windowId, nextExamData.study_instance_uid, nextExamData.guid);
+                }
+
+                // 4. CUARTO: Esperar un momento para que se propague el mensaje
                 await new Promise(resolve => setTimeout(resolve, 100));
 
-                // 4. CUARTO: Bloquear el nuevo examen
-                console.log('🔒 Bloqueando nuevo examen:', nextExamData.guid);
+                // 5. QUINTO: Bloquear el nuevo examen
                 await blockExam(nextExamData.guid);
 
-                // 5. QUINTO: Construir la URL
+                // 6. SEXTO: Construir la URL
                 const params = new URLSearchParams();
                 if (modalityId) params.set('modality_id', modalityId);
                 if (bodypartId) params.set('bodypart_id', bodypartId);
                 if (studyGroupId) params.set('study_group_id', studyGroupId);
                 if (windowId) params.set('windowId', windowId);
+                if (siguientePaso) params.set('siguiente_paso', siguientePaso);
 
                 const newUrl = `/redaccion/radiologia/redactar-informe/${nextExamData.guid}/${nextExamData.study_instance_uid}?${params.toString()}`;
 
 
-                // 6. SEXTO: Navegar
+                // 7. SÉPTIMO: Navegar
                 navigate(newUrl);
 
                 setIsNextExamModalOpen(false);

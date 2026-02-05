@@ -44,6 +44,7 @@ export function TablaDynamic<T extends Record<string, any>>({
     allColumns,
     visibleColumns,
     onToggleColumn,
+    additionalControls,
 }: DynamicTableProps<T>) {
     const [sortConfig, setSortConfig] = useState<{
         key: keyof T | string;
@@ -146,7 +147,7 @@ export function TablaDynamic<T extends Record<string, any>>({
 
     return (
         <div className={cn("space-y-4 mt-5", className)}>
-            <div className={cn("rounded-md border", maxHeight ? "overflow-auto" : "overflow-hidden")} style={maxHeight ? { maxHeight } : undefined}>
+            <div className={cn("rounded-md border", maxHeight ? "overflow-y-auto" : "overflow-hidden")} style={maxHeight ? { maxHeight } : undefined}>
                 <Table /* style={{ tableLayout: "fixed" }} */>
                     <TableHeader className="bg-brand-purple">
                         <TableRow className="hover:bg-brand-purple border-b-0">
@@ -196,10 +197,10 @@ export function TablaDynamic<T extends Record<string, any>>({
                                         className={cn(
                                             (onRowClick || onRowDoubleClick) && "cursor-pointer hover:bg-muted/50",
                                             isSelected && "bg-purple-100 hover:bg-purple-100/80 border-l-4 border-l-brand-purple",
-                                            "animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-500 ease-out"
+                                            "animate-in fade-in duration-300 ease-out"
                                         )}
                                         style={{
-                                            animationDelay: `${index * 60}ms`,
+                                            animationDelay: `${index * 40}ms`,
                                             animationFillMode: 'both'
                                         }}
                                         onClick={() => onRowClick?.(row, getRowIndex(index))}
@@ -266,6 +267,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                     columns={allColumns?.map(col => ({ key: col.key as string, label: col.label }))}
                     visibleColumns={visibleColumns}
                     onToggleColumn={onToggleColumn}
+                    additionalControls={additionalControls}
                 />
             )}
         </div>

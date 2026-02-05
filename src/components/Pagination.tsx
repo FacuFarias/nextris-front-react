@@ -25,6 +25,7 @@ interface TablePaginationProps {
     columns?: Array<{ key: string; label: string }>;
     visibleColumns?: string[];
     onToggleColumn?: (columnKey: string) => void;
+    additionalControls?: React.ReactNode;
 }
 
 export function TablePagination({
@@ -36,6 +37,7 @@ export function TablePagination({
     columns,
     visibleColumns,
     onToggleColumn,
+    additionalControls,
 }: TablePaginationProps) {
     const { page, pageSize, total } = pagination;
 
@@ -134,6 +136,9 @@ export function TablePagination({
                                 </Select>
                             </div>
                         )}
+
+                        {/* Controles adicionales */}
+                        {additionalControls}
                     </>
                 )}
             </div>

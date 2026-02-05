@@ -10,12 +10,14 @@ type InformeEventType =
     | 'INFORME_UPDATED'
     | 'INFORME_DELETED'
     | 'INFORME_UNBLOCKED'
-    | 'GUID_UPDATE';
+    | 'GUID_UPDATE'
+    | 'VIEWER_UPDATE';
 
 interface BroadcastMessage {
     type: InformeEventType;
     windowId?: string;
     guid?: string;
+    studyInstanceUid?: string;
     timestamp?: number;
 }
 
@@ -42,7 +44,7 @@ export const useCrossWindowSync = () => {
         const channel = getBroadcastChannel();
 
         const handleMessage = (event: MessageEvent<BroadcastMessage>) => {
-            const { type, windowId, guid } = event.data;
+            const { type, windowId, guid, studyInstanceUid } = event.data;
 
 
             switch (type) {
@@ -64,6 +66,11 @@ export const useCrossWindowSync = () => {
                         }
 
                     }
+                    break;
+
+                case 'VIEWER_UPDATE':
+                    // Este evento es manejado en el componente Radiologia.tsx
+                    // Aquí solo lo dejamos pasar para que el listener específico lo capture
                     break;
             }
         };
@@ -110,4 +117,18 @@ export const notifyInformeChange = (
 export const clearWindowStorage = (windowId: string) => {
     localStorage.removeItem(windowId);
     notifyGuidChange(windowId, '');
+};
+
+/**
+ * Notifica cambio del visor de imágenes
+ */
+export const notifyViewerUpdate = (windowId: string, studyInstanceUid: string, guid: string) => {
+    const channel = getBroadcastChannel();
+    channel.postMessage({
+        type: 'VIEWER_UPDATE',
+        windowId,
+        studyInstanceUid,
+        guid,
+        timestamp: Date.now(),
+    });
 };

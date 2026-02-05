@@ -59,4 +59,5 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     allColumns?: TableColumn<T>[]; // Todas las columnas para el selector
     visibleColumns?: string[];
     onToggleColumn?: (columnKey: string) => void;
+    additionalControls?: React.ReactNode; // Controles adicionales en la barra de paginación
 }

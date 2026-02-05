@@ -2,7 +2,7 @@ import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
 import { InputSearch } from "@/components/InputSearch"
 import { MainLayout } from "@/layouts/layout"
 import { HandHelping, RefreshCcw, Loader2 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect, useRef } from "react"
 import { useInformes, useBlockExam, useUnblockExam } from "./hooks/use-informes"
 import { useCrossWindowSync } from "./redactar-informe/hooks/use-cross-windows"
 import { getInformesActions, informeColumns } from "./components/columns"
@@ -10,6 +10,7 @@ import TablaDynamic from "@/components/TableDynamic"
 import type { Informes } from "./types/informes.types"
 import { useDebounce } from "@uidotdev/usehooks"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { PrimaryButton } from "@/components"
 import { toast } from "sonner"
@@ -23,6 +24,9 @@ export const Radiologia = () => {
     // Hook para sincronizar entre ventanas
     useCrossWindowSync();
 
+    // Ref para guardar las ventanas del visor de imágenes (windowId -> Window)
+    const viewerWindowsRef = useRef<Map<string, Window>>(new Map());
+
     const [studioTypeId, setStudioTypeId] = useState<string | undefined>(undefined);
     const [bodyPartId, setBodyPartId] = useState<string | undefined>(undefined);
     const [modalityId, setModalityId] = useState<string | undefined>(undefined);
@@ -32,7 +36,9 @@ export const Radiologia = () => {
     const [verFinalizados, setVerFinalizados] = useState(false);
     const [asignadosAMi, setAsignadosAMi] = useState(false);
     const [listoParaLeer, setListoParaLeer] = useState(true);
+    const [siguientePaso, setSiguientePaso] = useState(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+    const [isNoImageModalOpen, setIsNoImageModalOpen] = useState(false);
     const [selectedInforme, setSelectedInforme] = useState<Informes | null>(null);
     const [isBlocking, setIsBlocking] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<string[]>(
@@ -46,6 +52,70 @@ export const Radiologia = () => {
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
 
+    // Listener para eventos de actualización del visor
+    useEffect(() => {
+        const CHANNEL_NAME = 'informe-updates';
+        const channel = new BroadcastChannel(CHANNEL_NAME);
+        console.log('📡 Listener del visor iniciado en Radiologia.tsx');
+
+        const handleViewerUpdate = (event: MessageEvent) => {
+            console.log('📨 Mensaje recibido en Radiologia.tsx:', event.data);
+            const { type, windowId, studyInstanceUid } = event.data;
+
+            if (type === 'VIEWER_UPDATE') {
+                console.log('🎯 Evento VIEWER_UPDATE detectado:', { windowId, studyInstanceUid });
+                console.log('🗺️ Ventanas guardadas:', Array.from(viewerWindowsRef.current.keys()));
+
+                if (windowId && studyInstanceUid) {
+                    const viewerWindow = viewerWindowsRef.current.get(windowId);
+                    console.log('🪟 Ventana encontrada:', viewerWindow ? 'Sí' : 'No');
+
+                    if (viewerWindow && !viewerWindow.closed) {
+                        console.log('🔄 Actualizando visor local con postMessage...');
+                        console.log('🆔 Nuevo StudyInstanceUID:', studyInstanceUid);
+
+                        try {
+                            // Enviar postMessage al wrapper para que actualice el iframe
+                            const newViewerUrl = `https://viewer.nextris.cloud/viewer?StudyInstanceUIDs=${studyInstanceUid}`;
+
+                            console.log('📨 Enviando postMessage al wrapper...');
+                            viewerWindow.postMessage(
+                                {
+                                    type: 'UPDATE_VIEWER',
+                                    studyInstanceUid: studyInstanceUid,
+                                    newUrl: newViewerUrl
+                                },
+                                window.location.origin
+                            );
+                            console.log('✅ Mensaje enviado al wrapper exitosamente');
+
+                            // Dar foco a la ventana
+                            viewerWindow.focus();
+                        } catch (error) {
+                            console.log('❌ Error al enviar mensaje:', error);
+                        }
+                    } else if (viewerWindow?.closed) {
+                        console.log('⚠️ La ventana del visor está cerrada');
+                        viewerWindowsRef.current.delete(windowId);
+                    } else {
+                        console.log('❌ No se encontró ventana del visor para windowId:', windowId);
+                    }
+                } else {
+                    console.log('⚠️ Faltan datos:', { windowId, studyInstanceUid });
+                }
+            }
+        };
+
+        channel.addEventListener('message', handleViewerUpdate);
+        console.log('👂 Listener registrado');
+
+        return () => {
+            console.log('🔌 Desconectando listener del visor');
+            channel.removeEventListener('message', handleViewerUpdate);
+            channel.close();
+        };
+    }, []);
+
     const pagination = informesData && {
         page: informesData?.data?.page || 1,
         pageSize: informesData?.data?.per_page || 5,
@@ -55,7 +125,15 @@ export const Radiologia = () => {
     const handleRedactarInforme = async (informe: Informes) => {
         // Verificar si el informe está bloqueado por otro usuario
         if (informe.blocked_by && informe.blocked_by_name) {
+
             toast.error(`Este informe está siendo editado por ${informe.blocked_by_name}`);
+            return;
+        }
+
+        // Verificar si el informe no tiene imágenes y no está reportado
+        if (!informe.is_reported && !informe.is_image) {
+            setSelectedInforme(informe);
+            setIsNoImageModalOpen(true);
             return;
         }
 
@@ -85,28 +163,54 @@ export const Radiologia = () => {
     const openReportWindow = async (informe: Informes) => {
         const windowId = `report_window_${Date.now()}`;
 
-        let url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?windowId=${windowId}`;
+        let url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?windowId=${windowId}&siguiente_paso=${siguientePaso}`;
 
         if (modalityId || bodyPartId || studioTypeId) {
-            url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?windowId=${windowId}&modality_id=${modalityId}&bodypart_id=${bodyPartId}&study_group_id=${studioTypeId}`;
+            url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?windowId=${windowId}&modality_id=${modalityId}&bodypart_id=${bodyPartId}&study_group_id=${studioTypeId}&siguiente_paso=${siguientePaso}`;
         }
 
-        // Generar un ID único para esta ventana
-
-        // Guardar el GUID inicial en localStorage con el ID de la ventana
         localStorage.setItem(windowId, informe.guid);
 
-        // 2️⃣ Abrir ventana Y GUARDAR LA REFERENCIA, pasando el windowId en la URL
+        // Abrir visor de imágenes si el informe tiene imágenes
+        let viewerWindow: Window | null = null;
+        if (informe.is_image) {
+            // Usar el wrapper en lugar del visor directo
+            const viewerWrapperUrl = `/viewer-wrapper.html?StudyInstanceUIDs=${informe.study_instance_uid}`;
+
+            viewerWindow = window.open(
+                viewerWrapperUrl, // 👈 Ahora apunta al wrapper local
+                `viewer_${windowId}`, // Usar un nombre único por windowId
+                `toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=no,width=1400,height=900,top=50,left=-1920,titlebar=no`
+            );
+
+            // Guardar referencia a la ventana del visor
+            if (viewerWindow) {
+                viewerWindowsRef.current.set(windowId, viewerWindow);
+                console.log('📺 Ventana del visor guardada para windowId:', windowId);
+                console.log('🗺️ Total de ventanas guardadas:', viewerWindowsRef.current.size);
+                console.log('🔑 WindowIds guardados:', Array.from(viewerWindowsRef.current.keys()));
+            } else {
+                console.log('❌ No se pudo abrir la ventana del visor');
+            }
+        }
+        const reportLeft = informe.is_image ? 2500 : 100;
+
+        // Abrir la ventana del informe
         const reportWindow = window.open(
             `${url}`,
             "_blank",
-            "toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=no,width=1400,height=900,top=50,left=100,titlebar=no"
+            `toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=no,width=1400,height=900,top=50,left=${reportLeft},titlebar=no`
         );
 
-        // 3️⃣ Si el navegador bloquea el popup
+        // Si el navegador bloquea el popup del informe
         if (!reportWindow) {
             localStorage.removeItem(windowId);
             await unblockExam(informe.guid);
+            // Cerrar ventana del visor si se abrió
+            if (viewerWindow) {
+                viewerWindow.close();
+                viewerWindowsRef.current.delete(windowId);
+            }
             return;
         }
 
@@ -121,13 +225,19 @@ export const Radiologia = () => {
                     await unblockExam(currentGuid);
                     localStorage.removeItem(windowId);
                 }
+
+                // Cerrar ventana del visor si sigue abierta
+                const viewerRef = viewerWindowsRef.current.get(windowId);
+                if (viewerRef && !viewerRef.closed) {
+                    viewerRef.close();
+                }
+                viewerWindowsRef.current.delete(windowId);
             }
         }, 300);
     };
 
 
     const handleViewImagenes = (informe: Informes) => {
-
         //abrir en otra pestaña
         window.open(
             `https://viewer.nextris.cloud/viewer?StudyInstanceUIDs=${informe.study_instance_uid}`,
@@ -214,7 +324,10 @@ export const Radiologia = () => {
                                 <Checkbox
                                     id="listo-leer"
                                     checked={listoParaLeer}
-                                    onCheckedChange={(checked) => setListoParaLeer(checked as boolean)}
+                                    onCheckedChange={(checked) => {
+                                        setListoParaLeer(checked as boolean);
+                                        setPage(1);
+                                    }}
                                     className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
                                 />
                                 <Label
@@ -228,7 +341,10 @@ export const Radiologia = () => {
                                 <Checkbox
                                     id="finalizados"
                                     checked={verFinalizados}
-                                    onCheckedChange={(checked) => setVerFinalizados(checked as boolean)}
+                                    onCheckedChange={(checked) => {
+                                        setVerFinalizados(checked as boolean);
+                                        setPage(1);
+                                    }}
                                     className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
                                 />
                                 <Label
@@ -246,7 +362,10 @@ export const Radiologia = () => {
                             <Checkbox
                                 id="asignados"
                                 checked={asignadosAMi}
-                                onCheckedChange={(checked) => setAsignadosAMi(checked as boolean)}
+                                onCheckedChange={(checked) => {
+                                    setAsignadosAMi(checked as boolean);
+                                    setPage(1);
+                                }}
                                 className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
                             />
                             <Label
@@ -255,8 +374,6 @@ export const Radiologia = () => {
                             >
                                 Asignados a mí
                             </Label>
-
-
                         </div>
 
                         <PrimaryButton onClick={() => {
@@ -274,7 +391,10 @@ export const Radiologia = () => {
                     <Autocomplete
                         options={gruposEstudioOptions}
                         value={studioTypeId}
-                        onValueChange={setStudioTypeId}
+                        onValueChange={(value) => {
+                            setStudioTypeId(value);
+                            setPage(1);
+                        }}
                         placeholder="Filtrar por grupo de estudio"
                         emptyMessage="No se encontraron grupos de estudio."
                         searchPlaceholder="Buscar grupo de estudio..."
@@ -284,7 +404,10 @@ export const Radiologia = () => {
                     <Autocomplete
                         options={modalidadesOptions}
                         value={modalityId}
-                        onValueChange={setModalityId}
+                        onValueChange={(value) => {
+                            setModalityId(value);
+                            setPage(1);
+                        }}
                         placeholder="Filtrar por modalidad"
                         emptyMessage="No se encontraron modalidades."
                         searchPlaceholder="Buscar modalidad..."
@@ -294,7 +417,10 @@ export const Radiologia = () => {
                     <Autocomplete
                         options={bodyPartsOptions}
                         value={bodyPartId || ''}
-                        onValueChange={setBodyPartId}
+                        onValueChange={(value) => {
+                            setBodyPartId(value);
+                            setPage(1);
+                        }}
                         placeholder="Filtrar por parte del cuerpo"
                         emptyMessage="No se encontraron partes del cuerpo."
                         searchPlaceholder="Buscar parte del cuerpo..."
@@ -329,6 +455,18 @@ export const Radiologia = () => {
                         allColumns={informeColumns}
                         visibleColumns={visibleColumns}
                         onToggleColumn={toggleColumn}
+                        additionalControls={
+                            <div className="flex items-center gap-2">
+                                <Label htmlFor="siguiente-paso-toggle" className="text-sm font-medium text-gray-700">
+                                    Siguiente paso:
+                                </Label>
+                                <Switch
+                                    id="siguiente-paso-toggle"
+                                    checked={siguientePaso}
+                                    onCheckedChange={setSiguientePaso}
+                                />
+                            </div>
+                        }
                     />
                 )}
 
@@ -352,6 +490,26 @@ export const Radiologia = () => {
                 title="Informe ya finalizado"
                 message="Este informe ya ha sido finalizado y reportado. Al continuar, se bloqueará el informe para que nadie más pueda editarlo mientras usted trabaja en él. ¿Está seguro que desea continuar?"
                 confirmText="Sí, abrir y bloquear informe"
+                cancelText="Cancelar"
+                variant="warning"
+            />
+            {/* Modal de sin imágenes */}
+            <ConfirmationModal
+                isOpen={isNoImageModalOpen}
+                onClose={() => {
+                    setIsNoImageModalOpen(false);
+                    setSelectedInforme(null);
+                }}
+                onConfirm={async () => {
+                    if (selectedInforme) {
+                        setIsNoImageModalOpen(false);
+                        await blockAndOpenReport(selectedInforme);
+                        setSelectedInforme(null);
+                    }
+                }}
+                title="Informe sin imágenes"
+                message="Este informe no tiene imágenes asociadas. ¿Desea continuar de todas formas?"
+                confirmText="Sí, continuar"
                 cancelText="Cancelar"
                 variant="warning"
             />
