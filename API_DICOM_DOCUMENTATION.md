@@ -92,7 +92,7 @@ Lista todos los estudios DICOM cargados que NO están vinculados a ninguna orden
 {
   "success": true,
   "data": {
-    "studies": [
+    "data": [
       {
         "guid": "uuid",
         "filename": "20260205_120000_estudio.dcm",
@@ -140,7 +140,7 @@ GET /api/dicom/search-examinations?patient_name=Juan&patient_id=12345678
 {
   "success": true,
   "data": {
-    "examinations": [
+    "data": [
       {
         "guid": "uuid-del-examen",
         "accession": "ACC001",
@@ -241,7 +241,7 @@ const getUnlinkedStudies = async () => {
   });
   
   const data = await response.json();
-  return data.data.studies;
+  return data.data.data; // data.data.data por el formato anidado
 };
 
 // 3. Buscar exámenes sin imagen
@@ -253,7 +253,7 @@ const searchExams = async (patientName) => {
   );
   
   const data = await response.json();
-  return data.data.examinations;
+  return data.data.data; // data.data.data por el formato anidado
 };
 
 // 4. Vincular estudio
