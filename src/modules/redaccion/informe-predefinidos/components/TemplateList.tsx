@@ -137,7 +137,7 @@ export const TemplateList = ({
 
     const handleEdit = (template: Template) => {
         // Navegar a la página de edición con el ID de la plantilla
-        navigate(`/redaccion/editar-informe/${template.guid}`);
+        navigate(`/estudios/editar-informe/${template.guid}`);
     };
 
     const handleDelete = async (template: Template) => {
@@ -207,7 +207,7 @@ export const TemplateList = ({
                 />
 
                 {/* Botón crear nueva plantilla */}
-                <PrimaryButton onClick={() => navigate("/redaccion/crear-informe")}>
+                <PrimaryButton onClick={() => navigate("/estudios/crear-informe")}>
                     <Plus className="h-4 w-4 mr-2" />
                     Nueva Plantilla
                 </PrimaryButton>

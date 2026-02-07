@@ -63,7 +63,6 @@ export const unblockExamOnUnload = (exam_id: string): void => {
 
     const url = `${baseURL}/examinations/${exam_id}/unblock`;
 
-
     try {
         // fetch con keepalive: true garantiza que el request se complete incluso si la página se cierra
         // A diferencia de sendBeacon, SÍ permite headers personalizados

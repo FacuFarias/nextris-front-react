@@ -14,6 +14,7 @@ import {
     Navigation,
     BookPlus,
     User,
+    UploadCloud,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
@@ -80,16 +81,21 @@ const menuItems: MenuItem[] = [
     },
     { icon: HandHelping, label: "Ejecucion", path: "/ejecucion", allowedRoles: ["Sysadmin"] },
     {
-        icon: NotebookText, label: "Redaccion", subItems: [
+        icon: NotebookText, label: "Estudios", subItems: [
             {
                 icon: NotebookText,
-                label: "Radiología",
-                path: "/redaccion/radiologia",
+                label: "Redaccion",
+                path: "/estudios/redaccion",
             },
             {
                 icon: NotebookText,
                 label: "Inf.Predef",
-                path: "/redaccion/informes-predefinidos",
+                path: "/estudios/informes-predefinidos",
+            },
+            {
+                icon: UploadCloud,
+                label: "Cargar Estudios",
+                path: "/estudios/cargar-estudios",
             }
         ],
         allowedRoles: ["Sysadmin"],

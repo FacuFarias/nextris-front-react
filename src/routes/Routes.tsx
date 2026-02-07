@@ -16,6 +16,7 @@ import { MisDatos } from "@/modules/mis-datos/MisDatos";
 import { CrearInforme } from "@/modules/redaccion/informe-predefinidos/crear-informe/CrearInforme";
 import { UnificacionPaciente } from "@/modules/administracion/unificacion-paciente/UnificacionPaciente";
 import { ReasignacionExamenes } from "@/modules/administracion/reasignacion-examenes/ReasignacionExamenes";
+import { CargarEstudios } from "@/modules/redaccion/cargar-estudios/CargarEstudios";
 
 const router = createBrowserRouter([
     {
@@ -116,7 +117,7 @@ const router = createBrowserRouter([
     },
     {/*Redaccion*/ },
     {
-        path: "/redaccion/radiologia",
+        path: "/estudios/redaccion",
         element: (
             <ProtectedRoute>
                 <Radiologia />
@@ -124,7 +125,7 @@ const router = createBrowserRouter([
         ),
     },
     {
-        path: "/redaccion/radiologia/redactar-informe/:informeGuid/:studyInstanceUID",
+        path: "/estudios/redaccion/redactar-informe/:informeGuid/:studyInstanceUID",
         element: (
             <ProtectedRoute>
                 <RedactarInforme />
@@ -132,7 +133,7 @@ const router = createBrowserRouter([
         ),
     },
     {
-        path: "/redaccion/informes-predefinidos",
+        path: "/estudios/informes-predefinidos",
         element: (
             <ProtectedRoute>
                 <InformePredefinidos />
@@ -140,7 +141,7 @@ const router = createBrowserRouter([
         ),
     },
     {
-        path: "/redaccion/crear-informe",
+        path: "/estudios/crear-informe",
         element: (
             <ProtectedRoute>
                 <CrearInforme />
@@ -148,10 +149,18 @@ const router = createBrowserRouter([
         ),
     },
     {
-        path: "/redaccion/editar-informe/:id",
+        path: "/estudios/editar-informe/:id",
         element: (
             <ProtectedRoute>
                 <CrearInforme />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/estudios/cargar-estudios",
+        element: (
+            <ProtectedRoute>
+                <CargarEstudios />
             </ProtectedRoute>
         ),
     },

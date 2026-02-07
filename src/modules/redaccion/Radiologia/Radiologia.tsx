@@ -56,7 +56,6 @@ export const Radiologia = () => {
     useEffect(() => {
         const CHANNEL_NAME = 'informe-updates';
         const channel = new BroadcastChannel(CHANNEL_NAME);
-        console.log('📡 Listener del visor iniciado en Radiologia.tsx');
 
         const handleViewerUpdate = (event: MessageEvent) => {
             console.log('📨 Mensaje recibido en Radiologia.tsx:', event.data);
@@ -163,10 +162,10 @@ export const Radiologia = () => {
     const openReportWindow = async (informe: Informes) => {
         const windowId = `report_window_${Date.now()}`;
 
-        let url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?windowId=${windowId}&siguiente_paso=${siguientePaso}`;
+        let url = `/estudios/redaccion/redactar-informe/${informe.guid}/${informe.study_instance_uid}?windowId=${windowId}&siguiente_paso=${siguientePaso}`;
 
         if (modalityId || bodyPartId || studioTypeId) {
-            url = `/redaccion/radiologia/redactar-informe/${informe.guid}/${informe.study_instance_uid}?windowId=${windowId}&modality_id=${modalityId}&bodypart_id=${bodyPartId}&study_group_id=${studioTypeId}&siguiente_paso=${siguientePaso}`;
+            url = `/estudios/redaccion/redactar-informe/${informe.guid}/${informe.study_instance_uid}?windowId=${windowId}&modality_id=${modalityId}&bodypart_id=${bodyPartId}&study_group_id=${studioTypeId}&siguiente_paso=${siguientePaso}`;
         }
 
         localStorage.setItem(windowId, informe.guid);
