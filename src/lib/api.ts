@@ -30,10 +30,30 @@ export const api = axios.create({
 // Interceptor para agregar el token de autenticación
 api.interceptors.request.use(
     (config) => {
-        const data = localStorage.getItem('authData');
-        if (data) {
-            const parsedData = JSON.parse(data);
-            config.headers.Authorization = `Bearer ${parsedData?.access_token}`;
+        let token = null;
+        
+        // Método 1: Buscar en authData (método correcto)
+        const authDataStr = localStorage.getItem('authData');
+        if (authDataStr) {
+            try {
+                const parsedData = JSON.parse(authDataStr);
+                token = parsedData?.access_token;
+            } catch (e) {
+                console.error('Error parsing authData:', e);
+            }
+        }
+        
+        // Método 2: Fallback - buscar en clave separada access_token (por compatibilidad)
+        if (!token) {
+            token = localStorage.getItem('access_token');
+        }
+        
+        // Configurar header de Authorization si hay token
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+            console.log('[API] Request con token:', config.method?.toUpperCase(), config.url);
+        } else {
+            console.warn('[API] Request SIN token:', config.method?.toUpperCase(), config.url);
         }
 
         // Si es FormData, eliminar el Content-Type para que axios lo configure automáticamente
