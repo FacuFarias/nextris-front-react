@@ -14,7 +14,7 @@ export const uploadFiles = async (files: File, location_id: string) => {
     formData.append('file', files);
     formData.append('location_id', location_id);
     try {
-        const response = await apiNoAuth.post("/dicom/upload", formData);
+        const response = await apiNoAuth.post("/manual/upload", formData);
         return response.data;
     } catch (error) {
         throw error;
@@ -24,7 +24,7 @@ export const uploadFiles = async (files: File, location_id: string) => {
 
 export const getUnlinkedStudies = async ({ location_id }: { location_id: string }) => {
     try {
-        const response = await apiNoAuth.get<EstudiosNoVinculados>("/dicom/unlinked-studies", { params: { location_id } });
+        const response = await apiNoAuth.get<EstudiosNoVinculados>("/manual/unlinked-studies", { params: { location_id } });
         return response.data;
     } catch (error) {
         throw error;
