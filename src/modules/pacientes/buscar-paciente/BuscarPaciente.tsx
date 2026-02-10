@@ -7,6 +7,7 @@ import { Search, UserPlus } from "lucide-react";
 //components
 import { DynamicBreadcrumb, InputSearch, Modal } from "@/components";
 import { useDebounce } from "@uidotdev/usehooks";
+import fondoImage from "@/assets/fondo1.png";
 
 //hooks and services
 import { useBuscarPaciente } from "./hooks/use-buscar-paciente";
@@ -27,6 +28,7 @@ import { CreatePatientForm } from "./components/CreatePatientForm";
 export const BuscarPaciente = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(10);
     const useDebounceSearch = useDebounce(searchTerm, 300);
     const navigate = useNavigate();
     const createPatientMutation = useCreatePatient();
@@ -68,7 +70,7 @@ export const BuscarPaciente = () => {
         handleDeletePatient,
         handleViewHistory
     );
-    const { patientsData, isLoading } = useBuscarPaciente({ page, per_page: 8, search: useDebounceSearch });
+    const { patientsData, isLoading } = useBuscarPaciente({ page, per_page: perPage, search: useDebounceSearch });
 
 
     const pagination = patientsData && {
@@ -126,7 +128,7 @@ export const BuscarPaciente = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
@@ -174,6 +176,13 @@ export const BuscarPaciente = () => {
                         onPaginationChange={(newPage) => {
                             setPage(newPage);
                         }}
+                        perPageValue={perPage}
+                        onPerPageChange={(value) => {
+                            setPerPage(value);
+                            setPage(1);
+                        }}
+                        perPageOptions={[10, 20, 50, 100]}
+                        tableBackgroundImage={fondoImage}
                     />
                 )}
 

@@ -45,6 +45,7 @@ export function TablaDynamic<T extends Record<string, any>>({
     visibleColumns,
     onToggleColumn,
     additionalControls,
+    tableBackgroundImage,
 }: DynamicTableProps<T>) {
     const [sortConfig, setSortConfig] = useState<{
         key: keyof T | string;
@@ -146,10 +147,20 @@ export function TablaDynamic<T extends Record<string, any>>({
     }
 
     return (
-        <div className={cn("space-y-4 mt-5", className)}>
-            <div className={cn("rounded-md border", maxHeight ? "overflow-y-auto" : "overflow-hidden")} style={maxHeight ? { maxHeight } : undefined}>
+        <div className={cn("space-y-4 mt-5 flex flex-col flex-1 min-h-0", className)}>
+            <div
+                className={cn("rounded-md border relative flex-1 overflow-auto", maxHeight && "overflow-y-auto")}
+                style={{
+                    ...(maxHeight ? { maxHeight } : {}),
+                    ...(tableBackgroundImage ? {
+                        backgroundImage: `linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url(${tableBackgroundImage})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                    } : {}),
+                }}
+            >
                 <Table /* style={{ tableLayout: "fixed" }} */>
-                    <TableHeader className="bg-brand-purple">
+                    <TableHeader className="bg-brand-purple sticky top-0 z-[2]">
                         <TableRow className="hover:bg-brand-purple border-b-0">
                             {columns.map((column, index) => (
                                 <TableHead

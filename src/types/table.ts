@@ -60,4 +60,5 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     visibleColumns?: string[];
     onToggleColumn?: (columnKey: string) => void;
     additionalControls?: React.ReactNode; // Controles adicionales en la barra de paginación
+    tableBackgroundImage?: string; // URL de imagen de fondo para el área de la tabla
 }

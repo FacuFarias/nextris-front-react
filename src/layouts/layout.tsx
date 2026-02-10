@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { Menu, X } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { Footer } from "./Footer";
-import fondoImage from "@/assets/fondo1.png";
 
 interface MainLayoutProps {
     children: ReactNode;
@@ -13,7 +12,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="min-h-screen flex flex-col bg-background">
+        <div className="h-screen flex flex-col bg-background overflow-hidden">
             {/* Mobile Header */}
             <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-40 flex items-center px-4">
                 <button
@@ -31,32 +30,19 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
                 </div>
             </div>
 
-            <div className="flex flex-1 pt-16 lg:pt-0 min-h-screen">
+            <div className="flex flex-1 pt-16 lg:pt-0 min-h-0">
                 {/* Sidebar */}
                 <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
                 {/* Main Content */}
-                <main className="flex-1 flex flex-col lg:ml-64 relative">
-                    {/* Background con overlay morado */}
-                    <div
-                        className="absolute inset-0 z-0"
-                        style={{
-                            backgroundImage: ` url(${fondoImage})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            backgroundRepeat: 'no-repeat',
-                            backgroundAttachment: 'fixed',
-                        }}
-                    />
-
+                <main className="flex-1 flex flex-col lg:ml-64 relative min-h-0">
                     {/* Content Area */}
-                    <div className="flex-1 p-4 md:p-6 lg:p-8 relative z-10">
-
-                        {children}
+                    <div className="flex-1 flex flex-col min-h-0">
+                        <div className="flex-1 flex flex-col min-h-0">
+                            {children}
+                        </div>
+                        <Footer />
                     </div>
-
-                    {/* Footer */}
-                    <Footer />
                 </main>
             </div>
 
