@@ -1,0 +1,1 @@
+export { VincularImagenTab } from './VincularImagenTab'

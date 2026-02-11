@@ -23,3 +23,23 @@ export interface EstudiosNoVinculados {
         total: number;
     };
 }
+
+
+interface SearchExamsData {
+    guid: string;
+    accession: string;
+    patient_name: string;
+    patient_id: string;
+    date: string;
+    study_type: string;
+    is_image: number;
+}
+
+
+export interface SearchExams {
+    success: boolean;
+    data: {
+        data: SearchExamsData[];
+        total: number;
+    };
+}

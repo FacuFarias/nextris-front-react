@@ -7,12 +7,14 @@ interface DireccionSelectorProps {
     selectedDireccion: string;
     onDireccionChange: (direccionId: string) => void;
     isPending?: boolean;
+    isRow?: boolean;
 }
 
 export const DireccionSelector = ({
     selectedDireccion,
     onDireccionChange,
     isPending = false,
+    isRow = false,
 }: DireccionSelectorProps) => {
     const { data: locationsData } = useLocationsInstitutional();
 
@@ -22,16 +24,16 @@ export const DireccionSelector = ({
     };
 
     return (
-        <div className="bg-brand-purple rounded-lg p-6 shadow-lg">
-            <div className="flex items-center gap-3 mb-4">
+        <div className={`bg-brand-purple rounded-lg p-6 shadow-lg ${isRow ? 'flex items-center gap-10' : ''}`}>
+            <div className={`flex items-center gap-3  ${isRow ? '' : 'mb-4'}`}>
                 <div className="bg-white/20 p-2 rounded-lg">
                     <MapPin className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                    <h3 className="text-white font-bold text-lg">Seleccione una Dirección</h3>
+                    <h3 className="text-white font-bold text-lg">Seleccione una Ubicación</h3>
                 </div>
             </div>
-            <div className="relative">
+            <div className={`relative ${isRow ? 'flex-1' : ''}`}>
                 <Select
                     onValueChange={onDireccionChange}
                     value={selectedDireccion}
