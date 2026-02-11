@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { PrimaryButton } from "@/components"
 import { toast } from "sonner"
 import { ConfirmationModal } from "./components/ConfirmationModal"
+import fondoImage from "@/assets/fondo1.png"
 import { Autocomplete } from "@/components/autocomplete"
 import { useBodyParts } from "@/modules/configuracion/configuracion-tablas/examenes/partes-cuerpo"
 import { useModalidades } from "@/modules/configuracion/configuracion-tablas/examenes/modalidades"
@@ -294,7 +295,7 @@ export const Radiologia = () => {
     };
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
@@ -431,43 +432,39 @@ export const Radiologia = () => {
                     <h2 className="text-base sm:text-lg font-semibold text-gray-700">Resultados</h2>
                 </div>
 
-                {isLoadingInformes ? (
-                    <div className='flex justify-center items-center h-40'>
-                        <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
-                    </div>
-                ) : (
-                    <TablaDynamic<Informes>
-                        data={(informesData?.data?.data) || []}
-                        columns={filteredColumns}
-                        showIndex
-                        pagination={pagination}
-                        actions={getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf)}
-                        onPaginationChange={(newPage) => {
-                            setPage(newPage);
-                        }}
-                        maxHeight="600px"
-                        perPageValue={perPage}
-                        onPerPageChange={(value) => {
-                            setPerPage(value);
-                            setPage(1);
-                        }}
-                        allColumns={informeColumns}
-                        visibleColumns={visibleColumns}
-                        onToggleColumn={toggleColumn}
-                        additionalControls={
-                            <div className="flex items-center gap-2">
-                                <Label htmlFor="siguiente-paso-toggle" className="text-sm font-medium text-gray-700">
-                                    Siguiente paso:
-                                </Label>
-                                <Switch
-                                    id="siguiente-paso-toggle"
-                                    checked={siguientePaso}
-                                    onCheckedChange={setSiguientePaso}
-                                />
-                            </div>
-                        }
-                    />
-                )}
+                <TablaDynamic<Informes>
+                    data={(informesData?.data?.data) || []}
+                    columns={filteredColumns}
+                    showIndex
+                    loading={isLoadingInformes}
+                    pagination={pagination}
+                    actions={getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf)}
+                    onPaginationChange={(newPage) => {
+                        setPage(newPage);
+                    }}
+                    perPageValue={perPage}
+                    onPerPageChange={(value) => {
+                        setPerPage(value);
+                        setPage(1);
+                    }}
+                    perPageOptions={[10, 20, 50, 100]}
+                    allColumns={informeColumns}
+                    visibleColumns={visibleColumns}
+                    onToggleColumn={toggleColumn}
+                    tableBackgroundImage={fondoImage}
+                    additionalControls={
+                        <div className="flex items-center gap-2">
+                            <Label htmlFor="siguiente-paso-toggle" className="text-sm font-medium text-gray-700">
+                                Siguiente paso:
+                            </Label>
+                            <Switch
+                                id="siguiente-paso-toggle"
+                                checked={siguientePaso}
+                                onCheckedChange={setSiguientePaso}
+                            />
+                        </div>
+                    }
+                />
 
 
             </div>

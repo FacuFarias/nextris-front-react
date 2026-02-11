@@ -13,11 +13,12 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { distribucionService } from "./services/distribucion.service";
+import fondoImage from "@/assets/fondo1.png";
 
 export const Distribucion = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(8);
+    const [pageSize, setPageSize] = useState(10);
     const [allReported, setAllReported] = useState(false);
 
     // Modals state
@@ -128,7 +129,7 @@ export const Distribucion = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
@@ -161,20 +162,22 @@ export const Distribucion = () => {
                 </div>
 
                 {/* Tabla de resultados */}
-                {isLoading ? (
-                    <div className='flex justify-center items-center h-40'>
-                        <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
-                    </div>
-                ) : (
-                    <TablaDynamic
-                        data={examenes?.data?.data || []}
-                        columns={distribucionColumns}
-                        showIndex
-                        actions={actions}
-                        pagination={pagination}
-                        onPaginationChange={handlePaginationChange}
-                    />
-                )}
+                <TablaDynamic
+                    data={examenes?.data?.data || []}
+                    columns={distribucionColumns}
+                    showIndex
+                    loading={isLoading}
+                    actions={actions}
+                    pagination={pagination}
+                    onPaginationChange={handlePaginationChange}
+                    perPageValue={pageSize}
+                    onPerPageChange={(value) => {
+                        setPageSize(value);
+                        setPage(1);
+                    }}
+                    perPageOptions={[10, 20, 50, 100]}
+                    tableBackgroundImage={fondoImage}
+                />
 
                 {/* Modal Actualizar Email */}
                 <UpdateEmailModal

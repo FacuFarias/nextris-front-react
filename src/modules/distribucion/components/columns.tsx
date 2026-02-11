@@ -7,16 +7,19 @@ export const distribucionColumns: TableColumn<Examen>[] = [
         key: "fecha",
         label: "FECHA",
         className: "font-medium",
+        sortable: true,
     },
     {
         key: "paciente",
         label: "PACIENTE",
         className: "font-medium",
+        sortable: true,
     },
     {
         key: "examen",
         label: "EXAMEN",
         className: "font-medium",
+        sortable: true,
         render: (value) => (
             <div className="max-w-[150px] truncate" title={value}>
                 {value}
@@ -27,6 +30,7 @@ export const distribucionColumns: TableColumn<Examen>[] = [
         key: "medico_solicitante",
         label: "MÉDICO SOLICITANTE",
         className: "font-medium text-sm",
+        sortable: true,
         render: (value) => (
             <div className="max-w-[150px] truncate" title={value}>
                 {value}
@@ -37,6 +41,7 @@ export const distribucionColumns: TableColumn<Examen>[] = [
         key: "medico_autor",
         label: "MÉDICO AUTOR",
         className: "font-medium text-sm",
+        sortable: true,
         render: (value) => (
             <div className="max-w-[150px] truncate" title={value}>
                 {value}
@@ -47,16 +52,19 @@ export const distribucionColumns: TableColumn<Examen>[] = [
         key: "mail",
         label: "EMAIL",
         className: "font-medium text-sm",
+        sortable: true,
     },
     {
         key: "accession_number",
         label: "ACC. Nº",
         className: "font-medium text-sm",
+        sortable: true,
     },
     {
         key: "urgencia",
         label: "URGENCIA",
         className: "font-medium text-center",
+        sortable: true,
         render: (value) => (
             <div className="flex justify-center">
                 {value === "S" ? (
@@ -71,6 +79,7 @@ export const distribucionColumns: TableColumn<Examen>[] = [
         key: "estado",
         label: "ESTADO",
         className: "font-medium text-center",
+        sortable: true,
         render: (value) => (
             <div className="flex justify-center">
                 {value === "E" ? (

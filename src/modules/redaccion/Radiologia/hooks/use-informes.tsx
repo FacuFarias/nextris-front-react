@@ -9,7 +9,7 @@ import { notifyInformeChange, useCrossWindowSync } from "../redactar-informe/hoo
 export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, bodypart_id = "", modality_id = "", study_group_id = "" }) => {
     useCrossWindowSync();
 
-    const { data, isLoading, error, refetch } = useQuery<ApiPaginatedResponse<Informes>>({
+    const { data, isLoading, isFetching, error, refetch } = useQuery<ApiPaginatedResponse<Informes>>({
         queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready, bodypart_id, modality_id, study_group_id),
         queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready, bodypart_id, modality_id, study_group_id }),
         refetchInterval: 120000,
@@ -18,7 +18,7 @@ export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported
 
     return {
         informesData: data,
-        isLoading,
+        isLoading: isLoading || isFetching,
         error,
         refetchInformes: refetch,
     }

@@ -10,12 +10,12 @@ const informeColumns: TableColumn<Informes>[] = [
         key: "patient_name",
         label: "PACIENTE",
         className: "font-medium",
+        sortable: true,
         render: (value: string, informe: Informes) => (
             <div className="flex items-center gap-2">
                 {informe.blocked_by && informe.blocked_by_name && (
                     <div className="relative group">
                         <Lock className="w-4 h-4 text-yellow-600" />
-
                     </div>
                 )}
                 <span>{value}</span>
@@ -26,36 +26,39 @@ const informeColumns: TableColumn<Informes>[] = [
         key: "patient_dni",
         label: "DNI",
         className: "font-medium",
+        sortable: true,
     },
     {
         key: "study_type",
         label: "EXAMEN",
         className: "font-medium",
         hideOnMobile: true,
+        sortable: true,
     },
     {
         key: "status",
         label: "ESTADO",
         className: "font-medium",
         hideOnMobile: true,
+        sortable: true,
     },
     {
         key: "admission_number",
         label: "ADM. Nº",
         className: "font-medium",
-
+        sortable: true,
     },
     {
         key: "accession_number",
         label: "ACC. Nº",
         className: "font-medium",
-
+        sortable: true,
     },
-
     {
         key: "created_on",
         label: "FECHA Y HORA DE ADMISION",
         className: "font-medium",
+        sortable: true,
         render: (value: string) => {
             return fechaYhora(value);
         }
@@ -64,6 +67,7 @@ const informeColumns: TableColumn<Informes>[] = [
         key: "is_reported",
         label: "REPORTADO",
         className: "font-medium",
+        sortable: true,
         render: (value) => (
             <div className="flex justify-center">
                 {value ? (
@@ -73,8 +77,6 @@ const informeColumns: TableColumn<Informes>[] = [
                 )}
             </div>
         ),
-
-
     },
 ];
 

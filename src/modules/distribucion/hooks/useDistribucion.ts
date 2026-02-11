@@ -7,7 +7,7 @@ export const useDistribucion = (allReported: boolean = false, page: number = 1, 
     const queryClient = useQueryClient();
 
     // Query para obtener exámenes
-    const { data: examenes, isLoading, error, refetch } = useQuery({
+    const { data: examenes, isLoading, isFetching, error, refetch } = useQuery({
         queryKey: [DistribucionKeys.all, allReported, page, perPage],
         queryFn: () => distribucionService.getExamenes(allReported, page, perPage),
         gcTime: 5 * 60 * 1000, // 5 minutos
@@ -34,7 +34,7 @@ export const useDistribucion = (allReported: boolean = false, page: number = 1, 
 
     return {
         examenes,
-        isLoading,
+        isLoading: isLoading || isFetching,
         error,
         refetch,
         sendReport: sendReportMutation.mutate,
