@@ -1,5 +1,5 @@
 import { MainLayout } from "@/layouts/layout"
-import { UploadCloud, FolderOpen, FileText, Sparkles, Rocket, CheckCircle, Loader2, RefreshCw, Archive, Calendar, User } from "lucide-react"
+import { UploadCloud, FolderOpen, FileText, Sparkles, Rocket, CheckCircle, Loader2, RefreshCw, Archive, Calendar } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { useState, useRef, useEffect } from "react"
@@ -7,6 +7,7 @@ import { DireccionSelector } from "@/components"
 import { Progress } from "@/components/ui/progress"
 import { useCargarEstudios, useEstudiosNoVinculados } from "./hooks/use-cargar-estudios"
 import { Badge } from "@/components/ui/badge"
+import { VincularImagenTab } from "./components"
 
 export const CargarEstudios = () => {
     const [files, setFiles] = useState<File[]>([])
@@ -19,7 +20,6 @@ export const CargarEstudios = () => {
     const [totalFiles, setTotalFiles] = useState(0)
     const { estudiosNoVinculadosData, isLoading, error, refetchEstudiosNoVinculados } = useEstudiosNoVinculados({ location_id: selectedDireccion });
     const cargarEstudiosMutation = useCargarEstudios();
-    console.log(estudiosNoVinculadosData)
 
     const handleDireccionChange = (direccionId: string) => {
         setSelectedDireccion(direccionId);
@@ -141,6 +141,7 @@ export const CargarEstudios = () => {
                             <DireccionSelector
                                 selectedDireccion={selectedDireccion}
                                 onDireccionChange={handleDireccionChange}
+                                isRow={true}
                             />
                             {
                                 selectedDireccion && (
@@ -280,7 +281,7 @@ export const CargarEstudios = () => {
                                                                     <FileText className="w-5 h-5 text-gray-400 mt-1" />
                                                                     <div className="flex-1">
                                                                         <h3 className="font-medium text-gray-800 mb-1">
-                                                                            {estudio.filename}
+                                                                            {estudio.patient_name} - {estudio.patient_id} - {estudio.study_description || 'Sin descripción'}
                                                                         </h3>
                                                                         <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
                                                                             <div className="flex items-center gap-1">
@@ -291,13 +292,13 @@ export const CargarEstudios = () => {
                                                                                 <Calendar className="w-3 h-3 text-gray-500" />
                                                                                 <span>{new Date(estudio.upload_date).toLocaleDateString()}</span>
                                                                             </div>
-                                                                            <div className="flex items-center gap-1">
-                                                                                <User className="w-3 h-3 text-gray-500" />
-                                                                                <span>{estudio.uploaded_by}</span>
-                                                                            </div>
+
                                                                             <Badge variant="outline" className="text-xs">
                                                                                 {estudio.modality}
                                                                             </Badge>
+                                                                            <div className="flex items-center gap-1">
+                                                                                <span>{estudio.study_instance_uid}</span>
+                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -316,10 +317,7 @@ export const CargarEstudios = () => {
                         </TabsContent>
 
                         <TabsContent value="vincular-imagen" className="mt-6">
-                            <div className="border rounded-lg p-6">
-                                <h2 className="text-xl font-semibold mb-4">Vincular Imagen</h2>
-                                <p className="text-gray-600">Contenido del tab Vincular Imagen</p>
-                            </div>
+                            <VincularImagenTab />
                         </TabsContent>
                     </Tabs>
 
