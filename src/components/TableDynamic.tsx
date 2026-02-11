@@ -135,17 +135,6 @@ export function TablaDynamic<T extends Record<string, any>>({
     const visibleActions = (row: T) =>
         actions.filter((action) => !action.hidden?.(row));
 
-    if (loading) {
-        return (
-            <div className="space-y-3">
-                <div className="h-8 bg-muted animate-pulse rounded" />
-                {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="h-12 bg-muted animate-pulse rounded" />
-                ))}
-            </div>
-        );
-    }
-
     return (
         <div className={cn("space-y-4 mt-5 flex flex-col flex-1 min-h-0", className)}>
             <div
@@ -186,7 +175,22 @@ export function TablaDynamic<T extends Record<string, any>>({
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {paginatedData.length === 0 ? (
+                        {loading ? (
+                            <TableRow>
+                                <TableCell
+                                    colSpan={
+                                        columns.length +
+                                        (showIndex ? 1 : 0) +
+                                        (actions.length > 0 ? 1 : 0)
+                                    }
+                                    className="h-40"
+                                >
+                                    <div className="flex justify-center items-center">
+                                        <span className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500"></span>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : paginatedData.length === 0 ? (
                             <TableRow className="">
                                 <TableCell
                                     colSpan={

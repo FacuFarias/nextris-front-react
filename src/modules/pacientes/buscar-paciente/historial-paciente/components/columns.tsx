@@ -8,23 +8,27 @@ const historyColumns: TableColumn<HistoryPatient>[] = [
         key: "estudio",
         label: "ESTUDIO",
         className: "font-medium",
+        sortable: true,
     },
     {
         key: "medico_autor",
         label: "MEDICO AUTOR",
         className: "font-medium",
+        sortable: true,
     },
     {
         key: "medico_referente",
         label: "MEDICO REFERENTE",
         className: "font-medium",
         hideOnMobile: true,
+        sortable: true,
     },
     {
         key: "fecha",
         label: "FECHA",
         className: "font-medium",
         hideOnMobile: true,
+        sortable: true,
     },
     {
         key: "modalidad",
@@ -32,6 +36,7 @@ const historyColumns: TableColumn<HistoryPatient>[] = [
         className: "font-medium",
         render: (value: number) => value.toString(),
         hideOnMobile: true,
+        sortable: true,
     },
     {
         key: "con_imagen",
@@ -39,6 +44,7 @@ const historyColumns: TableColumn<HistoryPatient>[] = [
         className: "font-medium",
         render: (value: number) => value.toString(),
         hideOnMobile: true,
+        sortable: true,
     },
 ];
 

@@ -3,17 +3,22 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useHistorialPaciente, useViewImagenDicom } from './hooks/use-historial-paciente';
 import { Search, ArrowLeft } from 'lucide-react';
 import { InputSearch } from '@/components/InputSearch';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { TablaDynamic } from '@/components/TableDynamic';
 import type { HistoryPatient } from '../types/BuscarPaciente';
 import { getHistoryPatientActions, historyColumns } from './components/columns';
 import { DynamicBreadcrumb } from '@/components/DynamicBreadcrumb';
 import { Button } from '@/components/ui/button';
+import fondoImage from "@/assets/fondo1.png";
+import { useDebounce } from '@uidotdev/usehooks';
 
 export const HistorialPaciente = () => {
     const location = useLocation()
     const navigate = useNavigate()
     const [searchTerm, setSearchTerm] = useState("");
+    const debouncedSearch = useDebounce(searchTerm, 300);
+    const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(10);
     const { historyData, isLoading } = useHistorialPaciente({ patientId: location?.state?.patient.guid });
     const { viewImagenDicom } = useViewImagenDicom();
     const onViewImage = (patient: HistoryPatient) => {
@@ -29,12 +34,37 @@ export const HistorialPaciente = () => {
         onViewReport,
         onViewImage
     );
+
+    // Filtrado local por búsqueda
+    const filteredData = useMemo(() => {
+        const data = historyData?.data || [];
+        if (!debouncedSearch) return data;
+        const search = debouncedSearch.toLowerCase();
+        return data.filter((item) =>
+            item.estudio?.toLowerCase().includes(search) ||
+            item.medico_autor?.toLowerCase().includes(search) ||
+            item.medico_referente?.toLowerCase().includes(search) ||
+            item.modalidad?.toLowerCase().includes(search) ||
+            item.fecha?.toLowerCase().includes(search)
+        );
+    }, [historyData?.data, debouncedSearch]);
+
+    // Paginación local
+    const paginatedData = useMemo(() => {
+        const start = (page - 1) * perPage;
+        return filteredData.slice(start, start + perPage);
+    }, [filteredData, page, perPage]);
+
+    const pagination = {
+        page,
+        pageSize: perPage,
+        total: filteredData.length,
+    };
+
     return (
         <MainLayout>
-            <div className="bg-white backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
                 <DynamicBreadcrumb />
-
-                {/* Botón Volver */}
 
                 {/* Header */}
                 <div className="flex justify-between items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
@@ -47,7 +77,7 @@ export const HistorialPaciente = () => {
 
                     <Button
                         onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 bg-transparent text-gray-600  mb-4 hover:bg-transparent"
+                        className="flex items-center gap-2 bg-transparent text-gray-600 mb-4 hover:bg-transparent"
                     >
                         <ArrowLeft className="w-5 h-5" />
                         <span className="font-medium">Volver</span>
@@ -58,41 +88,37 @@ export const HistorialPaciente = () => {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
                     <InputSearch
                         searchTerm={searchTerm}
-                        setSearchTerm={setSearchTerm}
-                        placeholder="Buscar paciente o historial..."
+                        setSearchTerm={(value) => {
+                            setSearchTerm(value);
+                            setPage(1);
+                        }}
+                        placeholder="Buscar estudio, médico, modalidad..."
                     />
-                    {/* <PrimaryButton onClick={() => setIsModalOpen(true)}>
-                        <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                        AGREGAR
-                    </PrimaryButton> */}
                 </div>
 
                 {/* Resultados */}
                 <div>
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-700 mb-3 sm:mb-4">RESULTADOS</h2>
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-700">RESULTADOS</h2>
                 </div>
 
-                {isLoading ? (
-                    <div className='flex justify-center items-center h-40'>
-                        <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
-                    </div>
-                ) : (
-                    <TablaDynamic<HistoryPatient>
-                        data={(historyData?.data) || []}
-                        columns={historyColumns}
-                        showIndex
-                        onRowClick={(patient) => {
-                            console.log("Paciente seleccionado:", patient);
-                        }}
-                        actions={patientActions}
-                    /* pagination={pagination} */
-                    /*  onPaginationChange={(newPage) => {
-                         setPage(newPage);
-                     }} */
-                    />
-                )}
-
-
+                <TablaDynamic<HistoryPatient>
+                    data={paginatedData}
+                    columns={historyColumns}
+                    showIndex
+                    loading={isLoading}
+                    actions={patientActions}
+                    pagination={pagination}
+                    onPaginationChange={(newPage) => {
+                        setPage(newPage);
+                    }}
+                    perPageValue={perPage}
+                    onPerPageChange={(value) => {
+                        setPerPage(value);
+                        setPage(1);
+                    }}
+                    perPageOptions={[10, 20, 50, 100]}
+                    tableBackgroundImage={fondoImage}
+                />
             </div>
         </MainLayout>
     )

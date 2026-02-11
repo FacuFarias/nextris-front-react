@@ -1,9 +1,9 @@
 import { api } from "@/lib/api";
 import type { CreatePatientFormValues } from "../schemas/create-patient.schema";
 
-export const getAllPacientes = async ({ page = 1, per_page = 8, search = "" }) => {
+export const getAllPacientes = async ({ page = 1, per_page = 8, search = "", hide_without_studies = false }) => {
     try {
-        const response = await api.get(`/patients?page=${page}&per_page=${per_page}&search=${search}`);
+        const response = await api.get(`/patients?page=${page}&per_page=${per_page}&search=${search}&hide_without_studies=${hide_without_studies}`);
         return response.data;
     } catch (error) {
         throw error;

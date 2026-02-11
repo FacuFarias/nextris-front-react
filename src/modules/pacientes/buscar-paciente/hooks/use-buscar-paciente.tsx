@@ -5,15 +5,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { patientsKeys } from "../constants/query-keys";
 
-export const useBuscarPaciente = ({ page = 1, per_page = 8, search = "" }) => {
-    const { data, isLoading, error, refetch } = useQuery<ApiPaginatedResponse<Patient>>({
-        queryKey: patientsKeys.list(page, per_page, search),
-        queryFn: () => getAllPacientes({ page, per_page, search }),
+export const useBuscarPaciente = ({ page = 1, per_page = 8, search = "", hide_without_studies = false }) => {
+    const { data, isLoading, isFetching, error, refetch } = useQuery<ApiPaginatedResponse<Patient>>({
+        queryKey: patientsKeys.list(page, per_page, search, hide_without_studies),
+        queryFn: () => getAllPacientes({ page, per_page, search, hide_without_studies }),
     });
 
     return {
         patientsData: data,
-        isLoading,
+        isLoading: isLoading || isFetching,
         error,
         refetchPatients: refetch,
     }

@@ -29,6 +29,7 @@ export const BuscarPaciente = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
+    const [hideWithoutStudies, setHideWithoutStudies] = useState(false);
     const useDebounceSearch = useDebounce(searchTerm, 300);
     const navigate = useNavigate();
     const createPatientMutation = useCreatePatient();
@@ -70,7 +71,7 @@ export const BuscarPaciente = () => {
         handleDeletePatient,
         handleViewHistory
     );
-    const { patientsData, isLoading } = useBuscarPaciente({ page, per_page: perPage, search: useDebounceSearch });
+    const { patientsData, isLoading } = useBuscarPaciente({ page, per_page: perPage, search: useDebounceSearch, hide_without_studies: hideWithoutStudies });
 
 
     const pagination = patientsData && {
@@ -147,6 +148,18 @@ export const BuscarPaciente = () => {
                         setSearchTerm={setSearchTerm}
                         placeholder="Buscar paciente o historial..."
                     />
+                    <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer whitespace-nowrap select-none">
+                        <input
+                            type="checkbox"
+                            checked={hideWithoutStudies}
+                            onChange={(e) => {
+                                setHideWithoutStudies(e.target.checked);
+                                setPage(1);
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-brand-purple focus:ring-brand-purple accent-brand-purple"
+                        />
+                        Solo con estudios
+                    </label>
                     <IsAdmin>
                         <PrimaryButton onClick={handleAddPatient}>
                             <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
@@ -161,30 +174,25 @@ export const BuscarPaciente = () => {
                     <h2 className="text-base sm:text-lg font-semibold text-gray-700">RESULTADOS</h2>
                 </div>
 
-                {isLoading ? (
-                    <div className='flex justify-center items-center h-40'>
-                        <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
-                    </div>
-                ) : (
-                    <TablaDynamic<Patient>
-                        data={(patientsData?.data?.data) || []}
-                        columns={patientColumns}
-                        showIndex
-                        onRowDoubleClick={handleViewHistory}
-                        actions={patientActions}
-                        pagination={pagination}
-                        onPaginationChange={(newPage) => {
-                            setPage(newPage);
-                        }}
-                        perPageValue={perPage}
-                        onPerPageChange={(value) => {
-                            setPerPage(value);
-                            setPage(1);
-                        }}
-                        perPageOptions={[10, 20, 50, 100]}
-                        tableBackgroundImage={fondoImage}
-                    />
-                )}
+                <TablaDynamic<Patient>
+                    data={(patientsData?.data?.data) || []}
+                    columns={patientColumns}
+                    showIndex
+                    loading={isLoading}
+                    onRowDoubleClick={handleViewHistory}
+                    actions={patientActions}
+                    pagination={pagination}
+                    onPaginationChange={(newPage) => {
+                        setPage(newPage);
+                    }}
+                    perPageValue={perPage}
+                    onPerPageChange={(value) => {
+                        setPerPage(value);
+                        setPage(1);
+                    }}
+                    perPageOptions={[10, 20, 50, 100]}
+                    tableBackgroundImage={fondoImage}
+                />
 
                 {/* Modal de Agregar/Editar Paciente */}
                 <Modal

@@ -8,23 +8,27 @@ const patientColumns: TableColumn<Patient>[] = [
         key: "name",
         label: "NOMBRE",
         className: "font-medium",
+        sortable: true,
     },
     {
         key: "surname",
         label: "APELLIDO",
         className: "font-medium",
+        sortable: true,
     },
     {
         key: "gender",
         label: "GENERO",
         className: "font-medium",
         hideOnMobile: true,
+        sortable: true,
     },
     {
         key: "birthdate",
         label: "FECHA DE NACIMIENTO",
         className: "font-medium",
         hideOnMobile: true,
+        sortable: true,
     },
     {
         key: "study_count",
@@ -32,6 +36,7 @@ const patientColumns: TableColumn<Patient>[] = [
         className: "font-medium",
         render: (value: number) => value.toString(),
         hideOnMobile: true,
+        sortable: true,
     },
 ];
 
