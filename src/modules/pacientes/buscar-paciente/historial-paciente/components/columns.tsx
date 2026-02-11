@@ -1,5 +1,5 @@
 import type { TableAction, TableColumn } from "@/types/table";
-import type { HistoryPatient } from "../../../types/BuscarPaciente";
+import type { HistoryPatient } from "../../types/BuscarPaciente";
 import { File, Image } from "lucide-react";
 
 // Configuración de columnas para usuarios
@@ -58,6 +58,7 @@ export const getHistoryPatientActions = (
             label: "Ver informe",
             icon: <File className="h-4 w-4 text-brand-purple" />,
             onClick: onViewReport,
+            hidden: (patient) => !patient.pdf_path,
         },
         {
             label: "Ver imagen",

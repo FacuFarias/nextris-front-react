@@ -21,6 +21,7 @@ export interface HistoryPatient {
     modalidad: string;
     con_imagen: string;
     isreported: number;
+    pdf_path: string | null;
 }
 
 export interface HistoryPatientResponse {

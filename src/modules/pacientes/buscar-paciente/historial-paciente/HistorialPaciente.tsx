@@ -26,7 +26,11 @@ export const HistorialPaciente = () => {
     };
 
     const onViewReport = (patient: HistoryPatient) => {
-        console.log("asdas", patient)
+        if (!patient.pdf_path) {
+            return;
+        }
+        const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+        window.open(`${baseURL}/pdfs/${patient.pdf_path}`, '_blank');
     };
 
     // Generar las acciones con las funciones
