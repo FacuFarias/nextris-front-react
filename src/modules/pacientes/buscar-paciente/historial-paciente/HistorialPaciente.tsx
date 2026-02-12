@@ -21,6 +21,7 @@ export const HistorialPaciente = () => {
     const [perPage, setPerPage] = useState(10);
     const { historyData, isLoading } = useHistorialPaciente({ patientId: location?.state?.patient.guid });
     const { viewImagenDicom } = useViewImagenDicom();
+
     const onViewImage = (patient: HistoryPatient) => {
         viewImagenDicom({ imageId: patient.guid, userId: location?.state?.patient.guid! });
     };

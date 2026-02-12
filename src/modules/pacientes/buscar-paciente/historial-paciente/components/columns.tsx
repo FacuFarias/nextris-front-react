@@ -42,7 +42,7 @@ const historyColumns: TableColumn<HistoryPatient>[] = [
         key: "con_imagen",
         label: "CON IMAGEN",
         className: "font-medium",
-        render: (value: number) => value.toString(),
+        render: (value: string) => value === 'Sí' ? 'Si' : 'No',
         hideOnMobile: true,
         sortable: true,
     },
@@ -64,6 +64,7 @@ export const getHistoryPatientActions = (
             label: "Ver imagen",
             icon: <Image className="h-4 w-4 text-brand-purple" />,
             onClick: onViewImage,
+            hidden: (patient) => patient.con_imagen !== 'Sí',
         },
     ];
 
