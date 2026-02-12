@@ -31,9 +31,33 @@
         const urlParams = new URLSearchParams(window.location.search);
         const initialStudyUID = urlParams.get('StudyInstanceUIDs');
 
+        let currentStudyUID = initialStudyUID;
+        let retryCount = 0;
+        const MAX_RETRIES = 3;
+        const RETRY_DELAY = 2000; // 2 segundos
+
+        // Función para cargar un estudio con reintentos
+        function loadStudy(studyUID, isRetry = false) {
+            if (!studyUID) return;
+
+            if (isRetry) {
+                console.log(`🔄 Reintentando cargar estudio (${retryCount + 1}/${MAX_RETRIES}):`, studyUID);
+            } else {
+                console.log('📥 Cargando estudio:', studyUID);
+                retryCount = 0;
+            }
+
+            currentStudyUID = studyUID;
+            const url = `https://viewer.nextris.cloud/viewer?StudyInstanceUIDs=${studyUID}`;
+
+            // Forzar recarga agregando un timestamp para evitar cache
+            const timestamp = new Date().getTime();
+            iframe.src = `${url}&_t=${timestamp}`;
+        }
+
         // Cargar el estudio inicial
         if (initialStudyUID) {
-            iframe.src = `https://viewer.nextris.cloud/viewer?StudyInstanceUIDs=${initialStudyUID}`;
+            loadStudy(initialStudyUID);
         }
 
         // Escuchar mensajes de la ventana padre (la aplicación principal)
@@ -44,24 +68,56 @@
             }
             if (event.data && event.data.type === 'UPDATE_VIEWER') {
                 const { newUrl, studyInstanceUid } = event.data;
-                if (newUrl) {
+
+                if (studyInstanceUid) {
+                    // Esperar un momento antes de actualizar para dar tiempo al servidor
+                    setTimeout(() => {
+                        loadStudy(studyInstanceUid);
+                        // Actualizar también la URL de esta ventana
+                        const newWrapperUrl = `${window.location.pathname}?StudyInstanceUIDs=${studyInstanceUid}`;
+                        window.history.pushState({}, '', newWrapperUrl);
+                    }, 500);
+                } else if (newUrl) {
                     iframe.src = newUrl;
-                    // Actualizar también la URL de esta ventana
-                    const newWrapperUrl = `${window.location.pathname}?StudyInstanceUIDs=${studyInstanceUid}`;
-                    window.history.pushState({}, '', newWrapperUrl);
-                } else if (studyInstanceUid) {
-                    const url = `https://viewer.nextris.cloud/viewer?StudyInstanceUIDs=${studyInstanceUid}`;
-                    iframe.src = url;
-                    // Actualizar también la URL de esta ventana
-                    const newWrapperUrl = `${window.location.pathname}?StudyInstanceUIDs=${studyInstanceUid}`;
-                    window.history.pushState({}, '', newWrapperUrl);
                 }
             }
         });
 
-        // Log cuando el iframe carga
+        // Monitorear el contenido del iframe para detectar errores
         iframe.addEventListener('load', function () {
             console.log('✅ Iframe cargado:', iframe.src);
+
+            // Resetear el contador de reintentos cuando carga exitosamente
+            retryCount = 0;
+
+            // Intentar detectar si hay un error en el contenido
+            setTimeout(() => {
+                try {
+                    // Si podemos acceder al contenido del iframe (mismo origen)
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const bodyText = iframeDoc.body.innerText || '';
+
+                    // Detectar el mensaje de error específico
+                    if (bodyText.includes('One or more of the requested studies are not available') ||
+                        bodyText.includes('not available at this time')) {
+                        console.log('⚠️ Error detectado: Estudio no disponible');
+
+                        if (retryCount < MAX_RETRIES && currentStudyUID) {
+                            retryCount++;
+                            console.log(`⏳ Esperando ${RETRY_DELAY}ms antes de reintentar...`);
+                            setTimeout(() => {
+                                loadStudy(currentStudyUID, true);
+                            }, RETRY_DELAY);
+                        } else if (retryCount >= MAX_RETRIES) {
+                            console.log('❌ Máximo de reintentos alcanzado. El estudio podría no estar disponible.');
+                        }
+                    }
+                } catch (e) {
+                    // Si no podemos acceder al contenido (diferente origen), no hay problema
+                    // El visor está en un dominio diferente, así que esto es esperado
+                    console.log('📺 Visor cargado (contenido de diferente origen)');
+                }
+            }, 1500);
         });
 
         console.log('✅ Wrapper del visor configurado y escuchando mensajes');
