@@ -7,6 +7,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { PaginationConfig } from "@/types/table";
 
 import {
@@ -14,6 +20,7 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
+    ChevronDown,
 } from "lucide-react";
 
 interface TablePaginationProps {
@@ -108,32 +115,50 @@ export function TablePagination({
                             </Select>
                         </div>
 
-                        {/* Selector de columnas visibles */}
+                        {/* Selector de columnas visibles - Multi-select */}
                         {columns && visibleColumns && onToggleColumn && (
                             <div className="flex items-center gap-2">
-                                <Label htmlFor="column-selector" className="text-sm font-medium text-gray-700">
+                                <Label className="text-sm font-medium text-gray-700">
                                     Columnas:
                                 </Label>
-                                <Select
-                                    value=""
-                                    onValueChange={(value) => {
-                                        if (value) {
-                                            onToggleColumn(value);
-                                        }
-                                    }}
-                                >
-                                    <SelectTrigger className="w-[220px]">
-                                        <SelectValue placeholder="Seleccionar columna..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {columns.map((column) => (
-                                            <SelectItem key={column.key} value={column.key}>
-                                                {visibleColumns.includes(column.key) ? '✓ ' : '✗ '}
-                                                {column.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="w-[220px] justify-between">
+                                            <span className="truncate">
+                                                {visibleColumns.length === columns.length
+                                                    ? 'Seleccione columnas'
+                                                    : `${visibleColumns.length} de ${columns.length} columnas`}
+                                            </span>
+                                            <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[220px] p-0" align="start">
+                                        <div className="max-h-[300px] overflow-y-auto p-3">
+                                            <div className="space-y-2">
+                                                {columns.map((column) => (
+                                                    <div
+                                                        key={column.key}
+                                                        className="flex items-center space-x-2 hover:bg-gray-50 p-1 rounded cursor-pointer"
+                                                        onClick={() => onToggleColumn(column.key)}
+                                                    >
+                                                        <Checkbox
+                                                            id={`column-${column.key}`}
+                                                            checked={visibleColumns.includes(column.key)}
+                                                            onCheckedChange={() => onToggleColumn(column.key)}
+                                                            className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
+                                                        />
+                                                        <Label
+                                                            htmlFor={`column-${column.key}`}
+                                                            className="text-sm font-normal cursor-pointer flex-1"
+                                                        >
+                                                            {column.label}
+                                                        </Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         )}
 
