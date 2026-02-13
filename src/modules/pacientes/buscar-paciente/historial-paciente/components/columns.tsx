@@ -65,6 +65,7 @@ export const getHistoryPatientActions = (
             icon: <Image className="h-4 w-4 text-brand-purple" />,
             onClick: onViewImage,
             hidden: (patient) => patient.con_imagen !== 'Sí',
+
         },
     ];
 
