@@ -1,8 +1,8 @@
-# API de Obras Sociales (Health Insurances) - Documentación
+# API de Obras Sociales y Dominios de Pacientes - Documentación
 
 ## Descripción General
 
-API REST para la gestión de obras sociales y sus relaciones con ubicaciones en el sistema NextRIS. Incluye endpoints CRUD para obras sociales y gestión de la relación muchos-a-muchos entre obras sociales y ubicaciones.
+API REST para la gestión de obras sociales, sus relaciones con ubicaciones, y dominios de pacientes en el sistema NextRIS.
 
 **Autenticación:** Todos los endpoints requieren un token JWT válido en el header:
 ```
@@ -24,8 +24,13 @@ Authorization: Bearer <access_token>
    - [Eliminar ubicación de una obra social](#7-eliminar-ubicación-de-una-obra-social)
 3. [Consulta de obras sociales por ubicación](#consulta-de-obras-sociales-por-ubicación)
    - [Obtener obras sociales (todas o por ubicación)](#8-obtener-obras-sociales-todas-o-filtradas-por-ubicación)
-4. [Modelos de Datos](#modelos-de-datos)
-5. [Códigos de Respuesta](#códigos-de-respuesta)
+4. [CRUD de Dominios de Pacientes](#crud-de-dominios-de-pacientes)
+   - [Listar dominios](#9-listar-dominios-de-pacientes)
+   - [Crear dominio](#10-crear-dominio-de-pacientes)
+   - [Actualizar dominio](#11-actualizar-dominio-de-pacientes)
+   - [Eliminar dominio](#12-eliminar-dominio-de-pacientes)
+5. [Modelos de Datos](#modelos-de-datos)
+6. [Códigos de Respuesta](#códigos-de-respuesta)
 
 ---
 
@@ -367,6 +372,168 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 ---
 
+## CRUD de Dominios de Pacientes
+
+### 9. Listar dominios de pacientes
+
+Obtiene todos los dominios de pacientes del sistema.
+
+**Endpoint:** `GET /api/config/patient-domains`
+
+**Ejemplo de Petición:**
+```bash
+GET /api/config/patient-domains
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "09c0cbce-9f3c-4156-9cd8-fe34f672a15b",
+      "description": "GENERAL",
+      "note": "Identificación principal en Argentina",
+      "code": "GEN"
+    },
+    {
+      "guid": "5828f3bc-ccbc-4226-961c-9592e9f7a4c5",
+      "description": "CLINICA DEL SOL",
+      "note": "Identificación internacional",
+      "code": "CDS"
+    }
+  ]
+}
+```
+
+---
+
+### 10. Crear dominio de pacientes
+
+Crea un nuevo dominio de pacientes.
+
+**Endpoint:** `POST /api/config/patient-domains`
+
+**Body JSON:**
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `description` | string | Sí | Nombre del dominio (max 45 chars) |
+| `code` | string | No | Código corto (max 8 chars) |
+| `note` | string | No | Nota descriptiva |
+
+**Ejemplo de Petición:**
+```bash
+POST /api/config/patient-domains
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+Content-Type: application/json
+
+{
+  "description": "HOSPITAL CENTRAL",
+  "code": "HC",
+  "note": "Dominio del hospital central"
+}
+```
+
+**Respuesta Exitosa (201):**
+```json
+{
+  "success": true,
+  "message": "Dominio de pacientes creado exitosamente",
+  "data": {
+    "guid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  }
+}
+```
+
+---
+
+### 11. Actualizar dominio de pacientes
+
+Actualiza un dominio existente. Soporta actualización parcial.
+
+**Endpoint:** `PUT /api/config/patient-domains/<domain_id>`
+**Alternativo:** `PATCH /api/config/patient-domains/<domain_id>`
+
+**Path Parameters:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `domain_id` | string (UUID) | GUID del dominio |
+
+**Body JSON (todos opcionales):**
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `description` | string | Nombre del dominio |
+| `code` | string | Código corto |
+| `note` | string | Nota descriptiva |
+
+**Ejemplo de Petición:**
+```bash
+PUT /api/config/patient-domains/09c0cbce-9f3c-4156-9cd8-fe34f672a15b
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+Content-Type: application/json
+
+{
+  "description": "GENERAL ACTUALIZADO",
+  "note": "Dominio principal actualizado"
+}
+```
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "success": true,
+  "message": "Dominio de pacientes actualizado exitosamente"
+}
+```
+
+**Respuesta Error - No encontrado (404):**
+```json
+{
+  "success": false,
+  "message": "Dominio de pacientes no encontrado"
+}
+```
+
+---
+
+### 12. Eliminar dominio de pacientes
+
+Elimina un dominio de pacientes. No se permite eliminar si hay pacientes asignados a este dominio. Las relaciones con usuarios (`rel_user_patientdomain`) se eliminan en cascada automáticamente.
+
+**Endpoint:** `DELETE /api/config/patient-domains/<domain_id>`
+
+**Path Parameters:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `domain_id` | string (UUID) | GUID del dominio |
+
+**Ejemplo de Petición:**
+```bash
+DELETE /api/config/patient-domains/09c0cbce-9f3c-4156-9cd8-fe34f672a15b
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "success": true,
+  "message": "Dominio de pacientes eliminado exitosamente"
+}
+```
+
+**Respuesta Error - Tiene pacientes asignados (400):**
+```json
+{
+  "success": false,
+  "message": "No se puede eliminar: hay 25 pacientes asignados a este dominio"
+}
+```
+
+> **Nota:** Las relaciones en `rel_user_patientdomain` se eliminan en cascada por la FK de la base de datos. Pero si existen pacientes en `datapatient.id_patientdomain`, la eliminación es rechazada.
+
+---
+
 ## Modelos de Datos
 
 ### Tabla: `nextris.ishealthinsurances`
@@ -391,11 +558,39 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 | `created_at` | timestamp | SI | now() | Fecha de creación |
 | `updated_at` | timestamp | SI | now() | Fecha de actualización |
 
-### Diagrama de relación
+### Tabla: `nextris.ispatientdomain`
+
+| Columna | Tipo | Nullable | Descripción |
+|---------|------|----------|-------------|
+| `guid` | varchar(45) | NO | Primary key (default uuid_generate_v4()) |
+| `description` | varchar(45) | NO | Nombre del dominio |
+| `note` | text | SI | Nota descriptiva |
+| `code` | varchar(8) | SI | Código corto |
+
+### Tabla: `nextris.rel_user_patientdomain`
+
+| Columna | Tipo | Nullable | Default | Descripción |
+|---------|------|----------|---------|-------------|
+| `guid` | varchar(45) | NO | uuid_generate_v4() | Primary key |
+| `user_id` | varchar(45) | NO | — | FK a `tbuser.guid` (ON DELETE CASCADE) |
+| `patientdomain_id` | varchar(45) | NO | — | FK a `ispatientdomain.guid` (ON DELETE CASCADE) |
+| `is_default` | boolean | SI | false | Si es el dominio por defecto del usuario |
+| `created_at` | timestamp | SI | now() | Fecha de creación |
+| `updated_at` | timestamp | SI | now() | Fecha de actualización |
+
+### Diagramas de relación
 
 ```
 ishealthinsurances (1) ──── (*) rel_insurance_location (*) ──── (1) tblocation
        guid          ←──── insurance_id    location_id ────→      guid
+```
+
+```
+ispatientdomain (1) ──── (*) rel_user_patientdomain (*) ──── (1) tbuser
+       guid       ←──── patientdomain_id      user_id ────→    guid
+
+ispatientdomain (1) ──── (*) datapatient
+       guid       ←──── id_patientdomain
 ```
 
 ---
