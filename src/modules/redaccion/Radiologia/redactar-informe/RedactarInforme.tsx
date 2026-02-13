@@ -530,16 +530,16 @@ export const RedactarInforme = () => {
                     notifyGuidChange(windowId, nextExamData.guid);
                 }
 
-                // 3. TERCERO: Notificar actualización del visor con el nuevo study_instance_uid
+                // 3. TERCERO: Bloquear el nuevo examen
+                await blockExam(nextExamData.guid);
+
+                // 4. CUARTO: Esperar un poco para que el servidor procese
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                // 5. QUINTO: Notificar actualización del visor con el nuevo study_instance_uid
                 if (windowId && nextExamData.study_instance_uid) {
                     notifyViewerUpdate(windowId, nextExamData.study_instance_uid, nextExamData.guid);
                 }
-
-                // 4. CUARTO: Esperar un momento para que se propague el mensaje
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                // 5. QUINTO: Bloquear el nuevo examen
-                await blockExam(nextExamData.guid);
 
                 // 6. SEXTO: Construir la URL
                 const params = new URLSearchParams();
@@ -549,7 +549,7 @@ export const RedactarInforme = () => {
                 if (windowId) params.set('windowId', windowId);
                 if (siguientePaso) params.set('siguiente_paso', siguientePaso);
 
-                const newUrl = `/redaccion/radiologia/redactar-informe/${nextExamData.guid}/${nextExamData.study_instance_uid}?${params.toString()}`;
+                const newUrl = `/estudios/redaccion/redactar-informe/${nextExamData.guid}/${nextExamData.study_instance_uid}?${params.toString()}`;
 
 
                 // 7. SÉPTIMO: Navegar

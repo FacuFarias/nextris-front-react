@@ -1,6 +1,6 @@
 import type { TableAction, TableColumn } from "@/types/table";
-import type { HistoryPatient } from "../../types/BuscarPaciente";
 import { File, Image } from "lucide-react";
+import type { HistoryPatient } from "../../types/BuscarPaciente";
 
 // Configuración de columnas para usuarios
 const historyColumns: TableColumn<HistoryPatient>[] = [
