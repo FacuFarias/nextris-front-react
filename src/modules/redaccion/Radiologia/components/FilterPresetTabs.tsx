@@ -117,15 +117,14 @@ export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilter
         <>
             <div className="flex items-center gap-3 mb-2 overflow-x-auto border-b border-gray-200">
                 {/* Tabs container */}
-                <div className="flex items-center gap-0 flex-shrink-0">
+                <div className="flex items-center gap-0 shrink-0">
                     {/* Tab "Todos" - siempre presente */}
                     <button
                         onClick={() => handleTabClick(null)}
-                        className={`px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap border-b-2 -mb-px ${
-                            activePresetId === null
-                                ? "border-brand-purple text-brand-purple"
-                                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                        }`}
+                        className={`px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap border-b-2 -mb-px ${activePresetId === null
+                            ? "border-brand-purple text-brand-purple"
+                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                            }`}
                     >
                         Todos
                     </button>
@@ -134,11 +133,10 @@ export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilter
                     {presets.map((preset) => (
                         <div
                             key={preset.guid}
-                            className={`group flex items-center gap-0.5 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer whitespace-nowrap border-b-2 -mb-px ${
-                                activePresetId === preset.guid
-                                    ? "border-brand-purple text-brand-purple"
-                                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                            }`}
+                            className={`group flex items-center gap-0.5 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer whitespace-nowrap border-b-2 -mb-px ${activePresetId === preset.guid
+                                ? "border-brand-purple text-brand-purple"
+                                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                }`}
                             onClick={() => handleTabClick(preset)}
                         >
                             {editingPresetId === preset.guid ? (
@@ -158,11 +156,10 @@ export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilter
                             )}
                             <button
                                 onClick={(e) => handleDeleteClick(e, preset)}
-                                className={`ml-0.5 rounded-full p-0.5 transition-opacity ${
-                                    activePresetId === preset.guid
-                                        ? "opacity-50 hover:opacity-100 hover:bg-purple-100"
-                                        : "opacity-0 group-hover:opacity-50 hover:!opacity-100 hover:bg-gray-200"
-                                }`}
+                                className={`ml-0.5 rounded-full p-0.5 transition-opacity ${activePresetId === preset.guid
+                                    ? "opacity-50 hover:opacity-100 hover:bg-purple-100"
+                                    : "opacity-0 group-hover:opacity-50 hover:opacity-100! hover:bg-gray-200"
+                                    }`}
                             >
                                 <X className="w-3 h-3" />
                             </button>
@@ -171,7 +168,7 @@ export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilter
                 </div>
 
                 {/* Botones de acción */}
-                <div className="flex items-center gap-1 flex-shrink-0 ml-auto pb-1">
+                <div className="flex items-center gap-1 shrink-0 ml-auto pb-1">
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>

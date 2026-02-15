@@ -37,7 +37,7 @@ export const TemplateList = ({
     const navigate = useNavigate();
     // Paginación
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 6; // 3x3 grid
+    const itemsPerPage = 9; // 3x3 grid
     const { tiposEstudio } = useTiposEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
@@ -262,7 +262,7 @@ export const TemplateList = ({
             ) : (
                 <>
                     {/* Grid de Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                         {paginatedTemplates.map((template, index) => (
                             <TemplateCard
                                 key={template.guid}

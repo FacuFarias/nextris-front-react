@@ -17,7 +17,6 @@ import { PrimaryButton } from "@/components"
 import { toast } from "sonner"
 import { ConfirmationModal } from "./components/ConfirmationModal"
 import { FilterPresetTabs } from "./components/FilterPresetTabs"
-import fondoImage from "@/assets/redaccion.jpg"
 import { Autocomplete } from "@/components/autocomplete"
 import { useBodyParts } from "@/modules/configuracion/configuracion-tablas/examenes/partes-cuerpo"
 import { useModalidades } from "@/modules/configuracion/configuracion-tablas/examenes/modalidades"
@@ -389,9 +388,9 @@ export const Radiologia = () => {
                 <DynamicBreadcrumb />
 
                 {/* Header */}
-                <div className="flex items-center gap-2 sm:gap-3 mb-4 ">
-                    <div className="bg-brand-purple p-2 sm:p-3 rounded-lg">
-                        <HandHelping className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                <div className="flex items-center gap-2 sm:gap-3 mb-2 ">
+                    <div className="bg-brand-purple p-2  rounded-lg">
+                        <HandHelping className="w-4 h-4 sm:w-6 sm:h-5 text-white" />
                     </div>
                     <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Redacción de reportes</h1>
                 </div>
@@ -541,8 +540,8 @@ export const Radiologia = () => {
                     allColumns={informeColumns}
                     visibleColumns={visibleColumns}
                     onToggleColumn={toggleColumn}
-                    tableBackgroundImage={fondoImage}
-                    sortColumn={sortColumn}
+/*                     tableBackgroundImage={fondoImage}
+ */                    sortColumn={sortColumn}
                     sortDirection={sortDirection}
                     onSortChange={handleSortChange}
                     additionalControls={
