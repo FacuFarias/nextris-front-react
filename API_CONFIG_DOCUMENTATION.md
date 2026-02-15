@@ -19,11 +19,13 @@ Esta documentación describe todas las APIs de configuración del sistema NEXTRI
 7. [Equipos](#equipos)
 8. [Agendas de Equipos](#agendas-de-equipos)
 9. [Usuarios](#usuarios)
-10. [Roles](#roles)
-11. [Pacientes](#pacientes)
-12. [Médicos Solicitantes](#médicos-solicitantes)
-13. [Agendas de Médicos](#agendas-de-médicos)
-14. [Grupos de Estudio por Médico](#grupos-de-estudio-por-médico)
+10. [Relaciones Usuario-Localizacion](#relaciones-usuario-localizacion)
+11. [Datos Medicos del Usuario](#datos-medicos-del-usuario)
+12. [Roles](#roles)
+13. [Pacientes](#pacientes)
+14. [Médicos Solicitantes](#medicos-solicitantes)
+15. [Agendas de Médicos](#agendas-de-medicos)
+16. [Grupos de Estudio por Médico](#grupos-de-estudio-por-medico)
 
 ---
 
@@ -886,6 +888,98 @@ Resetea la contraseña de un usuario.
   "message": "Contraseña reseteada exitosamente"
 }
 ```
+
+---
+
+## Relaciones Usuario-Localizacion
+
+### POST /config/users/:user_id/locations
+Crea la relacion entre un usuario y una localizacion.
+
+**Request Body:**
+```json
+{
+  "location_id": "uuid",   // requerido
+  "is_default": true       // opcional, default: false
+}
+```
+
+**Response 201:**
+```json
+{
+  "success": true,
+  "message": "Ubicación asociada exitosamente",
+  "data": {
+    "user_id": "uuid",
+    "location_id": "uuid",
+    "is_default": true
+  }
+}
+```
+
+**Errores comunes:**
+- `400`: location_id es requerido
+- `404`: Usuario no encontrado
+- `404`: Ubicación no encontrada
+- `409`: La relación ya existe
+
+### DELETE /config/users/:user_id/locations/:location_id
+Elimina la relacion entre un usuario y una localizacion.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "message": "Ubicación desasociada exitosamente"
+}
+```
+
+**Errores comunes:**
+- `404`: Relación no encontrada
+
+---
+
+## Datos Medicos del Usuario
+
+### GET /config/users/:user_id/medical-data
+Obtiene datos medicos del usuario.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "aclaracion_firma": "Dr. Juan Perez",
+    "matricula_nacional": "MN12345",
+    "firma_digital": "uuid_firma.png",
+    "firma_habilitada": true
+  }
+}
+```
+
+**Nota:** Si no hay datos cargados, los campos se devuelven vacios y `firma_digital` es `null`.
+
+### POST /config/users/:user_id/medical-data
+Crea o actualiza datos medicos del usuario.
+
+**Request Body:** `multipart/form-data`
+- `aclaracion_firma` (string, requerido)
+- `matricula_nacional` (string, requerido)
+- `firma_habilitada` (true/false, opcional, default: false)
+- `firma_digital` (archivo png/jpg/jpeg, opcional)
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "message": "Datos medicos guardados correctamente"
+}
+```
+
+**Errores comunes:**
+- `400`: aclaracion_firma y matricula_nacional son requeridos
+- `400`: Tipo de archivo no permitido
+- `404`: Usuario no encontrado
 
 ---
 
