@@ -553,9 +553,6 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                             border-color: #c4b5fd !important;
                                             opacity: 0.6;
                                         }
-                                        .fc-day-sat, .fc-col-header-cell.fc-day-sat {
-                                            background-color: #ede9fe !important;
-                                        }
                                         /* Horarios no laborales (fuera de businessHours) */
                                         .fc .fc-non-business {
                                             background-color: #1f2937 !important;
