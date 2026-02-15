@@ -126,6 +126,7 @@ export const NuevaCita = () => {
                                 selectedDireccion={selectedDireccion}
                                 onDireccionChange={handleDireccionChange}
                                 isPending={isPending}
+                                isRow={true}
                             />
 
                             {/* Barra de búsqueda */}

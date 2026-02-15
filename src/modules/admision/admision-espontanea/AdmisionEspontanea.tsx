@@ -138,6 +138,7 @@ export const AdmisionEspontanea = () => {
                                 selectedDireccion={selectedDireccion}
                                 onDireccionChange={handleDireccionChange}
                                 isPending={isPending}
+                                isRow={true}
                             />
 
                             {/* Barra de búsqueda */}
