@@ -1,4 +1,4 @@
-import { DireccionSelector, InputSearch } from "@/components";
+import { DireccionSelector } from "@/components";
 import TablaDynamic from "@/components/TableDynamic";
 import { MainLayout } from "@/layouts/layout";
 import { usePacienteDireccion } from "@/modules/admision/admision-espontanea/hooks/use-paciente-direccion";
@@ -131,6 +131,7 @@ export const UnificacionPaciente = () => {
                         selectedDireccion={selectedDireccion}
                         onDireccionChange={handleDireccionChange}
                         isPending={isPending}
+                        isRow={true}
                     />
 
                     {/* Barra de búsqueda */}
