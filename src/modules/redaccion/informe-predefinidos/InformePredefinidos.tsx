@@ -46,12 +46,9 @@ export const InformePredefinidos = () => {
             setBodypartId(clickedBodypartId);
         }
     };
-
-
-
     return (
-        <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm">
+        <MainLayout isOverflow={false}>
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm h-full flex flex-col">
                 {/* Header */}
                 <div className="mb-6">
                     <div className="flex items-center gap-3 mb-4">
@@ -66,14 +63,16 @@ export const InformePredefinidos = () => {
                 </div>
 
                 {/* Lista de plantillas */}
-                <TemplateList
-                    onSelect={handleSelectTemplate}
-                    onEdit={handleEditTemplate}
-                    modalityId={modalityId}
-                    bodypartId={bodypartId}
-                    onModalityClick={handleModalityClick}
-                    onBodypartClick={handleBodypartClick}
-                />
+                <div className="flex-1 min-h-screen">
+                    <TemplateList
+                        onSelect={handleSelectTemplate}
+                        onEdit={handleEditTemplate}
+                        modalityId={modalityId}
+                        bodypartId={bodypartId}
+                        onModalityClick={handleModalityClick}
+                        onBodypartClick={handleBodypartClick}
+                    />
+                </div>
             </div>
         </MainLayout>
     )

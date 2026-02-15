@@ -103,7 +103,7 @@ export const Maquinas = () => {
                     description: selectedEquipment.description,
                     modality_id: selectedEquipment.modality_id,
                     location_id: selectedEquipment.location_id || undefined,
-                    aetitle: selectedEquipment.aetitle || undefined,
+                    aetitle: selectedEquipment.aeTitle || undefined,
                     ip: selectedEquipment.ip || undefined,
                     port: selectedEquipment.port || undefined,
                     status: selectedEquipment.status,

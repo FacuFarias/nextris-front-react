@@ -9,7 +9,7 @@ import { useDebounce } from "@uidotdev/usehooks"
 //layout
 import { MainLayout } from "@/layouts/layout"
 //icons and react
-import { Calendar, User, ClipboardList, FileCheck, UserPlus } from "lucide-react"
+import { Calendar, User, ClipboardList, FileCheck, UserPlus, Loader2 } from "lucide-react"
 import { useState } from "react"
 import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPaciente";
 import { usePacienteDireccion } from "@/modules/admision/admision-espontanea/hooks/use-paciente-direccion"
@@ -32,7 +32,8 @@ export const NuevaCita = () => {
     //modal agregar paciente
     const [, setIsModalOpen] = useState(false);
     //hook para crear paciente
-
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(8);
     const handleDireccionChange = (direccionId: string) => {
         setSelectedDireccion(direccionId);
 
@@ -44,6 +45,10 @@ export const NuevaCita = () => {
     const handleAddPatient = () => {
         setIsModalOpen(true);
 
+    };
+    const handlePaginationChange = (newPage: number, newPageSize: number) => {
+        setPage(newPage);
+        setPageSize(newPageSize);
     };
 
 
@@ -69,16 +74,15 @@ export const NuevaCita = () => {
      }, [debouncedSearch, selectedDireccion]); */
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10  overflow-y-auto">
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10overflow-y-auto">
                 {/* Header con Tabs integrados */}
-                <div className="mb-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="bg-brand-purple p-2.5 rounded-lg">
+                <div className="">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="bg-brand-purple p-2 rounded-lg">
                             <Calendar className="w-6 h-6 text-white" />
                         </div>
                         <h1 className="text-2xl font-bold text-brand-purple">Crear cita</h1>
                     </div>
-
                     {/* Tabs modernos */}
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         <TabsList className="grid w-full grid-cols-4 h-auto bg-purple-50/50 p-1 rounded-xl gap-2">
@@ -116,7 +120,7 @@ export const NuevaCita = () => {
                         </TabsList>
 
                         {/* Tab Content - Paciente */}
-                        <TabsContent value="paciente" className="mt-6 space-y-4">
+                        <TabsContent value="paciente" className="mt-6 space-y-2">
                             {/* Selector de Dirección */}
                             <DireccionSelector
                                 selectedDireccion={selectedDireccion}
@@ -136,12 +140,8 @@ export const NuevaCita = () => {
                             )}
 
                             {/* Tabla de pacientes */}
-                            <div className="bg-white rounded-lg border border-purple-100 p-4">
-                                <div className="w-full flex justify-between">
-                                    <h2 className="text-lg font-semibold text-gray-700 mb-4">
-                                        Seleccione un paciente
-                                    </h2>
-
+                            <div className="bg-white rounded-lg border border-purple-100 p-2">
+                                <div className="w-full flex justify-end">
                                     <div className="flex gap-2">
                                         {selectedPatient && (
                                             <PrimaryButton onClick={() => setActiveTab("examen")}>
@@ -150,7 +150,7 @@ export const NuevaCita = () => {
                                             </PrimaryButton>
                                         )}
                                         <PrimaryButton onClick={handleAddPatient}>
-                                            <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                                            <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2 " />
                                             AGREGAR
                                         </PrimaryButton>
                                     </div>
@@ -159,7 +159,7 @@ export const NuevaCita = () => {
 
                                 {isPending ? (
                                     <div className='flex justify-center items-center h-40'>
-                                        <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
+                                        <Loader2 className="h-8 w-8 animate-spin text-brand-purple" />
                                     </div>
                                 ) : (
                                     <TablaDynamic<Patient>
@@ -175,6 +175,13 @@ export const NuevaCita = () => {
                                             setSelectedPatient(patient);
                                             setActiveTab("examen");
                                         }}
+                                        pagination={{
+                                            page,
+                                            pageSize,
+                                            serverSide: false,
+                                            total: Array.isArray(pacientesData?.data) ? pacientesData.data.length : 0,
+                                        }}
+                                        onPaginationChange={handlePaginationChange}
                                         emptyMessage="Seleccione una dirección para ver los pacientes asociados."
                                     />
                                 )}

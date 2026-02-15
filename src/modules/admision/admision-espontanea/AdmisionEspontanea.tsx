@@ -15,7 +15,7 @@ import { useDebounce } from "@uidotdev/usehooks"
 //layout
 import { MainLayout } from "@/layouts/layout"
 //icons and react
-import { Calendar, User, ClipboardList, FileCheck, UserPlus } from "lucide-react"
+import { Calendar, User, ClipboardList, FileCheck, UserPlus, Loader2 } from "lucide-react"
 import { useState, useEffect } from "react"
 import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPaciente";
 
@@ -34,11 +34,18 @@ export const AdmisionEspontanea = () => {
 
     const debouncedSearch = useDebounce(searchTerm, 500);
     const { mutate: fetchPacientesDireccion, data: pacientesData, isPending } = usePacienteDireccion();
-
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(8);
     //modal agregar paciente
     const [isModalOpen, setIsModalOpen] = useState(false);
     //hook para crear paciente
     const pacienteRapido = usePacienteRapido();
+
+
+    const handlePaginationChange = (newPage: number, newPageSize: number) => {
+        setPage(newPage);
+        setPageSize(newPageSize);
+    };
     const handleDireccionChange = (direccionId: string) => {
         setSelectedDireccion(direccionId);
 
@@ -146,11 +153,7 @@ export const AdmisionEspontanea = () => {
 
                             {/* Tabla de pacientes */}
                             <div className="bg-white rounded-lg border border-purple-100 p-4">
-                                <div className="w-full flex justify-between">
-                                    <h2 className="text-lg font-semibold text-gray-700 mb-4">
-                                        Seleccione un paciente
-                                    </h2>
-
+                                <div className="w-full flex justify-end">
                                     <div className="flex gap-2">
                                         {selectedPatient && (
                                             <PrimaryButton onClick={() => setActiveTab("examen")}>
@@ -167,7 +170,7 @@ export const AdmisionEspontanea = () => {
 
                                 {isPending ? (
                                     <div className='flex justify-center items-center h-40'>
-                                        <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
+                                        <Loader2 className="h-8 w-8 animate-spin text-brand-purple" />
                                     </div>
                                 ) : (
                                     <TablaDynamic<Patient>
@@ -183,6 +186,13 @@ export const AdmisionEspontanea = () => {
                                             setSelectedPatient(patient);
                                             setActiveTab("examen");
                                         }}
+                                        pagination={{
+                                            page,
+                                            pageSize,
+                                            serverSide: false,
+                                            total: Array.isArray(pacientesData?.data) ? pacientesData.data.length : 0,
+                                        }}
+                                        onPaginationChange={handlePaginationChange}
                                         emptyMessage="Seleccione una dirección para ver los pacientes asociados."
                                     />
                                 )}

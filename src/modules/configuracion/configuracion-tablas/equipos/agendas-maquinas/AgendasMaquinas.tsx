@@ -3,17 +3,10 @@ import { toast } from "sonner";
 import { Plus, Edit, Trash2, Loader2, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
+import { Modal } from "@/components";
 import type { EquipmentSchedule, EquipmentScheduleFormData, EquipmentSchedulePayload } from "./types/equipment-schedules.types";
 import { useEquipment } from "../maquinas/hooks/useEquipment";
 import type { Equipment } from "../maquinas/types/equipment.types";
@@ -54,6 +47,7 @@ export const AgendasMaquinas = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(8);
     const [scheduleToDelete, setScheduleToDelete] = useState<EquipmentSchedule | null>(null);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [formData, setFormData] = useState<EquipmentScheduleFormData>({
         day: "lunes",
         time_from: "08:00",
@@ -89,10 +83,20 @@ export const AgendasMaquinas = () => {
         if (editingSchedule) {
             updateMutation.mutate(
                 { scheduleId: editingSchedule.guid, formData: dataToSend as any },
-                { onSuccess: () => resetForm() }
+                {
+                    onSuccess: () => {
+                        resetForm();
+                        setIsFormModalOpen(false);
+                    }
+                }
             );
         } else {
-            createMutation.mutate(dataToSend as any, { onSuccess: () => resetForm() });
+            createMutation.mutate(dataToSend as any, {
+                onSuccess: () => {
+                    resetForm();
+                    setIsFormModalOpen(false);
+                }
+            });
         }
     };
 
@@ -103,6 +107,7 @@ export const AgendasMaquinas = () => {
             time_from: schedule.time_from,
             time_to: schedule.time_to,
         });
+        setIsFormModalOpen(true);
     };
 
     const handleDelete = (schedule: EquipmentSchedule) => {
@@ -128,6 +133,11 @@ export const AgendasMaquinas = () => {
         });
     };
 
+    const handleOpenFormModal = () => {
+        resetForm();
+        setIsFormModalOpen(true);
+    };
+
     // Ordenar schedules por día
     const sortedSchedules = schedulesData?.data?.sort((a, b) => {
         const indexA = DAYS_ORDER.indexOf(a.day);
@@ -150,25 +160,16 @@ export const AgendasMaquinas = () => {
     };
     return (
         <div className="space-y-4">
-            <div>
-                <h2 className="text-2xl font-bold">Agendas de Equipos</h2>
-                <p className="text-muted-foreground">Gestión de horarios de disponibilidad de equipos</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 {/* Tabla de Equipos - Izquierda */}
-                <Card className="p-0">
-                    <CardHeader className="bg-brand-purple text-white rounded-t-lg p-4">
-                        <CardTitle className="text-lg font-bold uppercase">Agendas de Equipos</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4">
+                <Card className="p-0 h-fit">
+                    <CardContent className="py-2">
                         <Input
                             placeholder="Buscar..."
                             value={searchTerm}
                             onChange={(e) => handleSearchChange(e.target.value)}
                             className="mb-4"
                         />
-
                         {isLoading ? (
                             <div className="flex justify-center items-center h-40">
                                 <Loader2 className="h-8 w-8 animate-spin text-brand-purple" />
@@ -202,9 +203,9 @@ export const AgendasMaquinas = () => {
                                                         }`}
                                                     onClick={() => setSelectedEquipment(equipment)}
                                                 >
-                                                    <td className="px-4 py-3 text-sm">{equipment.aeTitle || "-"}</td>
-                                                    <td className="px-4 py-3 text-sm">{equipment.modality || "-"}</td>
-                                                    <td className="px-4 py-3 text-sm">{equipment.ip || "-"}</td>
+                                                    <td className="px-4 py-2 text-sm">{equipment.aeTitle || "-"}</td>
+                                                    <td className="px-4 py-2 text-sm">{equipment.modality || "-"}</td>
+                                                    <td className="px-4 py-2 text-sm">{equipment.ip || "-"}</td>
                                                 </tr>
                                             ))
                                         )}
@@ -256,23 +257,20 @@ export const AgendasMaquinas = () => {
                 </Card>
 
                 {/* Panel de Días - Derecha */}
-                <div className="space-y-6">
+                <div className="space-y-4">
                     <Card className="py-0">
-                        <CardHeader className="p-4 bg-brand-purple text-white rounded-t-lg flex flex-row items-center justify-between">
-                            <CardTitle className="text-lg font-bold uppercase">Días de Agenda</CardTitle>
-                            <div className="flex gap-2">
+                        <CardContent className="p-4">
+                            <div className="flex justify-end gap-2 mb-2">
                                 <Button
                                     size="icon"
                                     variant="ghost"
                                     className="h-8 w-8 rounded-full bg-brand-purple hover:bg-purple-700 text-white"
                                     disabled={!selectedEquipment || loadingSchedules}
-                                    onClick={resetForm}
+                                    onClick={handleOpenFormModal}
                                 >
                                     <Plus className="h-4 w-4 text-white" />
                                 </Button>
                             </div>
-                        </CardHeader>
-                        <CardContent className="p-4">
                             {!selectedEquipment ? (
                                 <div className="text-center py-12 text-gray-500">
                                     <p className="text-lg font-medium">Seleccione un equipo</p>
@@ -311,9 +309,9 @@ export const AgendasMaquinas = () => {
                                                         <td className="px-4 py-3 text-sm capitalize">
                                                             {schedule.day}
                                                         </td>
-                                                        <td className="px-4 py-3 text-sm">{schedule.time_from}</td>
-                                                        <td className="px-4 py-3 text-sm">{schedule.time_to}</td>
-                                                        <td className="px-4 py-3">
+                                                        <td className="px-4 py-2 text-sm">{schedule.time_from}</td>
+                                                        <td className="px-4 py-2 text-sm">{schedule.time_to}</td>
+                                                        <td className="px-4 py-2">
                                                             <div className="flex items-center justify-center gap-2">
                                                                 <Button
                                                                     size="icon"
@@ -342,116 +340,114 @@ export const AgendasMaquinas = () => {
                             )}
                         </CardContent>
                     </Card>
-
-                    {/* Formulario de creación/edición */}
-                    {selectedEquipment && (
-                        <Card className="p-0">
-                            <CardHeader className="bg-gray-100 p-4 rounded-t-lg">
-                                <CardTitle className="text-base">
-                                    {editingSchedule ? "Editar Día de Agenda" : "Nuevo Día de Agenda"}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-4">
-                                <form onSubmit={handleSubmit} className="space-y-4">
-                                    <div>
-                                        <Label htmlFor="day" className="text-sm font-medium mb-1 block">Día</Label>
-                                        <Select
-                                            value={formData.day}
-                                            onValueChange={(value) => {
-                                                console.log('Día seleccionado:', value);
-                                                setFormData({ ...formData, day: value });
-                                            }}
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Seleccione un día" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {DAYS_ORDER.map((day) => (
-                                                    <SelectItem key={day} value={day} className="capitalize">
-                                                        {DAYS_MAP[day]}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <Label htmlFor="time_from" className="text-sm font-medium mb-1 block">Hora Inicio</Label>
-                                            <Input
-                                                id="time_from"
-                                                type="time"
-                                                value={formData.time_from}
-                                                onChange={(e) =>
-                                                    setFormData({ ...formData, time_from: e.target.value })
-                                                }
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="time_to" className="text-sm font-medium mb-1 block">Hora Final</Label>
-                                            <Input
-                                                id="time_to"
-                                                type="time"
-                                                value={formData.time_to}
-                                                onChange={(e) =>
-                                                    setFormData({ ...formData, time_to: e.target.value })
-                                                }
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-2 justify-end">
-                                        {editingSchedule && (
-                                            <Button type="button" variant="outline" onClick={resetForm}>
-                                                Cancelar
-                                            </Button>
-                                        )}
-                                        <Button
-                                            type="submit"
-                                            className="bg-brand-purple hover:bg-brand-purple/90"
-                                            disabled={createMutation.isPending || updateMutation.isPending}
-                                        >
-                                            {createMutation.isPending || updateMutation.isPending ? (
-                                                <>
-                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                    Guardando...
-                                                </>
-                                            ) : editingSchedule ? (
-                                                "Actualizar"
-                                            ) : (
-                                                "Crear"
-                                            )}
-                                        </Button>
-                                    </div>
-                                </form>
-                            </CardContent>
-                        </Card>
-                    )}
                 </div>
             </div>
 
-            {/* Dialog de confirmación de eliminación */}
-            <Dialog open={!!scheduleToDelete} onOpenChange={(open) => !open && setScheduleToDelete(null)}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                                <AlertTriangle className="h-6 w-6 text-red-600" />
-                            </div>
-                            <div>
-                                <DialogTitle className="text-lg font-semibold">
-                                    Confirmar Eliminación
-                                </DialogTitle>
-                                <DialogDescription className="text-sm text-gray-500 mt-1">
-                                    Esta acción no se puede deshacer
-                                </DialogDescription>
-                            </div>
-                        </div>
-                    </DialogHeader>
+            {/* Modal de formulario de creación/edición */}
+            <Modal
+                isOpen={isFormModalOpen}
+                onClose={() => {
+                    setIsFormModalOpen(false);
+                    resetForm();
+                }}
+                title={editingSchedule ? "Editar Día de Agenda" : "Nuevo Día de Agenda"}
+                description={editingSchedule ? "Modifique los datos de la agenda" : "Complete los datos de la nueva agenda"}
+                size="md"
+            >
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <Label htmlFor="day" className="text-sm font-medium mb-1 block">Día</Label>
+                        <Select
+                            value={formData.day}
+                            onValueChange={(value) => {
+                                setFormData({ ...formData, day: value });
+                            }}
+                        >
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Seleccione un día" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {DAYS_ORDER.map((day) => (
+                                    <SelectItem key={day} value={day} className="capitalize">
+                                        {DAYS_MAP[day]}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-                    <div className="py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="time_from" className="text-sm font-medium mb-1 block">Hora Inicio</Label>
+                            <Input
+                                id="time_from"
+                                type="time"
+                                value={formData.time_from}
+                                onChange={(e) =>
+                                    setFormData({ ...formData, time_from: e.target.value })
+                                }
+                                required
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="time_to" className="text-sm font-medium mb-1 block">Hora Final</Label>
+                            <Input
+                                id="time_to"
+                                type="time"
+                                value={formData.time_to}
+                                onChange={(e) =>
+                                    setFormData({ ...formData, time_to: e.target.value })
+                                }
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2 justify-end pt-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setIsFormModalOpen(false);
+                                resetForm();
+                            }}
+                            disabled={createMutation.isPending || updateMutation.isPending}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="submit"
+                            className="bg-brand-purple hover:bg-brand-purple/90"
+                            disabled={createMutation.isPending || updateMutation.isPending}
+                        >
+                            {createMutation.isPending || updateMutation.isPending ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Guardando...
+                                </>
+                            ) : editingSchedule ? (
+                                "Actualizar"
+                            ) : (
+                                "Crear"
+                            )}
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Modal de confirmación de eliminación */}
+            <Modal
+                isOpen={!!scheduleToDelete}
+                onClose={() => setScheduleToDelete(null)}
+                title="Confirmar Eliminación"
+                description="Esta acción no se puede deshacer"
+                size="md"
+            >
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                        <AlertTriangle className="h-6 w-6 text-red-600" />
+                    </div>
+                    <div>
                         <p className="text-sm text-gray-600">
                             ¿Está seguro que desea eliminar la agenda del día{" "}
                             <span className="font-semibold text-gray-900">
@@ -459,45 +455,46 @@ export const AgendasMaquinas = () => {
                             </span>
                             ?
                         </p>
-                        <p className="text-sm text-gray-600 mt-2">
-                            Horario:{" "}
-                            <span className="font-medium">
-                                {scheduleToDelete?.time_from} - {scheduleToDelete?.time_to}
-                            </span>
-                        </p>
                     </div>
+                </div>
 
-                    <DialogFooter className="gap-2 sm:gap-0">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setScheduleToDelete(null)}
-                            disabled={deleteMutation.isPending}
-                        >
-                            Cancelar
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="destructive"
-                            onClick={confirmDelete}
-                            disabled={deleteMutation.isPending}
-                            className="bg-red-600 hover:bg-red-700"
-                        >
-                            {deleteMutation.isPending ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Eliminando...
-                                </>
-                            ) : (
-                                <>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Eliminar
-                                </>
-                            )}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                <p className="text-sm text-gray-600 mb-6">
+                    Horario:{" "}
+                    <span className="font-medium">
+                        {scheduleToDelete?.time_from} - {scheduleToDelete?.time_to}
+                    </span>
+                </p>
+
+                <div className="flex gap-2 justify-end">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setScheduleToDelete(null)}
+                        disabled={deleteMutation.isPending}
+                    >
+                        Cancelar
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={confirmDelete}
+                        disabled={deleteMutation.isPending}
+                        className="bg-red-600 hover:bg-red-700"
+                    >
+                        {deleteMutation.isPending ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Eliminando...
+                            </>
+                        ) : (
+                            <>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Eliminar
+                            </>
+                        )}
+                    </Button>
+                </div>
+            </Modal>
         </div>
     );
 };

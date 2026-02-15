@@ -138,7 +138,7 @@ export function TablePagination({
                                                 {columns.map((column) => (
                                                     <div
                                                         key={column.key}
-                                                        className="flex items-center space-x-2 hover:bg-gray-50 p-1 rounded cursor-pointer"
+                                                        className="flex items-center space-x-2 hover:bg-purple-100 p-1 rounded cursor-pointer"
                                                         onClick={() => onToggleColumn(column.key)}
                                                     >
                                                         <Checkbox

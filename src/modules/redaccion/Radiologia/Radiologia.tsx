@@ -57,11 +57,33 @@ export const Radiologia = () => {
     const useDebounceSearch = useDebounce(searchTerm, 500);
     const { mutateAsync: blockExam } = useBlockExam();
     const { mutateAsync: unblockExam } = useUnblockExam();
-    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId });
+    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
     const { presets, isLoading: isLoadingPresets } = useFilterPresets();
+
+    // Función para toggle de columnas
+    const toggleColumn = useCallback((columnKey: string) => {
+        setVisibleColumns(prev => {
+            if (prev.includes(columnKey)) {
+                // No permitir que se desmarquen todas las columnas
+                if (prev.length === 1) {
+                    toast.error('Debe mantener al menos una columna visible');
+                    return prev;
+                }
+                return prev.filter(key => key !== columnKey);
+            } else {
+                return [...prev, columnKey];
+            }
+        });
+    }, []);
+
+    // Filtrar columnas visibles
+    const filteredColumns = useMemo(
+        () => informeColumns.filter(col => visibleColumns.includes(col.key as string)),
+        [visibleColumns]
+    );
 
     // Función para obtener los filtros actuales como objeto
     const getCurrentFilters = useCallback((): FilterPresetFilters => ({
@@ -358,24 +380,8 @@ export const Radiologia = () => {
         }));
     }, [bodyParts]);
 
-    const filteredColumns = useMemo(() => {
-        return informeColumns.filter(col => visibleColumns.includes(col.key as string));
-    }, [visibleColumns]);
 
-    const toggleColumn = (columnKey: string) => {
-        setVisibleColumns(prev => {
-            if (prev.includes(columnKey)) {
-                // No permitir que se desmarquen todas las columnas
-                if (prev.length === 1) {
-                    toast.error('Debe mantener al menos una columna visible');
-                    return prev;
-                }
-                return prev.filter(key => key !== columnKey);
-            } else {
-                return [...prev, columnKey];
-            }
-        });
-    };
+
     return (
         <MainLayout>
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
@@ -383,7 +389,7 @@ export const Radiologia = () => {
                 <DynamicBreadcrumb />
 
                 {/* Header */}
-                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                <div className="flex items-center gap-2 sm:gap-3 mb-4 ">
                     <div className="bg-brand-purple p-2 sm:p-3 rounded-lg">
                         <HandHelping className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
@@ -516,11 +522,6 @@ export const Radiologia = () => {
                     </div>
                 </div>
 
-                {/* Resultados */}
-                <div className="mt-2">
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-700">Resultados</h2>
-                </div>
-
                 <TablaDynamic<Informes>
                     data={(informesData?.data?.data) || []}
                     columns={filteredColumns}
@@ -547,7 +548,7 @@ export const Radiologia = () => {
                     additionalControls={
                         <div className="flex items-center gap-2">
                             <Label htmlFor="siguiente-paso-toggle" className="text-sm font-medium text-gray-700">
-                                Siguiente paso:
+                                Siguiente estudio:
                             </Label>
                             <Switch
                                 id="siguiente-paso-toggle"

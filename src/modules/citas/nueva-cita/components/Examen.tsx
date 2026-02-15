@@ -29,10 +29,6 @@ export const Examen = ({
     const { data: partesDelCuerpoData, isLoading: isLoadingPartesCuerpo } = usePartesDelCuerpo();
     const { data: estudiosData, isLoading: isLoadingEstudios } = useEstudiosPorModalidad();
 
-
-
-
-
     // Filtrar estudios por modalidad y parte del cuerpo
     const filteredEstudios = (() => {
         if (!estudiosData) return [];
@@ -222,7 +218,7 @@ export const Examen = ({
                                                                     </span>
                                                                 </TableCell>
                                                                 <TableCell>{estudio.bodypart}</TableCell>
-                                                                <TableCell className="text-sm text-gray-600">{estudio.studygroup}</TableCell>
+                                                                <TableCell className="text-sm text-gray-600 max-w-[200px] truncate" title={estudio.studygroup}>{estudio.studygroup}</TableCell>
                                                             </TableRow>
                                                         )
                                                     })}

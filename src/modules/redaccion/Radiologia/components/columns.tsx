@@ -71,7 +71,7 @@ const informeColumns: TableColumn<Informes>[] = [
         render: (value) => (
             <div className="flex justify-center">
                 {value ? (
-                    <Badge variant="success">FINALIZADO</Badge>
+                    <Badge className="" variant="success">FINALIZADO</Badge>
                 ) : (
                     <Badge className="bg-yellow-500 hover:bg-yellow-600">PENDIENTE</Badge>
                 )}

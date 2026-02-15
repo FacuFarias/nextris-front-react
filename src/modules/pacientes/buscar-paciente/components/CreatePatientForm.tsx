@@ -25,6 +25,8 @@ import { createPatientSchema, type CreatePatientFormValues } from "../schemas/cr
 import { usePatientsDomains } from "@/hooks/use-patients-domains";
 import { useAuth } from "@/context/AuthContext";
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { useObraSocial } from "@/modules/configuracion/configuracion-tablas/examenes/obra-social/hooks/use-obra-social";
+import { Autocomplete, type AutocompleteOption } from "@/components/autocomplete";
 
 interface CreatePatientFormProps {
     onSubmit: (data: CreatePatientFormValues) => void;
@@ -35,6 +37,8 @@ interface CreatePatientFormProps {
 export const CreatePatientForm = ({ onSubmit, isLoading, initialData }: CreatePatientFormProps) => {
     const { authData } = useAuth();
     const { data: patientsDomains, isLoading: isLoadingDomains } = usePatientsDomains();
+    const { obraSocial, isLoading: isLoadingObraSocial } = useObraSocial();
+
     const form = useForm<CreatePatientFormValues>({
         resolver: zodResolver(createPatientSchema),
         defaultValues: {
@@ -283,10 +287,24 @@ export const CreatePatientForm = ({ onSubmit, isLoading, initialData }: CreatePa
                         control={form.control}
                         name="healthinsurance"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Obra Social</FormLabel>
+                            <FormItem className="w-full">
+                                <FormLabel>Seleccione obra social *</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="OSDE" {...field} disabled={isLoading} />
+                                    <Autocomplete
+                                        options={
+                                            obraSocial?.data?.map((obraSocialItem: any): AutocompleteOption => ({
+                                                value: obraSocialItem.guid,
+                                                label: obraSocialItem.description,
+                                            })) || []
+                                        }
+                                        value={field.value}
+                                        onValueChange={field.onChange}
+                                        placeholder="Seleccione obra social"
+                                        searchPlaceholder="Buscar obra social..."
+                                        emptyMessage="No se encontró ninguna obra social"
+                                        disabled={isLoading}
+                                        isLoading={isLoadingObraSocial}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

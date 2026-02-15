@@ -68,6 +68,7 @@ export function TablaDynamic<T extends Record<string, any>>({
             return () => clearTimeout(timer);
         }
     }, [tableBackgroundImage]);
+
     // Función para obtener el valor anidado de un objeto
     const getNestedValue = (obj: any, path: string): any => {
         return path.split(".").reduce((current, key) => current?.[key], obj);
@@ -193,7 +194,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 <TableHead
                                     key={index}
                                     className={cn(
-                                        "text-white",
+                                        "text-white py-0 px-2 text-xs",
                                         column.headerClassName,
                                         column.sortable &&
                                         "cursor-pointer select-none",
@@ -208,7 +209,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 </TableHead>
                             ))}
                             {actions.length > 0 && (
-                                <TableHead className="w-[70px] text-white">Acciones</TableHead>
+                                <TableHead className="w-[70px] text-white py-2 px-3 text-sm">Acciones</TableHead>
                             )}
                         </TableRow>
                     </TableHeader>
@@ -236,7 +237,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                         (showIndex ? 1 : 0) +
                                         (actions.length > 0 ? 1 : 0)
                                     }
-                                    className="h-24 text-center text-muted-foreground "
+                                    className="h-10 text-center text-muted-foreground "
                                 >
                                     {emptyMessage}
                                 </TableCell>
@@ -263,6 +264,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                             <TableCell
                                                 key={colIndex}
                                                 className={cn(
+                                                    "py-2 px-3 text-xs",
                                                     column.className,
                                                     column.hideOnMobile && "hidden md:table-cell"
                                                 )}
@@ -271,9 +273,9 @@ export function TablaDynamic<T extends Record<string, any>>({
                                             </TableCell>
                                         ))}
                                         {actions.length > 0 && (
-                                            <TableCell>
+                                            <TableCell className="p-0">
                                                 <TooltipProvider>
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-1">
                                                         {visibleActions(row).map((action, actionIndex) => (
                                                             <Tooltip key={actionIndex}>
                                                                 <TooltipTrigger asChild>

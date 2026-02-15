@@ -24,6 +24,7 @@ import { IsAdmin } from "@/components/IsAdmin";
 import { EliminarPaciente } from "./components/EliminarPaciente";
 
 import { CreatePatientForm } from "./components/CreatePatientForm";
+import { useTableColumns } from "@/hooks/use-table-columns";
 
 export const BuscarPaciente = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -40,7 +41,7 @@ export const BuscarPaciente = () => {
     //eliminar paciente modal
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-
+    const { visibleColumns, filteredColumns, toggleColumn } = useTableColumns({ columns: patientColumns });
     // Funciones para las acciones de la tabla
     const handleEditPatient = (patient: Patient) => {
         setSelectedPatient(patient);
@@ -134,15 +135,15 @@ export const BuscarPaciente = () => {
                 <DynamicBreadcrumb />
 
                 {/* Header */}
-                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                    <div className="bg-brand-purple p-2 sm:p-3 rounded-lg">
-                        <Search className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                <div className="flex items-center gap-2 sm:gap-3 mb-4 ">
+                    <div className="bg-brand-purple p-2  rounded-lg">
+                        <Search className="w-3 h-3 sm:w-6 sm:h-6 text-white" />
                     </div>
                     <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Pacientes</h1>
                 </div>
 
                 {/* Barra de búsqueda */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 ">
                     <InputSearch
                         searchTerm={searchTerm}
                         setSearchTerm={setSearchTerm}
@@ -169,14 +170,9 @@ export const BuscarPaciente = () => {
 
                 </div>
 
-                {/* Resultados */}
-                <div>
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-700">RESULTADOS</h2>
-                </div>
-
                 <TablaDynamic<Patient>
                     data={(patientsData?.data?.data) || []}
-                    columns={patientColumns}
+                    columns={filteredColumns}
                     showIndex
                     loading={isLoading}
                     onRowDoubleClick={handleViewHistory}
@@ -192,6 +188,9 @@ export const BuscarPaciente = () => {
                     }}
                     perPageOptions={[10, 20, 50, 100]}
                     tableBackgroundImage={fondoImage}
+                    allColumns={patientColumns}
+                    visibleColumns={visibleColumns}
+                    onToggleColumn={toggleColumn}
                 />
 
                 {/* Modal de Agregar/Editar Paciente */}

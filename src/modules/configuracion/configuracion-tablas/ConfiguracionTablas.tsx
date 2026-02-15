@@ -25,11 +25,12 @@ import { GestionPacientes } from "./usuarios-personal/gestion-pacientes"
 import { MedicosSolicitantes } from "./usuarios-personal/medicos-solicitantes"
 import { AgendaMedicos } from "./usuarios-personal/agenda-medicos"
 import { GruposEstudio } from "./examenes/grupos-estudio/GruposEstudio"
+import { ObraSocial } from "./examenes/obra-social/ObraSocial"
 
 export const ConfiguracionTablas = () => {
     return (
         <MainLayout>
-            <div className="space-y-6">
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
                 <div className="space-y-2">
                     <h1 className="text-3xl font-bold">Configuración</h1>
                     <p className="text-muted-foreground">Administra la configuración del sistema</p>
@@ -125,6 +126,7 @@ export const ConfiguracionTablas = () => {
                                 <TabsTrigger value="modalidades" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Modalidades</TabsTrigger>
                                 <TabsTrigger value="partes-cuerpo" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Partes del Cuerpo</TabsTrigger>
                                 <TabsTrigger value="grupos-estudio" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Grupos de Estudio</TabsTrigger>
+                                <TabsTrigger value="obra-social" className="data-[state=active]:bg-brand-purple data-[state=active]:text-white">Obra Social</TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="tipos-estudio">
@@ -148,6 +150,11 @@ export const ConfiguracionTablas = () => {
                             <TabsContent value="grupos-estudio">
                                 <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                                     <GruposEstudio />
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="obra-social">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+                                    <ObraSocial />
                                 </div>
                             </TabsContent>
                         </Tabs>

@@ -90,7 +90,7 @@ export const HistorialPaciente = () => {
                 </div>
 
                 {/* Barra de búsqueda */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 ">
                     <InputSearch
                         searchTerm={searchTerm}
                         setSearchTerm={(value) => {
@@ -101,10 +101,6 @@ export const HistorialPaciente = () => {
                     />
                 </div>
 
-                {/* Resultados */}
-                <div>
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-700">RESULTADOS</h2>
-                </div>
 
                 <TablaDynamic<HistoryPatient>
                     data={paginatedData}

@@ -24,10 +24,10 @@ export const DireccionSelector = ({
     };
 
     return (
-        <div className={`bg-brand-purple rounded-lg p-6 shadow-lg ${isRow ? 'flex items-center gap-10' : ''}`}>
+        <div className={`bg-brand-purple rounded-lg p-4 shadow-lg ${isRow ? 'flex items-center gap-10' : ''}`}>
             <div className={`flex items-center gap-3  ${isRow ? '' : 'mb-4'}`}>
                 <div className="bg-white/20 p-2 rounded-lg">
-                    <MapPin className="w-6 h-6 text-white" />
+                    <MapPin className="w-4 h-4 text-white" />
                 </div>
                 <div>
                     <h3 className="text-white font-bold text-lg">Seleccione una Ubicación</h3>
@@ -39,12 +39,12 @@ export const DireccionSelector = ({
                     value={selectedDireccion}
                     disabled={isPending}
                 >
-                    <SelectTrigger className="w-full bg-white border-2 border-white hover:border-purple-200 focus:border-white focus:ring-2 focus:ring-white/50 text-base font-medium py-6 cursor-pointer shadow-md pr-20">
+                    <SelectTrigger className="w-full bg-white border-2 border-white hover:border-purple-200 focus:border-white focus:ring-2 focus:ring-white/50 text-base font-medium py-5 cursor-pointer shadow-md pr-20">
                         <SelectValue placeholder={isPending ? "Cargando direcciones..." : "Seleccione una dirección para comenzar"} />
                     </SelectTrigger>
                     <SelectContent>
                         {locationsData?.data?.map((location: any) => (
-                            <SelectItem key={location.guid} value={location.guid} className="text-base py-3">
+                            <SelectItem key={location.guid} value={location.guid} className="text-sm py-2">
                                 {location.name}
                             </SelectItem>
                         ))}

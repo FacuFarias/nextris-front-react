@@ -161,7 +161,7 @@ export const TemplateList = ({
     }
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 h-full flex flex-col">
             {/* Filtros y búsqueda */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 {/* Búsqueda */}
@@ -230,7 +230,7 @@ export const TemplateList = ({
 
             {/* Grid de Cards */}
             {isLoading ? (
-                <div className="flex justify-center items-center py-20">
+                <div className="flex justify-center items-center flex-1 min-h-[400px]">
                     <div className="text-center">
                         <Loader2 className="h-12 w-12 animate-spin text-brand-purple mx-auto mb-4" />
                         <p className="text-gray-600">Cargando plantillas...</p>

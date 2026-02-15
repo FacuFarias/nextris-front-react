@@ -6,13 +6,14 @@ import { Footer } from "./Footer";
 
 interface MainLayoutProps {
     children: ReactNode;
+    isOverflow?: boolean;
 }
 
-export const MainLayout = ({ children }: MainLayoutProps) => {
+export const MainLayout = ({ children, isOverflow = true }: MainLayoutProps) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="h-screen flex flex-col bg-background overflow-hidden">
+        <div className={`flex flex-col bg-background ${isOverflow ? "overflow-hidden h-screen" : ""}`}>
             {/* Mobile Header */}
             <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-40 flex items-center px-4">
                 <button
@@ -35,7 +36,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
                 <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
                 {/* Main Content */}
-                <main className="flex-1 flex flex-col lg:ml-64 relative min-h-0">
+                <main className="flex-1 flex flex-col lg:ml-52 relative min-h-0">
                     {/* Content Area */}
                     <div className="flex-1 flex flex-col min-h-0">
                         <div className="flex-1 flex flex-col min-h-0">
