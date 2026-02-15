@@ -2,12 +2,13 @@ import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
 import { InputSearch } from "@/components/InputSearch"
 import { MainLayout } from "@/layouts/layout"
 import { HandHelping, RefreshCcw, Loader2 } from "lucide-react"
-import { useMemo, useState, useEffect, useRef } from "react"
+import { useMemo, useState, useEffect, useRef, useCallback } from "react"
 import { useInformes, useBlockExam, useUnblockExam } from "./hooks/use-informes"
 import { useCrossWindowSync } from "./redactar-informe/hooks/use-cross-windows"
 import { getInformesActions, informeColumns } from "./components/columns"
 import TablaDynamic from "@/components/TableDynamic"
 import type { Informes } from "./types/informes.types"
+import type { FilterPreset, FilterPresetFilters } from "./types/filter-preset.types"
 import { useDebounce } from "@uidotdev/usehooks"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
@@ -15,11 +16,13 @@ import { Label } from "@/components/ui/label"
 import { PrimaryButton } from "@/components"
 import { toast } from "sonner"
 import { ConfirmationModal } from "./components/ConfirmationModal"
-import fondoImage from "@/assets/fondo1.png"
+import { FilterPresetTabs } from "./components/FilterPresetTabs"
+import fondoImage from "@/assets/redaccion.jpg"
 import { Autocomplete } from "@/components/autocomplete"
 import { useBodyParts } from "@/modules/configuracion/configuracion-tablas/examenes/partes-cuerpo"
 import { useModalidades } from "@/modules/configuracion/configuracion-tablas/examenes/modalidades"
 import { useGrupoEstudio } from "@/modules/configuracion/configuracion-tablas/examenes/grupos-estudio"
+import { useFilterPresets } from "./hooks/use-filter-presets"
 
 export const Radiologia = () => {
     // Hook para sincronizar entre ventanas
@@ -37,6 +40,7 @@ export const Radiologia = () => {
     const [verFinalizados, setVerFinalizados] = useState(false);
     const [asignadosAMi, setAsignadosAMi] = useState(false);
     const [listoParaLeer, setListoParaLeer] = useState(true);
+    const [verSinImagenes, setVerSinImagenes] = useState(false);
     const [siguientePaso, setSiguientePaso] = useState(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [isNoImageModalOpen, setIsNoImageModalOpen] = useState(false);
@@ -45,13 +49,92 @@ export const Radiologia = () => {
     const [visibleColumns, setVisibleColumns] = useState<string[]>(
         informeColumns.map(col => col.key as string)
     );
+    const [sortColumn, setSortColumn] = useState("");
+    const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+    const [activePresetId, setActivePresetId] = useState<string | null>(null);
+    const presetsInitializedRef = useRef(false);
+
     const useDebounceSearch = useDebounce(searchTerm, 500);
     const { mutateAsync: blockExam } = useBlockExam();
     const { mutateAsync: unblockExam } = useUnblockExam();
-    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId });
+    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
+    const { presets, isLoading: isLoadingPresets } = useFilterPresets();
+
+    // Función para obtener los filtros actuales como objeto
+    const getCurrentFilters = useCallback((): FilterPresetFilters => ({
+        search: searchTerm,
+        listo_para_leer: listoParaLeer,
+        ver_finalizados: verFinalizados,
+        asignados_a_mi: asignadosAMi,
+        ver_sin_imagenes: verSinImagenes,
+        study_group_id: studioTypeId || "",
+        modality_id: modalityId || "",
+        bodypart_id: bodyPartId || "",
+        visible_columns: visibleColumns,
+        per_page: perPage,
+        sort_column: sortColumn,
+        sort_direction: sortDirection,
+    }), [searchTerm, listoParaLeer, verFinalizados, asignadosAMi, verSinImagenes, studioTypeId, modalityId, bodyPartId, visibleColumns, perPage, sortColumn, sortDirection]);
+
+    // Función para aplicar filtros de un preset
+    const applyPreset = useCallback((preset: FilterPreset | null) => {
+        if (!preset) {
+            // Reset a defaults (tab "Todos")
+            setSearchTerm("");
+            setListoParaLeer(true);
+            setVerFinalizados(false);
+            setAsignadosAMi(false);
+            setVerSinImagenes(false);
+            setStudioTypeId(undefined);
+            setModalityId(undefined);
+            setBodyPartId(undefined);
+            setVisibleColumns(informeColumns.map(col => col.key as string));
+            setPerPage(10);
+            setSortColumn("");
+            setSortDirection("asc");
+            setActivePresetId(null);
+        } else {
+            const f = preset.filters;
+            setSearchTerm(f.search || "");
+            setListoParaLeer(f.listo_para_leer ?? true);
+            setVerFinalizados(f.ver_finalizados ?? false);
+            setAsignadosAMi(f.asignados_a_mi ?? false);
+            setVerSinImagenes(f.ver_sin_imagenes ?? false);
+            setStudioTypeId(f.study_group_id || undefined);
+            setModalityId(f.modality_id || undefined);
+            setBodyPartId(f.bodypart_id || undefined);
+            setVisibleColumns(f.visible_columns?.length ? f.visible_columns : informeColumns.map(col => col.key as string));
+            setPerPage(f.per_page || 10);
+            setSortColumn(f.sort_column || "");
+            setSortDirection(f.sort_direction || "asc");
+            setActivePresetId(preset.guid);
+        }
+        setPage(1);
+    }, []);
+
+    // Inicializar con el preset activo al cargar
+    useEffect(() => {
+        if (!isLoadingPresets && !presetsInitializedRef.current) {
+            presetsInitializedRef.current = true;
+            const activePreset = presets.find(p => p.is_active);
+            if (activePreset) {
+                applyPreset(activePreset);
+            }
+        }
+    }, [isLoadingPresets, presets, applyPreset]);
+
+    // Handler para cambio de preset desde las tabs
+    const handlePresetChange = useCallback((preset: FilterPreset | null) => {
+        applyPreset(preset);
+    }, [applyPreset]);
+
+    const handleSortChange = useCallback((column: string, direction: "asc" | "desc") => {
+        setSortColumn(column);
+        setSortDirection(direction);
+    }, []);
 
     // Listener para eventos de actualización del visor
     useEffect(() => {
@@ -307,19 +390,26 @@ export const Radiologia = () => {
                     <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Redacción de reportes</h1>
                 </div>
 
-                {/* Barra de búsqueda y filtros */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4  mb-4 sm:mb-2">
-                    <div className="flex-1">
-                        <InputSearch
-                            searchTerm={searchTerm}
-                            setSearchTerm={setSearchTerm}
-                            placeholder="Buscar paciente o historial..."
-                        />
-                    </div>
+                {/* Pestañas de presets de filtros */}
+                <FilterPresetTabs
+                    activePresetId={activePresetId}
+                    onPresetChange={handlePresetChange}
+                    currentFilters={getCurrentFilters()}
+                />
 
-                    {/* Filtros con checkboxes */}
-                    <div className="flex flex-wrap items-center gap-4 sm:gap-6 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200">
-                        <div className="flex flex-col gap-3">
+                {/* Bloque unificado de filtros */}
+                <div className="flex flex-col gap-3 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200 mb-2">
+                    {/* Fila 1: Búsqueda + Checkboxes + Refresh */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+                        <div className="flex-1">
+                            <InputSearch
+                                searchTerm={searchTerm}
+                                setSearchTerm={setSearchTerm}
+                                placeholder="Buscar paciente o historial..."
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 sm:gap-5">
                             <div className="flex items-center space-x-2">
                                 <Checkbox
                                     id="listo-leer"
@@ -330,10 +420,7 @@ export const Radiologia = () => {
                                     }}
                                     className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
                                 />
-                                <Label
-                                    htmlFor="listo-leer"
-                                    className="text-sm font-medium text-gray-700 cursor-pointer"
-                                >
+                                <Label htmlFor="listo-leer" className="text-sm font-medium text-gray-700 cursor-pointer">
                                     Listo para leer
                                 </Label>
                             </div>
@@ -347,84 +434,86 @@ export const Radiologia = () => {
                                     }}
                                     className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
                                 />
-                                <Label
-                                    htmlFor="finalizados"
-                                    className="text-sm font-medium text-gray-700 cursor-pointer"
-                                >
+                                <Label htmlFor="finalizados" className="text-sm font-medium text-gray-700 cursor-pointer">
                                     Ver finalizados
                                 </Label>
                             </div>
-
-                        </div>
-
-
-                        <div className="flex items-center space-x-2">
-                            <Checkbox
-                                id="asignados"
-                                checked={asignadosAMi}
-                                onCheckedChange={(checked) => {
-                                    setAsignadosAMi(checked as boolean);
-                                    setPage(1);
-                                }}
-                                className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
-                            />
-                            <Label
-                                htmlFor="asignados"
-                                className="text-sm font-medium text-gray-700 cursor-pointer"
-                            >
-                                Asignados a mí
-                            </Label>
-                        </div>
-
-                        <PrimaryButton onClick={() => {
-                            refetchInformes();
-                            toast.success('Lista actualizada exitosamente');
-                        }}>
-                            <div className="flex items-center">
-                                <RefreshCcw className="h-4 w-4" />
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="asignados"
+                                    checked={asignadosAMi}
+                                    onCheckedChange={(checked) => {
+                                        setAsignadosAMi(checked as boolean);
+                                        setPage(1);
+                                    }}
+                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
+                                />
+                                <Label htmlFor="asignados" className="text-sm font-medium text-gray-700 cursor-pointer">
+                                    Asignados a mí
+                                </Label>
                             </div>
-                        </PrimaryButton>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="sin-imagenes"
+                                    checked={verSinImagenes}
+                                    onCheckedChange={(checked) => {
+                                        setVerSinImagenes(checked as boolean);
+                                        setPage(1);
+                                    }}
+                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
+                                />
+                                <Label htmlFor="sin-imagenes" className="text-sm font-medium text-gray-700 cursor-pointer">
+                                    Ver sin imágenes
+                                </Label>
+                            </div>
 
+                            <PrimaryButton onClick={() => {
+                                refetchInformes();
+                                toast.success('Lista actualizada exitosamente');
+                            }}>
+                                <div className="flex items-center">
+                                    <RefreshCcw className="h-4 w-4" />
+                                </div>
+                            </PrimaryButton>
+                        </div>
                     </div>
-                </div>
-                <div className="w-full flex flex-col sm:flex-row gap-3 ">
-                    <Autocomplete
-                        options={gruposEstudioOptions}
-                        value={studioTypeId}
-                        onValueChange={(value) => {
-                            setStudioTypeId(value);
-                            setPage(1);
-                        }}
-                        placeholder="Filtrar por grupo de estudio"
-                        emptyMessage="No se encontraron grupos de estudio."
-                        searchPlaceholder="Buscar grupo de estudio..."
-                    />
 
-                    {/* Filtro por modalidad */}
-                    <Autocomplete
-                        options={modalidadesOptions}
-                        value={modalityId}
-                        onValueChange={(value) => {
-                            setModalityId(value);
-                            setPage(1);
-                        }}
-                        placeholder="Filtrar por modalidad"
-                        emptyMessage="No se encontraron modalidades."
-                        searchPlaceholder="Buscar modalidad..."
-                    />
-
-                    {/* Filtro por parte del cuerpo */}
-                    <Autocomplete
-                        options={bodyPartsOptions}
-                        value={bodyPartId || ''}
-                        onValueChange={(value) => {
-                            setBodyPartId(value);
-                            setPage(1);
-                        }}
-                        placeholder="Filtrar por parte del cuerpo"
-                        emptyMessage="No se encontraron partes del cuerpo."
-                        searchPlaceholder="Buscar parte del cuerpo..."
-                    />
+                    {/* Fila 2: Autocompletes */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <Autocomplete
+                            options={gruposEstudioOptions}
+                            value={studioTypeId}
+                            onValueChange={(value) => {
+                                setStudioTypeId(value);
+                                setPage(1);
+                            }}
+                            placeholder="Filtrar por grupo de estudio"
+                            emptyMessage="No se encontraron grupos de estudio."
+                            searchPlaceholder="Buscar grupo de estudio..."
+                        />
+                        <Autocomplete
+                            options={modalidadesOptions}
+                            value={modalityId}
+                            onValueChange={(value) => {
+                                setModalityId(value);
+                                setPage(1);
+                            }}
+                            placeholder="Filtrar por modalidad"
+                            emptyMessage="No se encontraron modalidades."
+                            searchPlaceholder="Buscar modalidad..."
+                        />
+                        <Autocomplete
+                            options={bodyPartsOptions}
+                            value={bodyPartId || ''}
+                            onValueChange={(value) => {
+                                setBodyPartId(value);
+                                setPage(1);
+                            }}
+                            placeholder="Filtrar por parte del cuerpo"
+                            emptyMessage="No se encontraron partes del cuerpo."
+                            searchPlaceholder="Buscar parte del cuerpo..."
+                        />
+                    </div>
                 </div>
 
                 {/* Resultados */}
@@ -452,6 +541,9 @@ export const Radiologia = () => {
                     visibleColumns={visibleColumns}
                     onToggleColumn={toggleColumn}
                     tableBackgroundImage={fondoImage}
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSortChange={handleSortChange}
                     additionalControls={
                         <div className="flex items-center gap-2">
                             <Label htmlFor="siguiente-paso-toggle" className="text-sm font-medium text-gray-700">

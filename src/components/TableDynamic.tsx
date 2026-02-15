@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 //shadcn ui
 import {
     Table,
@@ -46,11 +46,28 @@ export function TablaDynamic<T extends Record<string, any>>({
     onToggleColumn,
     additionalControls,
     tableBackgroundImage,
+    sortColumn: controlledSortColumn,
+    sortDirection: controlledSortDirection,
+    onSortChange,
 }: DynamicTableProps<T>) {
-    const [sortConfig, setSortConfig] = useState<{
+    const isControlledSort = controlledSortColumn !== undefined && onSortChange !== undefined;
+
+    const [internalSortConfig, setInternalSortConfig] = useState<{
         key: keyof T | string;
         direction: "asc" | "desc";
     } | null>(null);
+
+    const sortConfig = isControlledSort
+        ? (controlledSortColumn ? { key: controlledSortColumn, direction: controlledSortDirection || "asc" } : null)
+        : internalSortConfig;
+    const [bgRevealed, setBgRevealed] = useState(false);
+
+    useEffect(() => {
+        if (tableBackgroundImage) {
+            const timer = setTimeout(() => setBgRevealed(true), 50);
+            return () => clearTimeout(timer);
+        }
+    }, [tableBackgroundImage]);
     // Función para obtener el valor anidado de un objeto
     const getNestedValue = (obj: any, path: string): any => {
         return path.split(".").reduce((current, key) => current?.[key], obj);
@@ -93,16 +110,29 @@ export function TablaDynamic<T extends Record<string, any>>({
     const handleSort = (column: TableColumn<T>) => {
         if (!column.sortable) return;
 
-        setSortConfig((current) => {
-            if (current?.key === column.key) {
-                if (current.direction === "asc") {
-                    return { key: column.key, direction: "desc" };
+        if (isControlledSort) {
+            const columnKey = column.key as string;
+            if (controlledSortColumn === columnKey) {
+                if (controlledSortDirection === "asc") {
+                    onSortChange(columnKey, "desc");
                 } else {
-                    return null; // Remove sorting
+                    onSortChange("", "asc");
                 }
+            } else {
+                onSortChange(columnKey, "asc");
             }
-            return { key: column.key, direction: "asc" };
-        });
+        } else {
+            setInternalSortConfig((current) => {
+                if (current?.key === column.key) {
+                    if (current.direction === "asc") {
+                        return { key: column.key, direction: "desc" };
+                    } else {
+                        return null;
+                    }
+                }
+                return { key: column.key, direction: "asc" };
+            });
+        }
     };
 
     const getSortIcon = (column: TableColumn<T>) => {
@@ -142,14 +172,22 @@ export function TablaDynamic<T extends Record<string, any>>({
                 style={{
                     ...(maxHeight ? { maxHeight } : {}),
                     ...(tableBackgroundImage ? {
-                        backgroundImage: `linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url(${tableBackgroundImage})`,
+                        backgroundImage: `linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url(${tableBackgroundImage})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                     } : {}),
                 }}
             >
-                <Table /* style={{ tableLayout: "fixed" }} */>
-                    <TableHeader className="bg-brand-purple sticky top-0 z-[2]">
+                {tableBackgroundImage && (
+                    <div
+                        className={cn(
+                            "absolute inset-0 z-[1] bg-purple-50 pointer-events-none transition-opacity duration-1000 ease-out",
+                            bgRevealed ? "opacity-0" : "opacity-100"
+                        )}
+                    />
+                )}
+                <Table className="relative z-[2]">
+                    <TableHeader className="bg-brand-purple sticky top-0 z-[3]">
                         <TableRow className="hover:bg-brand-purple border-b-0">
                             {columns.map((column, index) => (
                                 <TableHead
