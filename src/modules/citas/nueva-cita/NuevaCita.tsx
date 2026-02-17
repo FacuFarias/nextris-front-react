@@ -9,8 +9,8 @@ import { useDebounce } from "@uidotdev/usehooks"
 //layout
 import { MainLayout } from "@/layouts/layout"
 //icons and react
-import { Calendar, User, ClipboardList, FileCheck, UserPlus, Loader2 } from "lucide-react"
-import { useState } from "react"
+import { Calendar, User, ClipboardList, FileCheck, UserPlus, Loader2, CircleCheck } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPaciente";
 import { usePacienteDireccion } from "@/modules/admision/admision-espontanea/hooks/use-paciente-direccion"
 import { admisionColumns } from "@/modules/admision/admision-espontanea/components/columns"
@@ -34,6 +34,40 @@ export const NuevaCita = () => {
     //hook para crear paciente
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(8);
+    const tabsListRef = useRef<HTMLDivElement>(null)
+    const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+    const [indicator, setIndicator] = useState({ left: 0, width: 0 })
+
+    // Estado de completado de cada paso
+    const hasEvents = Object.values(allEvents).flat().some(ev => !ev.extendedProps?.blocked);
+    const completedSteps = {
+        paciente: !!selectedPatient,
+        examen: selectedEstudios.length > 0,
+        agenda: hasEvents,
+    };
+
+    const updateIndicator = useCallback(() => {
+        const activeEl = tabRefs.current.get(activeTab)
+        const container = tabsListRef.current
+        if (activeEl && container) {
+            const containerRect = container.getBoundingClientRect()
+            const tabRect = activeEl.getBoundingClientRect()
+            setIndicator({
+                left: tabRect.left - containerRect.left,
+                width: tabRect.width,
+            })
+        }
+    }, [activeTab])
+
+    useEffect(() => {
+        updateIndicator()
+    }, [updateIndicator])
+
+    useEffect(() => {
+        window.addEventListener("resize", updateIndicator)
+        return () => window.removeEventListener("resize", updateIndicator)
+    }, [updateIndicator])
+
     const handleDireccionChange = (direccionId: string) => {
         setSelectedDireccion(direccionId);
 
@@ -85,39 +119,63 @@ export const NuevaCita = () => {
                     </div>
                     {/* Tabs modernos */}
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-4 h-auto bg-purple-50/50 p-1 rounded-xl gap-2">
-                            <TabsTrigger
-                                value="paciente"
-                                className="bg-purple-100 data-[state=active]:bg-brand-purple data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-3 px-4 flex items-center justify-center gap-2 cursor-pointer"
+                        <div className="relative shrink-0">
+                            <TabsList
+                                ref={tabsListRef}
+                                className="bg-transparent border-b border-gray-200 rounded-none h-auto p-0 justify-start gap-0 w-full"
                             >
-                                <User className="w-4 h-4" />
-                                <span className="font-semibold">1. Paciente : {selectedPatient?.name} {selectedPatient?.surname}</span>
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="examen"
-                                disabled={!selectedPatient}
-                                className="bg-purple-100 data-[state=active]:bg-brand-purple data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-3 px-4 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed enabled:cursor-pointer"
-                            >
-                                <ClipboardList className="w-4 h-4" />
-                                <span className="font-semibold">2. Examen</span>
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="agenda"
-                                disabled={selectedEstudios.length === 0}
-                                className="bg-purple-100 data-[state=active]:bg-brand-purple data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-3 px-4 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed enabled:cursor-pointer"
-                            >
-                                <ClipboardList className="w-4 h-4" />
-                                <span className="font-semibold">3. Agenda {selectedEstudios.length > 0 && `(${selectedEstudios.length})`}</span>
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="prestacion"
-                                disabled={selectedEstudios.length === 0}
-                                className="bg-purple-100 data-[state=active]:bg-brand-purple data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-3 px-4 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed enabled:cursor-pointer"
-                            >
-                                <FileCheck className="w-4 h-4" />
-                                <span className="font-semibold">4. Prestación</span>
-                            </TabsTrigger>
-                        </TabsList>
+                                <TabsTrigger
+                                    value="paciente"
+                                    ref={(el) => {
+                                        if (el) tabRefs.current.set("paciente", el)
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 bg-transparent shadow-none"
+                                >
+                                    <User className="w-4 h-4" />
+                                    <span>1. Paciente {selectedPatient ? `: ${selectedPatient.name} ${selectedPatient.surname}` : ''}</span>
+                                    {completedSteps.paciente && <CircleCheck className="w-4 h-4 text-green-500" />}
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    value="examen"
+                                    disabled={!selectedPatient}
+                                    ref={(el) => {
+                                        if (el) tabRefs.current.set("examen", el)
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    <ClipboardList className="w-4 h-4" />
+                                    <span>2. Examen</span>
+                                    {completedSteps.examen && <CircleCheck className="w-4 h-4 text-green-500" />}
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    value="agenda"
+                                    disabled={selectedEstudios.length === 0}
+                                    ref={(el) => {
+                                        if (el) tabRefs.current.set("agenda", el)
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    <ClipboardList className="w-4 h-4" />
+                                    <span>3. Agenda {selectedEstudios.length > 0 && `(${selectedEstudios.length})`}</span>
+                                    {completedSteps.agenda && <CircleCheck className="w-4 h-4 text-green-500" />}
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    value="prestacion"
+                                    disabled={selectedEstudios.length === 0}
+                                    ref={(el) => {
+                                        if (el) tabRefs.current.set("prestacion", el)
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    <FileCheck className="w-4 h-4" />
+                                    <span>4. Prestación</span>
+                                </TabsTrigger>
+                            </TabsList>
+                            <div
+                                className="absolute bottom-0 h-0.5 bg-brand-purple transition-all duration-300 ease-in-out"
+                                style={{ left: indicator.left, width: indicator.width }}
+                            />
+                        </div>
 
                         {/* Tab Content - Paciente */}
                         <TabsContent value="paciente" className="mt-6 space-y-2">

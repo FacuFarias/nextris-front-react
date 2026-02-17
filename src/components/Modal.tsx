@@ -39,8 +39,18 @@ export const Modal = ({
     showCloseButton = true,
     closeOnOutsideClick = true,
 }: ModalProps) => {
+    const handleOpenChange = (open: boolean) => {
+        if (!closeOnOutsideClick) {
+            return;
+        }
+
+        if (!open) {
+            onClose();
+        }
+    };
+
     return (
-        <Dialog open={isOpen} onOpenChange={closeOnOutsideClick ? onClose : undefined}>
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogContent className={cn(sizeClasses[size], className)} showCloseButton={showCloseButton}>
                 {(title || description) && (
                     <DialogHeader className="bg-brand-purple text-white p-4 rounded-t-lg -m-6 mb-6">

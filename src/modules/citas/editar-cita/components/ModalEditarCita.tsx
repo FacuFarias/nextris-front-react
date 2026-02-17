@@ -48,8 +48,15 @@ export const ModalEditarCitaContent = ({ cita, onGuardar, onCancelar }: ModalEdi
                 <div className="space-y-2">
                     <Label>Médico Referente</Label>
                     <Select
-                        value={citaEditada.doctor}
-                        onValueChange={(value) => setCitaEditada({ ...citaEditada, doctor: value })}
+                        value={citaEditada.doctor_id || ""}
+                        onValueChange={(value) => {
+                            const doctorSeleccionado = doctorsData?.find((doctor: any) => doctor.guid === value);
+                            setCitaEditada({
+                                ...citaEditada,
+                                doctor_id: value,
+                                doctor: doctorSeleccionado?.name || citaEditada.doctor,
+                            });
+                        }}
                     >
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder="Seleccione un médico" />
@@ -74,8 +81,8 @@ export const ModalEditarCitaContent = ({ cita, onGuardar, onCancelar }: ModalEdi
                 <div className="space-y-2">
                     <Label>Médico Solicitante</Label>
                     <Select
-                        value={citaEditada.doctor_id || ""}
-                        onValueChange={(value) => setCitaEditada({ ...citaEditada, doctor_id: value })}
+                        value={citaEditada.requesting_physician_id || ""}
+                        onValueChange={(value) => setCitaEditada({ ...citaEditada, requesting_physician_id: value })}
                     >
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder="Seleccione un médico" />
@@ -135,7 +142,7 @@ export const ModalEditarCitaContent = ({ cita, onGuardar, onCancelar }: ModalEdi
                                 estudiosFiltrados.map((estudio: any, index: number) => (
                                     <tr
                                         key={estudio.guid}
-                                        onClick={() => setCitaEditada({ ...citaEditada, exam: estudio.description })}
+                                        onClick={() => setCitaEditada({ ...citaEditada, exam: estudio.description, exam_id: estudio.guid })}
                                         className={`cursor-pointer hover:bg-brand-purple/20 transition-colors ${citaEditada.exam_id === estudio.guid
                                             ? 'bg-brand-purple/30'
                                             : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'

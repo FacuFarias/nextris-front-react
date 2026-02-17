@@ -86,8 +86,6 @@ export function TablePagination({
         return rangeWithDots;
     };
 
-    if (total === 0) return null;
-
     return (
         <div className="flex items-center justify-between px-2 py-4">
             {/* Selector de filas por página y columnas */}

@@ -11,6 +11,7 @@ const informeColumns: TableColumn<Informes>[] = [
         label: "PACIENTE",
         className: "font-medium",
         sortable: true,
+        filterable: true,
         render: (value: string, informe: Informes) => (
             <div className="flex items-center gap-2">
                 {informe.blocked_by && informe.blocked_by_name && (
@@ -27,6 +28,7 @@ const informeColumns: TableColumn<Informes>[] = [
         label: "DNI",
         className: "font-medium",
         sortable: true,
+        filterable: true,
     },
     {
         key: "study_type",
@@ -34,6 +36,7 @@ const informeColumns: TableColumn<Informes>[] = [
         className: "font-medium",
         hideOnMobile: true,
         sortable: true,
+        filterable: true,
     },
     {
         key: "status",
@@ -41,24 +44,28 @@ const informeColumns: TableColumn<Informes>[] = [
         className: "font-medium",
         hideOnMobile: true,
         sortable: true,
+        filterable: true,
     },
     {
         key: "admission_number",
         label: "ADM. Nº",
         className: "font-medium",
         sortable: true,
+        filterable: true,
     },
     {
         key: "accession_number",
         label: "ACC. Nº",
         className: "font-medium",
         sortable: true,
+        filterable: true,
     },
     {
         key: "created_on",
         label: "FECHA Y HORA DE ADMISION",
         className: "font-medium",
         sortable: true,
+        filterable: true,
         render: (value: string) => {
             return fechaYhora(value);
         }
@@ -68,6 +75,7 @@ const informeColumns: TableColumn<Informes>[] = [
         label: "REPORTADO",
         className: "font-medium",
         sortable: true,
+        filterable: true,
         render: (value) => (
             <div className="flex justify-center">
                 {value ? (

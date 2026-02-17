@@ -38,3 +38,32 @@ export interface RolesResponse {
     success: boolean;
     data: Role[];
 }
+
+export interface UserLocation {
+    location_id: string;
+    location_name: string;
+    is_default: boolean;
+}
+
+export interface UserLocationsResponse {
+    success: boolean;
+    data: UserLocation[];
+}
+
+export interface UserMedicalData {
+    aclaracion_firma: string;
+    matricula_nacional: string;
+    firma_digital: string | null;
+    firma_habilitada: boolean;
+}
+
+export interface UserMedicalDataResponse {
+    success: boolean;
+    data: UserMedicalData;
+}
+
+export interface UserMedicalSubmitData {
+    aclaracion_firma: string;
+    matricula_nacional: string;
+    firma_digital?: File;
+}

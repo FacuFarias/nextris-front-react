@@ -1,0 +1,1 @@
+export { ObrasSociales } from "./ObrasSociales";

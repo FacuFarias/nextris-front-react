@@ -7,6 +7,7 @@ export interface TableColumn<T = any> {
     className?: string;
     headerClassName?: string;
     hideOnMobile?: boolean;
+    filterable?: boolean;
 }
 
 export interface TableAction<T = any> {
@@ -64,4 +65,7 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     sortColumn?: string; // Columna de ordenamiento controlada externamente
     sortDirection?: "asc" | "desc"; // Dirección de ordenamiento controlada externamente
     onSortChange?: (column: string, direction: "asc" | "desc") => void; // Callback para cambios de sort
+    tableClassName?: string;
+    preserveTableHeight?: boolean;
+    stickyPagination?: boolean;
 }

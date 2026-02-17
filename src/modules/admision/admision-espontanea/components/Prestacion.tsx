@@ -1,6 +1,6 @@
 import { User, ClipboardList, Monitor } from "lucide-react"
 import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPaciente"
-import { useMedicosPorLocacion, useObrasSocialesPorLocacion } from "@/hooks/use-global";
+import { useMedicosPorLocacion, useObrasSocialesPorLocacion, useRadsPorLocacion } from "@/hooks/use-global";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
@@ -23,14 +23,17 @@ export const Prestacion = ({
     onResetForm,
 }: PrestacionProps) => {
 
-    const [selectedMedico, setSelectedMedico] = useState<string>("");
+    const [selectedMedicoSolicitante, setSelectedMedicoSolicitante] = useState<string>("");
+    const [selectedMedicoReferente, setSelectedMedicoReferente] = useState<string>("");
     const [selectedObrasSociales, setSelectedObrasSociales] = useState<string>("");
     const [selectedPrioridad, setSelectedPrioridad] = useState<string>("");
-    const { data: medicos } = useMedicosPorLocacion(selectedDireccion || "");
+    const { data: medicosSolicitantes } = useMedicosPorLocacion(selectedDireccion || "");
+    const { data: medicosReferentes } = useRadsPorLocacion(selectedDireccion || "");
     const { data: obrasSociales } = useObrasSocialesPorLocacion(selectedDireccion || "");
     const mutationCrearOrden = useCrearOrdenParaPaciente(() => {
         // Resetear formulario local
-        setSelectedMedico("");
+        setSelectedMedicoSolicitante("");
+        setSelectedMedicoReferente("");
         setSelectedObrasSociales("");
         setSelectedPrioridad("");
         // Llamar callback del padre para resetear todo
@@ -44,14 +47,15 @@ export const Prestacion = ({
             exam: {
                 study_type_id: selectedEstudio?.guid,
                 equipment_id: selectedEquipo?.guid,
-                physician_id: selectedMedico || undefined,
+                physician_id: selectedMedicoSolicitante || undefined,
+                referring_physician_id: selectedMedicoReferente || undefined,
                 insurance_id: selectedObrasSociales || undefined,
                 severity: selectedPrioridad || "normal",
             }
         });
     }
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-4">
             {/* Sección de acciones o formulario adicional */}
             <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-6">
                 <div className="w-full flex items-center justify-between mb-6">
@@ -64,21 +68,21 @@ export const Prestacion = ({
                     </div>
                 </div>
                 <div className="space-y-4">
-                    <div className="w-full flex gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                         <div className="w-full">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Médico Solicitante
                             </label>
                             <Select
-                                onValueChange={setSelectedMedico}
-                                value={selectedMedico}
+                                onValueChange={setSelectedMedicoSolicitante}
+                                value={selectedMedicoSolicitante}
                                 required={true}
                             >
                                 <SelectTrigger className="w-full border-purple-300 focus:border-purple-500 focus:ring-purple-500">
                                     <SelectValue placeholder="Seleccione un médico" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {medicos?.map((medico: any) => (
+                                    {medicosSolicitantes?.map((medico: any) => (
                                         <SelectItem key={medico.guid} value={medico.guid}>
                                             {medico.description}
                                         </SelectItem>
@@ -86,6 +90,28 @@ export const Prestacion = ({
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        <div className="w-full">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Médico Referente (Radiólogo)
+                            </label>
+                            <Select
+                                onValueChange={setSelectedMedicoReferente}
+                                value={selectedMedicoReferente}
+                            >
+                                <SelectTrigger className="w-full border-purple-300 focus:border-purple-500 focus:ring-purple-500">
+                                    <SelectValue placeholder="Seleccione un radiólogo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {medicosReferentes?.map((medico: any) => (
+                                        <SelectItem key={medico.guid} value={medico.guid}>
+                                            {medico.description}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
                         <div className="w-full">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Obras Sociales Solicitante
@@ -106,8 +132,8 @@ export const Prestacion = ({
                                 </SelectContent>
                             </Select>
                         </div>
-                    </div>
-                    <div className="w-1/2">
+
+                        <div className="w-full">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Prioridad
                         </label>
@@ -127,7 +153,7 @@ export const Prestacion = ({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2 pb-2">
                 {/* Card Paciente */}
                 <div className="bg-white rounded-lg border border-purple-100 shadow-sm">
                     <div className="bg-brand-purple p-4 flex items-center gap-2 rounded-t-lg">
@@ -205,6 +231,7 @@ export const Prestacion = ({
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
 
 

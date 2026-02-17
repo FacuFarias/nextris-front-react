@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEjecucion } from './hooks/use-ejecucion';
 import TablaDynamic from '@/components/TableDynamic';
 import { ejecucionColumns, getEjecucionActions } from './components/columns';
+import fondoImage from "@/assets/ejecucion.jpg";
 import type { Ejecucion as EjecucionType } from './types/ejecucion.type';
 
 export const Ejecucion = () => {
@@ -39,7 +40,7 @@ export const Ejecucion = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
@@ -61,33 +62,37 @@ export const Ejecucion = () => {
                 </div>
 
                 {/* Resultados */}
-                <div>
+                <div className="mb-2">
                     <h2 className="text-base sm:text-lg font-semibold text-gray-700">Resultados de Órdenes</h2>
                 </div>
 
-                {isLoading ? (
-                    <div className='flex justify-center items-center h-40'>
-                        <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
-                    </div>
-                ) : (
-                    <TablaDynamic
-                        data={filteredData}
-                        columns={ejecucionColumns}
-                        showIndex
-                        actions={getEjecucionActions(handleVerDetalle)}
-                        onRowDoubleClick={(ejecucion: EjecucionType) => {
-                            handleVerDetalle(ejecucion);
-                        }
-                        }
-                        pagination={{
-                            page,
-                            pageSize,
-                            serverSide: false,
-                            total: filteredData.length,
-                        }}
-                        onPaginationChange={handlePaginationChange}
-                    />
-                )}
+                <TablaDynamic
+                    data={filteredData}
+                    columns={ejecucionColumns}
+                    showIndex
+                    loading={isLoading}
+                    preserveTableHeight
+                    stickyPagination
+                    actions={getEjecucionActions(handleVerDetalle)}
+                    onRowDoubleClick={(ejecucion: EjecucionType) => {
+                        handleVerDetalle(ejecucion);
+                    }
+                    }
+                    pagination={{
+                        page,
+                        pageSize,
+                        serverSide: false,
+                        total: filteredData.length,
+                    }}
+                    onPaginationChange={handlePaginationChange}
+                    perPageValue={pageSize}
+                    onPerPageChange={(value) => {
+                        setPageSize(value);
+                        setPage(1);
+                    }}
+                    perPageOptions={[10, 20, 50, 100]}
+                    tableBackgroundImage={fondoImage}
+                />
 
 
             </div>

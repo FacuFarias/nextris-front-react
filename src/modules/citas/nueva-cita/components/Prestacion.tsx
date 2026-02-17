@@ -62,16 +62,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
     };
 
     const handleSubmit = () => {
-        // Validar que todos los eventos tengan médico y obra social
-        const missingConfig = userEvents.some(ev => {
-            const config = eventConfigs[ev.id];
-            return !config || !config.physician_id || !config.obra_social_id;
-        });
-
-        if (missingConfig) {
-            toast.error('Complete médico y obra social para todos los estudios');
-            return;
-        }
+        // Médico y obra social son opcionales
 
         // Formatear datos para el backend
         const calendar_events = userEvents.map(ev => {
@@ -83,8 +74,8 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                 exam_id: ev.extendedProps?.study?.guid,
                 start_datetime: `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')} ${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`,
                 end_datetime: `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')} ${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`,
-                physician_id: config.physician_id,
-                obra_social_id: config.obra_social_id,
+                physician_id: config?.physician_id || null,
+                obra_social_id: config?.obra_social_id || null,
                 equipment_id: ev.extendedProps?.equipo?.guid
             };
         });
@@ -106,10 +97,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
         });
     };
 
-    const allConfigured = userEvents.every(ev => {
-        const config = eventConfigs[ev.id];
-        return config && config.physician_id && config.obra_social_id;
-    });
+    const allConfigured = userEvents.length > 0;
 
     return (
         <div className="space-y-6">
@@ -137,7 +125,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                     ) : (
                         userEvents.map((ev, idx) => {
                             const config = eventConfigs[ev.id] || {};
-                            const isComplete = config.physician_id && config.obra_social_id;
+                            const isComplete = config.physician_id || config.obra_social_id;
 
                             return (
                                 <div
@@ -186,7 +174,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                                             <div className="space-y-2">
                                                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                                                     <User className="w-4 h-4 text-brand-purple" />
-                                                    Médico Solicitante *
+                                                    Médico Solicitante
                                                 </label>
                                                 <Select
                                                     value={config.physician_id || ''}
@@ -216,7 +204,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                                             <div className="space-y-2">
                                                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                                                     <Building2 className="w-4 h-4 text-brand-purple" />
-                                                    Obra Social *
+                                                    Obra Social
                                                 </label>
                                                 <Select
                                                     value={config.obra_social_id || ''}
@@ -260,7 +248,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                         <div className="text-sm text-gray-600">
                             {Object.keys(eventConfigs).filter(id => {
                                 const config = eventConfigs[id];
-                                return config?.physician_id && config?.obra_social_id;
+                                return config?.physician_id || config?.obra_social_id;
                             }).length} / {userEvents.length} configurados
                         </div>
                         <PrimaryButton

@@ -7,7 +7,7 @@ import { Search, UserPlus } from "lucide-react";
 //components
 import { DynamicBreadcrumb, InputSearch, Modal } from "@/components";
 import { useDebounce } from "@uidotdev/usehooks";
-import fondoImage from "@/assets/fondo1.png";
+import fondoImage from "@/assets/patients.jpg";
 
 //hooks and services
 import { useBuscarPaciente } from "./hooks/use-buscar-paciente";

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userService, roleService } from '../services/users.service';
-import type { UserFormData } from '../types/users.types';
+import type { UserFormData, UserMedicalSubmitData } from '../types/users.types';
 import { userKeys, roleKeys } from '../constants/query-keys';
 
 export const useUsers = (includeInactive: boolean = false) => {
@@ -57,6 +57,22 @@ export const useUsers = (includeInactive: boolean = false) => {
         },
     });
 
+    const setUserLocationsMutation = useMutation({
+        mutationFn: ({ userId, locationIds }: { userId: string; locationIds: string[] }) =>
+            userService.setLocations(userId, locationIds),
+        onSuccess: (_data, variables) => {
+            queryClient.invalidateQueries({ queryKey: userKeys.locations(variables.userId) });
+        },
+    });
+
+    const saveUserMedicalDataMutation = useMutation({
+        mutationFn: ({ userId, medicalData }: { userId: string; medicalData: UserMedicalSubmitData }) =>
+            userService.saveMedicalData(userId, medicalData),
+        onSuccess: (_data, variables) => {
+            queryClient.invalidateQueries({ queryKey: userKeys.medicalData(variables.userId) });
+        },
+    });
+
     return {
         users,
         isLoading,
@@ -67,6 +83,40 @@ export const useUsers = (includeInactive: boolean = false) => {
         activateUser: activateMutation.mutate,
         deactivateUser: deactivateMutation.mutate,
         resetPassword: resetPasswordMutation.mutate,
+        setUserLocations: setUserLocationsMutation.mutate,
+        saveUserMedicalData: saveUserMedicalDataMutation.mutate,
+    };
+};
+
+export const useUserLocations = (userId: string | null) => {
+    const { data: assignedLocations, isLoading, error } = useQuery({
+        queryKey: userKeys.locations(userId || ''),
+        queryFn: () => userService.getLocations(userId!),
+        enabled: !!userId,
+        staleTime: 5 * 60 * 1000,
+        gcTime: 5 * 60 * 1000,
+    });
+
+    return {
+        assignedLocations,
+        isLoading,
+        error,
+    };
+};
+
+export const useUserMedicalData = (userId: string | null) => {
+    const { data: medicalData, isLoading, error } = useQuery({
+        queryKey: userKeys.medicalData(userId || ''),
+        queryFn: () => userService.getMedicalData(userId!),
+        enabled: !!userId,
+        staleTime: 5 * 60 * 1000,
+        gcTime: 5 * 60 * 1000,
+    });
+
+    return {
+        medicalData,
+        isLoading,
+        error,
     };
 };
 

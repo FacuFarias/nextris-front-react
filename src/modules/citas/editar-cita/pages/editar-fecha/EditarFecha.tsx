@@ -1,9 +1,9 @@
 import { MainLayout } from "@/layouts/layout";
 import { useCalendarEventos } from "@/modules/citas/nueva-cita/hooks/use-calendar-eventos";
-import { CalendarPlus, User, Calendar, ArrowLeft, Check, Monitor } from "lucide-react";
+import { CalendarPlus, Calendar, ArrowLeft, Check } from "lucide-react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -60,8 +60,9 @@ export const EditarFecha = () => {
                         setWorkHours(workHoursData);
 
                         // Convertir work_hours a businessHours para FullCalendar
+                        // Backend ya envía formato FullCalendar: 0=Domingo, 1=Lunes, ..., 6=Sábado
                         const businessHoursFormatted = workHoursData.map((wh: any) => ({
-                            daysOfWeek: [wh.day === 7 ? 0 : wh.day], // FullCalendar usa 0 para domingo
+                            daysOfWeek: [wh.day],
                             startTime: wh.start,
                             endTime: wh.end
                         }));
@@ -121,7 +122,11 @@ export const EditarFecha = () => {
                                 if (calendarApi) {
                                     calendarApi.gotoDate(eventoEditable.start);
                                     // Actualizar también el input de fecha deseada
-                                    const fechaStr = new Date(eventoEditable.start).toISOString().split('T')[0];
+                                    const fechaEvento = new Date(eventoEditable.start);
+                                    const year = fechaEvento.getFullYear();
+                                    const month = String(fechaEvento.getMonth() + 1).padStart(2, '0');
+                                    const day = String(fechaEvento.getDate()).padStart(2, '0');
+                                    const fechaStr = `${year}-${month}-${day}`;
                                     setFechaDeseada(fechaStr);
                                 }
                             }, 100);
@@ -178,9 +183,23 @@ export const EditarFecha = () => {
         }
     };
 
+    const parseLocalDate = (dateStr: string) => {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, (month || 1) - 1, day || 1);
+    };
+
+    const getTargetEvent = (eventList: any[]) => {
+        const targetId = id || cita?.guid;
+        return eventList.find((ev: any) => {
+            if (ev?.editable) return true;
+            if (!targetId) return false;
+            return String(ev?.id) === String(targetId);
+        });
+    };
+
 
     const handleAplicarCambios = () => {
-        const eventoEditable = events.find(ev => ev.editable);
+        const eventoEditable = getTargetEvent(events);
 
         if (!eventoEditable) {
             toast.error("No se encontró el evento a reprogramar");
@@ -224,7 +243,7 @@ export const EditarFecha = () => {
             calendarApi.gotoDate(nuevaFecha);
 
             // Encontrar el evento editable y moverlo a la nueva fecha
-            const eventoEditable = events.find(ev => ev.editable);
+            const eventoEditable = getTargetEvent(events);
 
             if (eventoEditable) {
                 // Calcular la duración original del evento
@@ -233,7 +252,7 @@ export const EditarFecha = () => {
                 const duracionMs = originalEnd.getTime() - originalStart.getTime();
 
                 // Crear nueva fecha manteniendo la hora original
-                const nuevaFechaDate = new Date(nuevaFecha);
+                const nuevaFechaDate = parseLocalDate(nuevaFecha);
                 nuevaFechaDate.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
 
                 // Calcular el nuevo end
@@ -242,7 +261,7 @@ export const EditarFecha = () => {
                 // Actualizar el evento
                 setEvents(prevEvents =>
                     prevEvents.map(ev =>
-                        ev.id === eventoEditable.id
+                        String(ev.id) === String(eventoEditable.id)
                             ? { ...ev, start: nuevaFechaDate, end: nuevoEnd }
                             : ev
                     )
@@ -362,6 +381,8 @@ export const EditarFecha = () => {
         });
     };
 
+    const actionButtonClass = "h-9 rounded-lg border border-brand-purple bg-white px-3 text-sm font-semibold text-brand-purple hover:bg-brand-purple/10";
+
 
     return (
         <MainLayout>
@@ -375,113 +396,83 @@ export const EditarFecha = () => {
                             </div>
                             <h1 className="text-2xl font-bold text-brand-purple">Editar Cita</h1>
                         </div>
-                        <Button
-                            onClick={() => navigate(-1)}
-                            className="flex items-center gap-2 bg-transparent text-gray-600  mb-4 hover:bg-transparent"
-                        >
-                            <ArrowLeft className="w-5 h-5" />
-                            <span className="font-medium">Volver</span>
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                onClick={handleAplicarCambios}
+                                className={actionButtonClass}
+                            >
+                                <Check className="w-4 h-4 mr-2" />
+                                Aplicar cambios
+                            </Button>
+                            <Button
+                                onClick={() => navigate(-1)}
+                                className={actionButtonClass}
+                            >
+                                <ArrowLeft className="w-4 h-4 mr-2" />
+                                Volver
+                            </Button>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 py-4">
-                        {/* Card: Paciente y Examen */}
-                        <Card className="bg-white shadow-lg border-0 overflow-hidden rounded-xl p-0">
-                            <CardHeader className="pt-2 pb-2 bg-brand-purple">
-                                <CardTitle className="flex items-center gap-2 text-white text-sm font-semibold">
-                                    <User className="w-4 h-4" />
-                                    Paciente y Examen
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2 pb-3 pt-3 h-full">
-                                <div>
-                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Paciente</p>
-                                    <p className="font-bold text-sm text-brand-purple">{cita?.patient_name || 'No especificado'}</p>
-                                </div>
-                                <div className="border-t pt-2">
-                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Examen</p>
-                                    <p className="font-semibold text-sm text-gray-700">{cita?.exam || 'No especificado'}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Card: Seleccionar Equipo */}
-                        <Card className="bg-white shadow-lg border-0 overflow-hidden rounded-xl p-0">
-                            <CardHeader className="pb-2 pt-2 bg-brand-purple">
-                                <CardTitle className="flex items-center gap-2 text-white text-sm font-semibold">
-                                    <Monitor className="w-4 h-4" />
-                                    Seleccionar Equipo
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3 pt-3 pb-3">
-                                <div>
-                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Equipo Actual</p>
-                                    <p className="font-semibold text-sm text-gray-700">{cita?.equipment || 'No especificado'}</p>
-                                </div>
-                                <div className="border-t pt-2">
-                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Cambiar Equipo</p>
-                                    {equiposFiltrados && equiposFiltrados.length > 0 ? (
-                                        <Select value={equipoSeleccionado} onValueChange={handleEquipoChange}>
-                                            <SelectTrigger className="w-full h-9 border-2 border-gray-200 rounded-lg focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 transition-all">
-                                                <SelectValue placeholder="Selecciona un equipo" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {equiposFiltrados.map((equipo: any) => (
-                                                    <SelectItem key={equipo.guid} value={equipo.guid}>
-                                                        {equipo.description}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    ) : (
-                                        <div className="flex items-center justify-center h-9 text-sm font-semibold text-red-600 bg-red-50 rounded-lg border-2 border-red-300">
-                                            No hay equipos disponibles
+                    <div className="mt-4 grid grid-cols-1 xl:grid-cols-12 gap-4">
+                        <div className="xl:col-span-4">
+                            <Card className="bg-white shadow-lg border-0 overflow-hidden rounded-xl p-0 h-full">
+                                <CardContent className="py-4 space-y-4">
+                                    <div className="space-y-2">
+                                        <p className="font-bold text-base text-brand-purple">{cita?.patient_name || 'No especificado'}</p>
+                                        <div className="border-t pt-2">
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Examen</p>
+                                            <p className="font-semibold text-sm text-gray-700">{cita?.exam || 'No especificado'}</p>
                                         </div>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
+                                    </div>
 
-                        {/* Card: Fecha deseada */}
-                        <Card className="bg-white shadow-lg border-0 overflow-hidden rounded-xl p-0">
-                            <CardHeader className="pb-2 pt-2 bg-brand-purple">
-                                <CardTitle className="flex items-center gap-2 text-white text-sm font-semibold">
-                                    <Calendar className="w-4 h-4" />
-                                    Fecha deseada
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-3 pb-3">
-                                <Input
-                                    type="date"
-                                    value={fechaDeseada}
-                                    onChange={handleFechaDeseadaChange}
-                                    className="w-full h-9 border-2 border-gray-200 rounded-lg focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 transition-all"
-                                    placeholder="dd/mm/aaaa"
-                                />
-                            </CardContent>
-                        </Card>
-                    </div>
+                                    <div className="space-y-3 border-t pt-3">
+                                        <div>
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Equipo Actual</p>
+                                            <p className="font-semibold text-sm text-gray-700">{cita?.equipment || 'No especificado'}</p>
+                                        </div>
+                                        <div className="border-t pt-2">
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Cambiar Equipo</p>
+                                            {equiposFiltrados && equiposFiltrados.length > 0 ? (
+                                                <Select value={equipoSeleccionado} onValueChange={handleEquipoChange}>
+                                                    <SelectTrigger className="w-full h-9 border-2 border-gray-200 rounded-lg focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 transition-all">
+                                                        <SelectValue placeholder="Selecciona un equipo" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {equiposFiltrados.map((equipo: any) => (
+                                                            <SelectItem key={equipo.guid} value={equipo.guid}>
+                                                                {equipo.description}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            ) : (
+                                                <div className="flex items-center justify-center h-9 text-sm font-semibold text-red-600 bg-red-50 rounded-lg border-2 border-red-300">
+                                                    No hay equipos disponibles
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
 
-                    {/* Sección del Calendario */}
-                    <Card className="bg-white shadow-lg border-0 overflow-hidden rounded-xl p-0 h-auto md:h-[750px]">
-                        <CardHeader className="pt-4 pb-4 bg-brand-purple">
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="flex items-center gap-2 text-white text-lg font-semibold">
-                                    <Calendar className="w-5 h-5" />
-                                    Arrastra el evento donde lo requieras
-                                </CardTitle>
-                                <Button
-                                    onClick={handleAplicarCambios}
-                                    className="h-9 bg-white hover:bg-gray-100 text-brand-purple text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg rounded-lg"
-                                >
-                                    <Check className="w-4 h-4 mr-2" />
-                                    Aplicar cambios
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="pt-6 pb-6 h-full">
-                            {/* Aquí irá el calendario */}
-                            <div className="agenda-container h-full" >
+                                    <div className="space-y-2 border-t pt-3">
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Fecha deseada</p>
+                                        <Input
+                                            type="date"
+                                            value={fechaDeseada}
+                                            onChange={handleFechaDeseadaChange}
+                                            className="w-full h-9 border-2 border-gray-200 rounded-lg focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 transition-all"
+                                            placeholder="dd/mm/aaaa"
+                                        />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        <div className="xl:col-span-8">
+                            <Card className="bg-white shadow-lg border-0 overflow-hidden rounded-xl p-0 h-auto md:h-[750px]">
+                                <CardContent className="pt-4 pb-6 h-full">
+                                    <p className="text-base font-semibold text-brand-purple mb-4">Arrastra el evento donde lo requieras</p>
+                                    <div className="agenda-container h-full" >
                                 <style>{`
                                         .fc .fc-button-primary {
                                             background-color: #440f6d !important;
@@ -523,6 +514,12 @@ export const EditarFecha = () => {
                                             cursor: grabbing !important;
                                             transform: scale(1.02);
                                         }
+                                        .fc-desired-date {
+                                            background-color: rgba(139, 92, 246, 0.10) !important;
+                                        }
+                                        .fc .fc-col-header-cell.fc-desired-date-header {
+                                            background-color: rgba(139, 92, 246, 0.18) !important;
+                                        }
                                     `}</style>
                                 <FullCalendar
                                     ref={calendarRef}
@@ -546,11 +543,11 @@ export const EditarFecha = () => {
 
                                                     // Actualizar la fecha deseada al día de hoy
                                                     const today = new Date();
-                                                    const todayStr = today.toISOString().split('T')[0];
+                                                    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
                                                     setFechaDeseada(todayStr);
 
                                                     // Mover el evento editable a hoy
-                                                    const eventoEditable = events.find(ev => ev.editable);
+                                                    const eventoEditable = getTargetEvent(events);
                                                     if (eventoEditable) {
                                                         // Calcular la duración original del evento
                                                         const originalStart = new Date(eventoEditable.start);
@@ -567,7 +564,7 @@ export const EditarFecha = () => {
                                                         // Actualizar el evento
                                                         setEvents(prevEvents =>
                                                             prevEvents.map(ev =>
-                                                                ev.id === eventoEditable.id
+                                                                String(ev.id) === String(eventoEditable.id)
                                                                     ? { ...ev, start: nuevaFechaDate, end: nuevoEnd }
                                                                     : ev
                                                             )
@@ -637,6 +634,18 @@ export const EditarFecha = () => {
                                     eventOverlap={false}
                                     selectOverlap={false}
                                     timeZone="local"
+                                    dayCellClassNames={(arg) => {
+                                        if (!fechaDeseada) return [];
+                                        const d = arg.date;
+                                        const cellDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                        return cellDate === fechaDeseada ? ['fc-desired-date'] : [];
+                                    }}
+                                    dayHeaderClassNames={(arg) => {
+                                        if (!fechaDeseada) return [];
+                                        const d = arg.date;
+                                        const headerDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                        return headerDate === fechaDeseada ? ['fc-desired-date-header'] : [];
+                                    }}
                                     eventContent={(eventInfo) => {
                                         const isBlocked = eventInfo.event.extendedProps?.blocked === true;
                                         return (
@@ -655,9 +664,11 @@ export const EditarFecha = () => {
                                         );
                                     }}
                                 />
-                            </div>
-                        </CardContent>
-                    </Card>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
                 </div>
             </div>
         </MainLayout >

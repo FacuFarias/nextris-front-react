@@ -9,6 +9,8 @@ const ejecucionColumns: TableColumn<Ejecucion>[] = [
         key: "created_on",
         label: "FECHA y HORA",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
         render: (value: string) => {
             return fechaYhora(value);
         }
@@ -17,37 +19,51 @@ const ejecucionColumns: TableColumn<Ejecucion>[] = [
         key: "patient_surname",
         label: "APELLIDO",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
     },
     {
         key: "patient_name",
         label: "NOMBRE",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
     },
     {
         key: "study_type",
         label: "TIPO DE ESTUDIO",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
     },
     {
         key: "status",
         label: "ESTADO",
         className: "font-medium",
         hideOnMobile: true,
+        sortable: true,
+        filterable: true,
     },
     {
         key: "equipment",
         label: "MÁQUINA",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
     },
     {
         key: "admission_number",
         label: "ADM. Nº",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
     },
     {
         key: "accession_number",
         label: "ACC. Nº",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
     }
 ];
 

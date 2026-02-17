@@ -1,12 +1,13 @@
 import { Modal } from "@/components";
 import { UserForm } from "./UserForm";
-import type { UserFormData } from "../types/users.types";
+import type { UserFormData, UserMedicalSubmitData } from "../types/users.types";
 
 interface UserModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: UserFormData) => void;
+    onSubmit: (data: UserFormData, locationIds?: string[], medicalData?: UserMedicalSubmitData) => void;
     initialData?: Partial<UserFormData>;
+    userId?: string;
     isLoading?: boolean;
 }
 
@@ -15,6 +16,7 @@ export const UserModal = ({
     onClose,
     onSubmit,
     initialData,
+    userId,
     isLoading = false,
 }: UserModalProps) => {
     const isEditing = !!initialData;
@@ -24,13 +26,14 @@ export const UserModal = ({
             isOpen={isOpen}
             onClose={onClose}
             title={isEditing ? "Editar Usuario" : "Nuevo Usuario"}
-            description={isEditing ? "Modifique los datos del usuario" : "Complete los datos del nuevo usuario"}
-            size="lg"
+            size="full"
+            className="sm:max-w-[70vw]"
         >
             <UserForm
                 onSubmit={onSubmit}
                 onCancel={onClose}
                 initialData={initialData}
+                userId={userId}
                 isLoading={isLoading}
                 isEditing={isEditing}
             />

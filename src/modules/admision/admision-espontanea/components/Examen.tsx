@@ -1,11 +1,11 @@
-import { ClipboardList, Check, ChevronLeft, ChevronRight } from "lucide-react"
+import { ClipboardList, Check, MousePointerClick } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
 import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPaciente"
 import { useState } from "react";
 import { useEquiposPorLocacion, useEstudiosPorModalidad, useModalidades, usePartesDelCuerpo } from "@/hooks/use-global";
-import { InputSearch } from "@/components"
+import TablaDynamic from "@/components/TableDynamic"
+import type { TableColumn } from "@/types/table"
+import fondoImage from "@/assets/fondo1.png"
 
 interface ExamenProps {
     selectedPatient: Patient | null;
@@ -22,8 +22,7 @@ export const Examen = ({
     const [selectedEstudio, setSelectedEstudio] = useState<any>(null);
     const [selectedEquipo, setSelectedEquipo] = useState<any>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [searchTerm, setSearchTerm] = useState<string>("");
-    const itemsPerPage = 10;
+    const [perPage, setPerPage] = useState(10);
     const { data: tiposExamenData, isLoading: isLoadingTiposExamen } = useModalidades();
     const { data: partesDelCuerpoData, isLoading: isLoadingPartesCuerpo } = usePartesDelCuerpo();
     const { data: estudiosData, isLoading: isLoadingEstudios } = useEstudiosPorModalidad();
@@ -36,24 +35,13 @@ export const Examen = ({
         equipo.modality === selectedEstudio.modalityName
     ) || [];
 
-    // Filtrar estudios por modalidad, parte del cuerpo y búsqueda
+    // Filtrar estudios por modalidad y parte del cuerpo
     const filteredEstudios = (() => {
         if (!estudiosData) return [];
 
         // Aplicar filtros si están seleccionados
         return estudiosData.filter((estudio: any) => {
             let matches = true;
-
-            // Filtro por búsqueda de descripción
-            if (searchTerm) {
-                const searchLower = searchTerm.toLowerCase();
-                const descriptionMatches = estudio.description?.toLowerCase().includes(searchLower);
-                const codeMatches = estudio.externalcode?.toLowerCase().includes(searchLower);
-
-                if (!descriptionMatches && !codeMatches) {
-                    matches = false;
-                }
-            }
 
             if (selectedTipoExamen && selectedTipoExamen !== 'all' && estudio.modality !== selectedTipoExamen) {
                 matches = false;
@@ -67,6 +55,75 @@ export const Examen = ({
         });
     })();
 
+    // Definición de columnas para TablaDynamic
+    const estudiosColumns: TableColumn[] = [
+        {
+            key: "externalcode",
+            label: "CÓDIGO",
+            className: "font-medium w-[90px]",
+            headerClassName: "w-[90px]",
+            sortable: true,
+            filterable: true,
+            render: (value: string) => (
+                <div className="max-w-[84px] truncate" title={value || ""}>
+                    {value || "-"}
+                </div>
+            ),
+        },
+        {
+            key: "description",
+            label: "DESCRIPCIÓN",
+            className: "w-[30%]",
+            headerClassName: "w-[30%]",
+            sortable: true,
+            filterable: true,
+            render: (value: string) => (
+                <div className="max-w-[260px] truncate" title={value || ""}>
+                    {value || "-"}
+                </div>
+            ),
+        },
+        {
+            key: "modality",
+            label: "MODALIDAD",
+            className: "w-[100px]",
+            headerClassName: "w-[100px]",
+            sortable: true,
+            filterable: true,
+            render: (value: string) => (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                    {value}
+                </span>
+            ),
+        },
+        {
+            key: "bodypart",
+            label: "PARTE DEL CUERPO",
+            className: "w-[130px]",
+            headerClassName: "w-[130px]",
+            sortable: true,
+            filterable: true,
+            render: (value: string) => (
+                <div className="max-w-[120px] truncate" title={value || ""}>
+                    {value || "-"}
+                </div>
+            ),
+        },
+        {
+            key: "studygroup",
+            label: "GRUPO DE ESTUDIO",
+            className: "text-sm text-gray-600 w-[170px]",
+            headerClassName: "w-[170px]",
+            sortable: true,
+            filterable: true,
+            render: (value: string) => (
+                <div className="max-w-[160px] truncate" title={value || ""}>
+                    {value || "-"}
+                </div>
+            ),
+        },
+    ];
+
     const onTipoExamenChange = (value: string) => {
         setSelectedTipoExamen(value);
         setSelectedEstudio(null);
@@ -79,23 +136,11 @@ export const Examen = ({
         setCurrentPage(1);
     }
 
-
-    // Paginación
-    const totalPages = Math.ceil(filteredEstudios.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const currentEstudios = filteredEstudios.slice(startIndex, endIndex);
-
-    const goToNextPage = () => {
-        if (currentPage < totalPages) {
-            setCurrentPage(currentPage + 1);
-        }
-    };
-
-    const goToPreviousPage = () => {
-        if (currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-        }
+    const pagination = {
+        page: currentPage,
+        pageSize: perPage,
+        total: filteredEstudios.length,
+        serverSide: false as const,
     };
 
 
@@ -107,27 +152,9 @@ export const Examen = ({
             {/* Grid de contenido */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Panel izquierdo - Estudios disponibles */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className="lg:col-span-2 space-y-6 min-w-0">
                     {/* Filtros */}
-                    <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                            <ClipboardList className="w-5 h-5 text-brand-purple" />
-                            ESTUDIOS DISPONIBLES
-                        </h3>
-
-                        {/* Buscador */}
-                        <div className="mb-6">
-                            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 block">
-                                Buscar estudio
-                            </label>
-                            <div className="relative">
-                                <InputSearch
-                                    searchTerm={searchTerm}
-                                    setSearchTerm={setSearchTerm}
-                                    placeholder="Buscar por código o descripción..."
-                                />
-                            </div>
-                        </div>
+                    <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-4">
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             {/* Select Modalidad */}
@@ -188,110 +215,43 @@ export const Examen = ({
                         </div>
 
                         {/* Tabla de estudios */}
-                        {isLoadingEstudios ? (
-                            <div className='flex justify-center items-center h-40'>
-                                <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {/* Tabla */}
-                                <div className="rounded-md border overflow-hidden">
-                                    <Table>
-                                        <TableHeader className="bg-brand-purple">
-                                            <TableRow className="hover:bg-brand-purple border-b-0">
-                                                <TableHead className="text-white font-semibold">CÓDIGO</TableHead>
-                                                <TableHead className="text-white font-semibold">DESCRIPCIÓN</TableHead>
-                                                <TableHead className="text-white font-semibold">MODALIDAD</TableHead>
-                                                <TableHead className="text-white font-semibold">PARTE DEL CUERPO</TableHead>
-                                                <TableHead className="text-white font-semibold">GRUPO DE ESTUDIO</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody className="min-h-[380px]">
-                                            {currentEstudios.length === 0 ? (
-                                                <>
-                                                    <TableRow>
-                                                        <TableCell colSpan={5} className="h-[480px] text-center text-gray-500 align-middle">
-                                                            <div className="flex flex-col items-center justify-center">
-                                                                <ClipboardList className="w-12 h-12 mb-3 text-gray-300" />
-                                                                <p>No hay estudios disponibles</p>
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    {currentEstudios.map((estudio: any) => (
-                                                        <TableRow
-                                                            key={estudio.guid}
-                                                            onClick={() => setSelectedEstudio(estudio)}
-                                                            className={`cursor-pointer hover:bg-purple-50 transition-colors ${selectedEstudio?.guid === estudio.guid
-                                                                ? 'bg-purple-100 hover:bg-purple-100/80 border-l-4 border-l-brand-purple'
-                                                                : ''
-                                                                }`}
-                                                        >
-                                                            <TableCell className="font-medium">{estudio.externalcode}</TableCell>
-                                                            <TableCell>{estudio.description}</TableCell>
-                                                            <TableCell>
-                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                                                                    {estudio.modality}
-                                                                </span>
-                                                            </TableCell>
-                                                            <TableCell>{estudio.bodypart}</TableCell>
-                                                            <TableCell className="text-sm text-gray-600">{estudio.studygroup}</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                    {/* Filas vacías para mantener altura */}
-                                                    {currentEstudios.length < itemsPerPage && Array.from({ length: itemsPerPage - currentEstudios.length }).map((_, index) => (
-                                                        <TableRow key={`empty-${index}`} className="h-12">
-                                                            <TableCell colSpan={5}>&nbsp;</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </>
-                                            )}
-                                        </TableBody>
-                                    </Table>
+                        <TablaDynamic
+                            data={filteredEstudios}
+                            columns={estudiosColumns}
+                            loading={isLoadingEstudios}
+                            emptyMessage={
+                                <div className="flex flex-col items-center justify-center">
+                                    <ClipboardList className="w-12 h-12 mb-3 text-gray-300" />
+                                    <p>No hay estudios disponibles</p>
                                 </div>
-
-                                {/* Paginación */}
-                                {filteredEstudios.length > 0 && (
-                                    <div className="flex items-center justify-between px-2">
-                                        <div className="text-sm text-gray-600">
-                                            Mostrando {startIndex + 1} - {Math.min(endIndex, filteredEstudios.length)} de {filteredEstudios.length} estudios
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={goToPreviousPage}
-                                                disabled={currentPage === 1}
-                                                className="h-8 w-8 p-0"
-                                            >
-                                                <ChevronLeft className="h-4 w-4" />
-                                            </Button>
-                                            <span className="text-sm font-medium">
-                                                Página {currentPage} de {totalPages}
-                                            </span>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={goToNextPage}
-                                                disabled={currentPage === totalPages}
-                                                className="h-8 w-8 p-0"
-                                            >
-                                                <ChevronRight className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                            }
+                            onRowClick={(row) => {
+                                setSelectedEstudio(row);
+                            }}
+                            selectedRow={selectedEstudio}
+                            rowIdKey="guid"
+                            pagination={pagination}
+                            onPaginationChange={(newPage) => {
+                                setCurrentPage(newPage);
+                            }}
+                            perPageValue={perPage}
+                            onPerPageChange={(value) => {
+                                setPerPage(value);
+                                setCurrentPage(1);
+                            }}
+                            perPageOptions={[10, 20, 50]}
+                            maxHeight="56vh"
+                            tableBackgroundImage={fondoImage}
+                            tableClassName="table-fixed w-full"
+                            preserveTableHeight
+                        />
                     </div>
                 </div>
 
                 {/* Panel derecho - Estudio seleccionado */}
-                <div className="space-y-6 ">
+                <div className="space-y-6 min-w-0">
                     {/* Card Estudio Seleccionado */}
-                    <div className="bg-white rounded-lg border border-purple-100 shadow-sm overflow-hidden ">
+                    <div className="bg-white rounded-lg border border-purple-100 shadow-sm overflow-hidden">
                         <div className="bg-brand-purple p-4 text-white">
                             <div className="flex items-center gap-2 mb-2">
                                 <Check className="w-5 h-5" />
@@ -366,11 +326,19 @@ export const Examen = ({
                                                     setSelectedEquipo(equipo);
                                                     onEquipoSelected?.(equipo, selectedEstudio);
                                                 }}
-                                                className={`rounded-lg p-3 border cursor-pointer transition-all duration-200 ${isSelected
+                                                className={`group relative rounded-lg p-3 border cursor-pointer transition-all duration-200 ${isSelected
                                                     ? 'bg-brand-purple text-white border-brand-purple border-l-4'
                                                     : 'bg-purple-50 border-purple-100 hover:bg-purple-100 hover:border-purple-200'
                                                     }`}
                                             >
+                                                {!isSelected && (
+                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-white/95 text-brand-purple border border-brand-purple/20 px-2 py-1 text-[11px] font-semibold shadow-sm">
+                                                            <MousePointerClick className="w-3 h-3" />
+                                                            Seleccionar
+                                                        </span>
+                                                    </div>
+                                                )}
                                                 <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${isSelected ? 'text-purple-100' : 'text-gray-600'
                                                     }`}>Equipo</p>
                                                 <p className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-gray-800'

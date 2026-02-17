@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { distribucionService } from "./services/distribucion.service";
-import fondoImage from "@/assets/fondo1.png";
+import fondoImage from "@/assets/mail.jpg";
 
 export const Distribucion = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -35,9 +35,9 @@ export const Distribucion = () => {
         isUpdatingEmail
     } = useDistribucion(allReported, page, pageSize);
 
-    const pagination = examenes && {
-        page: examenes?.data?.page || 1,
-        pageSize: examenes?.data?.per_page || 5,
+    const pagination = {
+        page: examenes?.data?.page || page,
+        pageSize: examenes?.data?.per_page || pageSize,
         total: examenes?.data?.total || 0,
     };
     const handlePaginationChange = (newPage: number, newPageSize: number) => {
@@ -167,6 +167,7 @@ export const Distribucion = () => {
                     columns={distribucionColumns}
                     showIndex
                     loading={isLoading}
+                    preserveTableHeight
                     actions={actions}
                     pagination={pagination}
                     onPaginationChange={handlePaginationChange}
@@ -177,6 +178,7 @@ export const Distribucion = () => {
                     }}
                     perPageOptions={[10, 20, 50, 100]}
                     tableBackgroundImage={fondoImage}
+                    stickyPagination
                 />
 
                 {/* Modal Actualizar Email */}

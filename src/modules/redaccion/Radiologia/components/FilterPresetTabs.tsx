@@ -115,7 +115,7 @@ export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilter
 
     return (
         <>
-            <div className="flex items-center gap-3 mb-2 overflow-x-auto border-b border-gray-200">
+            <div className="flex items-center gap-3 mb-2 overflow-hidden border-b border-gray-200">
                 {/* Tabs container */}
                 <div className="flex items-center gap-0 shrink-0">
                     {/* Tab "Todos" - siempre presente */}

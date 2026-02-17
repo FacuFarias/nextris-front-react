@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 //shadcn ui
 import {
     Table,
@@ -16,7 +16,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 //icons and utilities
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 //types
 import { TablePagination } from "./Pagination";
@@ -49,6 +49,9 @@ export function TablaDynamic<T extends Record<string, any>>({
     sortColumn: controlledSortColumn,
     sortDirection: controlledSortDirection,
     onSortChange,
+    tableClassName,
+    preserveTableHeight = false,
+    stickyPagination = false,
 }: DynamicTableProps<T>) {
     const isControlledSort = controlledSortColumn !== undefined && onSortChange !== undefined;
 
@@ -56,6 +59,10 @@ export function TablaDynamic<T extends Record<string, any>>({
         key: keyof T | string;
         direction: "asc" | "desc";
     } | null>(null);
+
+    const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+    const [openFilterColumn, setOpenFilterColumn] = useState<string | null>(null);
+    const filterInputRef = useRef<HTMLInputElement>(null);
 
     const sortConfig = isControlledSort
         ? (controlledSortColumn ? { key: controlledSortColumn, direction: controlledSortDirection || "asc" } : null)
@@ -95,11 +102,24 @@ export function TablaDynamic<T extends Record<string, any>>({
         return 0;
     });
 
+    // Aplicar filtros por columna (client-side sobre datos visibles)
+    const hasActiveFilters = Object.values(columnFilters).some(v => v.trim() !== "");
+    const filteredData = hasActiveFilters
+        ? sortedData.filter(row =>
+            Object.entries(columnFilters).every(([key, filterValue]) => {
+                if (!filterValue.trim()) return true;
+                const cellValue = getNestedValue(row, key);
+                if (cellValue === null || cellValue === undefined) return false;
+                return String(cellValue).toLowerCase().includes(filterValue.trim().toLowerCase());
+            })
+        )
+        : sortedData;
+
     // Aplicar paginación local SOLO si serverSide es explícitamente false
     // Por defecto (serverSide undefined o true), se asume que el backend ya envió los datos paginados
     const paginatedData = pagination && pagination.serverSide === false
-        ? sortedData.slice((pagination.page - 1) * pagination.pageSize, pagination.page * pagination.pageSize)
-        : sortedData;
+        ? filteredData.slice((pagination.page - 1) * pagination.pageSize, pagination.page * pagination.pageSize)
+        : filteredData;
 
     // Ajustar el índice para la paginación
     const getRowIndex = (index: number) => {
@@ -169,7 +189,7 @@ export function TablaDynamic<T extends Record<string, any>>({
     return (
         <div className={cn("space-y-4 mt-5 flex flex-col flex-1 min-h-0", className)}>
             <div
-                className={cn("rounded-md border relative flex-1 overflow-auto", maxHeight && "overflow-y-auto")}
+                className={cn("rounded-md border relative flex-1 overflow-auto table-scrollbar-purple", maxHeight && "overflow-y-auto")}
                 style={{
                     ...(maxHeight ? { maxHeight } : {}),
                     ...(tableBackgroundImage ? {
@@ -187,27 +207,101 @@ export function TablaDynamic<T extends Record<string, any>>({
                         )}
                     />
                 )}
-                <Table className="relative z-[2]">
+                <Table className={cn("relative z-[2]", tableClassName)}>
                     <TableHeader className="bg-brand-purple sticky top-0 z-[3]">
                         <TableRow className="hover:bg-brand-purple border-b-0">
-                            {columns.map((column, index) => (
-                                <TableHead
-                                    key={index}
-                                    className={cn(
-                                        "text-white py-0 px-2 text-xs",
-                                        column.headerClassName,
-                                        column.sortable &&
-                                        "cursor-pointer select-none",
-                                        column.hideOnMobile && "hidden md:table-cell"
-                                    )}
-                                    onClick={() => handleSort(column)}
-                                >
-                                    <div className="flex items-center">
-                                        {column.label}
-                                        {getSortIcon(column)}
-                                    </div>
-                                </TableHead>
-                            ))}
+                            {columns.map((column, index) => {
+                                const colKey = column.key as string;
+                                const filterActive = !!columnFilters[colKey]?.trim();
+                                const isEditing = openFilterColumn === colKey;
+                                return (
+                                    <TableHead
+                                        key={index}
+                                        className={cn(
+                                            "text-white py-0 px-2 text-xs group/header",
+                                            column.headerClassName,
+                                            column.sortable && !isEditing &&
+                                            "cursor-pointer select-none",
+                                            column.hideOnMobile && "hidden md:table-cell"
+                                        )}
+                                        onClick={() => !isEditing && handleSort(column)}
+                                    >
+                                        <div className="flex items-center">
+                                            {isEditing ? (
+                                                <div className="flex items-center gap-1 flex-1" onClick={(e) => e.stopPropagation()}>
+                                                    <input
+                                                        ref={filterInputRef}
+                                                        type="text"
+                                                        placeholder={`${column.label}...`}
+                                                        value={columnFilters[colKey] || ""}
+                                                        autoFocus
+                                                        onChange={(e) => {
+                                                            setColumnFilters(prev => ({
+                                                                ...prev,
+                                                                [colKey]: e.target.value
+                                                            }));
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === "Enter" || e.key === "Escape") {
+                                                                setOpenFilterColumn(null);
+                                                            }
+                                                        }}
+                                                        onBlur={() => setOpenFilterColumn(null)}
+                                                        className="w-full text-xs bg-white/20 text-white placeholder-white/50 border border-white/30 rounded px-2 py-0.5 outline-none focus:bg-white/30"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    {filterActive ? (
+                                                        <div className="flex items-center gap-1 flex-1 min-w-0">
+                                                            <span className="text-yellow-300 truncate text-xs">{columnFilters[colKey]}</span>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setColumnFilters(prev => {
+                                                                        const next = { ...prev };
+                                                                        delete next[colKey];
+                                                                        return next;
+                                                                    });
+                                                                }}
+                                                                className="p-0.5 rounded hover:bg-white/20 shrink-0"
+                                                            >
+                                                                <X className="h-3 w-3 text-yellow-300" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <span>{column.label}</span>
+                                                    )}
+                                                    {column.filterable && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setOpenFilterColumn(colKey);
+                                                            }}
+                                                            className={cn(
+                                                                "ml-1 p-0.5 rounded hover:bg-white/20 transition-all shrink-0",
+                                                                filterActive
+                                                                    ? "opacity-100"
+                                                                    : "opacity-0 group-hover/header:opacity-100"
+                                                            )}
+                                                        >
+                                                            <Search className={cn(
+                                                                "h-3 w-3",
+                                                                filterActive ? "text-yellow-300" : "text-white/70"
+                                                            )} />
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
+                                            {!isEditing && (
+                                                <span className="ml-auto shrink-0">
+                                                    {getSortIcon(column)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </TableHead>
+                                );
+                            })}
                             {actions.length > 0 && (
                                 <TableHead className="w-[70px] text-white py-2 px-3 text-sm">Acciones</TableHead>
                             )}
@@ -230,20 +324,38 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 </TableCell>
                             </TableRow>
                         ) : paginatedData.length === 0 ? (
-                            <TableRow className="">
-                                <TableCell
-                                    colSpan={
-                                        columns.length +
-                                        (showIndex ? 1 : 0) +
-                                        (actions.length > 0 ? 1 : 0)
-                                    }
-                                    className="h-10 text-center text-muted-foreground "
-                                >
-                                    {emptyMessage}
-                                </TableCell>
-                            </TableRow>
+                            <>
+                                <TableRow className="">
+                                    <TableCell
+                                        colSpan={
+                                            columns.length +
+                                            (showIndex ? 1 : 0) +
+                                            (actions.length > 0 ? 1 : 0)
+                                        }
+                                        className="h-10 text-center text-muted-foreground "
+                                    >
+                                        {emptyMessage}
+                                    </TableCell>
+                                </TableRow>
+                                {preserveTableHeight && pagination && pagination.pageSize > 1 &&
+                                    Array.from({ length: pagination.pageSize - 1 }).map((_, index) => (
+                                        <TableRow key={`empty-row-when-no-data-${index}`}>
+                                            <TableCell
+                                                colSpan={
+                                                    columns.length +
+                                                    (showIndex ? 1 : 0) +
+                                                    (actions.length > 0 ? 1 : 0)
+                                                }
+                                                className="py-2 px-3 text-xs"
+                                            >
+                                                &nbsp;
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                            </>
                         ) : (
-                            paginatedData.map((row, index) => {
+                            <>
+                                {paginatedData.map((row, index) => {
                                 const isSelected = selectedRow && row[rowIdKey] === selectedRow[rowIdKey];
                                 return (
                                     <TableRow
@@ -307,23 +419,43 @@ export function TablaDynamic<T extends Record<string, any>>({
                                         )}
                                     </TableRow>
                                 );
-                            })
+                                })}
+                                {preserveTableHeight && pagination && paginatedData.length < pagination.pageSize &&
+                                    Array.from({ length: pagination.pageSize - paginatedData.length }).map((_, index) => (
+                                        <TableRow key={`empty-row-${index}`}>
+                                            <TableCell
+                                                colSpan={
+                                                    columns.length +
+                                                    (showIndex ? 1 : 0) +
+                                                    (actions.length > 0 ? 1 : 0)
+                                                }
+                                                className="py-2 px-3 text-xs"
+                                            >
+                                                &nbsp;
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                            </>
                         )}
                     </TableBody>
                 </Table>
             </div>
             {pagination && onPaginationChange && (
-                <TablePagination
-                    pagination={pagination}
-                    onPaginationChange={onPaginationChange}
-                    perPageValue={perPageValue}
-                    onPerPageChange={onPerPageChange}
-                    perPageOptions={perPageOptions}
-                    columns={allColumns?.map(col => ({ key: col.key as string, label: col.label }))}
-                    visibleColumns={visibleColumns}
-                    onToggleColumn={onToggleColumn}
-                    additionalControls={additionalControls}
-                />
+                <div className={cn(
+                    stickyPagination && "sticky bottom-0 z-[4] bg-white/95 backdrop-blur-sm border-t"
+                )}>
+                    <TablePagination
+                        pagination={pagination}
+                        onPaginationChange={onPaginationChange}
+                        perPageValue={perPageValue}
+                        onPerPageChange={onPerPageChange}
+                        perPageOptions={perPageOptions}
+                        columns={allColumns?.map(col => ({ key: col.key as string, label: col.label }))}
+                        visibleColumns={visibleColumns}
+                        onToggleColumn={onToggleColumn}
+                        additionalControls={additionalControls}
+                    />
+                </div>
             )}
         </div>
     );

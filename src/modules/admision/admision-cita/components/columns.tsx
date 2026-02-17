@@ -8,21 +8,29 @@ const admisionColumns: TableColumn<Admision>[] = [
         key: "fullname",
         label: "PACIENTE",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
     },
     {
         key: "medref",
         label: "MEDICO REFERENTE",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
     },
     {
         key: "equipment_name",
         label: "EQUIPO",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
     },
     {
         key: "med_solicitante",
         label: "MEDICO SOLICITANTE",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
     },
 ];
 

@@ -10,5 +10,8 @@ export interface Cita {
     is_admitted: boolean;
     exam_id: string;
     location_id: string;
+    doctor_id?: string;
+    requesting_physician_id?: string;
+    equipment_id?: string;
 
 }

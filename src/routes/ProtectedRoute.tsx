@@ -1,12 +1,13 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { FirstLoginPasswordModal } from "@/modules/auth/change-password/FirstLoginPasswordModal";
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-    const { isAuthenticated, isLoading } = useAuth();
+    const { isAuthenticated, isLoading, authData } = useAuth();
 
     if (isLoading) {
         return (
@@ -20,5 +21,12 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         return <Navigate to="/" replace />;
     }
 
-    return <>{children}</>;
+    const requiresPasswordChange = !!authData?.user?.requires_password_change;
+
+    return (
+        <>
+            {children}
+            <FirstLoginPasswordModal isOpen={requiresPasswordChange} />
+        </>
+    );
 };

@@ -22,6 +22,7 @@ import { useBodyParts } from "@/modules/configuracion/configuracion-tablas/exame
 import { useModalidades } from "@/modules/configuracion/configuracion-tablas/examenes/modalidades"
 import { useGrupoEstudio } from "@/modules/configuracion/configuracion-tablas/examenes/grupos-estudio"
 import { useFilterPresets } from "./hooks/use-filter-presets"
+import fondoImage from "@/assets/redaccion.jpg"
 
 export const Radiologia = () => {
     // Hook para sincronizar entre ventanas
@@ -56,7 +57,7 @@ export const Radiologia = () => {
     const useDebounceSearch = useDebounce(searchTerm, 500);
     const { mutateAsync: blockExam } = useBlockExam();
     const { mutateAsync: unblockExam } = useUnblockExam();
-    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId });
+    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
@@ -220,9 +221,9 @@ export const Radiologia = () => {
         };
     }, []);
 
-    const pagination = informesData && {
+    const pagination = {
         page: informesData?.data?.page || 1,
-        pageSize: informesData?.data?.per_page || 5,
+        pageSize: informesData?.data?.per_page || perPage,
         total: informesData?.data?.total || 0,
     };
 
@@ -403,18 +404,62 @@ export const Radiologia = () => {
                 />
 
                 {/* Bloque unificado de filtros */}
-                <div className="flex flex-col gap-3 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200 mb-2">
-                    {/* Fila 1: Búsqueda + Checkboxes + Refresh */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-                        <div className="flex-1">
-                            <InputSearch
-                                searchTerm={searchTerm}
-                                setSearchTerm={setSearchTerm}
-                                placeholder="Buscar paciente o historial..."
+                <div className="flex flex-col sm:flex-row gap-3 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200 mb-2">
+                    {/* Sección de Filtros */}
+                    <div className="flex flex-col gap-2 flex-1">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Filtros</span>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                            <div className="sm:min-w-[250px]">
+                                <InputSearch
+                                    searchTerm={searchTerm}
+                                    setSearchTerm={setSearchTerm}
+                                    placeholder="Buscar paciente o historial..."
+                                />
+                            </div>
+                            <Autocomplete
+                                options={gruposEstudioOptions}
+                                value={studioTypeId}
+                                onValueChange={(value) => {
+                                    setStudioTypeId(value);
+                                    setPage(1);
+                                }}
+                                placeholder="Grupo de estudio"
+                                emptyMessage="No se encontraron grupos de estudio."
+                                searchPlaceholder="Buscar grupo de estudio..."
+                            />
+                            <Autocomplete
+                                options={modalidadesOptions}
+                                value={modalityId}
+                                onValueChange={(value) => {
+                                    setModalityId(value);
+                                    setPage(1);
+                                }}
+                                placeholder="Modalidad"
+                                emptyMessage="No se encontraron modalidades."
+                                searchPlaceholder="Buscar modalidad..."
+                            />
+                            <Autocomplete
+                                options={bodyPartsOptions}
+                                value={bodyPartId || ''}
+                                onValueChange={(value) => {
+                                    setBodyPartId(value);
+                                    setPage(1);
+                                }}
+                                placeholder="Parte del cuerpo"
+                                emptyMessage="No se encontraron partes del cuerpo."
+                                searchPlaceholder="Buscar parte del cuerpo..."
                             />
                         </div>
+                    </div>
 
-                        <div className="flex flex-wrap items-center gap-3 sm:gap-5">
+                    {/* Separador vertical */}
+                    <div className="hidden sm:block w-px bg-gray-300 self-stretch" />
+                    <div className="block sm:hidden h-px bg-gray-300" />
+
+                    {/* Sección de Checkboxes */}
+                    <div className="flex flex-col gap-2 shrink-0">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Opciones</span>
+                        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                             <div className="flex items-center space-x-2">
                                 <Checkbox
                                     id="listo-leer"
@@ -471,53 +516,7 @@ export const Radiologia = () => {
                                     Ver sin imágenes
                                 </Label>
                             </div>
-
-                            <PrimaryButton onClick={() => {
-                                refetchInformes();
-                                toast.success('Lista actualizada exitosamente');
-                            }}>
-                                <div className="flex items-center">
-                                    <RefreshCcw className="h-4 w-4" />
-                                </div>
-                            </PrimaryButton>
                         </div>
-                    </div>
-
-                    {/* Fila 2: Autocompletes */}
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <Autocomplete
-                            options={gruposEstudioOptions}
-                            value={studioTypeId}
-                            onValueChange={(value) => {
-                                setStudioTypeId(value);
-                                setPage(1);
-                            }}
-                            placeholder="Filtrar por grupo de estudio"
-                            emptyMessage="No se encontraron grupos de estudio."
-                            searchPlaceholder="Buscar grupo de estudio..."
-                        />
-                        <Autocomplete
-                            options={modalidadesOptions}
-                            value={modalityId}
-                            onValueChange={(value) => {
-                                setModalityId(value);
-                                setPage(1);
-                            }}
-                            placeholder="Filtrar por modalidad"
-                            emptyMessage="No se encontraron modalidades."
-                            searchPlaceholder="Buscar modalidad..."
-                        />
-                        <Autocomplete
-                            options={bodyPartsOptions}
-                            value={bodyPartId || ''}
-                            onValueChange={(value) => {
-                                setBodyPartId(value);
-                                setPage(1);
-                            }}
-                            placeholder="Filtrar por parte del cuerpo"
-                            emptyMessage="No se encontraron partes del cuerpo."
-                            searchPlaceholder="Buscar parte del cuerpo..."
-                        />
                     </div>
                 </div>
 
@@ -540,20 +539,31 @@ export const Radiologia = () => {
                     allColumns={informeColumns}
                     visibleColumns={visibleColumns}
                     onToggleColumn={toggleColumn}
-/*                     tableBackgroundImage={fondoImage}
- */                    sortColumn={sortColumn}
+                    tableBackgroundImage={fondoImage}
+                    sortColumn={sortColumn}
                     sortDirection={sortDirection}
                     onSortChange={handleSortChange}
                     additionalControls={
-                        <div className="flex items-center gap-2">
-                            <Label htmlFor="siguiente-paso-toggle" className="text-sm font-medium text-gray-700">
-                                Siguiente estudio:
-                            </Label>
-                            <Switch
-                                id="siguiente-paso-toggle"
-                                checked={siguientePaso}
-                                onCheckedChange={setSiguientePaso}
-                            />
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <Label htmlFor="siguiente-paso-toggle" className="text-sm font-medium text-gray-700">
+                                    Siguiente estudio:
+                                </Label>
+                                <Switch
+                                    id="siguiente-paso-toggle"
+                                    checked={siguientePaso}
+                                    onCheckedChange={setSiguientePaso}
+                                />
+                            </div>
+                            <button
+                                onClick={() => {
+                                    refetchInformes();
+                                    toast.success('Lista actualizada exitosamente');
+                                }}
+                                className="p-1.5 rounded-md bg-brand-purple text-white hover:bg-brand-purple/90 transition-colors cursor-pointer"
+                            >
+                                <RefreshCcw className="h-4 w-4" />
+                            </button>
                         </div>
                     }
                 />

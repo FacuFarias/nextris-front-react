@@ -17,6 +17,7 @@ import { CrearInforme } from "@/modules/redaccion/informe-predefinidos/crear-inf
 import { UnificacionPaciente } from "@/modules/administracion/unificacion-paciente/UnificacionPaciente";
 import { ReasignacionExamenes } from "@/modules/administracion/reasignacion-examenes/ReasignacionExamenes";
 import { CargarEstudios } from "@/modules/redaccion/cargar-estudios/CargarEstudios";
+import { ChangePassword } from "@/modules/auth/change-password/ChangePassword";
 
 const router = createBrowserRouter([
     {
@@ -32,6 +33,14 @@ const router = createBrowserRouter([
         element: (
             <ProtectedRoute>
                 <Inicio />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/cambiar-password",
+        element: (
+            <ProtectedRoute>
+                <ChangePassword />
             </ProtectedRoute>
         ),
     },

@@ -16,7 +16,7 @@ import { useDebounce } from "@uidotdev/usehooks"
 import { MainLayout } from "@/layouts/layout"
 //icons and react
 import { Calendar, User, ClipboardList, FileCheck, UserPlus, Loader2 } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPaciente";
 
 import type { CreatePatientFormFast } from "./schemas/create-patient-fast.schema"
@@ -36,10 +36,26 @@ export const AdmisionEspontanea = () => {
     const { mutate: fetchPacientesDireccion, data: pacientesData, isPending } = usePacienteDireccion();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(8);
+    const tabsListRef = useRef<HTMLDivElement>(null)
+    const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+    const [indicator, setIndicator] = useState({ left: 0, width: 0 })
     //modal agregar paciente
     const [isModalOpen, setIsModalOpen] = useState(false);
     //hook para crear paciente
     const pacienteRapido = usePacienteRapido();
+
+    const updateIndicator = useCallback(() => {
+        const activeEl = tabRefs.current.get(activeTab)
+        const container = tabsListRef.current
+        if (activeEl && container) {
+            const containerRect = container.getBoundingClientRect()
+            const tabRect = activeEl.getBoundingClientRect()
+            setIndicator({
+                left: tabRect.left - containerRect.left,
+                width: tabRect.width,
+            })
+        }
+    }, [activeTab])
 
 
     const handlePaginationChange = (newPage: number, newPageSize: number) => {
@@ -91,6 +107,15 @@ export const AdmisionEspontanea = () => {
         }
     }, [debouncedSearch, selectedDireccion]);
 
+    useEffect(() => {
+        updateIndicator()
+    }, [updateIndicator])
+
+    useEffect(() => {
+        window.addEventListener("resize", updateIndicator)
+        return () => window.removeEventListener("resize", updateIndicator)
+    }, [updateIndicator])
+
     return (
         <MainLayout>
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
@@ -105,31 +130,49 @@ export const AdmisionEspontanea = () => {
 
                     {/* Tabs modernos */}
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 h-auto bg-purple-50/50 p-1 rounded-xl gap-2">
-                            <TabsTrigger
-                                value="paciente"
-                                className="bg-purple-100 data-[state=active]:bg-brand-purple data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-3 px-4 flex items-center justify-center gap-2 cursor-pointer"
+                        <div className="relative shrink-0">
+                            <TabsList
+                                ref={tabsListRef}
+                                className="bg-transparent border-b border-gray-200 rounded-none h-auto p-0 justify-start gap-0 w-full"
                             >
-                                <User className="w-4 h-4" />
-                                <span className="font-semibold">1. Paciente : {selectedPatient?.name} {selectedPatient?.surname}</span>
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="examen"
-                                disabled={!selectedPatient}
-                                className="bg-purple-100 data-[state=active]:bg-brand-purple data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-3 px-4 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed enabled:cursor-pointer"
-                            >
-                                <ClipboardList className="w-4 h-4" />
-                                <span className="font-semibold">2. Examen</span>
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="prestacion"
-                                disabled={!selectedExam}
-                                className="bg-purple-100 data-[state=active]:bg-brand-purple data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-3 px-4 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed enabled:cursor-pointer"
-                            >
-                                <FileCheck className="w-4 h-4" />
-                                <span className="font-semibold">3. Prestación</span>
-                            </TabsTrigger>
-                        </TabsList>
+                                <TabsTrigger
+                                    value="paciente"
+                                    ref={(el) => {
+                                        if (el) tabRefs.current.set("paciente", el)
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 bg-transparent shadow-none"
+                                >
+                                    <User className="w-4 h-4" />
+                                    <span>1. Paciente : {selectedPatient?.name} {selectedPatient?.surname}</span>
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    value="examen"
+                                    disabled={!selectedPatient}
+                                    ref={(el) => {
+                                        if (el) tabRefs.current.set("examen", el)
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    <ClipboardList className="w-4 h-4" />
+                                    <span>2. Examen</span>
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    value="prestacion"
+                                    disabled={!selectedExam}
+                                    ref={(el) => {
+                                        if (el) tabRefs.current.set("prestacion", el)
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    <FileCheck className="w-4 h-4" />
+                                    <span>3. Prestación</span>
+                                </TabsTrigger>
+                            </TabsList>
+                            <div
+                                className="absolute bottom-0 h-0.5 bg-brand-purple transition-all duration-300 ease-in-out"
+                                style={{ left: indicator.left, width: indicator.width }}
+                            />
+                        </div>
 
                         {/* Tab Content - Paciente */}
                         <TabsContent value="paciente" className="mt-6 space-y-4">

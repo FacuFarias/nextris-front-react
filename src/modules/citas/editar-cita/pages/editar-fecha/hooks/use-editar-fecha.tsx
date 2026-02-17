@@ -19,8 +19,8 @@ export const useEditarFecha = () => {
         }
         ,
         onError: (error: any) => {
-            console.error("Error al obtener pacientes por dirección:", error);
-            toast.error("Error al crear paciente");
+            console.error("Error al reprogramar cita:", error);
+            toast.error("Error al reprogramar cita");
         },
     });
 }

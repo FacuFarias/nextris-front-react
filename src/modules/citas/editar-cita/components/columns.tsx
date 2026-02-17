@@ -9,13 +9,27 @@ const citaColumns: TableColumn<Cita>[] = [
         key: "patient_name",
         label: "NOMBRE",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
     },
     {
         key: "start",
         label: "TURNO",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
         render: (value: string) => {
+            if (!value) return "";
+
+            const match = value.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+            if (match) {
+                const [, year, month, day, hour, minute] = match;
+                return `${day}/${month}/${year}, ${hour}:${minute}`;
+            }
+
             const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+
             return date.toLocaleString("es-AR", {
                 hour12: false,
                 hour: "2-digit",
@@ -32,18 +46,24 @@ const citaColumns: TableColumn<Cita>[] = [
         label: "DOCTOR",
         className: "font-medium",
         hideOnMobile: true,
+        sortable: true,
+        filterable: true,
     },
     {
         key: "exam",
         label: "EXAMEN",
         className: "font-medium",
         hideOnMobile: true,
+        sortable: true,
+        filterable: true,
     },
     {
         key: "equipment",
         label: "EQUIPO",
         className: "font-medium",
         hideOnMobile: true,
+        sortable: true,
+        filterable: true,
     },
 ];
 

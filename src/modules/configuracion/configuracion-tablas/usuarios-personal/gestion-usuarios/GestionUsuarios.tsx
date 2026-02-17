@@ -4,7 +4,7 @@ import { getUserColumns, getUserActions } from "./components/columns";
 import { useUsers } from "./hooks/useUsers";
 import { UserModal } from "./components/UserModal";
 import { ResetPasswordModal } from "./components/ResetPasswordModal";
-import type { User, UserFormData } from "./types/users.types";
+import type { User, UserFormData, UserMedicalSubmitData } from "./types/users.types";
 import { toast } from "sonner";
 
 export const GestionUsuarios = () => {
@@ -20,7 +20,9 @@ export const GestionUsuarios = () => {
         createUser,
         updateUser,
         deleteUser,
-        resetPassword
+        resetPassword,
+        setUserLocations,
+        saveUserMedicalData,
     } = useUsers();
 
     const handlePaginationChange = (newPage: number, newPageSize: number) => {
@@ -47,18 +49,59 @@ export const GestionUsuarios = () => {
         setIsResetPasswordModalOpen(false);
         setSelectedUser(null);
     };
-
-
-
-    const handleSubmit = (data: UserFormData) => {
+    const handleSubmit = (data: UserFormData, locationIds?: string[], medicalData?: UserMedicalSubmitData) => {
         if (selectedUser) {
             // Actualizar
             updateUser(
                 { id: selectedUser.guid, data },
                 {
                     onSuccess: () => {
-                        toast.success("Usuario actualizado exitosamente");
-                        handleCloseModal();
+                        const saveMedicalIfNeeded = () => {
+                            if (!medicalData) {
+                                toast.success("Usuario actualizado exitosamente");
+                                handleCloseModal();
+                                return;
+                            }
+
+                            saveUserMedicalData(
+                                { userId: selectedUser.guid, medicalData },
+                                {
+                                    onSuccess: () => {
+                                        toast.success("Usuario actualizado exitosamente");
+                                        handleCloseModal();
+                                    },
+                                    onError: (error: any) => {
+                                        const message = error?.response?.data?.message || "Error al guardar los datos médicos";
+                                        toast.error(message);
+                                    },
+                                }
+                            );
+                        };
+
+                        if (locationIds) {
+                            setUserLocations(
+                                { userId: selectedUser.guid, locationIds },
+                                {
+                                    onSuccess: () => {
+                                        saveMedicalIfNeeded();
+                                    },
+                                    onError: (error: any) => {
+                                        const message = error?.response?.data?.message || "Error al actualizar las ubicaciones del usuario";
+                                        const missingIds = error?.response?.data?.missing_location_ids;
+
+                                        if (Array.isArray(missingIds) && missingIds.length > 0) {
+                                            toast.error(`${message}: ${missingIds.join(", ")}`);
+                                            return;
+                                        }
+
+                                        toast.error(message);
+                                    },
+                                }
+                            );
+                            return;
+                        }
+
+                        saveMedicalIfNeeded();
                     },
                     onError: () => {
                         toast.error("Error al actualizar el usuario");
@@ -68,9 +111,55 @@ export const GestionUsuarios = () => {
         } else {
             // Crear
             createUser(data, {
-                onSuccess: () => {
-                    toast.success("Usuario creado exitosamente");
-                    handleCloseModal();
+                onSuccess: (response: any) => {
+                    const createdUserId = response?.data?.user_id;
+
+                    const saveMedicalIfNeeded = () => {
+                        if (!(medicalData && createdUserId)) {
+                            toast.success("Usuario creado exitosamente");
+                            handleCloseModal();
+                            return;
+                        }
+
+                        saveUserMedicalData(
+                            { userId: createdUserId, medicalData },
+                            {
+                                onSuccess: () => {
+                                    toast.success("Usuario médico creado exitosamente");
+                                    handleCloseModal();
+                                },
+                                onError: (error: any) => {
+                                    const message = error?.response?.data?.message || "Usuario creado, pero falló el guardado de datos médicos";
+                                    toast.error(message);
+                                },
+                            }
+                        );
+                    };
+
+                    if (createdUserId && locationIds) {
+                        setUserLocations(
+                            { userId: createdUserId, locationIds },
+                            {
+                                onSuccess: () => {
+                                    saveMedicalIfNeeded();
+                                },
+                                onError: (error: any) => {
+                                    const message = error?.response?.data?.message || "Usuario creado, pero falló la asociación de ubicaciones";
+                                    const missingIds = error?.response?.data?.missing_location_ids;
+
+                                    if (Array.isArray(missingIds) && missingIds.length > 0) {
+                                        toast.error(`${message}: ${missingIds.join(", ")}`);
+                                        return;
+                                    }
+
+                                    toast.error(message);
+                                },
+                            }
+                        );
+                        return;
+                    }
+
+                    saveMedicalIfNeeded();
                 },
                 onError: () => {
                     toast.error("Error al crear el usuario");
@@ -155,6 +244,7 @@ export const GestionUsuarios = () => {
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
                 onSubmit={handleSubmit}
+                userId={selectedUser?.guid}
                 initialData={selectedUser ? {
                     username: selectedUser.username,
                     role_id: selectedUser.role_id,

@@ -357,16 +357,12 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
     // Convertir horariosDisponibles a formato businessHours de FullCalendar
     const businessHours = React.useMemo(() => {
         if (!horariosDisponibles || horariosDisponibles.length === 0) return undefined;
-        return horariosDisponibles.map((horario: any) => {
-            // day: 1=Lunes, 7=Domingo en nuestro backend
-            // FullCalendar: 0=Domingo, 1=Lunes, 6=Sábado
-            const fcDay = horario.day === 7 ? 0 : horario.day;
-            return {
-                daysOfWeek: [fcDay],
-                startTime: horario.start,
-                endTime: horario.end
-            };
-        });
+        // Backend ya envía el formato FullCalendar: 0=Domingo, 1=Lunes, ..., 6=Sábado
+        return horariosDisponibles.map((horario: any) => ({
+            daysOfWeek: [horario.day],
+            startTime: horario.start,
+            endTime: horario.end
+        }));
     }, [horariosDisponibles]);
 
     // Estado para mostrar/agrupar los eventos de usuario actuales (no bloqueados)
@@ -571,6 +567,13 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                             cursor: grabbing !important;
                                             transform: scale(1.02);
                                         }
+                                        /* Highlight de la fecha deseada */
+                                        .fc-desired-date {
+                                            background-color: rgba(139, 92, 246, 0.10) !important;
+                                        }
+                                        .fc .fc-col-header-cell.fc-desired-date-header {
+                                            background-color: rgba(139, 92, 246, 0.18) !important;
+                                        }
                                     `}</style>
                                     <FullCalendar
                                         ref={calendarRef}
@@ -636,6 +639,18 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                         eventOverlap={false}
                                         selectOverlap={false}
                                         timeZone="local"
+                                        dayCellClassNames={(arg) => {
+                                            if (!selectedDate) return [];
+                                            const d = arg.date;
+                                            const cellDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                            return cellDate === selectedDate ? ['fc-desired-date'] : [];
+                                        }}
+                                        dayHeaderClassNames={(arg) => {
+                                            if (!selectedDate) return [];
+                                            const d = arg.date;
+                                            const headerDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                            return headerDate === selectedDate ? ['fc-desired-date-header'] : [];
+                                        }}
                                         eventClick={(info => {
                                             const eventTitle = info.event.title;
                                             toast.info(`Evento: ${eventTitle}`, {

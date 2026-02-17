@@ -32,6 +32,7 @@ export const UseLogin = () => {
             toast.success(data?.message || "¡Inicio de sesión exitoso!", {
                 position: "top-right",
             });
+
             if (data?.user?.user_type === "patient") {
                 navigate("/estudios");
                 return

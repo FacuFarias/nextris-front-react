@@ -15,6 +15,11 @@ import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
 import { useNavigate } from "react-router-dom"
 import { ModalEditarCitaContent } from "./components/ModalEditarCita"
 import { Modal } from "@/components/Modal"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { actualizarCita } from "../service/cita.service"
+import { toast } from "sonner"
+import { citasKeys } from "../constants/query-keys"
+import fondoImage from "@/assets/calendar.jpg"
 
 
 
@@ -22,17 +27,42 @@ import { Modal } from "@/components/Modal"
 export const EditarCita = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(10);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [citaSeleccionada, setCitaSeleccionada] = useState<Cita | null>(null);
     const debouncedSearch = useDebounce(searchTerm, 500);
-    const { citasData, isLoading: isLoadingCitas } = useCitas({ page, per_page: 8, search: debouncedSearch });
+    const { citasData, isLoading: isLoadingCitas } = useCitas({ page, per_page: perPage, search: debouncedSearch });
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
+
+    const actualizarCitaMutation = useMutation({
+        mutationFn: (cita: Cita) => {
+            const payload = {
+                doctor_id: cita.doctor_id,
+                requesting_physician_id: cita.requesting_physician_id,
+                exam_id: cita.exam_id,
+            };
+            return actualizarCita(cita.guid, payload);
+        },
+        onSuccess: () => {
+            toast.success("Cita actualizada exitosamente", {
+                position: "top-right",
+            });
+            queryClient.invalidateQueries({ queryKey: citasKeys.lists() });
+            handleCloseModal();
+        },
+        onError: (error: any) => {
+            toast.error(error?.response?.data?.message || "Error al actualizar cita", {
+                position: "top-right",
+            });
+        },
+    });
 
 
 
     const pagination = citasData && {
         page: citasData?.data?.page || 1,
-        pageSize: citasData?.data?.per_page || 5,
+        pageSize: citasData?.data?.per_page || perPage,
         total: citasData?.data?.total || 0,
     };
 
@@ -50,9 +80,7 @@ export const EditarCita = () => {
     };
 
     const handleGuardarCambios = (citaActualizada: Cita) => {
-        // Aquí implementarás la lógica para guardar los cambios
-        console.log("Guardando cambios:", citaActualizada);
-        handleCloseModal();
+        actualizarCitaMutation.mutate(citaActualizada);
     };
 
     const handleEditFecha = (cita: Cita) => {
@@ -69,11 +97,11 @@ export const EditarCita = () => {
     );
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
                 {/* Header con Tabs integrados */}
-                <div className="mb-6">
+                <div className="flex flex-col flex-1 min-h-0">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="bg-brand-purple p-2.5 rounded-lg">
                             <CalendarPlus className="w-6 h-6 text-white" />
@@ -82,27 +110,33 @@ export const EditarCita = () => {
                     </div>
 
                     {/* Barra de búsqueda */}
-                    <InputSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Buscar cita..." />
+                    <div className="mb-2">
+                        <InputSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Buscar cita..." />
+                    </div>
                     {/* Tabla de pacientes */}
 
-                    {isLoadingCitas ? (
-                        <div className='flex justify-center items-center h-40'>
-                            <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
-                        </div>
-                    ) : (
-                        <TablaDynamic<Cita>
-                            data={citasData?.data?.data || []}
-                            columns={citaColumns}
-                            showIndex
-                            rowIdKey="guid"
-                            emptyMessage="No se encontraron citas."
-                            pagination={pagination}
-                            onPaginationChange={(newPage) => {
-                                setPage(newPage);
-                            }}
-                            actions={citasActions}
-                        />
-                    )}
+                    <TablaDynamic<Cita>
+                        data={citasData?.data?.data || []}
+                        columns={citaColumns}
+                        showIndex
+                        loading={isLoadingCitas}
+                        preserveTableHeight
+                        rowIdKey="guid"
+                        emptyMessage="No se encontraron citas."
+                        pagination={pagination}
+                        onPaginationChange={(newPage) => {
+                            setPage(newPage);
+                        }}
+                        perPageValue={perPage}
+                        onPerPageChange={(value) => {
+                            setPerPage(value);
+                            setPage(1);
+                        }}
+                        perPageOptions={[10, 20, 50, 100]}
+                        actions={citasActions}
+                        tableBackgroundImage={fondoImage}
+                        stickyPagination
+                    />
                 </div>
             </div>
 

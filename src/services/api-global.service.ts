@@ -59,6 +59,15 @@ export const getMedicosPorLocacion = async (locationGuid: string) => {
     }
 };
 
+export const getRadsPerLocation = async (locationGuid: string) => {
+    try {
+        const response = await api.get(`/institutional/locations/${locationGuid}/rads_per_location`);
+        return response.data.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
 
 export const getMedicosAll = async () => {
     try {

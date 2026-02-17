@@ -8,6 +8,7 @@ import { admisionColumns, getAdmisionActions } from "./components/columns";
 import TablaDynamic from "@/components/TableDynamic";
 import { ModalAdmision } from "./components/ModalAdmision";
 import type { Admision } from "./types/admision.type";
+import fondoImage from "@/assets/calendar.jpg";
 
 export const AdmisionCita = () => {
 
@@ -47,7 +48,7 @@ export const AdmisionCita = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
@@ -69,41 +70,42 @@ export const AdmisionCita = () => {
                 </div>
 
                 {/* Resultados */}
-                <div>
+                <div className="mb-2">
                     <h2 className="text-base sm:text-lg font-semibold text-gray-700">Citas a admisionar</h2>
                 </div>
 
-                {isLoading ? (
-                    <div className='flex justify-center items-center h-40'>
-                        <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
-                    </div>
-                ) : (
-                    <>
-                        <TablaDynamic
-                            data={(admisionData?.data) || []}
-                            columns={admisionColumns}
-                            showIndex
-                            actions={getAdmisionActions(handleOpenModal)}
-                            pagination={{
-                                page,
-                                pageSize,
-                                serverSide: false,
-                                total: admisionData?.data?.length || 0,
-                            }}
-                            onPaginationChange={handlePaginationChange}
-                            emptyMessage={
-                                <div className='flex flex-col items-center justify-center py-12 space-y-4'>
-                                    <CheckCircle className='w-16 h-16 text-green-500' />
-                                    <div className='text-center'>
-                                        <h3 className='text-xl font-bold text-green-600'>¡Todo al día!</h3>
-                                        <p className='text-gray-600 mt-1'>No hay citas pendientes de admisión</p>
-                                    </div>
-                                </div>
-                            }
-                        />
-
-                    </>
-                )}
+                <TablaDynamic
+                    data={(admisionData?.data) || []}
+                    columns={admisionColumns}
+                    showIndex
+                    loading={isLoading}
+                    preserveTableHeight
+                    actions={getAdmisionActions(handleOpenModal)}
+                    pagination={{
+                        page,
+                        pageSize,
+                        serverSide: false,
+                        total: admisionData?.data?.length || 0,
+                    }}
+                    onPaginationChange={handlePaginationChange}
+                    perPageValue={pageSize}
+                    onPerPageChange={(value) => {
+                        setPageSize(value);
+                        setPage(1);
+                    }}
+                    perPageOptions={[10, 20, 50, 100]}
+                    tableBackgroundImage={fondoImage}
+                    stickyPagination
+                    emptyMessage={
+                        <div className='flex flex-col items-center justify-center py-12 space-y-4'>
+                            <CheckCircle className='w-16 h-16 text-green-500' />
+                            <div className='text-center'>
+                                <h3 className='text-xl font-bold text-green-600'>¡Todo al día!</h3>
+                                <p className='text-gray-600 mt-1'>No hay citas pendientes de admisión</p>
+                            </div>
+                        </div>
+                    }
+                />
                 {
                     isModalOpen &&
                     <ModalAdmision
