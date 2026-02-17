@@ -48,7 +48,7 @@ const router = createBrowserRouter([
     {
         path: "/pacientes",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo"]}>
                 <BuscarPaciente />
             </ProtectedRoute>
         ),
@@ -56,7 +56,7 @@ const router = createBrowserRouter([
     {
         path: "/pacientes/historial-paciente",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo"]}>
                 <HistorialPaciente />
             </ProtectedRoute>
         ),
@@ -66,7 +66,7 @@ const router = createBrowserRouter([
     {
         path: "/cita/nueva-cita",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]}>
                 <NuevaCita />
             </ProtectedRoute>
         ),
@@ -74,7 +74,7 @@ const router = createBrowserRouter([
     {
         path: "/cita/editar-cita",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]}>
                 <EditarCita />
             </ProtectedRoute>
         ),
@@ -82,7 +82,7 @@ const router = createBrowserRouter([
     {
         path: "/cita/editar-cita/:id",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]}>
                 <EditarFecha />
             </ProtectedRoute>
         ),
@@ -94,7 +94,7 @@ const router = createBrowserRouter([
     {
         path: "/nueva-admision",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]}>
                 <AdmisionCita />
             </ProtectedRoute>
         ),
@@ -102,7 +102,7 @@ const router = createBrowserRouter([
     {
         path: "/admision-espontanea",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]}>
                 <AdmisionEspontanea />
             </ProtectedRoute>
         ),
@@ -111,7 +111,7 @@ const router = createBrowserRouter([
     {
         path: "/ejecucion",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Tecnico"]}>
                 <Ejecucion />
             </ProtectedRoute>
         ),
@@ -119,7 +119,7 @@ const router = createBrowserRouter([
     {
         path: "/ejecucion/detalle/:guid",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Tecnico"]}>
                 <DetalleEjecucion />
             </ProtectedRoute>
         ),
@@ -128,7 +128,7 @@ const router = createBrowserRouter([
     {
         path: "/estudios/redaccion",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Medico"]}>
                 <Radiologia />
             </ProtectedRoute>
         ),
@@ -136,7 +136,7 @@ const router = createBrowserRouter([
     {
         path: "/estudios/redaccion/redactar-informe/:informeGuid/:studyInstanceUID",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Medico"]}>
                 <RedactarInforme />
             </ProtectedRoute>
         ),
@@ -144,7 +144,7 @@ const router = createBrowserRouter([
     {
         path: "/estudios/informes-predefinidos",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Medico"]}>
                 <InformePredefinidos />
             </ProtectedRoute>
         ),
@@ -152,7 +152,7 @@ const router = createBrowserRouter([
     {
         path: "/estudios/crear-informe",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Medico"]}>
                 <CrearInforme />
             </ProtectedRoute>
         ),
@@ -160,7 +160,7 @@ const router = createBrowserRouter([
     {
         path: "/estudios/editar-informe/:id",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Medico"]}>
                 <CrearInforme />
             </ProtectedRoute>
         ),
@@ -168,7 +168,7 @@ const router = createBrowserRouter([
     {
         path: "/estudios/cargar-estudios",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Medico"]}>
                 <CargarEstudios />
             </ProtectedRoute>
         ),
@@ -178,7 +178,7 @@ const router = createBrowserRouter([
     {
         path: "/distribucion",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]}>
                 <Distribucion />
             </ProtectedRoute>
         ),
@@ -188,7 +188,7 @@ const router = createBrowserRouter([
     {
         path: "/configuraciones/tablas",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin"]}>
                 <ConfiguracionTablas />
             </ProtectedRoute>
         ),
@@ -198,7 +198,7 @@ const router = createBrowserRouter([
     {
         path: "/administracion/unificacion-paciente",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin"]}>
                 <UnificacionPaciente />
             </ProtectedRoute>
         ),
@@ -206,7 +206,7 @@ const router = createBrowserRouter([
     {
         path: "/administracion/reasignacion-examenes",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["Sysadmin"]}>
                 <ReasignacionExamenes />
             </ProtectedRoute>
         ),
@@ -215,7 +215,7 @@ const router = createBrowserRouter([
     {
         path: "/estudios",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["patient"]}>
                 <Estudios />
             </ProtectedRoute>
         ),
@@ -223,7 +223,7 @@ const router = createBrowserRouter([
     {
         path: "/mis-datos",
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["patient"]}>
                 <MisDatos />
             </ProtectedRoute>
         ),
