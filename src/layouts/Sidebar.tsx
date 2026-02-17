@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
     Users,
     Calendar,
@@ -15,6 +15,7 @@ import {
     BookPlus,
     User,
     UploadCloud,
+    Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
@@ -31,20 +32,25 @@ interface MenuItem {
     label: string;
     path?: string;
     subItems?: { icon: React.ElementType; label: string; path: string; allowedRoles?: string[] }[];
-    allowedRoles?: string[]; // Si está vacío o no está definido, todos pueden verlo
+    allowedRoles?: string[];
 }
 
 const menuItems: MenuItem[] = [
     {
+        icon: Home,
+        label: "Inicio",
+        path: "/inicio",
+        allowedRoles: ["Sysadmin", "Medico", "Tecnico", "patient", "Administrativo"],
+    },
+    {
         icon: Users,
         label: "Pacientes",
         path: "/pacientes",
-        allowedRoles: ["Sysadmin"]
-
+        allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo"],
     },
     {
         icon: Calendar, label: "Citas",
-        allowedRoles: ["Sysadmin"],
+        allowedRoles: ["Sysadmin", "Administrativo"],
         subItems: [
             {
                 icon: Calendar,
@@ -60,7 +66,7 @@ const menuItems: MenuItem[] = [
     },
     {
         icon: CalendarPlus, label: "Admision",
-        allowedRoles: ["Sysadmin"],
+        allowedRoles: ["Sysadmin", "Administrativo"],
         subItems: [
             {
                 icon: CalendarPlus,
@@ -79,7 +85,7 @@ const menuItems: MenuItem[] = [
             }
         ]
     },
-    { icon: HandHelping, label: "Ejecucion", path: "/ejecucion", allowedRoles: ["Sysadmin"] },
+    { icon: HandHelping, label: "Ejecucion", path: "/ejecucion", allowedRoles: ["Sysadmin", "Tecnico"] },
     {
         icon: NotebookText, label: "Estudios", subItems: [
             {
@@ -98,10 +104,9 @@ const menuItems: MenuItem[] = [
                 path: "/estudios/cargar-estudios",
             }
         ],
-        allowedRoles: ["Sysadmin"],
-
+        allowedRoles: ["Sysadmin", "Medico"],
     },
-    { icon: Navigation, label: "Distribucion", path: "/distribucion", allowedRoles: ["Sysadmin"], },
+    { icon: Navigation, label: "Distribucion", path: "/distribucion", allowedRoles: ["Sysadmin", "Administrativo"], },
     {
         icon: Settings,
         label: "Configuraciones",
@@ -125,7 +130,6 @@ const menuItems: MenuItem[] = [
                 path: "/administracion/reasignacion-examenes",
                 allowedRoles: ["Sysadmin"]
             },
-
         ]
     },
     {
@@ -133,44 +137,50 @@ const menuItems: MenuItem[] = [
         label: "Mis Estudios",
         path: "/estudios",
         allowedRoles: ["patient"]
-
     },
     {
         icon: User,
         label: "Mis datos",
         path: "/mis-datos",
         allowedRoles: ["patient"]
-
     },
 ];
 
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
     const { authData, logout } = useAuth();
-    const [expandedItems, setExpandedItems] = useState<string[]>([]);
     const navigate = useNavigate();
     const location = useLocation();
 
     const userRole = authData?.user?.user_type || "";
-    // Función para verificar si el usuario tiene acceso
+
     const hasAccess = (allowedRoles?: string[]) => {
         if (!allowedRoles || allowedRoles.length === 0) return true;
         return allowedRoles.includes(userRole);
     };
 
-    // Filtrar los items del menú según los roles
-    const filteredMenuItems = menuItems.map(item => {
-        if (!hasAccess(item.allowedRoles)) return null;
+    const filteredMenuItems = useMemo(() =>
+        menuItems.map(item => {
+            if (!hasAccess(item.allowedRoles)) return null;
 
-        if (item.subItems) {
-            const filteredSubItems = item.subItems.filter(subItem => hasAccess(subItem.allowedRoles));
-            // Si no hay subitems visibles, no mostrar el item padre
-            if (filteredSubItems.length === 0) return null;
-            return { ...item, subItems: filteredSubItems };
-        }
+            if (item.subItems) {
+                const filteredSubItems = item.subItems.filter(subItem => hasAccess(subItem.allowedRoles));
+                if (filteredSubItems.length === 0) return null;
+                return { ...item, subItems: filteredSubItems };
+            }
 
-        return item;
-    }).filter(Boolean) as MenuItem[];
+            return item;
+        }).filter(Boolean) as MenuItem[]
+        , [userRole]);
+
+    // Inicializar ya con los items que corresponden a la ruta actual abiertos
+    const [expandedItems, setExpandedItems] = useState<string[]>(() =>
+        menuItems
+            .filter(item =>
+                item.subItems?.some(subItem => location.pathname === subItem.path)
+            )
+            .map(item => item.label)
+    );
 
     const toggleItem = (label: string) => {
         setExpandedItems(prev =>
@@ -179,6 +189,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 : [...prev, label]
         );
     };
+
     return (
         <>
             {/* Desktop Sidebar */}
@@ -229,7 +240,11 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                                         <li key={subItem.path}>
                                                             <Link
                                                                 to={subItem.path || "#"}
-                                                                onClick={onClose}
+                                                                onClick={() => {
+                                                                    if (window.innerWidth < 1024) {
+                                                                        onClose();
+                                                                    }
+                                                                }}
                                                                 className={cn(
                                                                     "flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all duration-300 group cursor-pointer text-white",
                                                                     location.pathname === subItem.path
@@ -251,7 +266,11 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                     ) : (
                                         <Link
                                             to={item.path || "#"}
-                                            onClick={onClose}
+                                            onClick={() => {
+                                                if (window.innerWidth < 1024) {
+                                                    onClose();
+                                                }
+                                            }}
                                             className={cn(
                                                 "flex items-center gap-2 px-2 py-2 rounded-lg transition-all duration-300 group cursor-pointer text-white",
                                                 location.pathname === item.path
@@ -278,7 +297,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-xs font-medium text-white truncate">{authData?.user.username}</p>
-                                <p className="text-[10px] text-purple-300">{authData?.user.name}</p>
+                                <p className="text-[10px] text-purple-300">{authData?.user?.user_type}</p>
                             </div>
                         </div>
 

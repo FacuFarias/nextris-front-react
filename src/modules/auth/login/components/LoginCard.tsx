@@ -41,7 +41,7 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
 
     const onSubmit = (values: LoginFormValues) => {
         mutation.mutate({
-            username: values.username,
+            username: values.username.trim(),
             password: values.password,
             user_type: isPatient ? "patient" : "staff",
         });
@@ -89,7 +89,10 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
 
             {/* Form */}
             <Form {...form}>
-                <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)}>
+                <form
+                    className="space-y-5"
+                    onSubmit={form.handleSubmit(onSubmit)}
+                >
                     <div className="space-y-4">
                         <FormField
                             control={form.control}
@@ -157,6 +160,7 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
                         </div>
                         <a
                             href="#"
+                            onClick={(e) => e.preventDefault()}
                             className="text-sm text-primary hover:underline transition-colors"
                         >
                             ¿Olvidó su contraseña?

@@ -31,7 +31,7 @@ export const api = axios.create({
 api.interceptors.request.use(
     (config) => {
         let token = null;
-        
+
         // Método 1: Buscar en authData (método correcto)
         const authDataStr = localStorage.getItem('authData');
         if (authDataStr) {
@@ -42,12 +42,12 @@ api.interceptors.request.use(
                 console.error('Error parsing authData:', e);
             }
         }
-        
+
         // Método 2: Fallback - buscar en clave separada access_token (por compatibilidad)
         if (!token) {
             token = localStorage.getItem('access_token');
         }
-        
+
         // Configurar header de Authorization si hay token
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -73,6 +73,11 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+
+        // Si el 401 viene del login, no intentar refresh — dejar que onError lo maneje
+        if (originalRequest.url?.includes('/auth/login')) {
+            return Promise.reject(error);
+        }
 
         // Si el error es 401 y no hemos intentado refrescar aún
         if (error.response?.status === 401 && !originalRequest._retry) {
@@ -148,7 +153,3 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
-
-
-
-
