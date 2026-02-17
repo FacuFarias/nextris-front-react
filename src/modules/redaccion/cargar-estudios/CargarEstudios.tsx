@@ -2,7 +2,7 @@ import { MainLayout } from "@/layouts/layout"
 import { UploadCloud, FolderOpen, FileText, Sparkles, Rocket, CheckCircle, Loader2, RefreshCw, Archive, Calendar } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { DireccionSelector } from "@/components"
 import { Progress } from "@/components/ui/progress"
 import { useCargarEstudios, useEstudiosNoVinculados } from "./hooks/use-cargar-estudios"
@@ -21,12 +21,44 @@ export const CargarEstudios = () => {
     const { estudiosNoVinculadosData, isLoading, error, refetchEstudiosNoVinculados } = useEstudiosNoVinculados({ location_id: selectedDireccion });
     const cargarEstudiosMutation = useCargarEstudios();
 
+    // Estados para animación de tabs
+    const [activeTab, setActiveTab] = useState("cargar-dicom")
+    const tabsListRef = useRef<HTMLDivElement>(null)
+    const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+    const [pill, setPill] = useState({ left: 0, top: 0, width: 0, height: 0 })
+
     const handleDireccionChange = (direccionId: string) => {
         setSelectedDireccion(direccionId);
         /*  fetchPacientesDireccion(
              { uuid: direccionId, searchTerm: debouncedSearch },
          ); */
     };
+
+    // Función para actualizar la posición de la píldora animada
+    const updatePill = useCallback(() => {
+        const el = tabRefs.current.get(activeTab)
+        const container = tabsListRef.current
+        if (el && container) {
+            const cr = container.getBoundingClientRect()
+            const tr = el.getBoundingClientRect()
+            setPill({
+                left: tr.left - cr.left,
+                top: tr.top - cr.top,
+                width: tr.width,
+                height: tr.height,
+            })
+        }
+    }, [activeTab])
+
+    useEffect(() => {
+        updatePill()
+    }, [updatePill])
+
+    useEffect(() => {
+        window.addEventListener("resize", updatePill)
+        return () => window.removeEventListener("resize", updatePill)
+    }, [updatePill])
+
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault()
         setIsDragging(true)
@@ -113,20 +145,34 @@ export const CargarEstudios = () => {
                 {/* Header con Tabs integrados */}
                 <div className="mb-6">
                     {/* Tabs */}
-                    <Tabs defaultValue="cargar-dicom" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 p-1">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                        <TabsList
+                            ref={tabsListRef}
+                            className="relative bg-gray-50 border-b border-gray-200 rounded-lg h-auto p-1 px-2 justify-start gap-1 w-auto inline-flex"
+                        >
                             <TabsTrigger
                                 value="cargar-dicom"
-                                className="py-3 px-6 data-[state=active]:bg-brand-purple data-[state=active]:text-white"
+                                ref={(el) => {
+                                    if (el) tabRefs.current.set("cargar-dicom", el)
+                                }}
+                                className="px-3 py-1.5 text-xs font-medium rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none relative z-1"
                             >
                                 Cargar Estudio Dicom
                             </TabsTrigger>
                             <TabsTrigger
                                 value="vincular-imagen"
-                                className="py-3 px-6 data-[state=active]:bg-brand-purple data-[state=active]:text-white"
+                                ref={(el) => {
+                                    if (el) tabRefs.current.set("vincular-imagen", el)
+                                }}
+                                className="px-3 py-1.5 text-xs font-medium rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none relative z-1"
                             >
                                 Vincular Imagen
                             </TabsTrigger>
+                            {/* Píldora animada */}
+                            <div
+                                className="absolute rounded-full bg-brand-purple transition-all duration-300 ease-in-out z-0"
+                                style={{ left: pill.left, top: pill.top, width: pill.width, height: pill.height }}
+                            />
                         </TabsList>
 
                         <TabsContent value="cargar-dicom" className="mt-6">

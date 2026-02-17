@@ -6,9 +6,6 @@ import { Building2, FlaskConical, Monitor, Users, Settings } from "lucide-react"
 // Institucional
 import { Facilities } from "./institucional/facilities"
 import { Locations } from "./institucional/locations"
-import { ServidorSmtp } from "./institucional/servidor-smtp"
-import { DatosBackend } from "./institucional/datos-backend"
-import { WhatsApp } from "./institucional/whatsapp"
 import { ObrasSociales } from "./institucional/obras-sociales"
 import { DominioPacientes } from "./institucional/dominio-pacientes"
 
