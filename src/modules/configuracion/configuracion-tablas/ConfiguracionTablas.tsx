@@ -8,6 +8,7 @@ import { Facilities } from "./institucional/facilities"
 import { Locations } from "./institucional/locations"
 import { ObrasSociales } from "./institucional/obras-sociales"
 import { DominioPacientes } from "./institucional/dominio-pacientes"
+import { Tags } from "./institucional/tags"
 
 // Exámenes
 import { TiposEstudio } from "./examenes/tipos-estudio"
@@ -180,6 +181,7 @@ export const ConfiguracionTablas = () => {
                                 { value: "locations", label: "Ubicaciones" },
                                 { value: "obras-sociales", label: "Obras Sociales" },
                                 { value: "dominio-pacientes", label: "Dominio de Pacientes" },
+                                { value: "tags", label: "Tags" },
                             ]}
                         >
                             <TabsContent value="facilities" className="p-4">
@@ -193,6 +195,9 @@ export const ConfiguracionTablas = () => {
                             </TabsContent>
                             <TabsContent value="dominio-pacientes" className="p-4">
                                 <DominioPacientes />
+                            </TabsContent>
+                            <TabsContent value="tags" className="p-4">
+                                <Tags />
                             </TabsContent>
                         </AnimatedSubTabs>
                     </TabsContent>

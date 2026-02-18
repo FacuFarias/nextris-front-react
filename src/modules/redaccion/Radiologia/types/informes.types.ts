@@ -16,6 +16,8 @@ export type Informes = {
     study_instance_uid: string;
     location: string;
     pdf_path: string;
+    flags: string[];
+    tag_ids: string[];
 }
 
 

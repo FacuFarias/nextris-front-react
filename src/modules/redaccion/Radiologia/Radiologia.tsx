@@ -3,9 +3,9 @@ import { InputSearch } from "@/components/InputSearch"
 import { MainLayout } from "@/layouts/layout"
 import { HandHelping, RefreshCcw, Loader2 } from "lucide-react"
 import { useMemo, useState, useEffect, useRef, useCallback } from "react"
-import { useInformes, useBlockExam, useUnblockExam } from "./hooks/use-informes"
+import { useInformes, useBlockExam, useUnblockExam, useUpdateFlags, useUpdateTagIds, useAllTags } from "./hooks/use-informes"
 import { useCrossWindowSync } from "./redactar-informe/hooks/use-cross-windows"
-import { getInformesActions, informeColumns } from "./components/columns"
+import { getInformesActions, getFlagsColumn, getTagsColumn, informeColumns } from "./components/columns"
 import TablaDynamic from "@/components/TableDynamic"
 import type { Informes } from "./types/informes.types"
 import type { FilterPreset, FilterPresetFilters } from "./types/filter-preset.types"
@@ -40,13 +40,14 @@ export const Radiologia = () => {
     const [asignadosAMi, setAsignadosAMi] = useState(false);
     const [listoParaLeer, setListoParaLeer] = useState(true);
     const [verSinImagenes, setVerSinImagenes] = useState(false);
+    const [flagFilter, setFlagFilter] = useState<string[]>([]);
     const [siguientePaso, setSiguientePaso] = useState(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [isNoImageModalOpen, setIsNoImageModalOpen] = useState(false);
     const [selectedInforme, setSelectedInforme] = useState<Informes | null>(null);
     const [isBlocking, setIsBlocking] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<string[]>(
-        informeColumns.map(col => col.key as string)
+        [...informeColumns.map(col => col.key as string), "flags", "tag_ids"]
     );
     const [sortColumn, setSortColumn] = useState("");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -56,7 +57,10 @@ export const Radiologia = () => {
     const useDebounceSearch = useDebounce(searchTerm, 500);
     const { mutateAsync: blockExam } = useBlockExam();
     const { mutateAsync: unblockExam } = useUnblockExam();
-    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId });
+    const { mutate: updateFlags, isPending: isUpdatingFlags } = useUpdateFlags();
+    const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useUpdateTagIds();
+    const { allTags } = useAllTags();
+    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId, flag_filter: flagFilter.join(',') });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
@@ -78,10 +82,33 @@ export const Radiologia = () => {
         });
     }, []);
 
-    // Filtrar columnas visibles
+    const handleUpdateFlags = useCallback((examId: string, flags: string[]) => {
+        updateFlags({ examId, flags });
+    }, [updateFlags]);
+
+    const handleUpdateTagIds = useCallback((examId: string, tagIds: string[]) => {
+        updateTagIds({ examId, tagIds });
+    }, [updateTagIds]);
+
+    // Columna de banderas generada con el handler actual
+    const flagsColumn = useMemo(
+        () => getFlagsColumn(handleUpdateFlags, isUpdatingFlags),
+        [handleUpdateFlags, isUpdatingFlags]
+    );
+
+    // Columna de tags generada con handler y lista de tags disponibles
+    const tagsColumn = useMemo(
+        () => getTagsColumn(allTags, handleUpdateTagIds, isUpdatingTagIds),
+        [allTags, handleUpdateTagIds, isUpdatingTagIds]
+    );
+
+    // Todas las columnas disponibles (estáticas + banderas + tags)
+    const allColumns = useMemo(() => [...informeColumns, flagsColumn, tagsColumn], [flagsColumn, tagsColumn]);
+
+    // Columnas visibles (incluye banderas si está en la lista)
     const filteredColumns = useMemo(
-        () => informeColumns.filter(col => visibleColumns.includes(col.key as string)),
-        [visibleColumns]
+        () => allColumns.filter(col => visibleColumns.includes(col.key as string)),
+        [allColumns, visibleColumns]
     );
 
     // Función para obtener los filtros actuales como objeto
@@ -112,7 +139,7 @@ export const Radiologia = () => {
             setStudioTypeId(undefined);
             setModalityId(undefined);
             setBodyPartId(undefined);
-            setVisibleColumns(informeColumns.map(col => col.key as string));
+            setVisibleColumns([...informeColumns.map(col => col.key as string), "flags", "tag_ids"]);
             setPerPage(10);
             setSortColumn("");
             setSortDirection("asc");
@@ -127,7 +154,7 @@ export const Radiologia = () => {
             setStudioTypeId(f.study_group_id || undefined);
             setModalityId(f.modality_id || undefined);
             setBodyPartId(f.bodypart_id || undefined);
-            setVisibleColumns(f.visible_columns?.length ? f.visible_columns : informeColumns.map(col => col.key as string));
+            setVisibleColumns(f.visible_columns?.length ? f.visible_columns : [...informeColumns.map(col => col.key as string), "flags"]);
             setPerPage(f.per_page || 10);
             setSortColumn(f.sort_column || "");
             setSortDirection(f.sort_direction || "asc");
@@ -517,6 +544,60 @@ export const Radiologia = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Separador vertical */}
+                    <div className="hidden sm:block w-px bg-gray-300 self-stretch" />
+                    <div className="block sm:hidden h-px bg-gray-300" />
+
+                    {/* Sección de Banderas */}
+                    <div className="flex flex-col gap-2 shrink-0">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Banderas</span>
+                        <div className="flex items-center gap-1.5">
+                            {(["red", "green", "blue", "yellow"] as const).map((color) => {
+                                const active = flagFilter.includes(color);
+                                const svgFill: Record<string, string> = {
+                                    red: "#ef4444", green: "#22c55e", blue: "#3b82f6", yellow: "#facc15"
+                                };
+                                const svgStroke: Record<string, string> = {
+                                    red: "#b91c1c", green: "#15803d", blue: "#1d4ed8", yellow: "#a16207"
+                                };
+                                const label: Record<string, string> = {
+                                    red: "Roja", green: "Verde", blue: "Azul", yellow: "Amarilla"
+                                };
+                                return (
+                                    <button
+                                        key={color}
+                                        title={`Filtrar: ${label[color]}`}
+                                        onClick={() => {
+                                            setFlagFilter(prev =>
+                                                prev.includes(color)
+                                                    ? prev.filter(f => f !== color)
+                                                    : [...prev, color]
+                                            );
+                                            setPage(1);
+                                        }}
+                                        className={`flex flex-col items-center gap-0.5 p-1.5 rounded-md transition-all focus:outline-none
+                                            ${active ? "bg-gray-200 ring-1 ring-gray-400 scale-110" : "opacity-35 hover:opacity-70"}`}
+                                    >
+                                        <svg width="18" height="18" viewBox="0 0 24 24"
+                                            fill={svgFill[color]} stroke={svgStroke[color]}
+                                            strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <line x1="4" y1="2" x2="4" y2="22" />
+                                            <polyline points="4,2 20,9 4,16" />
+                                        </svg>
+                                        <span className="text-[9px] text-gray-500 leading-none">{label[color]}</span>
+                                    </button>
+                                );
+                            })}
+                            {flagFilter.length > 0 && (
+                                <button
+                                    onClick={() => { setFlagFilter([]); setPage(1); }}
+                                    className="text-xs text-gray-400 hover:text-gray-600 ml-1 self-start mt-1"
+                                    title="Limpiar filtro de banderas"
+                                >✕</button>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 <TablaDynamic<Informes>
@@ -535,7 +616,7 @@ export const Radiologia = () => {
                         setPage(1);
                     }}
                     perPageOptions={[10, 20, 50, 100]}
-                    allColumns={informeColumns}
+                    allColumns={allColumns}
                     visibleColumns={visibleColumns}
                     onToggleColumn={toggleColumn}
                     tableBackgroundImage={fondoImage}

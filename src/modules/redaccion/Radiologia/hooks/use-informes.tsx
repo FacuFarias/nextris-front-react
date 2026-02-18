@@ -1,17 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type InformeDetalle, type Informes } from "../types/informes.types";
 import type { ApiPaginatedResponse } from "@/types/global.type";
-import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, type UpdateReportPayload } from "../services/informes.service";
+import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, updateExaminationFlags, updateExaminationTagIds, getAllTags, type UpdateReportPayload } from "../services/informes.service";
 import { informesKeys } from "../constants/query-keys";
 import { toast } from "sonner";
 import { notifyInformeChange, useCrossWindowSync } from "../redactar-informe/hooks/use-cross-windows";
 
-export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, bodypart_id = "", modality_id = "", study_group_id = "" }) => {
+export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, bodypart_id = "", modality_id = "", study_group_id = "", flag_filter = "" }) => {
     useCrossWindowSync();
 
     const { data, isLoading, isFetching, error, refetch } = useQuery<ApiPaginatedResponse<Informes>>({
-        queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id),
-        queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id }),
+        queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id, flag_filter),
+        queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id, flag_filter }),
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
     });
@@ -74,6 +74,107 @@ export const useBlockExam = () => {
             throw error; // Re-lanzar el error para manejarlo en el componente
         }
     });
+}
+
+export const useUpdateFlags = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examId, flags }: { examId: string; flags: string[] }) =>
+            updateExaminationFlags(examId, flags),
+
+        // Actualización optimista: cambia el cache local al instante, sin refetch
+        onMutate: async ({ examId, flags }) => {
+            // Cancelar cualquier refetch en curso para no sobreescribir el optimismo
+            await queryClient.cancelQueries({ queryKey: informesKeys.lists() });
+
+            // Guardar snapshot del estado anterior (para rollback)
+            const previousData = queryClient.getQueriesData({ queryKey: informesKeys.lists() });
+
+            // Actualizar todas las páginas del cache que contengan este examen
+            queryClient.setQueriesData(
+                { queryKey: informesKeys.lists() },
+                (old: any) => {
+                    if (!old?.data?.data) return old;
+                    return {
+                        ...old,
+                        data: {
+                            ...old.data,
+                            data: old.data.data.map((item: Informes) =>
+                                item.guid === examId ? { ...item, flags } : item
+                            ),
+                        },
+                    };
+                }
+            );
+
+            return { previousData };
+        },
+
+        // Si el servidor falla, revertir al estado anterior
+        onError: (error: any, _vars, context: any) => {
+            if (context?.previousData) {
+                context.previousData.forEach(([queryKey, data]: [any, any]) => {
+                    queryClient.setQueryData(queryKey, data);
+                });
+            }
+            toast.error(error.response?.data?.message || 'Error al actualizar bandera');
+        },
+    });
+}
+
+export const useUpdateTagIds = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examId, tagIds }: { examId: string; tagIds: string[] }) =>
+            updateExaminationTagIds(examId, tagIds),
+
+        onMutate: async ({ examId, tagIds }) => {
+            await queryClient.cancelQueries({ queryKey: informesKeys.lists() });
+            const previousData = queryClient.getQueriesData({ queryKey: informesKeys.lists() });
+
+            queryClient.setQueriesData(
+                { queryKey: informesKeys.lists() },
+                (old: any) => {
+                    if (!old?.data?.data) return old;
+                    return {
+                        ...old,
+                        data: {
+                            ...old.data,
+                            data: old.data.data.map((item: Informes) =>
+                                item.guid === examId ? { ...item, tag_ids: tagIds } : item
+                            ),
+                        },
+                    };
+                }
+            );
+
+            return { previousData };
+        },
+
+        onError: (error: any, _vars, context: any) => {
+            if (context?.previousData) {
+                context.previousData.forEach(([queryKey, data]: [any, any]) => {
+                    queryClient.setQueryData(queryKey, data);
+                });
+            }
+            toast.error(error.response?.data?.message || 'Error al actualizar tags');
+        },
+    });
+}
+
+export const useAllTags = () => {
+    const { data, isLoading } = useQuery({
+        queryKey: ['tags', 'all'],
+        queryFn: getAllTags,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    return {
+        allTags: data?.data ?? [],
+        isLoading,
+    };
 }
 
 export const useUnblockExam = () => {

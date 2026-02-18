@@ -1,9 +1,9 @@
 import { api } from "@/lib/api"
 
-export const getInformes = async ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, modality_id = "", bodypart_id = "", study_group_id = "" }) => {
+export const getInformes = async ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, modality_id = "", bodypart_id = "", study_group_id = "", flag_filter = "" }) => {
 
     try {
-        const response = await api.get(`/examinations/for-reporting?page=${page}&per_page=${per_page}&search=${search}&show_reported=${show_reported}&show_ready=${show_ready}&show_no_image=${show_no_image}&modality_id=${modality_id}&body_part_id=${bodypart_id}&study_group_id=${study_group_id}`);
+        const response = await api.get(`/examinations/for-reporting?page=${page}&per_page=${per_page}&search=${search}&show_reported=${show_reported}&show_ready=${show_ready}&show_no_image=${show_no_image}&modality_id=${modality_id}&body_part_id=${bodypart_id}&study_group_id=${study_group_id}&flag_filter=${flag_filter}`);
         return response.data;
     } catch (error) {
         throw error;
@@ -49,6 +49,33 @@ export const blockExam = async (exam_id: string) => {
 export const unblockExam = async (exam_id: string) => {
     try {
         const response = await api.post(`/examinations/${exam_id}/unblock`);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const updateExaminationFlags = async (exam_id: string, flags: string[]) => {
+    try {
+        const response = await api.patch(`/examinations/${exam_id}/flags`, { flags });
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const updateExaminationTagIds = async (exam_id: string, tag_ids: string[]) => {
+    try {
+        const response = await api.patch(`/examinations/${exam_id}/tag_ids`, { tag_ids });
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const getAllTags = async () => {
+    try {
+        const response = await api.get('/tags/all');
         return response.data;
     } catch (error) {
         throw error;

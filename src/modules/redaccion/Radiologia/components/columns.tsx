@@ -3,6 +3,9 @@ import type { Informes } from "../types/informes.types";
 import { fechaYhora } from "@/lib/fechaYhora";
 import { ClipboardPlus, FileText, Image, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { FlagsCell } from "./FlagsCell";
+import { TagsCell } from "./TagsCell";
+import type { Tag } from "@/modules/configuracion/configuracion-tablas/institucional/tags";
 
 // Configuración de columnas para usuarios
 const informeColumns: TableColumn<Informes>[] = [
@@ -87,6 +90,48 @@ const informeColumns: TableColumn<Informes>[] = [
         ),
     },
 ];
+
+// Columna de banderas: generada dinámicamente para incluir el handler de actualización
+export const getFlagsColumn = (
+    onUpdateFlags: (examId: string, flags: string[]) => void,
+    isUpdating?: boolean,
+): TableColumn<Informes> => ({
+    key: "flags",
+    label: "BANDERAS",
+    className: "font-medium",
+    sortable: false,
+    filterable: false,
+    render: (_value: string[], informe: Informes) => (
+        <FlagsCell
+            examId={informe.guid}
+            currentFlags={informe.flags ?? []}
+            onUpdate={onUpdateFlags}
+            isUpdating={isUpdating}
+        />
+    ),
+});
+
+// Columna de tags: generada dinámicamente para incluir los tags disponibles y el handler
+export const getTagsColumn = (
+    availableTags: Tag[],
+    onUpdateTags: (examId: string, tagIds: string[]) => void,
+    isUpdating?: boolean,
+): TableColumn<Informes> => ({
+    key: "tag_ids",
+    label: "TAGS",
+    className: "font-medium",
+    sortable: false,
+    filterable: false,
+    render: (_value: string[], informe: Informes) => (
+        <TagsCell
+            examId={informe.guid}
+            currentTagIds={informe.tag_ids ?? []}
+            availableTags={availableTags}
+            onUpdate={onUpdateTags}
+            isUpdating={isUpdating}
+        />
+    ),
+});
 
 // Función que genera las acciones con handlers personalizados
 export const getInformesActions = (
