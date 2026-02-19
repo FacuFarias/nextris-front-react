@@ -141,21 +141,21 @@ export const CargarEstudios = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10  overflow-y-auto">
+            <div className="bg-card dark:bg-[#2a2e32] backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 overflow-y-auto">
                 {/* Header con Tabs integrados */}
                 <div className="mb-6">
                     {/* Tabs */}
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         <TabsList
                             ref={tabsListRef}
-                            className="relative bg-gray-50 border-b border-gray-200 rounded-lg h-auto p-1 px-2 justify-start gap-1 w-auto inline-flex"
+                            className="relative bg-gray-50 dark:bg-[#2a2e32] border-b border-gray-200 dark:border-gray-600 rounded-lg h-auto p-1 px-2 justify-start gap-1 w-auto inline-flex"
                         >
                             <TabsTrigger
                                 value="cargar-dicom"
                                 ref={(el) => {
                                     if (el) tabRefs.current.set("cargar-dicom", el)
                                 }}
-                                className="px-3 py-1.5 text-xs font-medium rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none relative z-1"
+                                className="px-3 py-1.5 text-xs font-medium rounded-full text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none relative z-1"
                             >
                                 Cargar Estudio Dicom
                             </TabsTrigger>
@@ -164,7 +164,7 @@ export const CargarEstudios = () => {
                                 ref={(el) => {
                                     if (el) tabRefs.current.set("vincular-imagen", el)
                                 }}
-                                className="px-3 py-1.5 text-xs font-medium rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none relative z-1"
+                                className="px-3 py-1.5 text-xs font-medium rounded-full text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none relative z-1"
                             >
                                 Vincular Imagen
                             </TabsTrigger>
@@ -179,10 +179,10 @@ export const CargarEstudios = () => {
                             {/* Header del tab */}
                             <div className="mb-6">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <UploadCloud className="w-5 h-5 text-gray-700" />
-                                    <h2 className="text-xl font-semibold text-gray-800">Cargar Estudio DICOM</h2>
+                                    <UploadCloud className="w-5 h-5 text-gray-700 dark:text-gray-200" />
+                                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Cargar Estudio DICOM</h2>
                                 </div>
-                                <p className="text-gray-600 text-sm">Arrastra archivos DICOM aquí o haz clic para seleccionar</p>
+                                <p className="text-gray-600 text-sm dark:text-gray-200">Arrastra archivos DICOM aquí o haz clic para seleccionar</p>
                             </div>
                             <DireccionSelector
                                 selectedDireccion={selectedDireccion}
@@ -198,22 +198,22 @@ export const CargarEstudios = () => {
                                             onDrop={handleDrop}
                                             className={`border-2 border-dashed rounded-lg p-12 transition-all mt-3 ${isDragging
                                                 ? 'border-brand-purple bg-purple-50'
-                                                : 'border-gray-300 bg-white'
+                                                : 'border-gray-300 bg-white dark:bg-[#2a2e32]'
                                                 }`}
                                         >
                                             <div className="flex flex-col items-center justify-center gap-4">
                                                 {/* Icono de nube */}
                                                 <div className="bg-brand-purple/10 p-6 rounded-full">
-                                                    <UploadCloud className="w-16 h-16 text-brand-purple" />
+                                                    <UploadCloud className="w-16 h-16 text-brand-purple dark:text-purple-400" />
                                                 </div>
 
                                                 {/* Texto principal */}
-                                                <h3 className="text-lg font-semibold text-gray-800">
+                                                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
                                                     Arrastra archivos DICOM aquí
                                                 </h3>
 
                                                 {/* Contador */}
-                                                <div className="text-3xl font-bold text-gray-400">
+                                                <div className="text-3xl font-bold text-gray-400 dark:text-gray-500">
                                                     0
                                                 </div>
 
@@ -242,7 +242,7 @@ export const CargarEstudios = () => {
                                                 />
 
                                                 {/* Información */}
-                                                <div className="mt-4 space-y-1 text-sm text-gray-600">
+                                                <div className="mt-4 space-y-1 text-sm text-gray-600 dark:text-gray-300">
                                                     <div className="flex items-center gap-2">
                                                         <FileText className="w-4 h-4" />
                                                         <span>Solo archivos DICOM (.dcm, .dicom, .dic)</span>
@@ -261,7 +261,7 @@ export const CargarEstudios = () => {
 
                                         {/* Barra de progreso */}
                                         {(isUploading || uploadProgress > 0) && (
-                                            <div className="mt-6 bg-white border border-gray-200 rounded-lg p-6">
+                                            <div className="mt-6 bg-white dark:bg-[#2a2e32] border border-gray-200 dark:border-gray-700 rounded-lg p-6">
                                                 <div className="flex items-center justify-between mb-3">
                                                     <div className="flex items-center gap-2">
                                                         {uploadProgress === 100 ? (
@@ -269,16 +269,16 @@ export const CargarEstudios = () => {
                                                         ) : (
                                                             <Loader2 className="w-5 h-5 text-brand-purple animate-spin" />
                                                         )}
-                                                        <span className="font-semibold text-gray-700">
+                                                        <span className="font-semibold text-gray-700 dark:text-gray-200">
                                                             {uploadProgress === 100 ? '¡Carga completada!' : 'Cargando archivos...'}
                                                         </span>
                                                     </div>
-                                                    <span className="text-sm text-gray-600">
+                                                    <span className="text-sm text-gray-600 dark:text-gray-400">
                                                         {uploadedCount} / {totalFiles} archivos
                                                     </span>
                                                 </div>
                                                 <Progress value={uploadProgress} className="h-2" />
-                                                <p className="text-xs text-gray-500 mt-2">
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                                     {uploadProgress.toFixed(0)}% completado
                                                 </p>
                                             </div>
@@ -288,8 +288,8 @@ export const CargarEstudios = () => {
                                         <div className="mt-8">
                                             <div className="flex items-center justify-between mb-6">
                                                 <div className="flex items-center gap-2">
-                                                    <Archive className="w-5 h-5 text-gray-700" />
-                                                    <h2 className="text-xl font-semibold text-gray-800">Archivos DICOM Subidos</h2>
+                                                    <Archive className="w-5 h-5 text-gray-700 dark:text-gray-200" />
+                                                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Archivos DICOM Subidos</h2>
                                                 </div>
                                                 <Button
                                                     onClick={() => refetchEstudiosNoVinculados()}
@@ -306,30 +306,30 @@ export const CargarEstudios = () => {
                                             <div className="space-y-3">
                                                 {isLoading ? (
                                                     <div className="flex items-center justify-center py-12">
-                                                        <Loader2 className="w-8 h-8 animate-spin text-brand-purple" />
+                                                        <Loader2 className="w-8 h-8 animate-spin text-brand-purple dark:text-purple-400" />
                                                     </div>
                                                 ) : error ? (
-                                                    <div className="text-center py-12 text-red-500">
+                                                    <div className="text-center py-12 text-red-500 dark:text-red-400">
                                                         Error al cargar los archivos
                                                     </div>
                                                 ) : estudiosNoVinculadosData?.data?.data?.length === 0 ? (
-                                                    <div className="text-center py-12 text-gray-500">
+                                                    <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                                                         No hay archivos DICOM subidos
                                                     </div>
                                                 ) : (
                                                     estudiosNoVinculadosData?.data?.data?.map((estudio) => (
                                                         <div
                                                             key={estudio.guid}
-                                                            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                                                            className="bg-white dark:bg-[#2a2e32] border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow"
                                                         >
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-start gap-3 flex-1">
-                                                                    <FileText className="w-5 h-5 text-gray-400 mt-1" />
+                                                                    <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-1" />
                                                                     <div className="flex-1">
-                                                                        <h3 className="font-medium text-gray-800 mb-1">
+                                                                        <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
                                                                             {estudio.patient_name} - {estudio.patient_id} - {estudio.study_description || 'Sin descripción'}
                                                                         </h3>
-                                                                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
+                                                                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
                                                                             <div className="flex items-center gap-1">
                                                                                 <Archive className="w-3 h-3 text-orange-500" />
                                                                                 <span>{estudio.file_size_mb} MB</span>

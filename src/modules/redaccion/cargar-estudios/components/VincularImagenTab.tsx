@@ -129,7 +129,7 @@ export const VincularImagenTab = () => {
                 <>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* TARJETA 1: Estudios Cargados Sin Vincular */}
-                        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                        <div className="bg-white dark:bg-[#2a2e32] rounded-lg shadow-lg overflow-hidden">
                             {/* Header Morado */}
                             <div className="bg-brand-purple p-6 text-white mb-4">
                                 <div className="flex items-start justify-between">
@@ -151,7 +151,7 @@ export const VincularImagenTab = () => {
                             </div>
 
                             {/* Contenido Blanco */}
-                            <div className="p-6">
+                            <div className="">
                                 <Button
                                     onClick={() => refetchEstudiosNoVinculados()}
                                     disabled={isLoading}
@@ -168,12 +168,12 @@ export const VincularImagenTab = () => {
                                         <div>FECHA</div>
                                     </div>
                                     {isLoading ? (
-                                        <div className="p-12 text-center bg-gray-50">
-                                            <Loader2 className="w-8 h-8 animate-spin text-brand-purple mx-auto" />
+                                        <div className="p-12 text-center bg-gray-50 dark:bg-[#2a2e32]">
+                                            <Loader2 className="w-8 h-8 animate-spin text-brand-purple dark:text-purple-400 mx-auto" />
                                         </div>
                                     ) : totalEstudios === 0 ? (
-                                        <div className="p-12 text-center bg-gray-50">
-                                            <div className="flex flex-col items-center gap-2 text-gray-400">
+                                        <div className="p-12 text-center bg-gray-50 dark:bg-[#2a2e32]">
+                                            <div className="flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500">
                                                 <Archive className="w-12 h-12" />
                                                 <p className="text-sm">No hay estudios sin vincular</p>
                                             </div>
@@ -185,19 +185,19 @@ export const VincularImagenTab = () => {
                                                     <div
                                                         key={estudio.guid}
                                                         onClick={() => handleEstudioClick(estudio)}
-                                                        className={`grid grid-cols-3 gap-4 p-4 cursor-pointer hover:bg-purple-50 transition-colors border-b border-gray-100 ${selectedEstudio?.guid === estudio.guid ? 'bg-purple-100 border-l-4 border-l-brand-purple' : ''
+                                                        className={`grid grid-cols-3 gap-4 p-4 cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors border-b border-gray-100 dark:border-gray-700 ${selectedEstudio?.guid === estudio.guid ? 'bg-purple-100 dark:bg-purple-900/50 border-l-4 border-l-brand-purple dark:border-l-purple-400' : ''
                                                             }`}
                                                     >
-                                                        <div className="text-sm font-medium text-gray-800">{estudio.patient_name}</div>
-                                                        <div className="text-sm text-gray-600">{estudio.modality}</div>
-                                                        <div className="text-sm text-gray-600">{formatDate(estudio.study_date)}</div>
+                                                        <div className="text-sm font-medium text-gray-800 dark:text-gray-200">{estudio.patient_name}</div>
+                                                        <div className="text-sm text-gray-600 dark:text-gray-400">{estudio.modality}</div>
+                                                        <div className="text-sm text-gray-600 dark:text-gray-400">{formatDate(estudio.study_date)}</div>
                                                     </div>
                                                 ))}
                                             </div>
                                             {/* Paginación de Estudios */}
                                             {totalPaginasEstudios > 1 && (
-                                                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
-                                                    <div className="text-sm text-gray-600">
+                                                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-[#2a2e32] border-t border-gray-200 dark:border-gray-700">
+                                                    <div className="text-sm text-gray-600 dark:text-gray-400">
                                                         Mostrando {((estudiosPagina - 1) * estudiosPerPage) + 1} - {Math.min(estudiosPagina * estudiosPerPage, totalEstudios)} de {totalEstudios}
                                                     </div>
                                                     <div className="flex items-center gap-2">
@@ -210,7 +210,7 @@ export const VincularImagenTab = () => {
                                                         >
                                                             <ChevronLeft className="w-4 h-4" />
                                                         </Button>
-                                                        <span className="text-sm font-medium text-gray-700">
+                                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                                             {estudiosPagina} / {totalPaginasEstudios}
                                                         </span>
                                                         <Button
@@ -232,7 +232,7 @@ export const VincularImagenTab = () => {
                         </div>
 
                         {/* TARJETA 2: Órdenes Sin Imagen */}
-                        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                        <div className="bg-white dark:bg-[#2a2e32] rounded-lg shadow-lg overflow-hidden">
                             {/* Header Morado */}
                             <div className="bg-brand-purple p-6 text-white">
                                 <div className="flex items-start justify-between">
@@ -284,12 +284,12 @@ export const VincularImagenTab = () => {
                                         <div>FECHA</div>
                                     </div>
                                     {isLoadingOrdenes ? (
-                                        <div className="p-12 text-center bg-gray-50">
-                                            <Loader2 className="w-8 h-8 animate-spin text-brand-purple mx-auto" />
+                                        <div className="p-12 text-center bg-gray-50 dark:bg-[#2a2e32]">
+                                            <Loader2 className="w-8 h-8 animate-spin text-brand-purple dark:text-purple-400 mx-auto" />
                                         </div>
                                     ) : totalOrdenes === 0 ? (
-                                        <div className="p-12 text-center bg-gray-50">
-                                            <div className="flex flex-col items-center gap-2 text-gray-400">
+                                        <div className="p-12 text-center bg-gray-50 dark:bg-[#2a2e32]">
+                                            <div className="flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500">
                                                 <Image className="w-12 h-12" />
                                                 <p className="text-sm">No hay órdenes sin imagen</p>
                                             </div>
@@ -301,20 +301,20 @@ export const VincularImagenTab = () => {
                                                     <div
                                                         key={orden.guid}
                                                         onClick={() => handleOrdenClick(orden)}
-                                                        className={`grid grid-cols-4 gap-4 p-4 cursor-pointer hover:bg-purple-50 transition-colors border-b border-gray-100 ${selectedOrden?.guid === orden.guid ? 'bg-purple-100 border-l-4 border-l-brand-purple' : ''
+                                                        className={`grid grid-cols-4 gap-4 p-4 cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors border-b border-gray-100 dark:border-gray-700 ${selectedOrden?.guid === orden.guid ? 'bg-purple-100 dark:bg-purple-900/50 border-l-4 border-l-brand-purple dark:border-l-purple-400' : ''
                                                             }`}
                                                     >
-                                                        <div className="text-sm font-medium text-gray-800">{orden.patient_name}</div>
-                                                        <div className="text-sm text-gray-600 truncate" title={orden.study_type}>{orden.study_type}</div>
-                                                        <div className="text-sm text-gray-600">{orden.accession}</div>
-                                                        <div className="text-sm text-gray-600">{formatDate(orden.date)}</div>
+                                                        <div className="text-sm font-medium text-gray-800 dark:text-gray-200">{orden.patient_name}</div>
+                                                        <div className="text-sm text-gray-600 dark:text-gray-400 truncate" title={orden.study_type}>{orden.study_type}</div>
+                                                        <div className="text-sm text-gray-600 dark:text-gray-400">{orden.accession}</div>
+                                                        <div className="text-sm text-gray-600 dark:text-gray-400">{formatDate(orden.date)}</div>
                                                     </div>
                                                 ))}
                                             </div>
                                             {/* Paginación de Órdenes */}
                                             {totalPaginasOrdenes > 1 && (
-                                                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
-                                                    <div className="text-sm text-gray-600">
+                                                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-[#2a2e32] border-t border-gray-200 dark:border-gray-700">
+                                                    <div className="text-sm text-gray-600 dark:text-gray-400">
                                                         Mostrando {((ordenesPagina - 1) * ordenesPerPage) + 1} - {Math.min(ordenesPagina * ordenesPerPage, totalOrdenes)} de {totalOrdenes}
                                                     </div>
                                                     <div className="flex items-center gap-2">
@@ -327,7 +327,7 @@ export const VincularImagenTab = () => {
                                                         >
                                                             <ChevronLeft className="w-4 h-4" />
                                                         </Button>
-                                                        <span className="text-sm font-medium text-gray-700">
+                                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                                             {ordenesPagina} / {totalPaginasOrdenes}
                                                         </span>
                                                         <Button
@@ -350,8 +350,8 @@ export const VincularImagenTab = () => {
                     </div>
 
                     {/* Sección de vinculación */}
-                    <div className="mt-8 bg-white/50 backdrop-blur-sm rounded-lg p-6 border-2 border-dashed border-gray-300">
-                        <div className="flex items-center justify-center gap-3 text-gray-600">
+                    <div className="mt-8 bg-white/50 dark:bg-[#2a2e32] backdrop-blur-sm rounded-lg p-6 border-2 border-dashed border-gray-300 dark:border-gray-600">
+                        <div className="flex items-center justify-center gap-3 text-gray-600 dark:text-gray-400">
                             <div className="bg-orange-100 p-2 rounded-lg">
                                 <Archive className="w-5 h-5 text-orange-600" />
                             </div>
@@ -373,71 +373,71 @@ export const VincularImagenTab = () => {
 
             {/* Modal de confirmación */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl dark:bg-[#2a2e32] dark:border-gray-700">
                     <DialogHeader>
-                        <DialogTitle className="text-2xl font-bold text-brand-purple">Confirmar Vinculación</DialogTitle>
-                        <DialogDescription>
+                        <DialogTitle className="text-2xl font-bold text-brand-purple dark:text-purple-400">Confirmar Vinculación</DialogTitle>
+                        <DialogDescription className="dark:text-gray-400">
                             Revisa los datos antes de vincular el estudio con la orden
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                         {/* Datos del Estudio */}
-                        <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                            <h3 className="font-bold text-brand-purple mb-3 flex items-center gap-2">
+                        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-700">
+                            <h3 className="font-bold text-brand-purple dark:text-purple-400 mb-3 flex items-center gap-2">
                                 <Archive className="w-5 h-5" />
                                 Estudio Cargado
                             </h3>
                             <div className="space-y-2 text-sm">
                                 <div>
-                                    <span className="font-semibold">Paciente:</span>
-                                    <p className="text-gray-700">{selectedEstudio?.patient_name}</p>
+                                    <span className="font-semibold dark:text-gray-200">Paciente:</span>
+                                    <p className="text-gray-700 dark:text-gray-300">{selectedEstudio?.patient_name}</p>
                                 </div>
                                 <div>
-                                    <span className="font-semibold">DNI:</span>
-                                    <p className="text-gray-700">{selectedEstudio?.patient_id}</p>
+                                    <span className="font-semibold dark:text-gray-200">DNI:</span>
+                                    <p className="text-gray-700 dark:text-gray-300">{selectedEstudio?.patient_id}</p>
                                 </div>
                                 <div>
-                                    <span className="font-semibold">Modalidad:</span>
-                                    <p className="text-gray-700">{selectedEstudio?.modality}</p>
+                                    <span className="font-semibold dark:text-gray-200">Modalidad:</span>
+                                    <p className="text-gray-700 dark:text-gray-300">{selectedEstudio?.modality}</p>
                                 </div>
                                 <div>
-                                    <span className="font-semibold">Descripción:</span>
-                                    <p className="text-gray-700">{selectedEstudio?.study_description}</p>
+                                    <span className="font-semibold dark:text-gray-200">Descripción:</span>
+                                    <p className="text-gray-700 dark:text-gray-300">{selectedEstudio?.study_description}</p>
                                 </div>
                                 <div>
-                                    <span className="font-semibold">Fecha:</span>
-                                    <p className="text-gray-700">{selectedEstudio && formatDate(selectedEstudio.study_date)}</p>
+                                    <span className="font-semibold dark:text-gray-200">Fecha:</span>
+                                    <p className="text-gray-700 dark:text-gray-300">{selectedEstudio && formatDate(selectedEstudio.study_date)}</p>
                                 </div>
                             </div>
                         </div>
 
                         {/* Datos de la Orden */}
-                        <div className="bg-cyan-50 rounded-lg p-4 border border-cyan-200">
-                            <h3 className="font-bold text-cyan-700 mb-3 flex items-center gap-2">
+                        <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-lg p-4 border border-cyan-200 dark:border-cyan-700">
+                            <h3 className="font-bold text-cyan-700 dark:text-cyan-400 mb-3 flex items-center gap-2">
                                 <Image className="w-5 h-5" />
                                 Orden Sin Imagen
                             </h3>
                             <div className="space-y-2 text-sm">
                                 <div>
-                                    <span className="font-semibold">Paciente:</span>
-                                    <p className="text-gray-700">{selectedOrden?.patient_name}</p>
+                                    <span className="font-semibold dark:text-gray-200">Paciente:</span>
+                                    <p className="text-gray-700 dark:text-gray-300">{selectedOrden?.patient_name}</p>
                                 </div>
                                 <div>
-                                    <span className="font-semibold">DNI:</span>
-                                    <p className="text-gray-700">{selectedOrden?.patient_id}</p>
+                                    <span className="font-semibold dark:text-gray-200">DNI:</span>
+                                    <p className="text-gray-700 dark:text-gray-300">{selectedOrden?.patient_id}</p>
                                 </div>
                                 <div>
-                                    <span className="font-semibold">Tipo de Estudio:</span>
-                                    <p className="text-gray-700">{selectedOrden?.study_type}</p>
+                                    <span className="font-semibold dark:text-gray-200">Tipo de Estudio:</span>
+                                    <p className="text-gray-700 dark:text-gray-300">{selectedOrden?.study_type}</p>
                                 </div>
                                 <div>
-                                    <span className="font-semibold">Accession:</span>
-                                    <p className="text-gray-700">{selectedOrden?.accession}</p>
+                                    <span className="font-semibold dark:text-gray-200">Accession:</span>
+                                    <p className="text-gray-700 dark:text-gray-300">{selectedOrden?.accession}</p>
                                 </div>
                                 <div>
-                                    <span className="font-semibold">Fecha:</span>
-                                    <p className="text-gray-700">{selectedOrden && formatDate(selectedOrden.date)}</p>
+                                    <span className="font-semibold dark:text-gray-200">Fecha:</span>
+                                    <p className="text-gray-700 dark:text-gray-300">{selectedOrden && formatDate(selectedOrden.date)}</p>
                                 </div>
                             </div>
                         </div>
