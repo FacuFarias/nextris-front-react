@@ -64,7 +64,7 @@ export const RichTextEditor = ({
         },
         editorProps: {
             attributes: {
-                class: 'prose max-w-none focus:outline-none min-h-[150px] p-3',
+                class: 'prose max-w-none focus:outline-none min-h-[150px] p-3 dark:prose-invert dark:text-gray-200',
             },
         },
     });
@@ -88,7 +88,7 @@ export const RichTextEditor = ({
     }
 
     return (
-        <div className={`relative border rounded-md bg-white ${dragOver ? 'border-purple-500 border-2 bg-purple-50' : ''} ${className}`}>
+        <div className={`relative border dark:border-gray-700 rounded-md bg-white dark:bg-[#2a2e32] ${dragOver ? 'border-purple-500 border-2 bg-purple-50 dark:bg-purple-900/20' : ''} ${className}`}>
             {/* Marca de agua BLOQUEADO - detrás de todo */}
             {readOnly && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
@@ -114,122 +114,122 @@ export const RichTextEditor = ({
 
             {/* Indicador de solo lectura */}
             {readOnly && (
-                <div className="relative z-10 flex items-center gap-2 p-2 bg-yellow-50 border-b border-yellow-200">
-                    <Lock className="w-4 h-4 text-yellow-700" />
-                    <span className="text-xs font-medium text-yellow-700">
+                <div className="relative z-10 flex items-center gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 border-b border-yellow-200 dark:border-yellow-800">
+                    <Lock className="w-4 h-4 text-yellow-700 dark:text-yellow-400" />
+                    <span className="text-xs font-medium text-yellow-700 dark:text-yellow-400">
                         Campo bloqueado - Documento firmado
                     </span>
                 </div>
             )}
 
             {/* Barra de herramientas */}
-            <div className="relative z-10 flex items-center gap-1 p-2 border-b bg-gray-50 flex-wrap">
+            <div className="relative z-10 flex items-center gap-1 p-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-[#2a2e32] flex-wrap">
                 {/* Formato de texto */}
                 <button
                     onClick={() => editor.chain().focus().toggleBold().run()}
-                    className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('bold') ? 'bg-gray-300' : ''}`}
+                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive('bold') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Negrita"
                     disabled={readOnly}
                 >
-                    <Bold className="w-4 h-4" />
+                    <Bold className="w-4 h-4 dark:text-gray-200" />
                 </button>
                 <button
                     onClick={() => editor.chain().focus().toggleItalic().run()}
-                    className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('italic') ? 'bg-gray-300' : ''}`}
+                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive('italic') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Cursiva"
                     disabled={readOnly}
                 >
-                    <Italic className="w-4 h-4" />
+                    <Italic className="w-4 h-4 dark:text-gray-200" />
                 </button>
                 <button
                     onClick={() => editor.chain().focus().toggleUnderline().run()}
-                    className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('underline') ? 'bg-gray-300' : ''}`}
+                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive('underline') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Subrayado"
                     disabled={readOnly}
                 >
-                    <UnderlineIcon className="w-4 h-4" />
+                    <UnderlineIcon className="w-4 h-4 dark:text-gray-200" />
                 </button>
 
-                <div className="w-px h-6 bg-gray-300 mx-1" />
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
 
                 <button
                     onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                    className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('orderedList') ? 'bg-gray-300' : ''}`}
+                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive('orderedList') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Lista numerada"
                     disabled={readOnly}
                 >
-                    <ListOrdered className="w-4 h-4" />
+                    <ListOrdered className="w-4 h-4 dark:text-gray-200" />
                 </button>
 
-                <div className="w-px h-6 bg-gray-300 mx-1" />
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
 
                 {/* Alineación */}
                 <button
                     onClick={() => editor.chain().focus().setTextAlign('left').run()}
-                    className={`p-2 rounded hover:bg-gray-200 ${editor.isActive({ textAlign: 'left' }) ? 'bg-gray-300' : ''}`}
+                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive({ textAlign: 'left' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Alinear a la izquierda"
                     disabled={readOnly}
                 >
-                    <AlignLeft className="w-4 h-4" />
+                    <AlignLeft className="w-4 h-4 dark:text-gray-200" />
                 </button>
                 <button
                     onClick={() => editor.chain().focus().setTextAlign('center').run()}
-                    className={`p-2 rounded hover:bg-gray-200 ${editor.isActive({ textAlign: 'center' }) ? 'bg-gray-300' : ''}`}
+                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive({ textAlign: 'center' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Centrar"
                     disabled={readOnly}
                 >
-                    <AlignCenter className="w-4 h-4" />
+                    <AlignCenter className="w-4 h-4 dark:text-gray-200" />
                 </button>
                 <button
                     onClick={() => editor.chain().focus().setTextAlign('right').run()}
-                    className={`p-2 rounded hover:bg-gray-200 ${editor.isActive({ textAlign: 'right' }) ? 'bg-gray-300' : ''}`}
+                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive({ textAlign: 'right' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Alinear a la derecha"
                     disabled={readOnly}
                 >
-                    <AlignRight className="w-4 h-4" />
+                    <AlignRight className="w-4 h-4 dark:text-gray-200" />
                 </button>
                 <button
                     onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-                    className={`p-2 rounded hover:bg-gray-200 ${editor.isActive({ textAlign: 'justify' }) ? 'bg-gray-300' : ''}`}
+                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive({ textAlign: 'justify' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Justificar"
                     disabled={readOnly}
                 >
-                    <AlignJustify className="w-4 h-4" />
+                    <AlignJustify className="w-4 h-4 dark:text-gray-200" />
                 </button>
 
-                <div className="w-px h-6 bg-gray-300 mx-1" />
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
 
                 {/* Deshacer/Rehacer */}
                 <button
                     onClick={() => editor.chain().focus().undo().run()}
-                    className="p-2 rounded hover:bg-gray-200"
+                    className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                     type="button"
                     title="Deshacer"
                     disabled={!editor.can().undo() || readOnly}
                 >
-                    <Undo className="w-4 h-4" />
+                    <Undo className="w-4 h-4 dark:text-gray-200" />
                 </button>
                 <button
                     onClick={() => editor.chain().focus().redo().run()}
-                    className="p-2 rounded hover:bg-gray-200"
+                    className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                     type="button"
                     title="Rehacer"
                     disabled={!editor.can().redo() || readOnly}
                 >
-                    <Redo className="w-4 h-4" />
+                    <Redo className="w-4 h-4 dark:text-gray-200" />
                 </button>
             </div>
 
             {/* Editor con overlay cuando está bloqueado */}
-            <div className={`relative ${readOnly ? 'bg-yellow-50' : ''}`}>
+            <div className={`relative ${readOnly ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}`}>
                 {/* Marca de agua BLOQUEADO - detrás del texto */}
                 {readOnly && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">

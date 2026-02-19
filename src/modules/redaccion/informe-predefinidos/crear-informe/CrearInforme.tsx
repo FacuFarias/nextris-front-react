@@ -186,7 +186,7 @@ export const CrearInforme = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Columna Izquierda */}
                     <div className="space-y-6 lg:col-span-1">{/* Título y tipo de estudio */}
-                        <Card className="shadow-lg overflow-hidden p-0">
+                        <Card className="shadow-lg overflow-hidden p-0 dark:bg-[#2a2e32]">
                             <div
                                 className="bg-brand-purple px-4 py-3 cursor-pointer flex items-center justify-between"
                                 onClick={() => toggleSection('tituloYTipo')}
@@ -198,7 +198,7 @@ export const CrearInforme = () => {
                             <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.tituloYTipo ? 'max-h-[1000px] min-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                 <div className="p-4 space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                                             Título del informe:
                                         </label>
                                         <Input
@@ -210,7 +210,7 @@ export const CrearInforme = () => {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                                             Tipo de estudio:
                                         </label>
                                         <Autocomplete
@@ -231,7 +231,7 @@ export const CrearInforme = () => {
                                         />
                                         <label
                                             htmlFor="default-report"
-                                            className="text-sm font-medium text-gray-700 cursor-pointer select-none"
+                                            className="text-sm font-medium text-gray-700 cursor-pointer select-none dark:text-gray-300"
                                         >
                                             Configurar como informe por defecto
                                         </label>
@@ -244,7 +244,7 @@ export const CrearInforme = () => {
                     {/* Columna Derecha */}
                     <div className="space-y-6 lg:col-span-2">
                         {/* Técnica de examen */}
-                        <Card className="shadow-lg overflow-hidden  p-0">
+                        <Card className="shadow-lg overflow-hidden  p-0 dark:bg-[#2a2e32]">
                             <div
                                 className="bg-brand-purple px-4 py-3 cursor-pointer flex items-center justify-between"
                                 onClick={() => toggleSection('tecnica')}
@@ -266,7 +266,7 @@ export const CrearInforme = () => {
                         </Card>
 
                         {/* Hallazgos */}
-                        <Card className="shadow-lg overflow-hidden  p-0">
+                        <Card className="shadow-lg overflow-hidden  p-0 dark:bg-[#2a2e32]">
                             <div
                                 className="bg-brand-purple px-4 py-3 cursor-pointer flex items-center justify-between"
                                 onClick={() => toggleSection('hallazgos')}
@@ -288,7 +288,7 @@ export const CrearInforme = () => {
                         </Card>
 
                         {/* Impresiones */}
-                        <Card className="shadow-lg overflow-hidden  p-0">
+                        <Card className="shadow-lg overflow-hidden  p-0 dark:bg-[#2a2e32]">
                             <div
                                 className="bg-brand-purple px-4 py-3 cursor-pointer flex items-center justify-between"
                                 onClick={() => toggleSection('impresiones')}
@@ -310,7 +310,7 @@ export const CrearInforme = () => {
                         </Card>
 
                         {/* Conclusiones */}
-                        <Card className="shadow-lg overflow-hidden  p-0">
+                        <Card className="shadow-lg overflow-hidden  p-0 dark:bg-[#2a2e32]">
                             <div
                                 className="bg-brand-purple px-4 py-3 cursor-pointer flex items-center justify-between"
                                 onClick={() => toggleSection('conclusiones')}

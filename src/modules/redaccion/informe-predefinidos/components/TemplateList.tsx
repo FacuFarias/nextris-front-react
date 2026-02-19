@@ -220,7 +220,7 @@ export const TemplateList = ({
                         onClick={handleClearFilters}
                         variant="outline"
                         size="sm"
-                        className="text-gray-600 hover:text-gray-900"
+                        className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 gap-1"
                     >
                         <X className="h-4 w-4 mr-2" />
                         Limpiar filtros
@@ -233,19 +233,19 @@ export const TemplateList = ({
                 <div className="flex justify-center items-center flex-1 min-h-[400px]">
                     <div className="text-center">
                         <Loader2 className="h-12 w-12 animate-spin text-brand-purple mx-auto mb-4" />
-                        <p className="text-gray-600">Cargando plantillas...</p>
+                        <p className="text-gray-600 dark:text-gray-400">Cargando plantillas...</p>
                     </div>
                 </div>
             ) : filteredTemplates.length === 0 ? (
-                <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12 text-center">
                     <div className="max-w-md mx-auto">
-                        <div className="bg-gray-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Search className="h-10 w-10 text-gray-400" />
+                        <div className="bg-gray-100 dark:bg-gray-700 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Search className="h-10 w-10 text-gray-400 dark:text-gray-500" />
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-200 mb-2">
                             No se encontraron plantillas
                         </h3>
-                        <p className="text-gray-600 mb-6">
+                        <p className="text-gray-600 dark:text-gray-400 mb-6">
                             {searchTerm || studyTypeFilter
                                 ? "Intenta ajustar tus filtros de búsqueda"
                                 : "Aún no hay plantillas creadas"}

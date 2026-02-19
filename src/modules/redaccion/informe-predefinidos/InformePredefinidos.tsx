@@ -48,16 +48,16 @@ export const InformePredefinidos = () => {
     };
     return (
         <MainLayout isOverflow={false}>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm h-full flex flex-col">
+            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm h-full flex flex-col">
                 {/* Header */}
                 <div className="mb-6">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="bg-brand-purple p-2.5 rounded-lg">
                             <FileText className="w-6 h-6 text-white" />
                         </div>
-                        <h1 className="text-2xl font-bold text-brand-purple">Plantillas de Informes</h1>
+                        <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400">Plantillas de Informes</h1>
                     </div>
-                    <p className="text-gray-600">
+                    <p className="text-gray-600 dark:text-gray-400">
                         Gestiona las plantillas predefinidas para agilizar la redacción de informes médicos
                     </p>
                 </div>

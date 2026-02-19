@@ -38,7 +38,7 @@ export const TemplateCard = ({
 }: TemplateCardProps) => {
     return (
         <Card
-            className="group hover:shadow-lg transition-all border-gray-200 hover:border-brand-purple/50 animate-in fade-in slide-in-from-bottom-3 zoom-in-95 duration-500 ease-out"
+            className="group hover:shadow-lg transition-all border-gray-200 hover:border-brand-purple/50 animate-in fade-in slide-in-from-bottom-3 zoom-in-95 duration-500 ease-out dark:bg-[#2a2e32]"
             style={{
                 animationDelay: `${index * 80}ms`,
                 animationFillMode: 'both'
@@ -49,9 +49,9 @@ export const TemplateCard = ({
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-1">
                             <div className="bg-brand-purple/10 p-1.5 rounded-lg">
-                                <FileText className="h-4 w-4 text-brand-purple" />
+                                <FileText className="h-4 w-4 text-brand-purple dark:text-purple-400" />
                             </div>
-                            <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 group-hover:text-brand-purple transition-colors">
+                            <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 group-hover:text-brand-purple transition-colors dark:text-gray-200 group-hover:dark:text-purple-400">
                                 {template.title}
                             </h3>
                         </div>
@@ -59,7 +59,7 @@ export const TemplateCard = ({
                             {template.study_type_description && (
                                 <Badge
                                     variant="outline"
-                                    className="bg-purple-50 text-purple-700 border-purple-200 text-xs py-0 px-1.5 h-5"
+                                    className="bg-purple-50 text-purple-700 border-purple-200 text-xs py-0 px-1.5 h-5 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-700"
                                 >
                                     <Microscope className="h-2.5 w-2.5 mr-0.5" />
                                     {template.study_type_description}
@@ -69,7 +69,7 @@ export const TemplateCard = ({
                             <Badge
                                 variant="outline"
                                 className={`transition-all cursor-pointer hover:shadow-md text-xs py-0 px-1.5 h-5 ${isModalityActive
-                                    ? 'bg-green-600 text-white border-green-600 ring-2 ring-green-300'
+                                    ? 'bg-green-600 text-white border-green-600 ring-2 ring-green-300 dark:bg-green-700 dark:border-green-700'
                                     : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
                                     }`}
                                 onClick={(e) => {
@@ -79,14 +79,14 @@ export const TemplateCard = ({
                                     }
                                 }}
                             >
-                                <Microscope className="h-2.5 w-2.5 mr-0.5" />
+                                <Microscope className="h-2.5 w-2.5 mr-0.5 dark:text-green-400" />
                                 {template.modality_description}
                             </Badge>
 
                             <Badge
                                 variant="outline"
                                 className={`transition-all cursor-pointer hover:shadow-md text-xs py-0 px-1.5 h-5 ${isBodypartActive
-                                    ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-300'
+                                    ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-300 dark:bg-blue-700 dark:border-blue-700'
                                     : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
                                     }`}
                                 onClick={(e) => {
@@ -96,7 +96,7 @@ export const TemplateCard = ({
                                     }
                                 }}
                             >
-                                <Microscope className="h-2.5 w-2.5 mr-0.5" />
+                                <Microscope className="h-2.5 w-2.5 mr-0.5 dark:text-blue-400" />
                                 {template.bodypart_description}
                             </Badge>
                         </div>
@@ -109,24 +109,24 @@ export const TemplateCard = ({
                 {/* Preview de contenido */}
                 <div className="space-y-1.5">
                     {template.findings && (
-                        <div className="bg-gray-50 rounded-lg p-2">
+                        <div className="bg-gray-50 dark:bg-[#2a2a2a] rounded-lg p-2">
                             <div className="flex items-center gap-1.5 mb-0.5">
                                 <ClipboardList className="h-3 w-3 text-gray-500" />
-                                <span className="text-xs font-medium text-gray-600">Hallazgos</span>
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Hallazgos</span>
                             </div>
-                            <p className="text-xs text-gray-700 line-clamp-2">
+                            <p className="text-xs text-gray-700 line-clamp-2 dark:text-gray-400">
                                 {stripHtmlTags(template.findings)}
                             </p>
                         </div>
                     )}
 
                     {template.impression && (
-                        <div className="bg-blue-50/50 rounded-lg p-2">
+                        <div className="bg-blue-50/50 dark:bg-[#2a2a2a] rounded-lg p-2">
                             <div className="flex items-center gap-1.5 mb-0.5">
-                                <FileCheck className="h-3 w-3 text-blue-600" />
-                                <span className="text-xs font-medium text-blue-600">Impresión</span>
+                                <FileCheck className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Impresión</span>
                             </div>
-                            <p className="text-xs text-gray-700 line-clamp-2">
+                            <p className="text-xs text-gray-700 line-clamp-2 dark:text-gray-400">
                                 {stripHtmlTags(template.impression)}
                             </p>
                         </div>
@@ -139,7 +139,7 @@ export const TemplateCard = ({
                         variant="outline"
                         size="sm"
                         onClick={() => onView(template)}
-                        className="hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors h-7 text-xs px-2"
+                        className="hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors h-7 text-xs px-2 dark:hover:bg-blue-600 dark:hover:text-blue-100 dark:hover:border-blue-500"
                     >
                         <Eye className="h-3 w-3 mr-1" />
                         Ver
@@ -159,7 +159,7 @@ export const TemplateCard = ({
                         variant="outline"
                         size="sm"
                         onClick={() => onEdit(template)}
-                        className="hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300 transition-colors h-7 text-xs px-2"
+                        className="hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300 transition-colors h-7 text-xs px-2 dark:hover:bg-purple-600 dark:hover:text-purple-100 dark:hover:border-purple-500"
                     >
                         <Edit className="h-3 w-3 mr-1" />
                         Editar
@@ -169,7 +169,7 @@ export const TemplateCard = ({
                         variant="outline"
                         size="sm"
                         onClick={() => onDelete(template)}
-                        className="hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors h-7 text-xs px-2"
+                        className="hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors h-7 text-xs px-2 dark:hover:bg-red-600 dark:hover:text-red-100 dark:hover:border-red-500"
                     >
                         <Trash2 className="h-3 w-3 mr-1" />
                         Eliminar
