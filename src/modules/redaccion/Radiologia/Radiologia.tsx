@@ -43,6 +43,7 @@ export const Radiologia = () => {
     const [verSinImagenes, setVerSinImagenes] = useState(false);
     const [flagFilter, setFlagFilter] = useState<string[]>([]);
     const [dateRange, setDateRange] = useState<string>("all");
+    const [dateField, setDateField] = useState<string>("admision");
     const [siguientePaso, setSiguientePaso] = useState(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [isNoImageModalOpen, setIsNoImageModalOpen] = useState(false);
@@ -62,7 +63,7 @@ export const Radiologia = () => {
     const { mutate: updateFlags, isPending: isUpdatingFlags } = useUpdateFlags();
     const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useUpdateTagIds();
     const { allTags } = useAllTags();
-    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange });
+    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
@@ -128,7 +129,8 @@ export const Radiologia = () => {
         sort_column: sortColumn,
         sort_direction: sortDirection,
         date_range: dateRange,
-    }), [searchTerm, listoParaLeer, verFinalizados, asignadosAMi, verSinImagenes, studioTypeId, modalityId, bodyPartId, visibleColumns, perPage, sortColumn, sortDirection, dateRange]);
+        date_field: dateField,
+    }), [searchTerm, listoParaLeer, verFinalizados, asignadosAMi, verSinImagenes, studioTypeId, modalityId, bodyPartId, visibleColumns, perPage, sortColumn, sortDirection, dateRange, dateField]);
 
     // Función para aplicar filtros de un preset
     const applyPreset = useCallback((preset: FilterPreset | null) => {
@@ -147,6 +149,7 @@ export const Radiologia = () => {
             setSortColumn("");
             setSortDirection("asc");
             setDateRange("all");
+            setDateField("admision");
             setActivePresetId(null);
         } else {
             const f = preset.filters;
@@ -164,6 +167,7 @@ export const Radiologia = () => {
             setSortColumn(f.sort_column || "");
             setSortDirection(f.sort_direction || "asc");
             setDateRange(f.date_range || "all");
+            setDateField(f.date_field || "admision");
             setActivePresetId(preset.guid);
         }
         setPage(1);
@@ -612,28 +616,45 @@ export const Radiologia = () => {
                     {/* Sección de Fechas */}
                     <div className="flex flex-col gap-2 shrink-0">
                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Fechas</span>
-                        <Select
-                            value={dateRange}
-                            onValueChange={(value) => {
-                                setDateRange(value);
-                                setPage(1);
-                            }}
-                        >
-                            <SelectTrigger className="h-9 text-sm min-w-[140px]">
-                                <SelectValue placeholder="Hace >" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todo</SelectItem>
-                                <SelectItem value="1d">Hace &gt; 1 día</SelectItem>
-                                <SelectItem value="3d">Hace &gt; 3 días</SelectItem>
-                                <SelectItem value="7d">Hace &gt; 7 días</SelectItem>
-                                <SelectItem value="14d">Hace &gt; 14 días</SelectItem>
-                                <SelectItem value="1m">Hace &gt; 1 mes</SelectItem>
-                                <SelectItem value="2m">Hace &gt; 2 meses</SelectItem>
-                                <SelectItem value="3m">Hace &gt; 3 meses</SelectItem>
-                                <SelectItem value="1y">Hace &gt; 1 año</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div className="flex gap-2">
+                            <Select
+                                value={dateField}
+                                onValueChange={(value) => {
+                                    setDateField(value);
+                                    setPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="h-9 text-sm min-w-[120px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="admision">Admisión</SelectItem>
+                                    <SelectItem value="reporte">Reporte</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select
+                                value={dateRange}
+                                onValueChange={(value) => {
+                                    setDateRange(value);
+                                    setPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="h-9 text-sm min-w-[130px]">
+                                    <SelectValue placeholder="Hace >" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todo</SelectItem>
+                                    <SelectItem value="1d">Hace &gt; 1 día</SelectItem>
+                                    <SelectItem value="3d">Hace &gt; 3 días</SelectItem>
+                                    <SelectItem value="7d">Hace &gt; 7 días</SelectItem>
+                                    <SelectItem value="14d">Hace &gt; 14 días</SelectItem>
+                                    <SelectItem value="1m">Hace &gt; 1 mes</SelectItem>
+                                    <SelectItem value="2m">Hace &gt; 2 meses</SelectItem>
+                                    <SelectItem value="3m">Hace &gt; 3 meses</SelectItem>
+                                    <SelectItem value="1y">Hace &gt; 1 año</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                 </div>
 

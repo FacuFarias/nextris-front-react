@@ -1,9 +1,9 @@
 import { api } from "@/lib/api"
 
-export const getInformes = async ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, modality_id = "", bodypart_id = "", study_group_id = "", flag_filter = "", date_range = "all" }) => {
+export const getInformes = async ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, modality_id = "", bodypart_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision" }) => {
 
     try {
-        const response = await api.get(`/examinations/for-reporting?page=${page}&per_page=${per_page}&search=${search}&show_reported=${show_reported}&show_ready=${show_ready}&show_no_image=${show_no_image}&modality_id=${modality_id}&body_part_id=${bodypart_id}&study_group_id=${study_group_id}&flag_filter=${flag_filter}&date_range=${date_range}`);
+        const response = await api.get(`/examinations/for-reporting?page=${page}&per_page=${per_page}&search=${search}&show_reported=${show_reported}&show_ready=${show_ready}&show_no_image=${show_no_image}&modality_id=${modality_id}&body_part_id=${bodypart_id}&study_group_id=${study_group_id}&flag_filter=${flag_filter}&date_range=${date_range}&date_field=${date_field}`);
         return response.data;
     } catch (error) {
         throw error;

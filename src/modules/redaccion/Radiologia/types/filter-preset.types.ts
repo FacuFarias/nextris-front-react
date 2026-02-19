@@ -12,6 +12,7 @@ export interface FilterPresetFilters {
     sort_column: string;
     sort_direction: "asc" | "desc";
     date_range: string;
+    date_field: string;
 }
 
 export interface FilterPreset {
