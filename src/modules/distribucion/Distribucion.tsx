@@ -129,7 +129,7 @@ export const Distribucion = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
+            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
@@ -138,18 +138,18 @@ export const Distribucion = () => {
                     <div className="bg-brand-purple p-2 sm:p-3 rounded-lg">
                         <Navigation className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Distribución de informes</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400">Distribución de informes</h1>
                 </div>
 
                 {/* Barra de búsqueda y filtros */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
                     <InputSearch
                         searchTerm={searchTerm}
                         setSearchTerm={setSearchTerm}
                         placeholder="Buscar paciente, examen o email..."
                     />
 
-                    <div className="flex items-center space-x-2 bg-gray-50 px-4 py-2 rounded-lg">
+                    <div className="flex items-center space-x-2 bg-gray-50 px-4 py-2 rounded-lg dark:bg-[#2a2e32]">
                         <Switch
                             id="all-reported"
                             checked={allReported}
