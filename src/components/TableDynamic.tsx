@@ -196,7 +196,7 @@ export function TablaDynamic<T extends Record<string, any>>({
         <div className={cn("space-y-4 mt-5 flex flex-col flex-1 min-h-0", className)}>
             <div
                 className={cn(
-                    "rounded-md border relative flex-1 overflow-y-auto overflow-x-hidden table-scrollbar-purple",
+                    "rounded-md border relative flex-1 overflow-y-auto overflow-x-auto table-scrollbar-purple",
                     maxHeight && "overflow-y-auto",
                     tableBackgroundImage && "bg-white/82 dark:bg-background/90"
                 )}
@@ -218,7 +218,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                         )}
                     />
                 )}
-                <Table className={cn("relative z-2 table-fixed w-full", tableClassName)}>
+                <Table className={cn("relative z-2 w-full", tableClassName)}>
                     <TableHeader className="bg-brand-purple sticky top-0 z-3">
                         <TableRow className="bg-brand-purple hover:bg-brand-purple border-b-0">
                             {columns.map((column, index) => {
@@ -341,7 +341,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                             </TableRow>
                         ) : paginatedData.length === 0 ? (
                             <>
-                                <TableRow className="bg-card dark:bg-[#2a2e32]">
+                                <TableRow className="bg-card dark:bg-transparent">
                                     <TableCell
                                         colSpan={
                                             columns.length +
@@ -355,7 +355,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 </TableRow>
                                 {preserveTableHeight && pagination && pagination.pageSize > 1 &&
                                     Array.from({ length: pagination.pageSize - 1 }).map((_, index) => (
-                                        <TableRow key={`empty-row-when-no-data-${index}`}>
+                                        <TableRow key={`empty-row-when-no-data-${index}`} className="bg-card dark:bg-transparent">
                                             <TableCell
                                                 colSpan={
                                                     columns.length +
@@ -377,8 +377,8 @@ export function TablaDynamic<T extends Record<string, any>>({
                                         <TableRow
                                             key={getRowIndex(index)}
                                             className={cn(
-                                                "bg-card dark:bg-[#2a2e32]",
-                                                (onRowClick || onRowDoubleClick) && "cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/30",
+                                                "bg-card dark:bg-transparent",
+                                                (onRowClick || onRowDoubleClick) && "cursor-pointer hover:bg-muted/50 dark:hover:bg-muted",
                                                 isSelected && "bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-100/80 dark:hover:bg-purple-900/40 border-l-4 border-l-brand-purple dark:border-l-purple-500",
                                                 "animate-in fade-in duration-300 ease-out"
                                             )}
@@ -411,28 +411,28 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                                         {action.component(row, getRowIndex(index))}
                                                                     </div>
                                                                 ) : (
-                                                                <Tooltip key={actionIndex}>
-                                                                    <TooltipTrigger asChild>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            className={cn(
-                                                                                "h-8 w-8 hover:bg-brand-purple/10 dark:hover:bg-purple-800/30 cursor-pointer",
-                                                                                action.variant === "destructive" && "hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400"
-                                                                            )}
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                action.onClick?.(row, getRowIndex(index));
-                                                                            }}
-                                                                            disabled={action.disabled?.(row)}
-                                                                        >
-                                                                            {action.icon}
-                                                                        </Button>
-                                                                    </TooltipTrigger>
-                                                                    <TooltipContent>
-                                                                        <p>{action.label}</p>
-                                                                    </TooltipContent>
-                                                                </Tooltip>
+                                                                    <Tooltip key={actionIndex}>
+                                                                        <TooltipTrigger asChild>
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className={cn(
+                                                                                    "h-8 w-8 hover:bg-brand-purple/10 dark:hover:bg-purple-800/30 cursor-pointer",
+                                                                                    action.variant === "destructive" && "hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400"
+                                                                                )}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    action.onClick?.(row, getRowIndex(index));
+                                                                                }}
+                                                                                disabled={action.disabled?.(row)}
+                                                                            >
+                                                                                {action.icon}
+                                                                            </Button>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent>
+                                                                            <p>{action.label}</p>
+                                                                        </TooltipContent>
+                                                                    </Tooltip>
                                                                 )
                                                             ))}
                                                         </div>
@@ -444,7 +444,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 })}
                                 {preserveTableHeight && pagination && paginatedData.length < pagination.pageSize &&
                                     Array.from({ length: pagination.pageSize - paginatedData.length }).map((_, index) => (
-                                        <TableRow key={`empty-row-${index}`}>
+                                        <TableRow key={`empty-row-${index}`} className="bg-card dark:bg-transparent">
                                             <TableCell
                                                 colSpan={
                                                     columns.length +

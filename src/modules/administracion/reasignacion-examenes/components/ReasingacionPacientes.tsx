@@ -32,9 +32,9 @@ export const ReasingacionPacientes = ({ selectedEstudio, handleSubmit }: Reasing
     };
 
     return (
-        <div className="bg-white rounded-lg border border-purple-100 p-4">
+        <div className="bg-card dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 p-4">
             <div className="w-full flex justify-between">
-                <h2 className="text-lg font-semibold text-gray-700 mb-4">
+                <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 ">
                     Seleccione un paciente
                 </h2>
             </div>

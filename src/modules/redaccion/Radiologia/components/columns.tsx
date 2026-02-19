@@ -39,9 +39,15 @@ const informeColumns: TableColumn<Informes>[] = [
         key: "study_type",
         label: "EXAMEN",
         className: "font-medium",
+        headerClassName: "max-w-[250px]",
         hideOnMobile: true,
         sortable: true,
         filterable: true,
+        render: (value: string, _informe: Informes) => {
+            return (
+                <span className="block truncate max-w-[250px]" title={value}>{value}</span>
+            );
+        },
     },
     {
         key: "status",

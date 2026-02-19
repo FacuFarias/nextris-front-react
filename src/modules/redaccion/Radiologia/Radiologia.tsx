@@ -468,239 +468,239 @@ export const Radiologia = () => {
 
                 {/* Bloque unificado de filtros */}
                 <div className={`grid transition-all duration-300 ease-in-out ${showFilters ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-                <div className="overflow-hidden">
-                <div className="flex flex-col sm:flex-row gap-3 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200 mb-2 dark:bg-[#2a2e32] dark:border-gray-700">
-                    {/* Sección de Filtros */}
-                    <div className="flex flex-col gap-2 flex-1">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Filtros</span>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                            <div className="sm:min-w-[250px]">
-                                <InputSearch
-                                    searchTerm={searchTerm}
-                                    setSearchTerm={setSearchTerm}
-                                    placeholder="Buscar paciente o historial..."
-                                />
-                            </div>
-                            <Autocomplete
-                                options={gruposEstudioOptions}
-                                value={studioTypeId}
-                                onValueChange={(value) => {
-                                    setStudioTypeId(value);
-                                    setPage(1);
-                                }}
-                                placeholder="Grupo de estudio"
-                                emptyMessage="No se encontraron grupos de estudio."
-                                searchPlaceholder="Buscar grupo de estudio..."
-                            />
-                            <Autocomplete
-                                options={modalidadesOptions}
-                                value={modalityId}
-                                onValueChange={(value) => {
-                                    setModalityId(value);
-                                    setPage(1);
-                                }}
-                                placeholder="Modalidad"
-                                emptyMessage="No se encontraron modalidades."
-                                searchPlaceholder="Buscar modalidad..."
-                            />
-                            <Autocomplete
-                                options={bodyPartsOptions}
-                                value={bodyPartId || ''}
-                                onValueChange={(value) => {
-                                    setBodyPartId(value);
-                                    setPage(1);
-                                }}
-                                placeholder="Parte del cuerpo"
-                                emptyMessage="No se encontraron partes del cuerpo."
-                                searchPlaceholder="Buscar parte del cuerpo..."
-                            />
-                        </div>
-                    </div>
-
-                    {/* Separador vertical */}
-                    <div className="hidden sm:block w-px bg-gray-300 self-stretch" />
-                    <div className="block sm:hidden h-px bg-gray-300" />
-
-                    {/* Sección de Checkboxes */}
-                    <div className="flex flex-col gap-2 shrink-0">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-200">Opciones</span>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="listo-leer"
-                                    checked={listoParaLeer}
-                                    onCheckedChange={(checked) => {
-                                        setListoParaLeer(checked as boolean);
-                                        setPage(1);
-                                    }}
-                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
-                                />
-                                <Label htmlFor="listo-leer" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
-                                    Listo para leer
-                                </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="finalizados"
-                                    checked={verFinalizados}
-                                    onCheckedChange={(checked) => {
-                                        setVerFinalizados(checked as boolean);
-                                        setPage(1);
-                                    }}
-                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
-                                />
-                                <Label htmlFor="finalizados" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
-                                    Ver finalizados
-                                </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="asignados"
-                                    checked={asignadosAMi}
-                                    onCheckedChange={(checked) => {
-                                        setAsignadosAMi(checked as boolean);
-                                        setPage(1);
-                                    }}
-                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
-                                />
-                                <Label htmlFor="asignados" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
-                                    Asignados a mí
-                                </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="sin-imagenes"
-                                    checked={verSinImagenes}
-                                    onCheckedChange={(checked) => {
-                                        setVerSinImagenes(checked as boolean);
-                                        setPage(1);
-                                    }}
-                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
-                                />
-                                <Label htmlFor="sin-imagenes" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
-                                    Ver sin imágenes
-                                </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="solo-con-notas"
-                                    checked={soloConNotas}
-                                    onCheckedChange={(checked) => {
-                                        setSoloConNotas(checked as boolean);
-                                        setPage(1);
-                                    }}
-                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
-                                />
-                                <Label htmlFor="solo-con-notas" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
-                                    Solo con notas
-                                </Label>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Separador vertical */}
-                    <div className="hidden sm:block w-px bg-gray-300 self-stretch" />
-                    <div className="block sm:hidden h-px bg-gray-300" />
-
-                    {/* Sección de Banderas */}
-                    <div className="flex flex-col gap-2 shrink-0">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-300">Banderas</span>
-                        <div className="flex items-center gap-1.5">
-                            {(["red", "green", "blue", "yellow"] as const).map((color) => {
-                                const active = flagFilter.includes(color);
-                                const svgFill: Record<string, string> = {
-                                    red: "#ef4444", green: "#22c55e", blue: "#3b82f6", yellow: "#facc15"
-                                };
-                                const svgStroke: Record<string, string> = {
-                                    red: "#b91c1c", green: "#15803d", blue: "#1d4ed8", yellow: "#a16207"
-                                };
-                                const label: Record<string, string> = {
-                                    red: "Roja", green: "Verde", blue: "Azul", yellow: "Amarilla"
-                                };
-                                return (
-                                    <button
-                                        key={color}
-                                        title={`Filtrar: ${label[color]}`}
-                                        onClick={() => {
-                                            setFlagFilter(prev =>
-                                                prev.includes(color)
-                                                    ? prev.filter(f => f !== color)
-                                                    : [...prev, color]
-                                            );
+                    <div className="overflow-hidden">
+                        <div className="flex flex-col sm:flex-row gap-3 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200 mb-2 dark:bg-[#2a2e32] dark:border-gray-700">
+                            {/* Sección de Filtros */}
+                            <div className="flex flex-col gap-2 flex-1">
+                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Filtros</span>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <div className="sm:min-w-[250px]">
+                                        <InputSearch
+                                            searchTerm={searchTerm}
+                                            setSearchTerm={setSearchTerm}
+                                            placeholder="Buscar paciente o historial..."
+                                        />
+                                    </div>
+                                    <Autocomplete
+                                        options={gruposEstudioOptions}
+                                        value={studioTypeId}
+                                        onValueChange={(value) => {
+                                            setStudioTypeId(value);
                                             setPage(1);
                                         }}
-                                        className={`flex flex-col items-center gap-0.5 p-1.5 rounded-md transition-all focus:outline-none
+                                        placeholder="Grupo de estudio"
+                                        emptyMessage="No se encontraron grupos de estudio."
+                                        searchPlaceholder="Buscar grupo de estudio..."
+                                    />
+                                    <Autocomplete
+                                        options={modalidadesOptions}
+                                        value={modalityId}
+                                        onValueChange={(value) => {
+                                            setModalityId(value);
+                                            setPage(1);
+                                        }}
+                                        placeholder="Modalidad"
+                                        emptyMessage="No se encontraron modalidades."
+                                        searchPlaceholder="Buscar modalidad..."
+                                    />
+                                    <Autocomplete
+                                        options={bodyPartsOptions}
+                                        value={bodyPartId || ''}
+                                        onValueChange={(value) => {
+                                            setBodyPartId(value);
+                                            setPage(1);
+                                        }}
+                                        placeholder="Parte del cuerpo"
+                                        emptyMessage="No se encontraron partes del cuerpo."
+                                        searchPlaceholder="Buscar parte del cuerpo..."
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Separador vertical */}
+                            <div className="hidden sm:block w-px bg-gray-300 self-stretch" />
+                            <div className="block sm:hidden h-px bg-gray-300" />
+
+                            {/* Sección de Checkboxes */}
+                            <div className="flex flex-col gap-2 shrink-0">
+                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-200">Opciones</span>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="listo-leer"
+                                            checked={listoParaLeer}
+                                            onCheckedChange={(checked) => {
+                                                setListoParaLeer(checked as boolean);
+                                                setPage(1);
+                                            }}
+                                            className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
+                                        />
+                                        <Label htmlFor="listo-leer" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
+                                            Listo para leer
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="finalizados"
+                                            checked={verFinalizados}
+                                            onCheckedChange={(checked) => {
+                                                setVerFinalizados(checked as boolean);
+                                                setPage(1);
+                                            }}
+                                            className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
+                                        />
+                                        <Label htmlFor="finalizados" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
+                                            Ver finalizados
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="asignados"
+                                            checked={asignadosAMi}
+                                            onCheckedChange={(checked) => {
+                                                setAsignadosAMi(checked as boolean);
+                                                setPage(1);
+                                            }}
+                                            className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
+                                        />
+                                        <Label htmlFor="asignados" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
+                                            Asignados a mí
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="sin-imagenes"
+                                            checked={verSinImagenes}
+                                            onCheckedChange={(checked) => {
+                                                setVerSinImagenes(checked as boolean);
+                                                setPage(1);
+                                            }}
+                                            className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
+                                        />
+                                        <Label htmlFor="sin-imagenes" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
+                                            Ver sin imágenes
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="solo-con-notas"
+                                            checked={soloConNotas}
+                                            onCheckedChange={(checked) => {
+                                                setSoloConNotas(checked as boolean);
+                                                setPage(1);
+                                            }}
+                                            className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
+                                        />
+                                        <Label htmlFor="solo-con-notas" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
+                                            Solo con notas
+                                        </Label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Separador vertical */}
+                            <div className="hidden sm:block w-px bg-gray-300 self-stretch" />
+                            <div className="block sm:hidden h-px bg-gray-300" />
+
+                            {/* Sección de Banderas */}
+                            <div className="flex flex-col gap-2 shrink-0">
+                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-300">Banderas</span>
+                                <div className="flex items-center gap-1.5">
+                                    {(["red", "green", "blue", "yellow"] as const).map((color) => {
+                                        const active = flagFilter.includes(color);
+                                        const svgFill: Record<string, string> = {
+                                            red: "#ef4444", green: "#22c55e", blue: "#3b82f6", yellow: "#facc15"
+                                        };
+                                        const svgStroke: Record<string, string> = {
+                                            red: "#b91c1c", green: "#15803d", blue: "#1d4ed8", yellow: "#a16207"
+                                        };
+                                        const label: Record<string, string> = {
+                                            red: "Roja", green: "Verde", blue: "Azul", yellow: "Amarilla"
+                                        };
+                                        return (
+                                            <button
+                                                key={color}
+                                                title={`Filtrar: ${label[color]}`}
+                                                onClick={() => {
+                                                    setFlagFilter(prev =>
+                                                        prev.includes(color)
+                                                            ? prev.filter(f => f !== color)
+                                                            : [...prev, color]
+                                                    );
+                                                    setPage(1);
+                                                }}
+                                                className={`flex flex-col items-center gap-0.5 p-1.5 rounded-md transition-all focus:outline-none
                                             ${active ? "bg-gray-200 ring-1 ring-gray-400 scale-110 dark:bg-gray-700 dark:ring-gray-500" : "opacity-35 hover:opacity-70 dark:opacity-35 dark:hover:opacity-70"}`}
+                                            >
+                                                <svg width="18" height="18" viewBox="0 0 24 24"
+                                                    fill={svgFill[color]} stroke={svgStroke[color]}
+                                                    strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                                    <line x1="4" y1="2" x2="4" y2="22" />
+                                                    <polyline points="4,2 20,9 4,16" />
+                                                </svg>
+                                                <span className="text-[9px] text-gray-500 leading-none dark:text-gray-300">{label[color]}</span>
+                                            </button>
+                                        );
+                                    })}
+                                    {flagFilter.length > 0 && (
+                                        <button
+                                            onClick={() => { setFlagFilter([]); setPage(1); }}
+                                            className="text-xs text-gray-400 hover:text-gray-600 ml-1 self-start mt-1 dark:text-gray-400 dark:hover:text-gray-200"
+                                            title="Limpiar filtro de banderas"
+                                        >✕</button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Separador vertical */}
+                            <div className="hidden sm:block w-px bg-gray-300 self-stretch" />
+                            <div className="block sm:hidden h-px bg-gray-300" />
+
+                            {/* Sección de Fechas */}
+                            <div className="flex flex-col gap-2 shrink-0">
+                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Fechas</span>
+                                <div className="flex gap-2">
+                                    <Select
+                                        value={dateField}
+                                        onValueChange={(value) => {
+                                            setDateField(value);
+                                            setPage(1);
+                                        }}
                                     >
-                                        <svg width="18" height="18" viewBox="0 0 24 24"
-                                            fill={svgFill[color]} stroke={svgStroke[color]}
-                                            strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <line x1="4" y1="2" x2="4" y2="22" />
-                                            <polyline points="4,2 20,9 4,16" />
-                                        </svg>
-                                        <span className="text-[9px] text-gray-500 leading-none dark:text-gray-300">{label[color]}</span>
-                                    </button>
-                                );
-                            })}
-                            {flagFilter.length > 0 && (
-                                <button
-                                    onClick={() => { setFlagFilter([]); setPage(1); }}
-                                    className="text-xs text-gray-400 hover:text-gray-600 ml-1 self-start mt-1 dark:text-gray-400 dark:hover:text-gray-200"
-                                    title="Limpiar filtro de banderas"
-                                >✕</button>
-                            )}
+                                        <SelectTrigger className="h-9 text-sm min-w-[120px]">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="admision">Admisión</SelectItem>
+                                            <SelectItem value="reporte">Reporte</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <Select
+                                        value={dateRange}
+                                        onValueChange={(value) => {
+                                            setDateRange(value);
+                                            setPage(1);
+                                        }}
+                                    >
+                                        <SelectTrigger className="h-9 text-sm min-w-[130px]">
+                                            <SelectValue placeholder="Hace >" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todo</SelectItem>
+                                            <SelectItem value="1d">Hace &gt; 1 día</SelectItem>
+                                            <SelectItem value="3d">Hace &gt; 3 días</SelectItem>
+                                            <SelectItem value="7d">Hace &gt; 7 días</SelectItem>
+                                            <SelectItem value="14d">Hace &gt; 14 días</SelectItem>
+                                            <SelectItem value="1m">Hace &gt; 1 mes</SelectItem>
+                                            <SelectItem value="2m">Hace &gt; 2 meses</SelectItem>
+                                            <SelectItem value="3m">Hace &gt; 3 meses</SelectItem>
+                                            <SelectItem value="1y">Hace &gt; 1 año</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    {/* Separador vertical */}
-                    <div className="hidden sm:block w-px bg-gray-300 self-stretch" />
-                    <div className="block sm:hidden h-px bg-gray-300" />
-
-                    {/* Sección de Fechas */}
-                    <div className="flex flex-col gap-2 shrink-0">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Fechas</span>
-                        <div className="flex gap-2">
-                            <Select
-                                value={dateField}
-                                onValueChange={(value) => {
-                                    setDateField(value);
-                                    setPage(1);
-                                }}
-                            >
-                                <SelectTrigger className="h-9 text-sm min-w-[120px]">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="admision">Admisión</SelectItem>
-                                    <SelectItem value="reporte">Reporte</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select
-                                value={dateRange}
-                                onValueChange={(value) => {
-                                    setDateRange(value);
-                                    setPage(1);
-                                }}
-                            >
-                                <SelectTrigger className="h-9 text-sm min-w-[130px]">
-                                    <SelectValue placeholder="Hace >" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todo</SelectItem>
-                                    <SelectItem value="1d">Hace &gt; 1 día</SelectItem>
-                                    <SelectItem value="3d">Hace &gt; 3 días</SelectItem>
-                                    <SelectItem value="7d">Hace &gt; 7 días</SelectItem>
-                                    <SelectItem value="14d">Hace &gt; 14 días</SelectItem>
-                                    <SelectItem value="1m">Hace &gt; 1 mes</SelectItem>
-                                    <SelectItem value="2m">Hace &gt; 2 meses</SelectItem>
-                                    <SelectItem value="3m">Hace &gt; 3 meses</SelectItem>
-                                    <SelectItem value="1y">Hace &gt; 1 año</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                </div>
-                </div>
                 </div>
 
                 <TablaDynamic<Informes>

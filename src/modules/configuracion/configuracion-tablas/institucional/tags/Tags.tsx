@@ -91,7 +91,7 @@ export const Tags = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-800 uppercase tracking-wide">Tags</h2>
+        <h2 className="text-lg font-semibold text-gray-800 uppercase tracking-wide dark:text-foreground">Tags</h2>
         <PrimaryButton onClick={handleOpenCreate} disabled={!selectedFacilityId}>
           Nuevo Tag
         </PrimaryButton>
@@ -99,7 +99,7 @@ export const Tags = () => {
 
       {/* Selector de facility */}
       <div className="flex items-center gap-3">
-        <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+        <label className="text-sm font-medium text-gray-700 whitespace-nowrap dark:text-foreground">
           Institución:
         </label>
         <Select

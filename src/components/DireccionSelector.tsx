@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { MapPin, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLocationsInstitutional } from "@/hooks/use-locations";
@@ -17,6 +18,13 @@ export const DireccionSelector = ({
     isRow = false,
 }: DireccionSelectorProps) => {
     const { data: locationsData } = useLocationsInstitutional();
+
+    // Seleccionar automáticamente si solo hay una ubicación
+    useEffect(() => {
+        if (locationsData?.data?.length === 1 && !selectedDireccion) {
+            onDireccionChange(locationsData.data[0].guid);
+        }
+    }, [locationsData, selectedDireccion, onDireccionChange]);
 
     const handleClear = (e: React.MouseEvent) => {
         e.stopPropagation();

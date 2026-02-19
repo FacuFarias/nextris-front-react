@@ -34,7 +34,7 @@ const mainTabs = [
     { value: "usuarios", label: "Usuarios / Personal", icon: Users },
 ]
 
-const subTabClass = "px-3 py-1.5 text-xs font-medium rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none relative z-[1]"
+const subTabClass = "px-3 py-1.5 text-xs font-medium rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-gray-100 dark:hover:bg-gray-700 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none relative z-[1]"
 
 const AnimatedSubTabs = ({
     defaultValue,
@@ -78,7 +78,7 @@ const AnimatedSubTabs = ({
         <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
             <TabsList
                 ref={listRef}
-                className="relative bg-gray-50 border-b border-gray-200 rounded-none h-auto p-1 px-2 justify-start gap-1 w-full"
+                className="relative bg-gray-50 dark:bg-[#2a2e32]  border-b border-gray-200 dark:border-gray-700 rounded-none h-auto p-1 px-2 justify-start gap-1 w-full"
             >
                 {tabs.map((tab) => (
                     <TabsTrigger
@@ -132,15 +132,15 @@ export const ConfiguracionTablas = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-auto">
+            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-auto">
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-4">
                     <div className="bg-brand-purple p-2 rounded-lg">
                         <Settings className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-brand-purple">Configuracion</h1>
-                        <p className="text-sm text-muted-foreground">Administra la configuracion del sistema</p>
+                        <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400">Configuracion</h1>
+                        <p className="text-sm text-muted-foreground dark:text-foreground">Administra la configuracion del sistema</p>
                     </div>
                 </div>
 
@@ -149,7 +149,7 @@ export const ConfiguracionTablas = () => {
                     <div className="relative shrink-0">
                         <TabsList
                             ref={tabsListRef}
-                            className="bg-transparent border-b border-gray-200 rounded-none h-auto p-0 justify-start gap-0 w-full"
+                            className="bg-transparent border-b border-gray-200 dark:border-gray-700 rounded-none h-auto p-0 justify-start gap-0 w-full"
                         >
                             {mainTabs.map((tab) => (
                                 <TabsTrigger
@@ -158,7 +158,7 @@ export const ConfiguracionTablas = () => {
                                     ref={(el) => {
                                         if (el) tabRefs.current.set(tab.value, el)
                                     }}
-                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 bg-transparent shadow-none"
+                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none"
                                 >
                                     <tab.icon className="w-4 h-4" />
                                     {tab.label}
@@ -167,7 +167,7 @@ export const ConfiguracionTablas = () => {
                         </TabsList>
                         {/* Indicador deslizante */}
                         <div
-                            className="absolute bottom-0 h-0.5 bg-brand-purple transition-all duration-300 ease-in-out"
+                            className="absolute bottom-0 h-0.5 bg-brand-purple dark:bg-purple-500 transition-all duration-300 ease-in-out"
                             style={{ left: indicator.left, width: indicator.width }}
                         />
                     </div>
