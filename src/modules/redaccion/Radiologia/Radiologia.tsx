@@ -44,6 +44,7 @@ export const Radiologia = () => {
     const [flagFilter, setFlagFilter] = useState<string[]>([]);
     const [dateRange, setDateRange] = useState<string>("all");
     const [dateField, setDateField] = useState<string>("admision");
+    const [showFilters, setShowFilters] = useState(true);
     const [siguientePaso, setSiguientePaso] = useState(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [isNoImageModalOpen, setIsNoImageModalOpen] = useState(false);
@@ -130,7 +131,8 @@ export const Radiologia = () => {
         sort_direction: sortDirection,
         date_range: dateRange,
         date_field: dateField,
-    }), [searchTerm, listoParaLeer, verFinalizados, asignadosAMi, verSinImagenes, studioTypeId, modalityId, bodyPartId, visibleColumns, perPage, sortColumn, sortDirection, dateRange, dateField]);
+        flag_filter: flagFilter.join(','),
+    }), [searchTerm, listoParaLeer, verFinalizados, asignadosAMi, verSinImagenes, studioTypeId, modalityId, bodyPartId, visibleColumns, perPage, sortColumn, sortDirection, dateRange, dateField, flagFilter]);
 
     // Función para aplicar filtros de un preset
     const applyPreset = useCallback((preset: FilterPreset | null) => {
@@ -150,6 +152,7 @@ export const Radiologia = () => {
             setSortDirection("asc");
             setDateRange("all");
             setDateField("admision");
+            setFlagFilter([]);
             setActivePresetId(null);
         } else {
             const f = preset.filters;
@@ -168,6 +171,7 @@ export const Radiologia = () => {
             setSortDirection(f.sort_direction || "asc");
             setDateRange(f.date_range || "all");
             setDateField(f.date_field || "admision");
+            setFlagFilter(f.flag_filter ? f.flag_filter.split(',').filter(Boolean) : []);
             setActivePresetId(preset.guid);
         }
         setPage(1);
@@ -437,10 +441,12 @@ export const Radiologia = () => {
                     activePresetId={activePresetId}
                     onPresetChange={handlePresetChange}
                     currentFilters={getCurrentFilters()}
+                    filtersVisible={showFilters}
+                    onToggleFilters={() => setShowFilters(prev => !prev)}
                 />
 
                 {/* Bloque unificado de filtros */}
-                <div className="flex flex-col sm:flex-row gap-3 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200 mb-2 dark:bg-[#2a2e32] dark:border-gray-700">
+                {showFilters && <div className="flex flex-col sm:flex-row gap-3 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200 mb-2 dark:bg-[#2a2e32] dark:border-gray-700">
                     {/* Sección de Filtros */}
                     <div className="flex flex-col gap-2 flex-1">
                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Filtros</span>
@@ -495,7 +501,7 @@ export const Radiologia = () => {
                     {/* Sección de Checkboxes */}
                     <div className="flex flex-col gap-2 shrink-0">
                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-200">Opciones</span>
-                        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                             <div className="flex items-center space-x-2">
                                 <Checkbox
                                     id="listo-leer"
@@ -656,7 +662,7 @@ export const Radiologia = () => {
                             </Select>
                         </div>
                     </div>
-                </div>
+                </div>}
 
                 <TablaDynamic<Informes>
                     data={(informesData?.data?.data) || []}

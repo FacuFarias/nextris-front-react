@@ -13,6 +13,7 @@ export interface FilterPresetFilters {
     sort_direction: "asc" | "desc";
     date_range: string;
     date_field: string;
+    flag_filter: string;
 }
 
 export interface FilterPreset {

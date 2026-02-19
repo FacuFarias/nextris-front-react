@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { Save, Plus, X, Loader2 } from "lucide-react"
+import { Save, Plus, X, Loader2, Eye, EyeOff } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
     useFilterPresets,
@@ -17,9 +17,11 @@ interface FilterPresetTabsProps {
     activePresetId: string | null
     onPresetChange: (preset: FilterPreset | null) => void
     currentFilters: FilterPresetFilters
+    filtersVisible: boolean
+    onToggleFilters: () => void
 }
 
-export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilters }: FilterPresetTabsProps) => {
+export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilters, filtersVisible, onToggleFilters }: FilterPresetTabsProps) => {
     const { presets, isLoading } = useFilterPresets()
     const { mutateAsync: createPreset, isPending: isCreating } = useCreateFilterPreset()
     const { mutateAsync: updatePreset, isPending: isUpdating } = useUpdateFilterPreset()
@@ -203,6 +205,25 @@ export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilter
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent>Guardar como nueva pestaña</TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    onClick={onToggleFilters}
+                                    className="p-1 text-gray-400 hover:text-brand-purple transition-colors"
+                                >
+                                    {filtersVisible
+                                        ? <EyeOff className="w-3.5 h-3.5" />
+                                        : <Eye className="w-3.5 h-3.5" />
+                                    }
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {filtersVisible ? "Ocultar filtros" : "Mostrar filtros"}
+                            </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 </div>

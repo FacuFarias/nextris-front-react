@@ -186,6 +186,9 @@ export function TablaDynamic<T extends Record<string, any>>({
     const visibleActions = (row: T) =>
         actions.filter((action) => !action.hidden?.(row));
 
+    // Each button is w-8 (32px) + gap-1 (4px between buttons), plus 4px base
+    const actionsColumnWidth = actions.length > 0 ? actions.length * 36 + 4 : 90;
+
     return (
         <div className={cn("space-y-4 mt-5 flex flex-col flex-1 min-h-0", className)}>
             <div
@@ -308,7 +311,12 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 );
                             })}
                             {actions.length > 0 && (
-                                <TableHead className="w-[90px] text-white py-2 px-3 text-sm">Acciones</TableHead>
+                                <TableHead
+                                    style={{ width: `${actionsColumnWidth}px`, minWidth: `${actionsColumnWidth}px` }}
+                                    className="text-white py-2 px-3 text-sm"
+                                >
+                                    Acciones
+                                </TableHead>
                             )}
                         </TableRow>
                     </TableHeader>
