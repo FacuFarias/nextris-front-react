@@ -40,7 +40,7 @@ export const Ejecucion = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
+            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
@@ -49,11 +49,11 @@ export const Ejecucion = () => {
                     <div className="bg-brand-purple p-2 sm:p-3 rounded-lg">
                         <HandHelping className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Ejecutar Órdenes</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400">Ejecutar Órdenes</h1>
                 </div>
 
                 {/* Barra de búsqueda */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     <InputSearch
                         searchTerm={searchTerm}
                         setSearchTerm={setSearchTerm}
@@ -61,10 +61,7 @@ export const Ejecucion = () => {
                     />
                 </div>
 
-                {/* Resultados */}
-                <div className="mb-2">
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-700">Resultados de Órdenes</h2>
-                </div>
+
 
                 <TablaDynamic
                     data={filteredData}

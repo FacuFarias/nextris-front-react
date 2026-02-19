@@ -39,11 +39,11 @@ export const DetalleEjecucion = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                 {/* Botón volver */}
                 <Button
                     onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 bg-transparent text-gray-600  mb-4 hover:bg-transparent"
+                    className="flex items-center gap-2 bg-transparent text-gray-600 dark:text-foreground  mb-4 hover:bg-transparent"
                 >
                     <ArrowLeft className="w-5 h-5" />
                     <span className="font-medium">Volver</span>
@@ -56,7 +56,7 @@ export const DetalleEjecucion = () => {
                             <Eye className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-brand-purple">
+                            <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400">
                                 Detalles de la Orden: {detalleData?.data?.patient_name}
                             </h1>
                         </div>
@@ -79,7 +79,7 @@ export const DetalleEjecucion = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Historia Clínica */}
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2 text-brand-purple font-semibold text-base">
+                                <Label className="flex items-center gap-2 text-brand-purple font-semibold text-base dark:text-purple-400">
                                     <FileText className="w-5 h-5" />
                                     Historia Clínica
                                 </Label>
@@ -93,7 +93,7 @@ export const DetalleEjecucion = () => {
 
                             {/* Pregunta Clínica */}
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2 text-brand-purple font-semibold text-base">
+                                <Label className="flex items-center gap-2 text-brand-purple font-semibold text-base dark:text-purple-400">
                                     <HelpCircle className="w-5 h-5" />
                                     Pregunta Clínica
                                 </Label>
@@ -110,7 +110,7 @@ export const DetalleEjecucion = () => {
                         <div className={`grid grid-cols-1 gap-6 ${isRX ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
                             {/* Lateralidad */}
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2 text-brand-purple font-semibold text-base">
+                                <Label className="flex items-center gap-2 text-brand-purple font-semibold text-base dark:text-purple-400">
                                     <MoveHorizontal className="w-5 h-5" />
                                     Lateralidad
                                 </Label>
@@ -129,7 +129,7 @@ export const DetalleEjecucion = () => {
 
                             {/* STAT (Urgente) */}
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2 text-red-600 font-semibold text-base">
+                                <Label className="flex items-center gap-2 text-red-600 font-semibold text-base dark:text-red-400">
                                     <AlertCircle className="w-5 h-5" />
                                     STAT (Urgente)
                                 </Label>
@@ -147,7 +147,7 @@ export const DetalleEjecucion = () => {
                             {/* Número de Vistas - Solo para estudios RX */}
                             {isRX && (
                                 <div className="space-y-2">
-                                    <Label className="flex items-center gap-2 text-teal-600 font-semibold text-base">
+                                    <Label className="flex items-center gap-2 text-teal-600 font-semibold text-base dark:text-teal-400">
                                         <Camera className="w-5 h-5" />
                                         Número de Vistas
                                     </Label>
@@ -170,7 +170,7 @@ export const DetalleEjecucion = () => {
 
                         {/* Fila 3: Otros Detalles Técnicos */}
                         <div className="space-y-2">
-                            <Label className="flex items-center gap-2 text-brand-purple font-semibold text-base">
+                            <Label className="flex items-center gap-2 text-brand-purple font-semibold text-base dark:text-purple-400">
                                 <ClipboardList className="w-5 h-5" />
                                 Otros Detalles Técnicos
                             </Label>
