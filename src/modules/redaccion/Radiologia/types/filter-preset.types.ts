@@ -14,6 +14,7 @@ export interface FilterPresetFilters {
     date_range: string;
     date_field: string;
     flag_filter: string;
+    filters_visible: boolean;
 }
 
 export interface FilterPreset {
