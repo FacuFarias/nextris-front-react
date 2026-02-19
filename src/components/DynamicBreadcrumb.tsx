@@ -41,7 +41,7 @@ export const DynamicBreadcrumb = () => {
                 {/* Home siempre visible */}
                 <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                        <Link to="/inicio" className="flex items-center gap-1 hover:text-brand-purple transition-colors">
+                        <Link to="/inicio" className="flex items-center gap-1 hover:text-brand-purple dark:hover:text-purple-400 transition-colors">
                             <Home className="w-4 h-4" />
                             <span>Inicio</span>
                         </Link>
@@ -61,16 +61,16 @@ export const DynamicBreadcrumb = () => {
                             </BreadcrumbSeparator>
                             <BreadcrumbItem>
                                 {isLast ? (
-                                    <BreadcrumbPage className="text-brand-purple font-medium">
+                                    <BreadcrumbPage className="text-brand-purple dark:text-purple-400 font-medium">
                                         {displayName}
                                     </BreadcrumbPage>
                                 ) : isDisabled ? (
-                                    <span className="text-gray-400 cursor-not-allowed">
+                                    <span className="text-muted-foreground cursor-not-allowed">
                                         {displayName}
                                     </span>
                                 ) : (
                                     <BreadcrumbLink asChild>
-                                        <Link to={routeTo} className="hover:text-brand-purple transition-colors">
+                                        <Link to={routeTo} className="hover:text-brand-purple dark:hover:text-purple-400 transition-colors">
                                             {displayName}
                                         </Link>
                                     </BreadcrumbLink>

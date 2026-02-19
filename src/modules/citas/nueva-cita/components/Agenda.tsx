@@ -373,10 +373,10 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
     return (
         <div className="space-y-6">
             {/* Tarjeta principal con layout solicitado */}
-            <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-6">
+            <div className="bg-card dark:bg-[#2a2e32] rounded-lg border border-purple-100 shadow-sm p-6">
                 <div className="flex items-center gap-2 mb-4">
-                    <Monitor className="w-5 h-5 text-brand-purple" />
-                    <h3 className="text-lg font-semibold text-gray-800">
+                    <Monitor className="w-5 h-5 text-brand-purple dark:text-purple-400" />
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
                         Agenda de equipos y estudios
                     </h3>
                 </div>
@@ -385,7 +385,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                     <div className="flex flex-col gap-6 w-full md:w-80 max-w-xs">
                         {/* Select de Equipo */}
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
                                 Equipos disponibles
                             </label>
                             <Select
@@ -424,8 +424,8 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                         </div>
                         {/* Input de fecha deseada */}
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-brand-purple" />
+                            <label className="text-sm font-medium text-gray-700 flex items-center gap-2 dark:text-gray-200">
+                                <Calendar className="w-4 h-4 text-brand-purple dark:text-purple-400" />
                                 Fecha deseada
                             </label>
                             <input
@@ -438,7 +438,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                         {/* Modalidades seleccionadas */}
                         {modalidadesSeleccionadas.length > 0 && (
                             <div className="flex flex-wrap gap-2">
-                                <span className="text-xs text-gray-600">Modalidades:</span>
+                                <span className="text-xs text-gray-600 dark:text-gray-200">Modalidades:</span>
                                 {modalidadesSeleccionadas.map((modalidad, index) => (
                                     <span key={index} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">
                                         {modalidad}
@@ -448,10 +448,10 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                         )}
                         {/* Panel de estudios seleccionados */}
                         {selectedEstudios && selectedEstudios.length > 0 && (
-                            <div className="bg-gray-50 rounded-lg border border-purple-100 shadow-sm p-4">
+                            <div className="bg-gray-50 dark:bg-[#2a2e32] rounded-lg border border-purple-100 shadow-sm p-4">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <ClipboardList className="w-5 h-5 text-brand-purple" />
-                                    <h3 className="text-base font-semibold text-gray-800">
+                                    <ClipboardList className="w-5 h-5 text-brand-purple dark:text-purple-400" />
+                                    <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">
                                         Estudios a mover ({selectedEstudios.length})
                                     </h3>
                                     {estudiosAgendados.size > 0 && (
@@ -516,11 +516,11 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                             <div className="h-[600px] w-full">
                                 <div className="flex items-center mb-4 justify-between w-full">
                                     <div className="flex items-center gap-2">
-                                        <Calendar className="w-5 h-5 text-brand-purple" />
-                                        <h3 className="text-lg font-semibold text-gray-800">
+                                        <Calendar className="w-5 h-5 text-brand-purple dark:text-purple-400" />
+                                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
                                             Seleccionar fecha y hora
                                         </h3>
-                                        <span className="text-xs text-gray-500 ml-2">
+                                        <span className="text-xs text-gray-500 ml-2 dark:text-gray-200">
                                             (Arrastra los estudios al calendario)
                                         </span>
                                     </div>
@@ -553,6 +553,10 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                         .fc .fc-non-business {
                                             background-color: #1f2937 !important;
                                             opacity: 0.15;
+                                        }
+                                        .dark .fc .fc-non-business {
+                                            background-color: #7c3aed !important;
+                                            opacity: 0.2;
                                         }
                                         /* Optimización del drag and drop */
                                         .disabled-study {
@@ -713,12 +717,12 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                 </div>
                             </div>
                         ) : (
-                            <div className="bg-purple-50 border-2 border-dashed border-purple-300 rounded-lg p-8 text-center h-full flex flex-col items-center justify-center">
+                            <div className="bg-purple-50 dark:bg-[#2a2e32] border-2 border-dashed border-purple-300 rounded-lg p-8 text-center h-full flex flex-col items-center justify-center">
                                 <Calendar className="w-16 h-16 mx-auto mb-4 text-purple-300" />
-                                <p className="text-gray-600 font-medium">
+                                <p className="text-gray-600 font-medium dark:text-gray-200">
                                     Seleccione un equipo para ver el calendario
                                 </p>
-                                <p className="text-sm text-gray-500 mt-2">
+                                <p className="text-sm text-gray-500 mt-2 dark:text-gray-200">
                                     El calendario se mostrará cuando elija un equipo médico
                                 </p>
                             </div>

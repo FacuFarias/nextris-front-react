@@ -118,14 +118,14 @@ export const AdmisionEspontanea = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
                 {/* Header con Tabs integrados */}
                 <div className="mb-6">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="bg-brand-purple p-2.5 rounded-lg">
                             <Calendar className="w-6 h-6 text-white" />
                         </div>
-                        <h1 className="text-2xl font-bold text-brand-purple">Admisión Espontánea</h1>
+                        <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400">Admisión Espontánea</h1>
                     </div>
 
                     {/* Tabs modernos */}
@@ -133,14 +133,14 @@ export const AdmisionEspontanea = () => {
                         <div className="relative shrink-0">
                             <TabsList
                                 ref={tabsListRef}
-                                className="bg-transparent border-b border-gray-200 rounded-none h-auto p-0 justify-start gap-0 w-full"
+                                className="bg-transparent border-b border-gray-200 dark:border-gray-700 rounded-none h-auto p-0 justify-start gap-0 w-full"
                             >
                                 <TabsTrigger
                                     value="paciente"
                                     ref={(el) => {
                                         if (el) tabRefs.current.set("paciente", el)
                                     }}
-                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 bg-transparent shadow-none"
+                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none"
                                 >
                                     <User className="w-4 h-4" />
                                     <span>1. Paciente : {selectedPatient?.name} {selectedPatient?.surname}</span>
@@ -151,7 +151,7 @@ export const AdmisionEspontanea = () => {
                                     ref={(el) => {
                                         if (el) tabRefs.current.set("examen", el)
                                     }}
-                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
+                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     <ClipboardList className="w-4 h-4" />
                                     <span>2. Examen</span>
@@ -162,7 +162,7 @@ export const AdmisionEspontanea = () => {
                                     ref={(el) => {
                                         if (el) tabRefs.current.set("prestacion", el)
                                     }}
-                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
+                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     <FileCheck className="w-4 h-4" />
                                     <span>3. Prestación</span>
@@ -196,7 +196,7 @@ export const AdmisionEspontanea = () => {
                             )}
 
                             {/* Tabla de pacientes */}
-                            <div className="bg-white rounded-lg border border-purple-100 p-4">
+                            <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 p-4">
                                 <div className="w-full flex justify-end">
                                     <div className="flex gap-2">
                                         {selectedPatient && (

@@ -93,7 +93,7 @@ export function TablePagination({
                 {onPerPageChange && perPageValue && (
                     <>
                         <div className="flex items-center gap-2">
-                            <Label htmlFor="per-page" className="text-sm font-medium text-gray-700">
+                            <Label htmlFor="per-page" className="text-sm font-medium text-foreground">
                                 Filas:
                             </Label>
                             <Select
@@ -116,7 +116,7 @@ export function TablePagination({
                         {/* Selector de columnas visibles - Multi-select */}
                         {columns && visibleColumns && onToggleColumn && (
                             <div className="flex items-center gap-2">
-                                <Label className="text-sm font-medium text-gray-700">
+                                <Label className="text-sm font-medium text-foreground">
                                     Columnas:
                                 </Label>
                                 <Popover>
@@ -136,7 +136,7 @@ export function TablePagination({
                                                 {columns.map((column) => (
                                                     <div
                                                         key={column.key}
-                                                        className="flex items-center space-x-2 hover:bg-purple-100 p-1 rounded cursor-pointer"
+                                                        className="flex items-center space-x-2 hover:bg-accent p-1 rounded cursor-pointer"
                                                         onClick={() => onToggleColumn(column.key)}
                                                     >
                                                         <Checkbox

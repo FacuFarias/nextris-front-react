@@ -21,6 +21,8 @@ import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface SidebarProps {
     isOpen: boolean;
@@ -149,6 +151,7 @@ const menuItems: MenuItem[] = [
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
     const { authData, logout } = useAuth();
+    const { actualTheme } = useTheme();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -198,7 +201,11 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 "lg:translate-x-0",
                 isOpen ? "translate-x-0" : "-translate-x-full"
             )}
-                style={{ background: 'linear-gradient(to bottom, #2D1B4E 0%, #2D1B4E 40%, #1a0f2e 100%)' }}>
+                style={{
+                    background: actualTheme === 'dark'
+                        ? '#2D1B4E'
+                        : 'linear-gradient(to bottom, #2D1B4E 0%, #2D1B4E 40%, #1a0f2e 100%)'
+                }}>
                 <div className="flex flex-col h-full">
                     {/* Logo */}
                     <div className="h-14 flex items-center px-3 border-b border-purple-800/30 cursor-pointer" onClick={() => navigate("/inicio")}>
@@ -299,6 +306,11 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                 <p className="text-xs font-medium text-white truncate">{authData?.user.username}</p>
                                 <p className="text-[10px] text-purple-300">{authData?.user?.user_type}</p>
                             </div>
+                        </div>
+
+                        {/* Theme Toggle */}
+                        <div className="mt-2 flex items-center justify-center">
+                            <ThemeToggle />
                         </div>
 
                         <button

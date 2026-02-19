@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { TablaDynamic } from '@/components/TableDynamic';
 import { PrimaryButton } from '@/components';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useFacilities } from '../facilities/hooks/useFacilities';
 import { useTags } from './hooks/useTags';
 import { TagModal } from './components/TagModal';
@@ -95,19 +102,22 @@ export const Tags = () => {
         <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
           Institución:
         </label>
-        <select
+        <Select
           value={selectedFacilityId}
-          onChange={(e) => setSelectedFacilityId(e.target.value)}
-          className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-purple/50 min-w-[240px]"
+          onValueChange={setSelectedFacilityId}
           disabled={isFacilitiesLoading}
         >
-          <option value="">— Seleccione una institución —</option>
-          {facilityOptions.map((f) => (
-            <option key={f.guid} value={f.guid}>
-              {f.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="min-w-60">
+            <SelectValue placeholder="— Seleccione una institución —" />
+          </SelectTrigger>
+          <SelectContent>
+            {facilityOptions.map((f) => (
+              <SelectItem key={f.guid} value={f.guid}>
+                {f.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Tabla */}

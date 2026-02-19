@@ -97,7 +97,7 @@ export const EditarCita = () => {
     );
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
+            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
                 {/* Header con Tabs integrados */}
@@ -106,7 +106,7 @@ export const EditarCita = () => {
                         <div className="bg-brand-purple p-2.5 rounded-lg">
                             <CalendarPlus className="w-6 h-6 text-white" />
                         </div>
-                        <h1 className="text-2xl font-bold text-brand-purple">Editar Cita</h1>
+                        <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400">Editar Cita</h1>
                     </div>
 
                     {/* Barra de búsqueda */}

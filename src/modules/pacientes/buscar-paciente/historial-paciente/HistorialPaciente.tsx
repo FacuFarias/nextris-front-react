@@ -68,7 +68,7 @@ export const HistorialPaciente = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
+            <div className="bg-card/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm border border-border z-10 h-full flex flex-col overflow-hidden">
                 <DynamicBreadcrumb />
 
                 {/* Header */}
@@ -77,15 +77,15 @@ export const HistorialPaciente = () => {
                         <div className="bg-brand-purple p-2 sm:p-3 rounded-lg w-min">
                             <Search className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                         </div>
-                        <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Historial Paciente / {location?.state?.patient.name} {location?.state?.patient?.surname}</h1>
+                        <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400">Historial Paciente / {location?.state?.patient.name} {location?.state?.patient?.surname}</h1>
                     </div>
 
                     <Button
                         onClick={() => navigate(-1)}
                         className="flex items-center gap-2 bg-transparent text-gray-600 mb-4 hover:bg-transparent"
                     >
-                        <ArrowLeft className="w-5 h-5" />
-                        <span className="font-medium">Volver</span>
+                        <ArrowLeft className="w-5 h-5 dark:text-purple-400" />
+                        <span className="font-medium dark:text-purple-400">Volver</span>
                     </Button>
                 </div>
 

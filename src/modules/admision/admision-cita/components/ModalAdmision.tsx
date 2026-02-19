@@ -46,16 +46,16 @@ export const ModalAdmision = ({ isOpen, onClose, admisionData, onConfirm }: Moda
             ) : (
                 <div className="space-y-4">
                     {/* Información del Paciente */}
-                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                        <h3 className="text-sm font-semibold text-gray-800 mb-2">Información del Paciente</h3>
+                    <div className="bg-gray-50 dark:bg-[#2a2e32] rounded-lg p-4 space-y-3">
+                        <h3 className="text-sm font-semibold text-gray-800 mb-2 dark:text-gray-200">Información del Paciente</h3>
                         <div className="grid grid-cols-2 gap-2">
                             <div>
-                                <p className="text-xs text-gray-600">Paciente</p>
-                                <p className="text-sm font-medium text-gray-900">{admisionData.fullname}</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-200">Nombre</p>
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-200">{admisionData.fullname}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-600">Estudio</p>
-                                <p className="text-sm font-medium text-gray-900">{admisionData.description}</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-200">Estudio</p>
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-200">{admisionData.description}</p>
                             </div>
                         </div>
                     </div>
@@ -63,7 +63,7 @@ export const ModalAdmision = ({ isOpen, onClose, admisionData, onConfirm }: Moda
                     <div className="border rounded-lg overflow-hidden">
                         <Table>
                             <TableHeader className="bg-brand-purple">
-                                <TableRow className="hover:bg-purple-800">
+                                <TableRow className="hover:bg-purple-800 dark:bg-brand-purple/80">
                                     <TableHead className="text-white">AE Title</TableHead>
                                     <TableHead className="text-white">Descripción</TableHead>
                                     <TableHead className="text-white">Modalidad</TableHead>
@@ -78,7 +78,7 @@ export const ModalAdmision = ({ isOpen, onClose, admisionData, onConfirm }: Moda
                                             <TableRow
                                                 key={equipo.guid}
                                                 onClick={() => setEquipoSeleccionado(equipo.guid)}
-                                                className={`cursor-pointer transition-all ${isAsignado ? "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500" : "hover:bg-gray-50"}`}
+                                                className={`cursor-pointer transition-all ${isAsignado ? "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 dark:bg-green-900 dark:hover:bg-green-800" : "hover:bg-gray-50 dark:hover:bg-gray-700"}`}
                                             >
                                                 <TableCell className="font-medium">{equipo.aeTitle}</TableCell>
                                                 <TableCell>{equipo.description}</TableCell>
@@ -93,7 +93,7 @@ export const ModalAdmision = ({ isOpen, onClose, admisionData, onConfirm }: Moda
                                     })
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                        <TableCell colSpan={4} className="text-center text-muted-foreground dark:text-gray-400">
                                             No hay equipos disponibles
                                         </TableCell>
                                     </TableRow>

@@ -9,3 +9,4 @@ export { PrimaryButton } from './PrimaryButton';
 export { SecondaryButton } from './SecondaryButton';
 export { default as TableDynamic } from './TableDynamic';
 export { RichTextEditor } from './RichTextEditor';
+export { ThemeToggle } from './ThemeToggle';

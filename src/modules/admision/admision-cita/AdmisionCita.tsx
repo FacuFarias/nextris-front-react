@@ -48,7 +48,7 @@ export const AdmisionCita = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
+            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
@@ -57,21 +57,16 @@ export const AdmisionCita = () => {
                     <div className="bg-brand-purple p-2 sm:p-3 rounded-lg">
                         <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Admisionar citas de hoy</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400">Admisionar citas de hoy</h1>
                 </div>
 
                 {/* Barra de búsqueda */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 ">
                     <InputSearch
                         searchTerm={searchTerm}
                         setSearchTerm={setSearchTerm}
                         placeholder="Buscar por paciente, medico, médico y equipo..."
                     />
-                </div>
-
-                {/* Resultados */}
-                <div className="mb-2">
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-700">Citas a admisionar</h2>
                 </div>
 
                 <TablaDynamic

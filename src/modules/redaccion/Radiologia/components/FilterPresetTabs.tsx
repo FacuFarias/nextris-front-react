@@ -122,8 +122,8 @@ export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilter
                     <button
                         onClick={() => handleTabClick(null)}
                         className={`px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap border-b-2 -mb-px ${activePresetId === null
-                            ? "border-brand-purple text-brand-purple"
-                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                            ? "border-brand-purple text-brand-purple dark:border-purple-400 dark:text-purple-400"
+                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300"
                             }`}
                     >
                         Todos
@@ -134,8 +134,8 @@ export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilter
                         <div
                             key={preset.guid}
                             className={`group flex items-center gap-0.5 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer whitespace-nowrap border-b-2 -mb-px ${activePresetId === preset.guid
-                                ? "border-brand-purple text-brand-purple"
-                                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                ? "border-brand-purple text-brand-purple dark:border-purple-400 dark:text-purple-400"
+                                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300"
                                 }`}
                             onClick={() => handleTabClick(preset)}
                         >

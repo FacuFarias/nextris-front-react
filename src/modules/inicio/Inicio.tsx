@@ -267,28 +267,26 @@ export const Inicio = () => {
     return (
         <MainLayout>
             <div className="space-y-4">
-
-
-                <div className="rounded-2xl bg-white/95 backdrop-blur-sm p-4 space-y-3">
+                <div className="rounded-2xl bg-card/95 backdrop-blur-sm p-4 space-y-3 border border-border shadow-sm">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-2">
-                        <h1 className="text-2xl font-bold text-brand-purple">
+                        <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400">
                             Bienvenido <span>{authData?.user?.user_type}: {authData?.user.username}</span>
                         </h1>
                         <div className="flex flex-col items-end">
-                            <div className="flex items-center gap-2 text-brand-purple">
+                            <div className="flex items-center gap-2 text-brand-purple dark:text-purple-400">
                                 <Clock className="w-5 h-5" />
                                 <span className="text-2xl font-bold font-mono">{formatTime()}</span>
                             </div>
-                            <span className="text-xs text-gray-500 capitalize">{formatDate()}</span>
+                            <span className="text-xs text-muted-foreground capitalize">{formatDate()}</span>
                         </div>
                     </div>
                     {filteredSections.map((section, index) => (
                         <section
                             key={section.id}
-                            className={index < filteredSections.length - 1 ? "pb-3 border-b border-gray-200" : ""}
+                            className={index < filteredSections.length - 1 ? "pb-3 border-b border-border" : ""}
                         >
-                            <h2 className="text-xs font-semibold text-brand-purple mb-2 uppercase tracking-wide">
+                            <h2 className="text-xs font-semibold text-brand-purple dark:text-purple-400 mb-2 uppercase tracking-wide">
                                 {section.title}
                             </h2>
 
@@ -300,19 +298,19 @@ export const Inicio = () => {
                                                 key={item.id}
                                                 to={item.path}
                                                 onClick={() => handleItemClick(item)}
-                                                className="group cursor-pointer rounded-lg bg-white hover:shadow-sm transition-all duration-200 border border-gray-100 p-2.5 flex items-center gap-2 min-h-[68px]"
+                                                className="group cursor-pointer rounded-lg dark:bg-[#2a2e32] hover:shadow-sm transition-all duration-200 border border-border p-2.5 flex items-center gap-2 min-h-[68px] hover:bg-accent/50"
                                             >
-                                                <div className="bg-purple-100 rounded-md p-2 shrink-0 group-hover:bg-purple-200 transition-all duration-200">
-                                                    <div className="text-brand-purple group-hover:scale-105 transition-transform duration-200">
+                                                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-md p-2 shrink-0 group-hover:bg-purple-200 dark:group-hover:bg-purple-800/40 transition-all duration-200">
+                                                    <div className="text-brand-purple dark:text-purple-400 group-hover:scale-105 transition-transform duration-200">
                                                         {item.icon}
                                                     </div>
                                                 </div>
 
                                                 <div className="min-w-0">
-                                                    <h3 className="text-sm font-semibold text-gray-800 leading-tight truncate">
+                                                    <h3 className="text-sm font-semibold text-foreground leading-tight truncate">
                                                         {item.title}
                                                     </h3>
-                                                    <p className="text-xs text-gray-500 leading-tight mt-0.5 truncate">
+                                                    <p className="text-xs text-muted-foreground leading-tight mt-0.5 truncate">
                                                         {item.description}
                                                     </p>
                                                 </div>
@@ -324,19 +322,19 @@ export const Inicio = () => {
                                         <div
                                             key={item.id}
                                             onClick={() => handleItemClick(item)}
-                                            className="group cursor-pointer rounded-lg bg-white hover:shadow-sm transition-all duration-200 border border-gray-100 p-2.5 flex items-center gap-2 min-h-[68px]"
+                                            className="group cursor-pointer rounded-lg dark:bg-[#2a2e32] hover:shadow-sm transition-all duration-200 border border-border p-2.5 flex items-center gap-2 min-h-[68px] hover:bg-accent/50"
                                         >
-                                            <div className="bg-purple-100 rounded-md p-2 shrink-0 group-hover:bg-purple-200 transition-all duration-200">
-                                                <div className="text-brand-purple group-hover:scale-105 transition-transform duration-200">
+                                            <div className="bg-purple-100 dark:bg-purple-900/30 rounded-md p-2 shrink-0 group-hover:bg-purple-200 dark:group-hover:bg-purple-800/40 transition-all duration-200">
+                                                <div className="text-brand-purple dark:text-purple-400 group-hover:scale-105 transition-transform duration-200">
                                                     {item.icon}
                                                 </div>
                                             </div>
 
                                             <div className="min-w-0">
-                                                <h3 className="text-sm font-semibold text-gray-800 leading-tight truncate">
+                                                <h3 className="text-sm font-semibold text-foreground leading-tight truncate">
                                                     {item.title}
                                                 </h3>
-                                                <p className="text-xs text-gray-500 leading-tight mt-0.5 truncate">
+                                                <p className="text-xs text-muted-foreground leading-tight mt-0.5 truncate">
                                                     {item.description}
                                                 </p>
                                             </div>

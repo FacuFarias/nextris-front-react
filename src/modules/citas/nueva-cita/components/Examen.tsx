@@ -102,16 +102,16 @@ export const Examen = ({
                 {/* Panel izquierdo - Estudios disponibles */}
                 <div className="lg:col-span-2 space-y-6">
                     {/* Filtros */}
-                    <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                            <ClipboardList className="w-5 h-5 text-brand-purple" />
+                    <div className="bg-card dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm p-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2 dark:text-gray-200">
+                            <ClipboardList className="w-5 h-5 text-brand-purple dark:text-purple-400" />
                             ESTUDIOS DISPONIBLES
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             {/* Select Modalidad */}
                             <div className="space-y-2">
-                                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                                     Modalidad
                                 </label>
                                 <Select
@@ -119,7 +119,7 @@ export const Examen = ({
                                     value={selectedTipoExamen}
                                     disabled={isLoadingTiposExamen}
                                 >
-                                    <SelectTrigger className="w-full h-10 border border-gray-300 focus:border-brand-purple focus:ring-brand-purple bg-white">
+                                    <SelectTrigger className="w-full h-10 border border-gray-300 dark:border-gray-600 focus:border-brand-purple focus:ring-brand-purple bg-white dark:bg-gray-700 dark:text-gray-200">
                                         <SelectValue placeholder="Seleccionar modalidad" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -139,7 +139,7 @@ export const Examen = ({
 
                             {/* Select Parte del Cuerpo */}
                             <div className="space-y-2">
-                                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                                     Parte del cuerpo
                                 </label>
                                 <Select
@@ -147,7 +147,7 @@ export const Examen = ({
                                     value={selectedParteCuerpo}
                                     disabled={isLoadingPartesCuerpo || !selectedTipoExamen}
                                 >
-                                    <SelectTrigger className="w-full h-10 border border-gray-300 focus:border-brand-purple focus:ring-brand-purple bg-white">
+                                    <SelectTrigger className="w-full h-10 border border-gray-300 dark:border-gray-600 focus:border-brand-purple focus:ring-brand-purple bg-white dark:bg-gray-700 dark:text-gray-200">
                                         <SelectValue placeholder="Seleccionar parte del cuerpo" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -174,10 +174,10 @@ export const Examen = ({
                         ) : (
                             <div className="space-y-4">
                                 {/* Tabla */}
-                                <div className="rounded-md border overflow-hidden">
+                                <div className="rounded-md border  overflow-hidden">
                                     <Table>
-                                        <TableHeader className="bg-brand-purple">
-                                            <TableRow className="hover:bg-brand-purple border-b-0">
+                                        <TableHeader className="bg-brand-purple dark:bg-purple-900">
+                                            <TableRow className="hover:bg-brand-purple dark:hover:bg-purple-900 border-b-0">
                                                 <TableHead className="text-white font-semibold">CÓDIGO</TableHead>
                                                 <TableHead className="text-white font-semibold">DESCRIPCIÓN</TableHead>
                                                 <TableHead className="text-white font-semibold">MODALIDAD</TableHead>
@@ -189,9 +189,9 @@ export const Examen = ({
                                             {currentEstudios.length === 0 ? (
                                                 <>
                                                     <TableRow>
-                                                        <TableCell colSpan={5} className="h-[480px] text-center text-gray-500 align-middle">
+                                                        <TableCell colSpan={5} className="h-[480px] text-center text-gray-500 dark:text-gray-400 align-middle">
                                                             <div className="flex flex-col items-center justify-center">
-                                                                <ClipboardList className="w-12 h-12 mb-3 text-gray-300" />
+                                                                <ClipboardList className="w-12 h-12 mb-3 text-gray-300 dark:text-gray-600" />
                                                                 <p>No hay estudios disponibles</p>
                                                             </div>
                                                         </TableCell>
@@ -205,20 +205,20 @@ export const Examen = ({
                                                             <TableRow
                                                                 key={estudio.guid}
                                                                 onClick={() => toggleEstudioSelection(estudio)}
-                                                                className={`cursor-pointer hover:bg-purple-50 transition-colors ${isSelected
-                                                                    ? 'bg-purple-100 hover:bg-purple-100/80 border-l-4 border-l-brand-purple'
-                                                                    : ''
+                                                                className={`cursor-pointer transition-colors ${isSelected
+                                                                    ? 'bg-purple-100 hover:bg-purple-100/80 dark:bg-purple-900/50 dark:hover:bg-purple-900/70 border-l-4 border-l-brand-purple dark:border-l-purple-400'
+                                                                    : 'hover:bg-purple-50 dark:hover:bg-gray-700/50'
                                                                     }`}
                                                             >
-                                                                <TableCell className="font-medium">{estudio.externalcode}</TableCell>
-                                                                <TableCell>{estudio.description}</TableCell>
+                                                                <TableCell className="font-medium dark:text-gray-200">{estudio.externalcode}</TableCell>
+                                                                <TableCell className="dark:text-gray-200">{estudio.description}</TableCell>
                                                                 <TableCell>
-                                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                                                         {estudio.modality}
                                                                     </span>
                                                                 </TableCell>
-                                                                <TableCell>{estudio.bodypart}</TableCell>
-                                                                <TableCell className="text-sm text-gray-600 max-w-[200px] truncate" title={estudio.studygroup}>{estudio.studygroup}</TableCell>
+                                                                <TableCell className="dark:text-gray-200">{estudio.bodypart}</TableCell>
+                                                                <TableCell className="text-sm text-gray-600 dark:text-gray-400 max-w-[200px] truncate" title={estudio.studygroup}>{estudio.studygroup}</TableCell>
                                                             </TableRow>
                                                         )
                                                     })}
@@ -237,7 +237,7 @@ export const Examen = ({
                                 {/* Paginación */}
                                 {filteredEstudios.length > 0 && (
                                     <div className="flex items-center justify-between px-2">
-                                        <div className="text-sm text-gray-600">
+                                        <div className="text-sm text-gray-600 dark:text-gray-400">
                                             Mostrando {startIndex + 1} - {Math.min(endIndex, filteredEstudios.length)} de {filteredEstudios.length} estudios
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -273,15 +273,15 @@ export const Examen = ({
                 {/* Panel derecho - Estudio seleccionado */}
                 <div className="space-y-6 ">
                     {/* Card Estudio Seleccionado */}
-                    <div className="bg-white rounded-lg border border-purple-100 shadow-sm overflow-hidden ">
-                        <div className="bg-brand-purple p-4 text-white">
+                    <div className="bg-card  rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm overflow-hidden ">
+                        <div className="bg-brand-purple dark:bg-purple-900 p-4 text-white">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                     <Check className="w-5 h-5" />
                                     <h3 className="font-semibold uppercase text-sm tracking-wider">Estudios Seleccionados</h3>
                                 </div>
                                 {selectedEstudios.length > 0 && (
-                                    <span className="bg-white text-brand-purple px-2 py-1 rounded-full text-xs font-bold">
+                                    <span className="bg-white dark:bg-gray-200 text-brand-purple dark:text-purple-900 px-2 py-1 rounded-full text-xs font-bold">
                                         {selectedEstudios.length}
                                     </span>
                                 )}
@@ -293,25 +293,25 @@ export const Examen = ({
                                 {/* Lista de estudios seleccionados */}
                                 <div className="max-h-[400px] overflow-y-auto space-y-3">
                                     {selectedEstudios.map((estudio) => (
-                                        <div key={estudio.guid} className="border border-purple-200 rounded-lg p-3 bg-purple-50/50 relative">
+                                        <div key={estudio.guid} className="border border-purple-200 dark:border-gray-600 rounded-lg p-3 bg-purple-50/50 dark:bg-[#2a2e32] relative">
                                             <button
                                                 onClick={() => removeEstudio(estudio.guid)}
-                                                className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors"
+                                                className="absolute top-2 right-2 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                                             >
                                                 <X className="w-4 h-4" />
                                             </button>
                                             <div className="pr-6">
-                                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Código</p>
-                                                <p className="text-brand-purple font-bold mb-2">{estudio.externalcode}</p>
+                                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Código</p>
+                                                <p className="text-brand-purple font-bold mb-2 dark:text-purple-400">{estudio.externalcode}</p>
 
-                                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Descripción</p>
-                                                <p className="text-sm text-gray-800 font-medium mb-2">{estudio.description}</p>
+                                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Descripción</p>
+                                                <p className="text-sm text-gray-800 font-medium mb-2 dark:text-gray-200">{estudio.description}</p>
 
                                                 <div className="flex gap-2 flex-wrap">
-                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                                         {estudio.modality}
                                                     </span>
-                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-200">
                                                         {estudio.bodypart}
                                                     </span>
                                                 </div>
@@ -321,10 +321,10 @@ export const Examen = ({
                                 </div>
 
                                 {/* Botón para continuar */}
-                                <div className="pt-4 border-t border-gray-200">
+                                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                                     <Button
                                         onClick={() => onContinue?.(selectedEstudios)}
-                                        className="w-full bg-brand-purple hover:bg-brand-purple/90 text-white font-semibold py-3 rounded-lg transition-all shadow-md hover:shadow-lg"
+                                        className="w-full bg-brand-purple hover:bg-brand-purple/90 dark:bg-purple-700 dark:hover:bg-purple-800 text-white font-semibold py-3 rounded-lg transition-all shadow-md hover:shadow-lg"
                                     >
                                         <Check className="w-4 h-4 mr-2" />
                                         CONTINUAR CON {selectedEstudios.length} ESTUDIO{selectedEstudios.length > 1 ? 'S' : ''}
@@ -332,8 +332,8 @@ export const Examen = ({
                                 </div>
                             </div>
                         ) : (
-                            <div className="p-6 text-center text-gray-400">
-                                <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                            <div className="p-6 text-center text-gray-400 dark:text-gray-500">
+                                <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
                                 <p className="text-sm">Seleccione uno o más estudios de la tabla</p>
                             </div>
                         )}

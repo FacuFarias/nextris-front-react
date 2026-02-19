@@ -129,12 +129,12 @@ export const ModalEditarCitaContent = ({ cita, onGuardar, onCancelar }: ModalEdi
                 </div>
 
                 {/* Tabla de estudios */}
-                <div className="border rounded-lg overflow-hidden max-h-64 overflow-y-auto">
+                <div className="border rounded-lg overflow-hidden max-h-64 overflow-y-auto dark:border-gray-700">
                     <table className="w-full">
-                        <thead className="bg-brand-purple text-white sticky top-0">
+                        <thead className="bg-brand-purple text-white sticky top-0 ">
                             <tr>
-                                <th className="px-4 py-2 text-left text-sm font-semibold">CODIGO</th>
-                                <th className="px-4 py-2 text-left text-sm font-semibold">EXAMEN</th>
+                                <th className="px-4 py-2 text-left text-sm font-semibold dark:text-gray-200">CODIGO</th>
+                                <th className="px-4 py-2 text-left text-sm font-semibold dark:text-gray-200">EXAMEN</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -144,8 +144,8 @@ export const ModalEditarCitaContent = ({ cita, onGuardar, onCancelar }: ModalEdi
                                         key={estudio.guid}
                                         onClick={() => setCitaEditada({ ...citaEditada, exam: estudio.description, exam_id: estudio.guid })}
                                         className={`cursor-pointer hover:bg-brand-purple/20 transition-colors ${citaEditada.exam_id === estudio.guid
-                                            ? 'bg-brand-purple/30'
-                                            : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                            ? 'bg-brand-purple/30 dark:bg-brand-purple/40'
+                                            : index % 2 === 0 ? 'bg-white dark:bg-[#2a2e32]' : 'bg-gray-50 dark:bg-[#2a2e32]'
                                             }`}
                                     >
                                         <td className="px-4 py-2 text-sm">{estudio.externalcode}</td>
@@ -169,13 +169,13 @@ export const ModalEditarCitaContent = ({ cita, onGuardar, onCancelar }: ModalEdi
                 <Button
                     variant="outline"
                     onClick={onCancelar}
-                    className="border-2 border-gray-300 hover:bg-gray-100"
+                    className="border-2 border-gray-300 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
                 >
                     Cancelar
                 </Button>
                 <Button
                     onClick={handleGuardar}
-                    className="bg-brand-purple hover:bg-brand-purple/90"
+                    className="bg-brand-purple hover:bg-brand-purple/90  dark:hover:bg-purple-400/90 text-white"
                 >
                     Guardar Cambios
                 </Button>

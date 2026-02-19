@@ -101,17 +101,17 @@ export const Prestacion: React.FC<PrestacionProps> = ({
 
     return (
         <div className="space-y-6">
-            <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-6">
+            <div className="bg-card dark:bg-[#2a2e32] rounded-lg border border-purple-100 shadow-sm p-6">
                 <div className="flex items-center gap-2 mb-4">
-                    <ClipboardList className="w-5 h-5 text-brand-purple" />
-                    <h3 className="text-lg font-semibold text-gray-800">
+                    <ClipboardList className="w-5 h-5 text-brand-purple dark:text-purple-400" />
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
                         Configurar Prestaciones
                     </h3>
                 </div>
 
-                <div className="mb-4 p-4 bg-purple-50 rounded-lg">
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <User className="w-4 h-4 text-brand-purple" />
+                <div className="mb-4 p-4 bg-purple-50 dark:bg-[#3a3e42] rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                        <User className="w-4 h-4 text-brand-purple dark:text-purple-400" />
                         <span className="font-semibold">Paciente:</span>
                         <span>{selectedPatient?.name} {selectedPatient?.surname}</span>
                     </div>
@@ -119,7 +119,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
 
                 <div className="space-y-4">
                     {userEvents.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-200">
                             No hay estudios agendados
                         </div>
                     ) : (
@@ -130,17 +130,17 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                             return (
                                 <div
                                     key={ev.id || idx}
-                                    className={`bg-white border-2 rounded-lg shadow-sm p-4 transition-all ${isComplete ? 'border-green-300 bg-green-50' : 'border-purple-200'
+                                    className={`bg-white border-2 rounded-lg dark:bg-[#2a2e32] shadow-sm p-4 transition-all ${isComplete ? 'border-green-300 bg-green-50' : 'border-purple-200'
                                         }`}
                                 >
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                         {/* Información del estudio */}
                                         <div className="space-y-2">
-                                            <div className="font-bold text-brand-purple text-lg flex items-center gap-2">
+                                            <div className="font-bold text-brand-purple text-lg flex items-center gap-2 dark:text-purple-400">
                                                 <Stethoscope className="w-5 h-5" />
                                                 {ev.extendedProps?.study?.description}
                                             </div>
-                                            <div className="text-sm text-gray-600 space-y-1">
+                                            <div className="text-sm text-gray-600 dark:text-gray-200 space-y-1">
                                                 <div>
                                                     <span className="font-semibold">Código:</span>{' '}
                                                     {ev.extendedProps?.study?.externalcode}
@@ -172,8 +172,8 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                                         <div className="space-y-3">
                                             {/* Select de Médico */}
                                             <div className="space-y-2">
-                                                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                                    <User className="w-4 h-4 text-brand-purple" />
+                                                <label className="text-sm font-medium text-gray-700 flex items-center gap-2 dark:text-gray-200">
+                                                    <User className="w-4 h-4 text-brand-purple dark:text-purple-400" />
                                                     Médico Solicitante
                                                 </label>
                                                 <Select
@@ -202,8 +202,8 @@ export const Prestacion: React.FC<PrestacionProps> = ({
 
                                             {/* Select de Obra Social */}
                                             <div className="space-y-2">
-                                                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                                    <Building2 className="w-4 h-4 text-brand-purple" />
+                                                <label className="text-sm font-medium text-gray-700 flex items-center gap-2 dark:text-gray-200">
+                                                    <Building2 className="w-4 h-4 text-brand-purple dark:text-purple-400" />
                                                     Obra Social
                                                 </label>
                                                 <Select
@@ -233,7 +233,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                                     </div>
 
                                     {isComplete && (
-                                        <div className="mt-2 text-xs text-green-700 font-semibold flex items-center gap-1">
+                                        <div className="mt-2 text-xs text-green-700 font-semibold flex items-center gap-1 dark:text-green-400">
                                             ✓ Configuración completa
                                         </div>
                                     )}
@@ -245,7 +245,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
 
                 {userEvents.length > 0 && (
                     <div className="mt-6 flex justify-end gap-3">
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-gray-600 dark:text-gray-200">
                             {Object.keys(eventConfigs).filter(id => {
                                 const config = eventConfigs[id];
                                 return config?.physician_id || config?.obra_social_id;

@@ -189,27 +189,32 @@ export function TablaDynamic<T extends Record<string, any>>({
     return (
         <div className={cn("space-y-4 mt-5 flex flex-col flex-1 min-h-0", className)}>
             <div
-                className={cn("rounded-md border relative flex-1 overflow-auto table-scrollbar-purple", maxHeight && "overflow-y-auto")}
+                className={cn(
+                    "rounded-md border relative flex-1 overflow-auto table-scrollbar-purple",
+                    maxHeight && "overflow-y-auto",
+                    tableBackgroundImage && "bg-white/82 dark:bg-background/90"
+                )}
                 style={{
                     ...(maxHeight ? { maxHeight } : {}),
                     ...(tableBackgroundImage ? {
-                        backgroundImage: `linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url(${tableBackgroundImage})`,
+                        backgroundImage: `url(${tableBackgroundImage})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
+                        backgroundBlendMode: 'overlay',
                     } : {}),
                 }}
             >
                 {tableBackgroundImage && (
                     <div
                         className={cn(
-                            "absolute inset-0 z-[1] bg-purple-50 pointer-events-none transition-opacity duration-1000 ease-out",
+                            "absolute inset-0 z-1 bg-purple-50 dark:bg-purple-950/20 pointer-events-none transition-opacity duration-1000 ease-out",
                             bgRevealed ? "opacity-0" : "opacity-100"
                         )}
                     />
                 )}
-                <Table className={cn("relative z-[2]", tableClassName)}>
-                    <TableHeader className="bg-brand-purple sticky top-0 z-[3]">
-                        <TableRow className="hover:bg-brand-purple border-b-0">
+                <Table className={cn("relative z-2", tableClassName)}>
+                    <TableHeader className="bg-brand-purple  sticky top-0 z-3">
+                        <TableRow className="bg-brand-purple hover:bg-brand-purple border-b-0">
                             {columns.map((column, index) => {
                                 const colKey = column.key as string;
                                 const filterActive = !!columnFilters[colKey]?.trim();
@@ -247,7 +252,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                             }
                                                         }}
                                                         onBlur={() => setOpenFilterColumn(null)}
-                                                        className="w-full text-xs bg-white/20 text-white placeholder-white/50 border border-white/30 rounded px-2 py-0.5 outline-none focus:bg-white/30"
+                                                        className="w-full text-xs bg-background/30 dark:bg-foreground/10 text-foreground dark:text-white placeholder-muted-foreground dark:placeholder-white/50 border border-border dark:border-white/30 rounded px-2 py-0.5 outline-none focus:bg-background/40 dark:focus:bg-foreground/20"
                                                     />
                                                 </div>
                                             ) : (
@@ -264,7 +269,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                                         return next;
                                                                     });
                                                                 }}
-                                                                className="p-0.5 rounded hover:bg-white/20 shrink-0"
+                                                                className="p-0.5 rounded hover:bg-background/20 dark:hover:bg-white/20 shrink-0"
                                                             >
                                                                 <X className="h-3 w-3 text-yellow-300" />
                                                             </button>
@@ -279,7 +284,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                                 setOpenFilterColumn(colKey);
                                                             }}
                                                             className={cn(
-                                                                "ml-1 p-0.5 rounded hover:bg-white/20 transition-all shrink-0",
+                                                                "ml-1 p-0.5 rounded hover:bg-background/20 dark:hover:bg-white/20 transition-all shrink-0",
                                                                 filterActive
                                                                     ? "opacity-100"
                                                                     : "opacity-0 group-hover/header:opacity-100"
@@ -319,13 +324,13 @@ export function TablaDynamic<T extends Record<string, any>>({
                                     className="h-40"
                                 >
                                     <div className="flex justify-center items-center">
-                                        <span className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500"></span>
+                                        <span className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500 dark:border-purple-400"></span>
                                     </div>
                                 </TableCell>
                             </TableRow>
                         ) : paginatedData.length === 0 ? (
                             <>
-                                <TableRow className="">
+                                <TableRow className="bg-card dark:bg-[#2a2e32]">
                                     <TableCell
                                         colSpan={
                                             columns.length +
@@ -356,69 +361,70 @@ export function TablaDynamic<T extends Record<string, any>>({
                         ) : (
                             <>
                                 {paginatedData.map((row, index) => {
-                                const isSelected = selectedRow && row[rowIdKey] === selectedRow[rowIdKey];
-                                return (
-                                    <TableRow
-                                        key={getRowIndex(index)}
-                                        className={cn(
-                                            (onRowClick || onRowDoubleClick) && "cursor-pointer hover:bg-muted/50",
-                                            isSelected && "bg-purple-100 hover:bg-purple-100/80 border-l-4 border-l-brand-purple",
-                                            "animate-in fade-in duration-300 ease-out"
-                                        )}
-                                        style={{
-                                            animationDelay: `${index * 40}ms`,
-                                            animationFillMode: 'both'
-                                        }}
-                                        onClick={() => onRowClick?.(row, getRowIndex(index))}
-                                        onDoubleClick={() => onRowDoubleClick?.(row, getRowIndex(index))}
-                                    >
-                                        {columns.map((column, colIndex) => (
-                                            <TableCell
-                                                key={colIndex}
-                                                className={cn(
-                                                    "py-2 px-3 text-xs",
-                                                    column.className,
-                                                    column.hideOnMobile && "hidden md:table-cell"
-                                                )}
-                                            >
-                                                {renderCellContent(column, row, getRowIndex(index))}
-                                            </TableCell>
-                                        ))}
-                                        {actions.length > 0 && (
-                                            <TableCell className="p-0">
-                                                <TooltipProvider>
-                                                    <div className="flex items-center gap-1">
-                                                        {visibleActions(row).map((action, actionIndex) => (
-                                                            <Tooltip key={actionIndex}>
-                                                                <TooltipTrigger asChild>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className={cn(
-                                                                            "h-8 w-8 hover:bg-brand-purple/10 cursor-pointer",
-                                                                            action.variant === "destructive" && "hover:bg-red-50 hover:text-red-600"
+                                    const isSelected = selectedRow && row[rowIdKey] === selectedRow[rowIdKey];
+                                    return (
+                                        <TableRow
+                                            key={getRowIndex(index)}
+                                            className={cn(
+                                                "bg-card dark:bg-[#2a2e32]",
+                                                (onRowClick || onRowDoubleClick) && "cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/30",
+                                                isSelected && "bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-100/80 dark:hover:bg-purple-900/40 border-l-4 border-l-brand-purple dark:border-l-purple-500",
+                                                "animate-in fade-in duration-300 ease-out"
+                                            )}
+                                            style={{
+                                                animationDelay: `${index * 40}ms`,
+                                                animationFillMode: 'both'
+                                            }}
+                                            onClick={() => onRowClick?.(row, getRowIndex(index))}
+                                            onDoubleClick={() => onRowDoubleClick?.(row, getRowIndex(index))}
+                                        >
+                                            {columns.map((column, colIndex) => (
+                                                <TableCell
+                                                    key={colIndex}
+                                                    className={cn(
+                                                        "py-2 px-3 text-xs",
+                                                        column.className,
+                                                        column.hideOnMobile && "hidden md:table-cell"
+                                                    )}
+                                                >
+                                                    {renderCellContent(column, row, getRowIndex(index))}
+                                                </TableCell>
+                                            ))}
+                                            {actions.length > 0 && (
+                                                <TableCell className="p-0">
+                                                    <TooltipProvider>
+                                                        <div className="flex items-center gap-1">
+                                                            {visibleActions(row).map((action, actionIndex) => (
+                                                                <Tooltip key={actionIndex}>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className={cn(
+                                                                                "h-8 w-8 hover:bg-brand-purple/10 dark:hover:bg-purple-800/30 cursor-pointer",
+                                                                                action.variant === "destructive" && "hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400"
 
-                                                                        )}
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            action.onClick(row, getRowIndex(index));
-                                                                        }}
-                                                                        disabled={action.disabled?.(row)}
-                                                                    >
-                                                                        {action.icon}
-                                                                    </Button>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <p>{action.label}</p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        ))}
-                                                    </div>
-                                                </TooltipProvider>
-                                            </TableCell>
-                                        )}
-                                    </TableRow>
-                                );
+                                                                            )}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                action.onClick(row, getRowIndex(index));
+                                                                            }}
+                                                                            disabled={action.disabled?.(row)}
+                                                                        >
+                                                                            {action.icon}
+                                                                        </Button>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>{action.label}</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            ))}
+                                                        </div>
+                                                    </TooltipProvider>
+                                                </TableCell>
+                                            )}
+                                        </TableRow>
+                                    );
                                 })}
                                 {preserveTableHeight && pagination && paginatedData.length < pagination.pageSize &&
                                     Array.from({ length: pagination.pageSize - paginatedData.length }).map((_, index) => (
@@ -442,7 +448,7 @@ export function TablaDynamic<T extends Record<string, any>>({
             </div>
             {pagination && onPaginationChange && (
                 <div className={cn(
-                    stickyPagination && "sticky bottom-0 z-[4] bg-white/95 backdrop-blur-sm border-t"
+                    stickyPagination && "sticky bottom-0 z-4 bg-card/95 dark:bg-card/95 backdrop-blur-sm border-t border-border"
                 )}>
                     <TablePagination
                         pagination={pagination}

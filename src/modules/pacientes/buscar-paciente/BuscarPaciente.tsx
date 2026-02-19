@@ -130,16 +130,16 @@ export const BuscarPaciente = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
+            <div className="bg-card/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm border border-border z-10 h-full flex flex-col overflow-hidden">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
                 {/* Header */}
                 <div className="flex items-center gap-2 sm:gap-3 mb-4 ">
-                    <div className="bg-brand-purple p-2  rounded-lg">
+                    <div className="bg-brand-purple dark:bg-purple-700 p-2 rounded-lg">
                         <Search className="w-3 h-3 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Pacientes</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400">Pacientes</h1>
                 </div>
 
                 {/* Barra de búsqueda */}
@@ -149,7 +149,7 @@ export const BuscarPaciente = () => {
                         setSearchTerm={setSearchTerm}
                         placeholder="Buscar paciente o historial..."
                     />
-                    <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer whitespace-nowrap select-none">
+                    <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer whitespace-nowrap select-none hover:text-foreground transition-colors">
                         <input
                             type="checkbox"
                             checked={hideWithoutStudies}
@@ -157,7 +157,7 @@ export const BuscarPaciente = () => {
                                 setHideWithoutStudies(e.target.checked);
                                 setPage(1);
                             }}
-                            className="w-4 h-4 rounded border-gray-300 text-brand-purple focus:ring-brand-purple accent-brand-purple"
+                            className="w-4 h-4 rounded border-input dark:border-input dark:bg-input/30 text-brand-purple dark:text-purple-500 focus:ring-brand-purple dark:focus:ring-purple-500 accent-brand-purple dark:accent-purple-500 cursor-pointer"
                         />
                         Solo con estudios
                     </label>

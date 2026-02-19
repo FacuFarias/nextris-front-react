@@ -410,7 +410,7 @@ export const Radiologia = () => {
 
     return (
         <MainLayout>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
+            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
@@ -419,7 +419,7 @@ export const Radiologia = () => {
                     <div className="bg-brand-purple p-2  rounded-lg">
                         <HandHelping className="w-4 h-4 sm:w-6 sm:h-5 text-white" />
                     </div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Redacción de reportes</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400">Redacción de reportes</h1>
                 </div>
 
                 {/* Pestañas de presets de filtros */}
@@ -430,7 +430,7 @@ export const Radiologia = () => {
                 />
 
                 {/* Bloque unificado de filtros */}
-                <div className="flex flex-col sm:flex-row gap-3 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200 mb-2">
+                <div className="flex flex-col sm:flex-row gap-3 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200 mb-2 dark:bg-[#2a2e32] dark:border-gray-700">
                     {/* Sección de Filtros */}
                     <div className="flex flex-col gap-2 flex-1">
                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Filtros</span>
@@ -484,7 +484,7 @@ export const Radiologia = () => {
 
                     {/* Sección de Checkboxes */}
                     <div className="flex flex-col gap-2 shrink-0">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Opciones</span>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-200">Opciones</span>
                         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                             <div className="flex items-center space-x-2">
                                 <Checkbox
@@ -494,9 +494,9 @@ export const Radiologia = () => {
                                         setListoParaLeer(checked as boolean);
                                         setPage(1);
                                     }}
-                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
+                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
                                 />
-                                <Label htmlFor="listo-leer" className="text-sm font-medium text-gray-700 cursor-pointer">
+                                <Label htmlFor="listo-leer" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
                                     Listo para leer
                                 </Label>
                             </div>
@@ -508,9 +508,9 @@ export const Radiologia = () => {
                                         setVerFinalizados(checked as boolean);
                                         setPage(1);
                                     }}
-                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
+                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
                                 />
-                                <Label htmlFor="finalizados" className="text-sm font-medium text-gray-700 cursor-pointer">
+                                <Label htmlFor="finalizados" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
                                     Ver finalizados
                                 </Label>
                             </div>
@@ -522,9 +522,9 @@ export const Radiologia = () => {
                                         setAsignadosAMi(checked as boolean);
                                         setPage(1);
                                     }}
-                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
+                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
                                 />
-                                <Label htmlFor="asignados" className="text-sm font-medium text-gray-700 cursor-pointer">
+                                <Label htmlFor="asignados" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
                                     Asignados a mí
                                 </Label>
                             </div>
@@ -536,9 +536,9 @@ export const Radiologia = () => {
                                         setVerSinImagenes(checked as boolean);
                                         setPage(1);
                                     }}
-                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
+                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
                                 />
-                                <Label htmlFor="sin-imagenes" className="text-sm font-medium text-gray-700 cursor-pointer">
+                                <Label htmlFor="sin-imagenes" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
                                     Ver sin imágenes
                                 </Label>
                             </div>
@@ -551,7 +551,7 @@ export const Radiologia = () => {
 
                     {/* Sección de Banderas */}
                     <div className="flex flex-col gap-2 shrink-0">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Banderas</span>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-300">Banderas</span>
                         <div className="flex items-center gap-1.5">
                             {(["red", "green", "blue", "yellow"] as const).map((color) => {
                                 const active = flagFilter.includes(color);
@@ -577,7 +577,7 @@ export const Radiologia = () => {
                                             setPage(1);
                                         }}
                                         className={`flex flex-col items-center gap-0.5 p-1.5 rounded-md transition-all focus:outline-none
-                                            ${active ? "bg-gray-200 ring-1 ring-gray-400 scale-110" : "opacity-35 hover:opacity-70"}`}
+                                            ${active ? "bg-gray-200 ring-1 ring-gray-400 scale-110 dark:bg-gray-700 dark:ring-gray-500" : "opacity-35 hover:opacity-70 dark:opacity-35 dark:hover:opacity-70"}`}
                                     >
                                         <svg width="18" height="18" viewBox="0 0 24 24"
                                             fill={svgFill[color]} stroke={svgStroke[color]}
@@ -585,14 +585,14 @@ export const Radiologia = () => {
                                             <line x1="4" y1="2" x2="4" y2="22" />
                                             <polyline points="4,2 20,9 4,16" />
                                         </svg>
-                                        <span className="text-[9px] text-gray-500 leading-none">{label[color]}</span>
+                                        <span className="text-[9px] text-gray-500 leading-none dark:text-gray-300">{label[color]}</span>
                                     </button>
                                 );
                             })}
                             {flagFilter.length > 0 && (
                                 <button
                                     onClick={() => { setFlagFilter([]); setPage(1); }}
-                                    className="text-xs text-gray-400 hover:text-gray-600 ml-1 self-start mt-1"
+                                    className="text-xs text-gray-400 hover:text-gray-600 ml-1 self-start mt-1 dark:text-gray-400 dark:hover:text-gray-200"
                                     title="Limpiar filtro de banderas"
                                 >✕</button>
                             )}
@@ -626,7 +626,7 @@ export const Radiologia = () => {
                     additionalControls={
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
-                                <Label htmlFor="siguiente-paso-toggle" className="text-sm font-medium text-gray-700">
+                                <Label htmlFor="siguiente-paso-toggle" className="text-sm font-medium text-gray-700 dark:text-gray-200">
                                     Siguiente estudio:
                                 </Label>
                                 <Switch
@@ -640,7 +640,7 @@ export const Radiologia = () => {
                                     refetchInformes();
                                     toast.success('Lista actualizada exitosamente');
                                 }}
-                                className="p-1.5 rounded-md bg-brand-purple text-white hover:bg-brand-purple/90 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-md bg-brand-purple text-white hover:bg-brand-purple/90 transition-colors cursor-pointer dark:bg-purple-600 dark:hover:bg-purple-700"
                             >
                                 <RefreshCcw className="h-4 w-4" />
                             </button>

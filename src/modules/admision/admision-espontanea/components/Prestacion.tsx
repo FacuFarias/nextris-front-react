@@ -57,9 +57,9 @@ export const Prestacion = ({
     return (
         <div className="space-y-6 pb-4">
             {/* Sección de acciones o formulario adicional */}
-            <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-6">
+            <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm p-6">
                 <div className="w-full flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-semibold text-gray-700 ">Información Adicional</h3>
+                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">Información Adicional</h3>
 
                     <div className="">
                         <PrimaryButton onClick={handleSubmit} >
@@ -70,7 +70,7 @@ export const Prestacion = ({
                 <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                         <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-200">
                                 Médico Solicitante
                             </label>
                             <Select
@@ -92,7 +92,7 @@ export const Prestacion = ({
                         </div>
 
                         <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-200">
                                 Médico Referente (Radiólogo)
                             </label>
                             <Select
@@ -113,7 +113,7 @@ export const Prestacion = ({
                         </div>
 
                         <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-200">
                                 Obras Sociales Solicitante
                             </label>
                             <Select
@@ -134,104 +134,104 @@ export const Prestacion = ({
                         </div>
 
                         <div className="w-full">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Prioridad
-                        </label>
-                        <Select
-                            onValueChange={setSelectedPrioridad}
-                            value={selectedPrioridad}
-                        >
-                            <SelectTrigger className="w-full border-purple-300 focus:border-purple-500 focus:ring-purple-500">
-                                <SelectValue placeholder="Seleccione la prioridad" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="normal">Normal</SelectItem>
-                                <SelectItem value="urgente">Urgente</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2 pb-2">
-                {/* Card Paciente */}
-                <div className="bg-white rounded-lg border border-purple-100 shadow-sm">
-                    <div className="bg-brand-purple p-4 flex items-center gap-2 rounded-t-lg">
-                        <User className="w-5 h-5 text-white" />
-                        <h3 className="font-semibold text-white uppercase text-sm tracking-wider">Paciente</h3>
-                    </div>
-                    <div className="p-4 space-y-3">
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Nombre Completo</p>
-                            <p className="text-sm text-gray-800 font-medium">
-                                {selectedPatient?.name} {selectedPatient?.surname}
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">DNI</p>
-                            <p className="text-sm text-gray-800">{selectedPatient?.nationalcode}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Fecha de Nacimiento</p>
-                            <p className="text-sm text-gray-800">{selectedPatient?.birthdate}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Género</p>
-                            <p className="text-sm text-gray-800">{selectedPatient?.gender}</p>
+                            <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-200">
+                                Prioridad
+                            </label>
+                            <Select
+                                onValueChange={setSelectedPrioridad}
+                                value={selectedPrioridad}
+                            >
+                                <SelectTrigger className="w-full border-purple-300 focus:border-purple-500 focus:ring-purple-500">
+                                    <SelectValue placeholder="Seleccione la prioridad" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="normal">Normal</SelectItem>
+                                    <SelectItem value="urgente">Urgente</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                 </div>
 
-                {/* Card Estudio */}
-                <div className="bg-white rounded-lg border border-purple-100 shadow-sm">
-                    <div className="bg-brand-purple p-4 flex items-center gap-2 rounded-t-lg">
-                        <ClipboardList className="w-5 h-5 text-white" />
-                        <h3 className="font-semibold text-white uppercase text-sm tracking-wider">Estudio</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2 pb-2">
+                    {/* Card Paciente */}
+                    <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm">
+                        <div className="bg-brand-purple p-4 flex items-center gap-2 rounded-t-lg">
+                            <User className="w-5 h-5 text-white" />
+                            <h3 className="font-semibold text-white uppercase text-sm tracking-wider">Paciente</h3>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1">Nombre Completo</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">
+                                    {selectedPatient?.name} {selectedPatient?.surname}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1">DNI</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-100">{selectedPatient?.nationalcode}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1">Fecha de Nacimiento</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-100">{selectedPatient?.birthdate}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1">Género</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-100">{selectedPatient?.gender}</p>
+                            </div>
+                        </div>
                     </div>
-                    <div className="p-4 space-y-3">
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Código</p>
-                            <p className="text-sm text-gray-800 font-medium">{selectedEstudio?.externalcode}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Descripción</p>
-                            <p className="text-sm text-gray-800">{selectedEstudio?.description}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Modalidad</p>
-                            <p className="text-sm text-gray-800">{selectedEstudio?.modality}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Parte del Cuerpo</p>
-                            <p className="text-sm text-gray-800">{selectedEstudio?.bodypart}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Grupo de Estudio</p>
-                            <p className="text-sm text-gray-800">{selectedEstudio?.studygroup}</p>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Card Equipo */}
-                <div className="bg-white rounded-lg border border-purple-100 shadow-sm">
-                    <div className="bg-brand-purple p-4 flex items-center gap-2 rounded-t-lg">
-                        <Monitor className="w-5 h-5 text-white" />
-                        <h3 className="font-semibold text-white uppercase text-sm tracking-wider">Equipo</h3>
-                    </div>
-                    <div className="p-4 space-y-3">
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Nombre</p>
-                            <p className="text-sm text-gray-800 font-medium">
-                                {selectedEquipo?.description || selectedEquipo?.name}
-                            </p>
+                    {/* Card Estudio */}
+                    <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm">
+                        <div className="bg-brand-purple p-4 flex items-center gap-2 rounded-t-lg">
+                            <ClipboardList className="w-5 h-5 text-white" />
+                            <h3 className="font-semibold text-white uppercase text-sm tracking-wider">Estudio</h3>
                         </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Modalidad</p>
-                            <p className="text-sm text-gray-800">{selectedEquipo?.modality}</p>
+                        <div className="p-4 space-y-3">
+                            <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1">Código</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">{selectedEstudio?.externalcode}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1">Descripción</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-100">{selectedEstudio?.description}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1">Modalidad</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-100">{selectedEstudio?.modality}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1">Parte del Cuerpo</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-100">{selectedEstudio?.bodypart}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1">Grupo de Estudio</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-100">{selectedEstudio?.studygroup}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Card Equipo */}
+                    <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm">
+                        <div className="bg-brand-purple p-4 flex items-center gap-2 rounded-t-lg">
+                            <Monitor className="w-5 h-5 text-white" />
+                            <h3 className="font-semibold text-white uppercase text-sm tracking-wider">Equipo</h3>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1">Nombre</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">
+                                    {selectedEquipo?.description || selectedEquipo?.name}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1">Modalidad</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-100">{selectedEquipo?.modality}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
             </div>
 
 

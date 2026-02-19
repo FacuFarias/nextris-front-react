@@ -1,6 +1,6 @@
 import { MainLayout } from "@/layouts/layout";
 import { useCalendarEventos } from "@/modules/citas/nueva-cita/hooks/use-calendar-eventos";
-import { CalendarPlus, Calendar, ArrowLeft, Check } from "lucide-react";
+import { CalendarPlus, ArrowLeft, Check } from "lucide-react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -381,20 +381,20 @@ export const EditarFecha = () => {
         });
     };
 
-    const actionButtonClass = "h-9 rounded-lg border border-brand-purple bg-white px-3 text-sm font-semibold text-brand-purple hover:bg-brand-purple/10";
+    const actionButtonClass = "h-9 rounded-lg border border-brand-purple bg-white px-3 text-sm font-semibold text-brand-purple hover:bg-brand-purple/10 dark:bg-brand-purple dark:text-white dark:hover:bg-text-400";
 
 
     return (
         <MainLayout>
             <div className="space-y-4">
                 {/* Header */}
-                <div className="bg-white rounded-lg p-3 sm:p-6 shadow-md border border-gray-100">
+                <div className="bg-card rounded-lg p-3 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="bg-brand-purple p-2.5 rounded-lg">
                                 <CalendarPlus className="w-6 h-6 text-white" />
                             </div>
-                            <h1 className="text-2xl font-bold text-brand-purple">Editar Cita</h1>
+                            <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400">Editar Cita</h1>
                         </div>
                         <div className="flex items-center gap-2">
                             <Button
@@ -416,23 +416,23 @@ export const EditarFecha = () => {
 
                     <div className="mt-4 grid grid-cols-1 xl:grid-cols-12 gap-4">
                         <div className="xl:col-span-4">
-                            <Card className="bg-white shadow-lg border-0 overflow-hidden rounded-xl p-0 h-full">
+                            <Card className="bg-white dark:bg-[#2a2e32] shadow-lg border-0 overflow-hidden rounded-xl p-0 h-full">
                                 <CardContent className="py-4 space-y-4">
                                     <div className="space-y-2">
-                                        <p className="font-bold text-base text-brand-purple">{cita?.patient_name || 'No especificado'}</p>
+                                        <p className="font-bold text-base text-brand-purple dark:text-purple-400">{cita?.patient_name || 'No especificado'}</p>
                                         <div className="border-t pt-2">
-                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Examen</p>
-                                            <p className="font-semibold text-sm text-gray-700">{cita?.exam || 'No especificado'}</p>
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 dark:text-gray-200">Examen</p>
+                                            <p className="font-semibold text-sm text-gray-700 dark:text-gray-200">{cita?.exam || 'No especificado'}</p>
                                         </div>
                                     </div>
 
                                     <div className="space-y-3 border-t pt-3">
                                         <div>
-                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Equipo Actual</p>
-                                            <p className="font-semibold text-sm text-gray-700">{cita?.equipment || 'No especificado'}</p>
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 dark:text-gray-200">Equipo Actual</p>
+                                            <p className="font-semibold text-sm text-gray-700 dark:text-gray-200">{cita?.equipment || 'No especificado'}</p>
                                         </div>
                                         <div className="border-t pt-2">
-                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Cambiar Equipo</p>
+                                            <p className="text-xs font-medium text-gray-500  uppercase tracking-wide mb-2 dark:text-gray-200 ">Cambiar Equipo</p>
                                             {equiposFiltrados && equiposFiltrados.length > 0 ? (
                                                 <Select value={equipoSeleccionado} onValueChange={handleEquipoChange}>
                                                     <SelectTrigger className="w-full h-9 border-2 border-gray-200 rounded-lg focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 transition-all">
@@ -455,7 +455,7 @@ export const EditarFecha = () => {
                                     </div>
 
                                     <div className="space-y-2 border-t pt-3">
-                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Fecha deseada</p>
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 dark:text-gray-200">Fecha deseada</p>
                                         <Input
                                             type="date"
                                             value={fechaDeseada}
@@ -468,12 +468,12 @@ export const EditarFecha = () => {
                             </Card>
                         </div>
 
-                        <div className="xl:col-span-8">
-                            <Card className="bg-white shadow-lg border-0 overflow-hidden rounded-xl p-0 h-auto md:h-[750px]">
+                        <div className="xl:col-span-8 dark:bg-[#2a2e32]">
+                            <Card className="bg-white dark:bg-[#2a2e32] shadow-lg border-0 overflow-hidden rounded-xl p-0 h-auto md:h-[750px]">
                                 <CardContent className="pt-4 pb-6 h-full">
-                                    <p className="text-base font-semibold text-brand-purple mb-4">Arrastra el evento donde lo requieras</p>
+                                    <p className="text-base font-semibold text-brand-purple mb-4 dark:text-purple-400">Arrastra el evento donde lo requieras</p>
                                     <div className="agenda-container h-full" >
-                                <style>{`
+                                        <style>{`
                                         .fc .fc-button-primary {
                                             background-color: #440f6d !important;
                                             border-color: #7c3aed !important;
@@ -496,10 +496,17 @@ export const EditarFecha = () => {
                                         .fc-day-sat, .fc-col-header-cell.fc-day-sat {
                                             background-color: white !important;
                                         }
+                                        .dark .fc-day-sat, .dark .fc-col-header-cell.fc-day-sat {
+                                            background-color: #2a2e32 !important;
+                                        }
                                         /* Horarios no laborales (fuera de businessHours) */
                                         .fc .fc-non-business {
                                             background-color: #1f2937 !important;
                                             opacity: 0.15;
+                                        }
+                                        .dark .fc .fc-non-business {
+                                            background-color: #7c3aed !important;
+                                            opacity: 0.2;
                                         }
                                         /* Optimización del drag and drop */
                                         .disabled-study {
@@ -521,149 +528,149 @@ export const EditarFecha = () => {
                                             background-color: rgba(139, 92, 246, 0.18) !important;
                                         }
                                     `}</style>
-                                <FullCalendar
-                                    ref={calendarRef}
-                                    plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                                    initialView="timeGridWeek"
-                                    headerToolbar={{
-                                        left: 'prev,next today',
-                                        center: 'title',
-                                        right: ''
-                                    }}
-                                    buttonText={{
-                                        today: 'hoy'
-                                    }}
-                                    customButtons={{
-                                        today: {
-                                            text: 'hoy',
-                                            click: () => {
-                                                if (calendarRef.current) {
-                                                    const calendarApi = calendarRef.current.getApi();
-                                                    calendarApi.today();
+                                        <FullCalendar
+                                            ref={calendarRef}
+                                            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                                            initialView="timeGridWeek"
+                                            headerToolbar={{
+                                                left: 'prev,next today',
+                                                center: 'title',
+                                                right: ''
+                                            }}
+                                            buttonText={{
+                                                today: 'hoy'
+                                            }}
+                                            customButtons={{
+                                                today: {
+                                                    text: 'hoy',
+                                                    click: () => {
+                                                        if (calendarRef.current) {
+                                                            const calendarApi = calendarRef.current.getApi();
+                                                            calendarApi.today();
 
-                                                    // Actualizar la fecha deseada al día de hoy
-                                                    const today = new Date();
-                                                    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                                                    setFechaDeseada(todayStr);
+                                                            // Actualizar la fecha deseada al día de hoy
+                                                            const today = new Date();
+                                                            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                                                            setFechaDeseada(todayStr);
 
-                                                    // Mover el evento editable a hoy
-                                                    const eventoEditable = getTargetEvent(events);
-                                                    if (eventoEditable) {
-                                                        // Calcular la duración original del evento
-                                                        const originalStart = new Date(eventoEditable.start);
-                                                        const originalEnd = new Date(eventoEditable.end);
-                                                        const duracionMs = originalEnd.getTime() - originalStart.getTime();
+                                                            // Mover el evento editable a hoy
+                                                            const eventoEditable = getTargetEvent(events);
+                                                            if (eventoEditable) {
+                                                                // Calcular la duración original del evento
+                                                                const originalStart = new Date(eventoEditable.start);
+                                                                const originalEnd = new Date(eventoEditable.end);
+                                                                const duracionMs = originalEnd.getTime() - originalStart.getTime();
 
-                                                        // Crear nueva fecha manteniendo la hora original
-                                                        const nuevaFechaDate = new Date(today);
-                                                        nuevaFechaDate.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
+                                                                // Crear nueva fecha manteniendo la hora original
+                                                                const nuevaFechaDate = new Date(today);
+                                                                nuevaFechaDate.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
 
-                                                        // Calcular el nuevo end
-                                                        const nuevoEnd = new Date(nuevaFechaDate.getTime() + duracionMs);
+                                                                // Calcular el nuevo end
+                                                                const nuevoEnd = new Date(nuevaFechaDate.getTime() + duracionMs);
 
-                                                        // Actualizar el evento
-                                                        setEvents(prevEvents =>
-                                                            prevEvents.map(ev =>
-                                                                String(ev.id) === String(eventoEditable.id)
-                                                                    ? { ...ev, start: nuevaFechaDate, end: nuevoEnd }
-                                                                    : ev
-                                                            )
-                                                        );
+                                                                // Actualizar el evento
+                                                                setEvents(prevEvents =>
+                                                                    prevEvents.map(ev =>
+                                                                        String(ev.id) === String(eventoEditable.id)
+                                                                            ? { ...ev, start: nuevaFechaDate, end: nuevoEnd }
+                                                                            : ev
+                                                                    )
+                                                                );
 
-                                                        toast.success("Cita movida", {
-                                                            description: `El evento se ha movido a ${todayStr}`,
-                                                            duration: 3000
-                                                        });
+                                                                toast.success("Cita movida", {
+                                                                    description: `El evento se ha movido a ${todayStr}`,
+                                                                    duration: 3000
+                                                                });
+                                                            }
+                                                        }
                                                     }
                                                 }
-                                            }
-                                        }
-                                    }}
-                                    selectable={false}
-                                    selectMirror={false}
-                                    droppable={true}
-                                    drop={handleEventReceive}
-                                    eventDrop={handleEventDrop}
-                                    businessHours={businessHours}
-                                    eventAllow={(dropInfo) => {
-                                        // Verificar solapamiento con eventos existentes
-                                        const startDate = dropInfo.start;
-                                        const endDate = dropInfo.end || new Date(startDate.getTime() + 60 * 60 * 1000);
+                                            }}
+                                            selectable={false}
+                                            selectMirror={false}
+                                            droppable={true}
+                                            drop={handleEventReceive}
+                                            eventDrop={handleEventDrop}
+                                            businessHours={businessHours}
+                                            eventAllow={(dropInfo) => {
+                                                // Verificar solapamiento con eventos existentes
+                                                const startDate = dropInfo.start;
+                                                const endDate = dropInfo.end || new Date(startDate.getTime() + 60 * 60 * 1000);
 
-                                        // Para eventos existentes que se mueven, excluir el propio evento de la validación
-                                        const eventsToCheck = 'event' in dropInfo && dropInfo.event
-                                            ? events.filter((ev: any) => ev.id !== (dropInfo.event as any).id)
-                                            : events;
+                                                // Para eventos existentes que se mueven, excluir el propio evento de la validación
+                                                const eventsToCheck = 'event' in dropInfo && dropInfo.event
+                                                    ? events.filter((ev: any) => ev.id !== (dropInfo.event as any).id)
+                                                    : events;
 
-                                        if (checkEventOverlap(startDate, endDate, eventsToCheck)) {
-                                            return false; // No permitir drop si hay solapamiento
-                                        }
+                                                if (checkEventOverlap(startDate, endDate, eventsToCheck)) {
+                                                    return false; // No permitir drop si hay solapamiento
+                                                }
 
-                                        // Validar horarios de negocio (work_hours)
-                                        if (!workHours || workHours.length === 0) return true;
+                                                // Validar horarios de negocio (work_hours)
+                                                if (!workHours || workHours.length === 0) return true;
 
-                                        const jsDay = startDate.getDay();
-                                        const dia = jsDay === 0 ? 7 : jsDay; // Convertir domingo de 0 a 7
-                                        const horario = workHours.find((h: any) => h.day === dia);
+                                                const jsDay = startDate.getDay();
+                                                const dia = jsDay === 0 ? 7 : jsDay; // Convertir domingo de 0 a 7
+                                                const horario = workHours.find((h: any) => h.day === dia);
 
-                                        if (!horario) return false;
+                                                if (!horario) return false;
 
-                                        const [startHour, startMin] = horario.start.split(":").map(Number);
-                                        const [endHour, endMin] = horario.end.split(":").map(Number);
+                                                const [startHour, startMin] = horario.start.split(":").map(Number);
+                                                const [endHour, endMin] = horario.end.split(":").map(Number);
 
-                                        const startAllowed = new Date(startDate);
-                                        startAllowed.setHours(startHour, startMin, 0, 0);
+                                                const startAllowed = new Date(startDate);
+                                                startAllowed.setHours(startHour, startMin, 0, 0);
 
-                                        const endAllowed = new Date(startDate);
-                                        endAllowed.setHours(endHour, endMin, 0, 0);
+                                                const endAllowed = new Date(startDate);
+                                                endAllowed.setHours(endHour, endMin, 0, 0);
 
-                                        return startDate >= startAllowed && endDate <= endAllowed;
-                                    }}
-                                    events={events}
-                                    allDaySlot={false}
-                                    slotMinTime={slotMinTime}
-                                    slotMaxTime={slotMaxTime}
-                                    slotDuration="00:30:00"
-                                    height="100%"
-                                    locale="es"
-                                    firstDay={0}
-                                    weekends={true}
-                                    dayMaxEvents={true}
-                                    nowIndicator={true}
-                                    editable={true}
-                                    eventOverlap={false}
-                                    selectOverlap={false}
-                                    timeZone="local"
-                                    dayCellClassNames={(arg) => {
-                                        if (!fechaDeseada) return [];
-                                        const d = arg.date;
-                                        const cellDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                                        return cellDate === fechaDeseada ? ['fc-desired-date'] : [];
-                                    }}
-                                    dayHeaderClassNames={(arg) => {
-                                        if (!fechaDeseada) return [];
-                                        const d = arg.date;
-                                        const headerDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                                        return headerDate === fechaDeseada ? ['fc-desired-date-header'] : [];
-                                    }}
-                                    eventContent={(eventInfo) => {
-                                        const isBlocked = eventInfo.event.extendedProps?.blocked === true;
-                                        return (
-                                            <div
-                                                className={`flex items-center justify-between gap-2 p-1 w-full ${isBlocked ? 'cursor-not-allowed' : 'cursor-pointer'} group`}
-                                            >
-                                                <div className="flex-1 overflow-hidden">
-                                                    <div className="text-xs font-semibold truncate">
-                                                        {eventInfo.event.title}
+                                                return startDate >= startAllowed && endDate <= endAllowed;
+                                            }}
+                                            events={events}
+                                            allDaySlot={false}
+                                            slotMinTime={slotMinTime}
+                                            slotMaxTime={slotMaxTime}
+                                            slotDuration="00:30:00"
+                                            height="100%"
+                                            locale="es"
+                                            firstDay={0}
+                                            weekends={true}
+                                            dayMaxEvents={true}
+                                            nowIndicator={true}
+                                            editable={true}
+                                            eventOverlap={false}
+                                            selectOverlap={false}
+                                            timeZone="local"
+                                            dayCellClassNames={(arg) => {
+                                                if (!fechaDeseada) return [];
+                                                const d = arg.date;
+                                                const cellDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                                return cellDate === fechaDeseada ? ['fc-desired-date'] : [];
+                                            }}
+                                            dayHeaderClassNames={(arg) => {
+                                                if (!fechaDeseada) return [];
+                                                const d = arg.date;
+                                                const headerDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                                return headerDate === fechaDeseada ? ['fc-desired-date-header'] : [];
+                                            }}
+                                            eventContent={(eventInfo) => {
+                                                const isBlocked = eventInfo.event.extendedProps?.blocked === true;
+                                                return (
+                                                    <div
+                                                        className={`flex items-center justify-between gap-2 p-1 w-full ${isBlocked ? 'cursor-not-allowed' : 'cursor-pointer'} group`}
+                                                    >
+                                                        <div className="flex-1 overflow-hidden">
+                                                            <div className="text-xs font-semibold truncate">
+                                                                {eventInfo.event.title}
+                                                            </div>
+                                                            <div className="text-xs opacity-80">
+                                                                {eventInfo.timeText}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-xs opacity-80">
-                                                        {eventInfo.timeText}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    }}
-                                />
+                                                );
+                                            }}
+                                        />
                                     </div>
                                 </CardContent>
                             </Card>

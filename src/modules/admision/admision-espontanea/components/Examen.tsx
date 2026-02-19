@@ -117,7 +117,7 @@ export const Examen = ({
             sortable: true,
             filterable: true,
             render: (value: string) => (
-                <div className="max-w-[160px] truncate" title={value || ""}>
+                <div className="max-w-40 truncate" title={value || ""}>
                     {value || "-"}
                 </div>
             ),
@@ -154,12 +154,12 @@ export const Examen = ({
                 {/* Panel izquierdo - Estudios disponibles */}
                 <div className="lg:col-span-2 space-y-6 min-w-0">
                     {/* Filtros */}
-                    <div className="bg-white rounded-lg border border-purple-100 shadow-sm p-4">
+                    <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm p-6">
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             {/* Select Modalidad */}
                             <div className="space-y-2">
-                                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider dark:text-gray-200">
                                     Modalidad
                                 </label>
                                 <Select
@@ -187,7 +187,7 @@ export const Examen = ({
 
                             {/* Select Parte del Cuerpo */}
                             <div className="space-y-2">
-                                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider dark:text-gray-200">
                                     Parte del cuerpo
                                 </label>
                                 <Select
@@ -195,7 +195,7 @@ export const Examen = ({
                                     value={selectedParteCuerpo}
                                     disabled={isLoadingPartesCuerpo || !selectedTipoExamen}
                                 >
-                                    <SelectTrigger className="w-full h-10 border border-gray-300 focus:border-brand-purple focus:ring-brand-purple bg-white">
+                                    <SelectTrigger className="w-full h-10 border border-gray-300 focus:border-brand-purple focus:ring-brand-purple bg-white dark:bg-[#2a2e32] dark:border-gray-700">
                                         <SelectValue placeholder="Seleccionar parte del cuerpo" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -251,7 +251,7 @@ export const Examen = ({
                 {/* Panel derecho - Estudio seleccionado */}
                 <div className="space-y-6 min-w-0">
                     {/* Card Estudio Seleccionado */}
-                    <div className="bg-white rounded-lg border border-purple-100 shadow-sm overflow-hidden">
+                    <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm overflow-hidden">
                         <div className="bg-brand-purple p-4 text-white">
                             <div className="flex items-center gap-2 mb-2">
                                 <Check className="w-5 h-5" />
@@ -262,26 +262,26 @@ export const Examen = ({
                         {selectedEstudio ? (
                             <div className="p-4 space-y-3">
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Código</p>
-                                    <p className="text-brand-purple font-bold">{selectedEstudio.externalcode}</p>
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 dark:text-gray-200">Código</p>
+                                    <p className="text-brand-purple font-bold dark:text-purple-400">{selectedEstudio.externalcode}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Descripción</p>
-                                    <p className="text-sm text-gray-800 font-medium">{selectedEstudio.description}</p>
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 dark:text-gray-200">Descripción</p>
+                                    <p className="text-sm text-gray-800 font-medium dark:text-gray-100">{selectedEstudio.description}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Modalidad</p>
-                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 dark:text-gray-200">Modalidad</p>
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
                                         {selectedEstudio.modality}
                                     </span>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Parte del cuerpo</p>
-                                    <p className="text-sm text-gray-700">{selectedEstudio.bodypart}</p>
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 dark:text-gray-200">Parte del cuerpo</p>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">{selectedEstudio.bodypart}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Grupo</p>
-                                    <p className="text-sm text-gray-700">{selectedEstudio.studygroup}</p>
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 dark:text-gray-200">Grupo</p>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">{selectedEstudio.studygroup}</p>
                                 </div>
                             </div>
                         ) : (
@@ -293,7 +293,7 @@ export const Examen = ({
                     </div>
 
                     {/* Card Equipos */}
-                    <div className="bg-white rounded-lg border border-purple-100 shadow-sm max-h-[400px] overflow-y-auto">
+                    <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm max-h-[400px] overflow-y-auto">
                         <div className="bg-brand-purple p-4 text-white flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <h3 className="font-semibold uppercase text-sm tracking-wider">Equipos</h3>
@@ -307,12 +307,12 @@ export const Examen = ({
                                     <span className='animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500'></span>
                                 </div>
                             ) : !selectedEstudio ? (
-                                <div className="text-center py-6 text-gray-400">
+                                <div className="text-center py-6 text-gray-400 dark:text-gray-500">
                                     <p className="text-sm">Seleccione un estudio para ver equipos disponibles</p>
                                 </div>
                             ) : filteredEquipos.length === 0 ? (
-                                <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-                                    <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-1">No hay equipos disponibles</p>
+                                <div className="bg-red-50 rounded-lg p-3 border border-red-200 dark:bg-red-900/20 dark:border-red-800">
+                                    <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-1 dark:text-red-400">No hay equipos disponibles</p>
                                     <p className="text-sm text-red-700">No se encontraron equipos para la modalidad {selectedEstudio.modality}</p>
                                 </div>
                             ) : (
@@ -327,8 +327,8 @@ export const Examen = ({
                                                     onEquipoSelected?.(equipo, selectedEstudio);
                                                 }}
                                                 className={`group relative rounded-lg p-3 border cursor-pointer transition-all duration-200 ${isSelected
-                                                    ? 'bg-brand-purple text-white border-brand-purple border-l-4'
-                                                    : 'bg-purple-50 border-purple-100 hover:bg-purple-100 hover:border-purple-200'
+                                                    ? 'bg-brand-purple text-white border-brand-purple border-l-4 dark:bg-purple-900 dark:border-purple-400'
+                                                    : 'bg-purple-50 border-purple-100 hover:bg-purple-100 hover:border-purple-200 dark:bg-purple-900/50 dark:border-purple-800/50 dark:hover:bg-purple-800/50 dark:hover:border-purple-700'
                                                     }`}
                                             >
                                                 {!isSelected && (
@@ -339,9 +339,9 @@ export const Examen = ({
                                                         </span>
                                                     </div>
                                                 )}
-                                                <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${isSelected ? 'text-purple-100' : 'text-gray-600'
+                                                <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${isSelected ? 'text-purple-100 dark:text-purple-200' : 'text-gray-600 dark:text-gray-400'
                                                     }`}>Equipo</p>
-                                                <p className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-gray-800'
+                                                <p className={`text-sm font-medium ${isSelected ? 'text-white dark:text-white' : 'text-gray-800 dark:text-gray-200'
                                                     }`}>{equipo.description || equipo.name}</p>
                                             </div>
                                         );

@@ -35,13 +35,13 @@ export const TagsCell = ({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
-          className="flex items-center gap-1 flex-wrap cursor-pointer min-w-[20px] min-h-[20px] focus:outline-none hover:opacity-80 transition-opacity"
+          className="flex items-center gap-1 flex-wrap cursor-pointer min-w-5 min-h-5 focus:outline-none hover:opacity-80 transition-opacity"
           title="Gestionar tags"
           disabled={isUpdating}
           onClick={(e) => e.stopPropagation()}
         >
           {activeTags.length === 0 ? (
-            <span className="inline-block w-3 h-3 rounded-full bg-gray-200" />
+            <span className="inline-block w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-700" />
           ) : (
             activeTags.map((tag) => (
               <span
@@ -50,7 +50,7 @@ export const TagsCell = ({
                 style={{ backgroundColor: `${tagColor(tag.guid)}22`, color: tagColor(tag.guid) }}
               >
                 <span
-                  className="inline-block w-2 h-2 rounded-full shrink-0"
+                  className="inline-block w-2 h-2 rounded-full shrink-0 dark:bg-gray-700"
                   style={{ backgroundColor: tagColor(tag.guid) }}
                 />
                 {tag.description}
@@ -64,7 +64,7 @@ export const TagsCell = ({
         align="start"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Tags</p>
+        <p className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide dark:text-gray-200">Tags</p>
         {availableTags.length === 0 ? (
           <p className="text-xs text-gray-400">No hay tags disponibles para esta institución.</p>
         ) : (
@@ -86,7 +86,7 @@ export const TagsCell = ({
                     className="inline-block w-3 h-3 rounded-full shrink-0"
                     style={{ backgroundColor: color }}
                   />
-                  <span className="text-gray-700">{tag.description}</span>
+                  <span className="text-gray-700 dark:text-gray-200">{tag.description}</span>
                 </button>
               );
             })}

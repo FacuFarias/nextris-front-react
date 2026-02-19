@@ -4,16 +4,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 type FlagColor = "red" | "green" | "blue" | "yellow";
 
 const FLAG_CONFIG: { color: FlagColor; label: string; fill: string; stroke: string; ring: string }[] = [
-    { color: "red",    label: "Roja",     fill: "#ef4444", stroke: "#b91c1c", ring: "ring-red-400" },
-    { color: "green",  label: "Verde",    fill: "#22c55e", stroke: "#15803d", ring: "ring-green-400" },
-    { color: "blue",   label: "Azul",     fill: "#3b82f6", stroke: "#1d4ed8", ring: "ring-blue-400" },
+    { color: "red", label: "Roja", fill: "#ef4444", stroke: "#b91c1c", ring: "ring-red-400" },
+    { color: "green", label: "Verde", fill: "#22c55e", stroke: "#15803d", ring: "ring-green-400" },
+    { color: "blue", label: "Azul", fill: "#3b82f6", stroke: "#1d4ed8", ring: "ring-blue-400" },
     { color: "yellow", label: "Amarilla", fill: "#facc15", stroke: "#a16207", ring: "ring-yellow-300" },
 ];
 
 const FLAG_FILL: Record<FlagColor, { fill: string; stroke: string }> = {
-    red:    { fill: "#ef4444", stroke: "#b91c1c" },
-    green:  { fill: "#22c55e", stroke: "#15803d" },
-    blue:   { fill: "#3b82f6", stroke: "#1d4ed8" },
+    red: { fill: "#ef4444", stroke: "#b91c1c" },
+    green: { fill: "#22c55e", stroke: "#15803d" },
+    blue: { fill: "#3b82f6", stroke: "#1d4ed8" },
     yellow: { fill: "#facc15", stroke: "#a16207" },
 };
 
@@ -76,7 +76,7 @@ export const FlagsCell = ({ examId, currentFlags, onUpdate, isUpdating }: FlagsC
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <button
-                    className="flex items-center gap-0.5 cursor-pointer min-w-[20px] min-h-[20px] focus:outline-none hover:opacity-80 transition-opacity"
+                    className="flex items-center gap-0.5 cursor-pointer min-w-5 min-h-5 focus:outline-none hover:opacity-80 transition-opacity"
                     title="Gestionar banderas"
                     disabled={isUpdating}
                     onClick={(e) => e.stopPropagation()}
@@ -100,7 +100,7 @@ export const FlagsCell = ({ examId, currentFlags, onUpdate, isUpdating }: FlagsC
                 align="start"
                 onClick={(e) => e.stopPropagation()}
             >
-                <p className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Banderas</p>
+                <p className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide dark:text-gray-200">Banderas</p>
                 <div className="flex gap-3">
                     {FLAG_CONFIG.map(({ color, label, fill, stroke, ring }) => {
                         const active = currentFlags.includes(color);
@@ -115,7 +115,7 @@ export const FlagsCell = ({ examId, currentFlags, onUpdate, isUpdating }: FlagsC
                                     disabled:cursor-not-allowed`}
                             >
                                 <FlagIcon fill={fill} stroke={stroke} size={20} />
-                                <span className="text-[10px] text-gray-600 leading-none">{label}</span>
+                                <span className="text-[10px] text-gray-600 leading-none dark:text-gray-400">{label}</span>
                             </button>
                         );
                     })}
