@@ -1,17 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type InformeDetalle, type Informes } from "../types/informes.types";
 import type { ApiPaginatedResponse } from "@/types/global.type";
-import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, updateExaminationFlags, updateExaminationTagIds, getAllTags, type UpdateReportPayload } from "../services/informes.service";
+import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, updateExaminationFlags, updateExaminationTagIds, getAllTags, updateGeneralNotes, type UpdateReportPayload } from "../services/informes.service";
 import { informesKeys } from "../constants/query-keys";
 import { toast } from "sonner";
 import { notifyInformeChange, useCrossWindowSync } from "../redactar-informe/hooks/use-cross-windows";
 
-export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, bodypart_id = "", modality_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision" }) => {
+export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, show_only_with_notes = false, bodypart_id = "", modality_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc" }) => {
     useCrossWindowSync();
 
     const { data, isLoading, isFetching, error, refetch } = useQuery<ApiPaginatedResponse<Informes>>({
-        queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field),
-        queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field }),
+        queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction, show_only_with_notes),
+        queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready, show_no_image, show_only_with_notes, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction }),
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
     });
@@ -87,9 +87,11 @@ export const useUpdateFlags = () => {
         onMutate: async ({ examId, flags }) => {
             // Cancelar cualquier refetch en curso para no sobreescribir el optimismo
             await queryClient.cancelQueries({ queryKey: informesKeys.lists() });
+            await queryClient.cancelQueries({ queryKey: informesKeys.listDetalle(examId) });
 
             // Guardar snapshot del estado anterior (para rollback)
             const previousData = queryClient.getQueriesData({ queryKey: informesKeys.lists() });
+            const previousDetail = queryClient.getQueryData(informesKeys.listDetalle(examId));
 
             // Actualizar todas las páginas del cache que contengan este examen
             queryClient.setQueriesData(
@@ -108,7 +110,18 @@ export const useUpdateFlags = () => {
                 }
             );
 
-            return { previousData };
+            queryClient.setQueryData(informesKeys.listDetalle(examId), (old: any) => {
+                if (!old?.data) return old;
+                return {
+                    ...old,
+                    data: {
+                        ...old.data,
+                        flags,
+                    },
+                };
+            });
+
+            return { previousData, previousDetail, examId };
         },
 
         // Si el servidor falla, revertir al estado anterior
@@ -118,7 +131,14 @@ export const useUpdateFlags = () => {
                     queryClient.setQueryData(queryKey, data);
                 });
             }
+            if (context?.previousDetail && context?.examId) {
+                queryClient.setQueryData(informesKeys.listDetalle(context.examId), context.previousDetail);
+            }
             toast.error(error.response?.data?.message || 'Error al actualizar bandera');
+        },
+
+        onSuccess: (_response, variables) => {
+            queryClient.invalidateQueries({ queryKey: informesKeys.listDetalle(variables.examId) });
         },
     });
 }
@@ -132,7 +152,9 @@ export const useUpdateTagIds = () => {
 
         onMutate: async ({ examId, tagIds }) => {
             await queryClient.cancelQueries({ queryKey: informesKeys.lists() });
+            await queryClient.cancelQueries({ queryKey: informesKeys.listDetalle(examId) });
             const previousData = queryClient.getQueriesData({ queryKey: informesKeys.lists() });
+            const previousDetail = queryClient.getQueryData(informesKeys.listDetalle(examId));
 
             queryClient.setQueriesData(
                 { queryKey: informesKeys.lists() },
@@ -150,7 +172,18 @@ export const useUpdateTagIds = () => {
                 }
             );
 
-            return { previousData };
+            queryClient.setQueryData(informesKeys.listDetalle(examId), (old: any) => {
+                if (!old?.data) return old;
+                return {
+                    ...old,
+                    data: {
+                        ...old.data,
+                        tag_ids: tagIds,
+                    },
+                };
+            });
+
+            return { previousData, previousDetail, examId };
         },
 
         onError: (error: any, _vars, context: any) => {
@@ -159,7 +192,14 @@ export const useUpdateTagIds = () => {
                     queryClient.setQueryData(queryKey, data);
                 });
             }
+            if (context?.previousDetail && context?.examId) {
+                queryClient.setQueryData(informesKeys.listDetalle(context.examId), context.previousDetail);
+            }
             toast.error(error.response?.data?.message || 'Error al actualizar tags');
+        },
+
+        onSuccess: (_response, variables) => {
+            queryClient.invalidateQueries({ queryKey: informesKeys.listDetalle(variables.examId) });
         },
     });
 }
@@ -175,6 +215,51 @@ export const useAllTags = () => {
         allTags: data?.data ?? [],
         isLoading,
     };
+}
+
+export const useUpdateGeneralNotes = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examId, notes }: { examId: string; notes: string }) =>
+            updateGeneralNotes(examId, notes),
+
+        onMutate: async ({ examId, notes }) => {
+            await queryClient.cancelQueries({ queryKey: informesKeys.lists() });
+            const previousData = queryClient.getQueriesData({ queryKey: informesKeys.lists() });
+
+            queryClient.setQueriesData(
+                { queryKey: informesKeys.lists() },
+                (old: any) => {
+                    if (!old?.data?.data) return old;
+                    return {
+                        ...old,
+                        data: {
+                            ...old.data,
+                            data: old.data.data.map((item: Informes) =>
+                                item.guid === examId ? { ...item, general_notes: notes } : item
+                            ),
+                        },
+                    };
+                }
+            );
+
+            return { previousData, examId };
+        },
+
+        onError: (error: any, _vars, context: any) => {
+            if (context?.previousData) {
+                context.previousData.forEach(([queryKey, data]: [any, any]) => {
+                    queryClient.setQueryData(queryKey, data);
+                });
+            }
+            toast.error(error.response?.data?.message || 'Error al guardar la nota');
+        },
+
+        onSuccess: () => {
+            toast.success('Nota guardada');
+        },
+    });
 }
 
 export const useUnblockExam = () => {

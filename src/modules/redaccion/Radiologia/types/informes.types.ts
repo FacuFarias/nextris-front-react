@@ -19,6 +19,7 @@ export type Informes = {
     flags: string[];
     tag_ids: string[];
     report_date: string | null;
+    general_notes: string | null;
 }
 
 
@@ -42,6 +43,8 @@ export type InformeDetalle = {
         history: string;
         updated_on: string;
         patient_name: string;
+        flags?: string[];
+        tag_ids?: string[];
     }
 
 }

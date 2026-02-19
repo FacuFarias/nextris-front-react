@@ -1,9 +1,9 @@
 import { api } from "@/lib/api"
 
-export const getInformes = async ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, modality_id = "", bodypart_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision" }) => {
+export const getInformes = async ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, show_only_with_notes = false, modality_id = "", bodypart_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc" }) => {
 
     try {
-        const response = await api.get(`/examinations/for-reporting?page=${page}&per_page=${per_page}&search=${search}&show_reported=${show_reported}&show_ready=${show_ready}&show_no_image=${show_no_image}&modality_id=${modality_id}&body_part_id=${bodypart_id}&study_group_id=${study_group_id}&flag_filter=${flag_filter}&date_range=${date_range}&date_field=${date_field}`);
+        const response = await api.get(`/examinations/for-reporting?page=${page}&per_page=${per_page}&search=${search}&show_reported=${show_reported}&show_ready=${show_ready}&show_no_image=${show_no_image}&show_only_with_notes=${show_only_with_notes}&modality_id=${modality_id}&body_part_id=${bodypart_id}&study_group_id=${study_group_id}&flag_filter=${flag_filter}&date_range=${date_range}&date_field=${date_field}&sort_column=${sort_column}&sort_direction=${sort_direction}`);
         return response.data;
     } catch (error) {
         throw error;
@@ -67,6 +67,15 @@ export const updateExaminationFlags = async (exam_id: string, flags: string[]) =
 export const updateExaminationTagIds = async (exam_id: string, tag_ids: string[]) => {
     try {
         const response = await api.patch(`/examinations/${exam_id}/tag_ids`, { tag_ids });
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const updateGeneralNotes = async (exam_id: string, general_notes: string) => {
+    try {
+        const response = await api.patch(`/examinations/${exam_id}/general-notes`, { general_notes });
         return response.data;
     } catch (error) {
         throw error;

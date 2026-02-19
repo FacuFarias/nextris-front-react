@@ -13,7 +13,8 @@ export interface TableColumn<T = any> {
 export interface TableAction<T = any> {
     label: string;
     icon?: React.ReactNode;
-    onClick: (row: T, index: number) => void;
+    onClick?: (row: T, index: number) => void;
+    component?: (row: T, index: number) => React.ReactNode;
     variant?:
     | "default"
     | "destructive"

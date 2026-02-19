@@ -3,9 +3,9 @@ import { InputSearch } from "@/components/InputSearch"
 import { MainLayout } from "@/layouts/layout"
 import { HandHelping, RefreshCcw, Loader2 } from "lucide-react"
 import { useMemo, useState, useEffect, useRef, useCallback } from "react"
-import { useInformes, useBlockExam, useUnblockExam, useUpdateFlags, useUpdateTagIds, useAllTags } from "./hooks/use-informes"
+import { useInformes, useBlockExam, useUnblockExam, useUpdateFlags, useUpdateTagIds, useAllTags, useUpdateGeneralNotes } from "./hooks/use-informes"
 import { useCrossWindowSync } from "./redactar-informe/hooks/use-cross-windows"
-import { getInformesActions, getFlagsColumn, getTagsColumn, informeColumns } from "./components/columns"
+import { getInformesActions, getFlagsColumn, getTagsColumn, getGeneralNotesAction, informeColumns } from "./components/columns"
 import TablaDynamic from "@/components/TableDynamic"
 import type { Informes } from "./types/informes.types"
 import type { FilterPreset, FilterPresetFilters } from "./types/filter-preset.types"
@@ -41,6 +41,7 @@ export const Radiologia = () => {
     const [asignadosAMi, setAsignadosAMi] = useState(false);
     const [listoParaLeer, setListoParaLeer] = useState(true);
     const [verSinImagenes, setVerSinImagenes] = useState(false);
+    const [soloConNotas, setSoloConNotas] = useState(false);
     const [flagFilter, setFlagFilter] = useState<string[]>([]);
     const [dateRange, setDateRange] = useState<string>("all");
     const [dateField, setDateField] = useState<string>("admision");
@@ -64,7 +65,8 @@ export const Radiologia = () => {
     const { mutate: updateFlags, isPending: isUpdatingFlags } = useUpdateFlags();
     const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useUpdateTagIds();
     const { allTags } = useAllTags();
-    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField });
+    const { mutate: updateGeneralNotes, isPending: isUpdatingNotes } = useUpdateGeneralNotes();
+    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, show_only_with_notes: soloConNotas, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField, sort_column: sortColumn, sort_direction: sortDirection });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
@@ -93,6 +95,10 @@ export const Radiologia = () => {
     const handleUpdateTagIds = useCallback((examId: string, tagIds: string[]) => {
         updateTagIds({ examId, tagIds });
     }, [updateTagIds]);
+
+    const handleUpdateGeneralNotes = useCallback((examId: string, notes: string) => {
+        updateGeneralNotes({ examId, notes });
+    }, [updateGeneralNotes]);
 
     // Columna de banderas generada con el handler actual
     const flagsColumn = useMemo(
@@ -199,6 +205,7 @@ export const Radiologia = () => {
     const handleSortChange = useCallback((column: string, direction: "asc" | "desc") => {
         setSortColumn(column);
         setSortDirection(direction);
+        setPage(1);
     }, []);
 
     // Listener para eventos de actualización del visor
@@ -311,11 +318,22 @@ export const Radiologia = () => {
     const openReportWindow = async (informe: Informes) => {
         const windowId = `report_window_${Date.now()}`;
 
-        let url = `/estudios/redaccion/redactar-informe/${informe.guid}/${informe.study_instance_uid}?windowId=${windowId}&siguiente_paso=${siguientePaso}`;
-
-        if (modalityId || bodyPartId || studioTypeId) {
-            url = `/estudios/redaccion/redactar-informe/${informe.guid}/${informe.study_instance_uid}?windowId=${windowId}&modality_id=${modalityId}&bodypart_id=${bodyPartId}&study_group_id=${studioTypeId}&siguiente_paso=${siguientePaso}`;
+        const params = new URLSearchParams();
+        params.set('windowId', windowId);
+        if (siguientePaso !== undefined && siguientePaso !== null) {
+            params.set('siguiente_paso', String(siguientePaso));
         }
+        if (modalityId) params.set('modality_id', modalityId);
+        if (bodyPartId) params.set('bodypart_id', bodyPartId);
+        if (studioTypeId) params.set('study_group_id', studioTypeId);
+        if (Array.isArray(informe.flags) && informe.flags.length > 0) {
+            params.set('flags', informe.flags.join(','));
+        }
+        if (Array.isArray(informe.tag_ids) && informe.tag_ids.length > 0) {
+            params.set('tag_ids', informe.tag_ids.join(','));
+        }
+
+        const url = `/estudios/redaccion/redactar-informe/${informe.guid}/${informe.study_instance_uid}?${params.toString()}`;
 
         localStorage.setItem(windowId, informe.guid);
 
@@ -563,6 +581,20 @@ export const Radiologia = () => {
                                     Ver sin imágenes
                                 </Label>
                             </div>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="solo-con-notas"
+                                    checked={soloConNotas}
+                                    onCheckedChange={(checked) => {
+                                        setSoloConNotas(checked as boolean);
+                                        setPage(1);
+                                    }}
+                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
+                                />
+                                <Label htmlFor="solo-con-notas" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
+                                    Solo con notas
+                                </Label>
+                            </div>
                         </div>
                     </div>
 
@@ -677,7 +709,7 @@ export const Radiologia = () => {
                     showIndex
                     loading={isLoadingInformes}
                     pagination={pagination}
-                    actions={getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf)}
+                    actions={getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf, getGeneralNotesAction(handleUpdateGeneralNotes, isUpdatingNotes))}
                     onPaginationChange={(newPage) => {
                         setPage(newPage);
                     }}

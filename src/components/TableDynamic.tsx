@@ -81,26 +81,29 @@ export function TablaDynamic<T extends Record<string, any>>({
         return path.split(".").reduce((current, key) => current?.[key], obj);
     };
 
-    // Función para ordenar los datos
-    const sortedData = [...data].sort((a, b) => {
-        if (!sortConfig) return 0;
+    // Cuando el ordenamiento es controlado (servidor), los datos ya vienen ordenados del backend
+    // y no se debe aplicar ordenamiento client-side para no romper el orden global
+    const sortedData = isControlledSort
+        ? [...data]
+        : [...data].sort((a, b) => {
+            if (!sortConfig) return 0;
 
-        const aValue = getNestedValue(a, sortConfig.key as string);
-        const bValue = getNestedValue(b, sortConfig.key as string);
+            const aValue = getNestedValue(a, sortConfig.key as string);
+            const bValue = getNestedValue(b, sortConfig.key as string);
 
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
+            if (aValue === null || aValue === undefined) return 1;
+            if (bValue === null || bValue === undefined) return -1;
 
-        if (typeof aValue === "string" && typeof bValue === "string") {
-            return sortConfig.direction === "asc"
-                ? aValue.localeCompare(bValue)
-                : bValue.localeCompare(aValue);
-        }
+            if (typeof aValue === "string" && typeof bValue === "string") {
+                return sortConfig.direction === "asc"
+                    ? aValue.localeCompare(bValue)
+                    : bValue.localeCompare(aValue);
+            }
 
-        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-        return 0;
-    });
+            if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+            return 0;
+        });
 
     // Aplicar filtros por columna (client-side sobre datos visibles)
     const hasActiveFilters = Object.values(columnFilters).some(v => v.trim() !== "");
@@ -403,6 +406,11 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                     <TooltipProvider>
                                                         <div className="flex items-center gap-1">
                                                             {visibleActions(row).map((action, actionIndex) => (
+                                                                action.component ? (
+                                                                    <div key={actionIndex} onClick={(e) => e.stopPropagation()}>
+                                                                        {action.component(row, getRowIndex(index))}
+                                                                    </div>
+                                                                ) : (
                                                                 <Tooltip key={actionIndex}>
                                                                     <TooltipTrigger asChild>
                                                                         <Button
@@ -414,7 +422,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                                             )}
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
-                                                                                action.onClick(row, getRowIndex(index));
+                                                                                action.onClick?.(row, getRowIndex(index));
                                                                             }}
                                                                             disabled={action.disabled?.(row)}
                                                                         >
@@ -425,6 +433,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                                         <p>{action.label}</p>
                                                                     </TooltipContent>
                                                                 </Tooltip>
+                                                                )
                                                             ))}
                                                         </div>
                                                     </TooltipProvider>

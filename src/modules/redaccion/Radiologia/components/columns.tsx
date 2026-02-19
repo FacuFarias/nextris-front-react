@@ -5,6 +5,7 @@ import { ClipboardPlus, FileText, Image, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FlagsCell } from "./FlagsCell";
 import { TagsCell } from "./TagsCell";
+import { GeneralNotesCell } from "./GeneralNotesCell";
 import type { Tag } from "@/modules/configuracion/configuracion-tablas/institucional/tags";
 
 // Configuración de columnas para usuarios
@@ -151,11 +152,28 @@ export const getTagsColumn = (
     ),
 });
 
+// Acción de notas generales: renderiza un componente Popover propio
+export const getGeneralNotesAction = (
+    onUpdateNotes: (examId: string, notes: string) => void,
+    isPending?: boolean,
+): TableAction<Informes> => ({
+    label: "Nota general",
+    component: (informe: Informes) => (
+        <GeneralNotesCell
+            examId={informe.guid}
+            currentNotes={informe.general_notes ?? null}
+            onUpdate={onUpdateNotes}
+            isPending={isPending}
+        />
+    ),
+});
+
 // Función que genera las acciones con handlers personalizados
 export const getInformesActions = (
     onViewInforme: (informe: Informes) => void,
     onViewImagenes: (informe: Informes) => void,
     onViewPdf: (informe: Informes) => void,
+    generalNotesAction?: TableAction<Informes>,
 ): TableAction<Informes>[] => [
         {
             label: "Redactar Informe",
@@ -173,7 +191,8 @@ export const getInformesActions = (
             icon: <FileText className="h-4 w-4 text-red-900" />,
             onClick: onViewPdf,
             hidden: (informe) => !(informe.pdf_path), // Solo mostrar si is_image es true
-        }
+        },
+        ...(generalNotesAction ? [generalNotesAction] : []),
     ];
 
 export { informeColumns };
