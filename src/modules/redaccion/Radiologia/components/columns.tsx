@@ -30,6 +30,7 @@ const informeColumns: TableColumn<Informes>[] = [
         key: "patient_dni",
         label: "DNI",
         className: "font-medium",
+        headerClassName: "w-[88px]",
         sortable: true,
         filterable: true,
     },
@@ -45,6 +46,7 @@ const informeColumns: TableColumn<Informes>[] = [
         key: "status",
         label: "ESTADO",
         className: "font-medium",
+        headerClassName: "w-[68px]",
         hideOnMobile: true,
         sortable: true,
         filterable: true,
@@ -53,6 +55,7 @@ const informeColumns: TableColumn<Informes>[] = [
         key: "admission_number",
         label: "ADM. Nº",
         className: "font-medium",
+        headerClassName: "w-[80px]",
         sortable: true,
         filterable: true,
     },
@@ -60,6 +63,7 @@ const informeColumns: TableColumn<Informes>[] = [
         key: "accession_number",
         label: "ACC. Nº",
         className: "font-medium",
+        headerClassName: "w-[80px]",
         sortable: true,
         filterable: true,
     },
@@ -77,6 +81,7 @@ const informeColumns: TableColumn<Informes>[] = [
         key: "is_reported",
         label: "REPORTADO",
         className: "font-medium",
+        headerClassName: "w-[92px]",
         sortable: true,
         filterable: true,
         render: (value) => (
@@ -89,6 +94,17 @@ const informeColumns: TableColumn<Informes>[] = [
             </div>
         ),
     },
+    {
+        key: "report_date",
+        label: "FECHA REPORTE",
+        className: "font-medium",
+        sortable: true,
+        filterable: false,
+        render: (value: string | null) => {
+            if (!value) return <span className="text-gray-400 text-xs">—</span>;
+            return fechaYhora(value);
+        }
+    },
 ];
 
 // Columna de banderas: generada dinámicamente para incluir el handler de actualización
@@ -99,6 +115,7 @@ export const getFlagsColumn = (
     key: "flags",
     label: "BANDERAS",
     className: "font-medium",
+    headerClassName: "w-[85px]",
     sortable: false,
     filterable: false,
     render: (_value: string[], informe: Informes) => (
@@ -120,6 +137,7 @@ export const getTagsColumn = (
     key: "tag_ids",
     label: "TAGS",
     className: "font-medium",
+    headerClassName: "w-[100px]",
     sortable: false,
     filterable: false,
     render: (_value: string[], informe: Informes) => (

@@ -13,6 +13,7 @@ import { useDebounce } from "@uidotdev/usehooks"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { ConfirmationModal } from "./components/ConfirmationModal"
 import { FilterPresetTabs } from "./components/FilterPresetTabs"
@@ -41,13 +42,14 @@ export const Radiologia = () => {
     const [listoParaLeer, setListoParaLeer] = useState(true);
     const [verSinImagenes, setVerSinImagenes] = useState(false);
     const [flagFilter, setFlagFilter] = useState<string[]>([]);
+    const [dateRange, setDateRange] = useState<string>("all");
     const [siguientePaso, setSiguientePaso] = useState(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [isNoImageModalOpen, setIsNoImageModalOpen] = useState(false);
     const [selectedInforme, setSelectedInforme] = useState<Informes | null>(null);
     const [isBlocking, setIsBlocking] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<string[]>(
-        [...informeColumns.map(col => col.key as string), "flags", "tag_ids"]
+        [...informeColumns.map(col => col.key as string), "flags", "tag_ids", "report_date"]
     );
     const [sortColumn, setSortColumn] = useState("");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -60,7 +62,7 @@ export const Radiologia = () => {
     const { mutate: updateFlags, isPending: isUpdatingFlags } = useUpdateFlags();
     const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useUpdateTagIds();
     const { allTags } = useAllTags();
-    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId, flag_filter: flagFilter.join(',') });
+    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
@@ -125,7 +127,8 @@ export const Radiologia = () => {
         per_page: perPage,
         sort_column: sortColumn,
         sort_direction: sortDirection,
-    }), [searchTerm, listoParaLeer, verFinalizados, asignadosAMi, verSinImagenes, studioTypeId, modalityId, bodyPartId, visibleColumns, perPage, sortColumn, sortDirection]);
+        date_range: dateRange,
+    }), [searchTerm, listoParaLeer, verFinalizados, asignadosAMi, verSinImagenes, studioTypeId, modalityId, bodyPartId, visibleColumns, perPage, sortColumn, sortDirection, dateRange]);
 
     // Función para aplicar filtros de un preset
     const applyPreset = useCallback((preset: FilterPreset | null) => {
@@ -139,10 +142,11 @@ export const Radiologia = () => {
             setStudioTypeId(undefined);
             setModalityId(undefined);
             setBodyPartId(undefined);
-            setVisibleColumns([...informeColumns.map(col => col.key as string), "flags", "tag_ids"]);
+            setVisibleColumns([...informeColumns.map(col => col.key as string), "flags", "tag_ids", "report_date"]);
             setPerPage(10);
             setSortColumn("");
             setSortDirection("asc");
+            setDateRange("all");
             setActivePresetId(null);
         } else {
             const f = preset.filters;
@@ -154,10 +158,12 @@ export const Radiologia = () => {
             setStudioTypeId(f.study_group_id || undefined);
             setModalityId(f.modality_id || undefined);
             setBodyPartId(f.bodypart_id || undefined);
-            setVisibleColumns(f.visible_columns?.length ? f.visible_columns : [...informeColumns.map(col => col.key as string), "flags"]);
+            const cols = f.visible_columns?.length ? f.visible_columns : [...informeColumns.map(col => col.key as string), "flags"];
+            setVisibleColumns(cols.includes("report_date") ? cols : [...cols, "report_date"]);
             setPerPage(f.per_page || 10);
             setSortColumn(f.sort_column || "");
             setSortDirection(f.sort_direction || "asc");
+            setDateRange(f.date_range || "all");
             setActivePresetId(preset.guid);
         }
         setPage(1);
@@ -597,6 +603,37 @@ export const Radiologia = () => {
                                 >✕</button>
                             )}
                         </div>
+                    </div>
+
+                    {/* Separador vertical */}
+                    <div className="hidden sm:block w-px bg-gray-300 self-stretch" />
+                    <div className="block sm:hidden h-px bg-gray-300" />
+
+                    {/* Sección de Fechas */}
+                    <div className="flex flex-col gap-2 shrink-0">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Fechas</span>
+                        <Select
+                            value={dateRange}
+                            onValueChange={(value) => {
+                                setDateRange(value);
+                                setPage(1);
+                            }}
+                        >
+                            <SelectTrigger className="h-9 text-sm min-w-[140px]">
+                                <SelectValue placeholder="Hace >" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todo</SelectItem>
+                                <SelectItem value="1d">Hace &gt; 1 día</SelectItem>
+                                <SelectItem value="3d">Hace &gt; 3 días</SelectItem>
+                                <SelectItem value="7d">Hace &gt; 7 días</SelectItem>
+                                <SelectItem value="14d">Hace &gt; 14 días</SelectItem>
+                                <SelectItem value="1m">Hace &gt; 1 mes</SelectItem>
+                                <SelectItem value="2m">Hace &gt; 2 meses</SelectItem>
+                                <SelectItem value="3m">Hace &gt; 3 meses</SelectItem>
+                                <SelectItem value="1y">Hace &gt; 1 año</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
 

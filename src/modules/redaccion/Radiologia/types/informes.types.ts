@@ -18,6 +18,7 @@ export type Informes = {
     pdf_path: string;
     flags: string[];
     tag_ids: string[];
+    report_date: string | null;
 }
 
 

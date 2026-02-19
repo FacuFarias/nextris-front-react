@@ -190,7 +190,7 @@ export function TablaDynamic<T extends Record<string, any>>({
         <div className={cn("space-y-4 mt-5 flex flex-col flex-1 min-h-0", className)}>
             <div
                 className={cn(
-                    "rounded-md border relative flex-1 overflow-auto table-scrollbar-purple",
+                    "rounded-md border relative flex-1 overflow-y-auto overflow-x-hidden table-scrollbar-purple",
                     maxHeight && "overflow-y-auto",
                     tableBackgroundImage && "bg-white/82 dark:bg-background/90"
                 )}
@@ -212,8 +212,8 @@ export function TablaDynamic<T extends Record<string, any>>({
                         )}
                     />
                 )}
-                <Table className={cn("relative z-2", tableClassName)}>
-                    <TableHeader className="bg-brand-purple  sticky top-0 z-3">
+                <Table className={cn("relative z-2 table-fixed w-full", tableClassName)}>
+                    <TableHeader className="bg-brand-purple sticky top-0 z-3">
                         <TableRow className="bg-brand-purple hover:bg-brand-purple border-b-0">
                             {columns.map((column, index) => {
                                 const colKey = column.key as string;
@@ -223,7 +223,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                     <TableHead
                                         key={index}
                                         className={cn(
-                                            "text-white py-0 px-2 text-xs group/header",
+                                            "text-white py-0 px-2 text-xs group/header overflow-hidden",
                                             column.headerClassName,
                                             column.sortable && !isEditing &&
                                             "cursor-pointer select-none",
@@ -308,7 +308,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 );
                             })}
                             {actions.length > 0 && (
-                                <TableHead className="w-[70px] text-white py-2 px-3 text-sm">Acciones</TableHead>
+                                <TableHead className="w-[90px] text-white py-2 px-3 text-sm">Acciones</TableHead>
                             )}
                         </TableRow>
                     </TableHeader>
@@ -382,7 +382,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                 <TableCell
                                                     key={colIndex}
                                                     className={cn(
-                                                        "py-2 px-3 text-xs",
+                                                        "py-2 px-3 text-xs overflow-hidden whitespace-nowrap",
                                                         column.className,
                                                         column.hideOnMobile && "hidden md:table-cell"
                                                     )}
@@ -403,7 +403,6 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                                             className={cn(
                                                                                 "h-8 w-8 hover:bg-brand-purple/10 dark:hover:bg-purple-800/30 cursor-pointer",
                                                                                 action.variant === "destructive" && "hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400"
-
                                                                             )}
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();

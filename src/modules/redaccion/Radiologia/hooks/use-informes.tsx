@@ -6,12 +6,12 @@ import { informesKeys } from "../constants/query-keys";
 import { toast } from "sonner";
 import { notifyInformeChange, useCrossWindowSync } from "../redactar-informe/hooks/use-cross-windows";
 
-export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, bodypart_id = "", modality_id = "", study_group_id = "", flag_filter = "" }) => {
+export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, bodypart_id = "", modality_id = "", study_group_id = "", flag_filter = "", date_range = "all" }) => {
     useCrossWindowSync();
 
     const { data, isLoading, isFetching, error, refetch } = useQuery<ApiPaginatedResponse<Informes>>({
-        queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id, flag_filter),
-        queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id, flag_filter }),
+        queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id, flag_filter, date_range),
+        queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id, flag_filter, date_range }),
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
     });
