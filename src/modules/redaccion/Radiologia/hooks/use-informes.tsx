@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type InformeDetalle, type Informes } from "../types/informes.types";
 import type { ApiPaginatedResponse } from "@/types/global.type";
-import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, updateExaminationFlags, updateExaminationTagIds, getAllTags, updateGeneralNotes, type UpdateReportPayload } from "../services/informes.service";
+import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, updateExaminationFlags, updateExaminationTagIds, getAllTags, updateGeneralNotes, getPatientHistory, type UpdateReportPayload } from "../services/informes.service";
 import { informesKeys } from "../constants/query-keys";
 import { toast } from "sonner";
 import { notifyInformeChange, useCrossWindowSync } from "../redactar-informe/hooks/use-cross-windows";
@@ -317,4 +317,13 @@ export const useUnblockExam = () => {
             unblockExam(); // También desbloquear en cleanup
         };
     }, [informeGuid]);
-}; */
+} */
+
+export const usePatientHistory = (patientId: string | undefined) => {
+    const { data, isLoading } = useQuery({
+        queryKey: ['patient-history', patientId],
+        queryFn: () => getPatientHistory(patientId!),
+        enabled: !!patientId,
+    });
+    return { historyData: data, isLoading };
+}

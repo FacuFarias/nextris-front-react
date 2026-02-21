@@ -1,9 +1,8 @@
 import { useNavigate, useParams, useSearchParams } from "react-router-dom"
-import { useInformeDetalle, useUpdateReport, useUnblockExam, useBlockExam } from "../hooks/use-informes";
-import { Input } from "@/components/ui/input";
+import { useAllTags, useInformeDetalle, useUpdateFlags, useUpdateReport, useUpdateTagIds, useUnblockExam, useBlockExam, usePatientHistory } from "../hooks/use-informes";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, PanelLeftClose, PanelLeftOpen, PanelRightClose, Image, User, Loader2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, User, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -19,6 +18,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { informesKeys } from "../constants/query-keys";
 import { CloseTabModal, NextExamModal, SignModal, TemplateModal } from "../components/modals";
 import { clearWindowStorage, notifyGuidChange, notifyViewerUpdate } from "./hooks/use-cross-windows";
+import { FlagsCell } from "../components/FlagsCell";
+import { TagsCell } from "../components/TagsCell";
 
 export const RedactarInforme = () => {
     const { informeGuid, studyInstanceUID } = useParams();
@@ -30,16 +31,31 @@ export const RedactarInforme = () => {
     const studyGroupId = searchParams.get('study_group_id');
     const windowId = searchParams.get('windowId');
     const siguientePaso = searchParams.get('siguiente_paso');
+    const flagsParam = searchParams.get('flags');
+    const tagIdsParam = searchParams.get('tag_ids');
+
+    const initialFlagsFromParams = flagsParam
+        ? flagsParam.split(',').map((value) => value.trim()).filter(Boolean)
+        : [];
+    const initialTagIdsFromParams = tagIdsParam
+        ? tagIdsParam.split(',').map((value) => value.trim()).filter(Boolean)
+        : [];
 
     const { informeDetalle, isLoading } = useInformeDetalle(informeGuid);
     const { data: imagenes } = useImagenesPorEstudio(studyInstanceUID || '');
     const updateReportMutation = useUpdateReport(informeGuid || '');
+    const { mutate: updateFlags, isPending: isUpdatingFlags } = useUpdateFlags();
+    const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useUpdateTagIds();
+    const { allTags } = useAllTags();
     const [formData, setFormData] = useState({
+        history: '',
         techniques: '',
         findings: '',
         impressions: '',
         conclusions: ''
     });
+    const [examFlags, setExamFlags] = useState<string[]>(initialFlagsFromParams);
+    const [examTagIds, setExamTagIds] = useState<string[]>(initialTagIdsFromParams);
     const [isSignModalOpen, setIsSignModalOpen] = useState(false);
     const [password, setPassword] = useState('');
     const [isSigning, setIsSigning] = useState(false);
@@ -100,18 +116,96 @@ export const RedactarInforme = () => {
         );
     }) || [];
 
+    const getExamMetaFromCachedLists = useCallback(() => {
+        const cachedQueries = queryClient.getQueriesData({ queryKey: informesKeys.lists() });
+
+        for (const [, data] of cachedQueries) {
+            const rows = (data as any)?.data?.data;
+            if (!Array.isArray(rows)) continue;
+
+            const exam = rows.find((item: any) => item?.guid === informeGuid);
+            if (exam) {
+                return {
+                    flags: Array.isArray(exam.flags) ? exam.flags : [],
+                    tag_ids: Array.isArray(exam.tag_ids) ? exam.tag_ids : [],
+                };
+            }
+        }
+
+        return null;
+    }, [informeGuid, queryClient]);
+
     // Actualizar formData cuando informeDetalle cambie
     useEffect(() => {
         if (informeDetalle?.data) {
+            const cachedExamMeta = getExamMetaFromCachedLists();
+
             setFormData({
-                techniques: informeDetalle.data ? informeDetalle.data.techniques || '' : '',
-                findings: informeDetalle.data ? informeDetalle.data.findings || '' : '',
-                impressions: informeDetalle.data ? informeDetalle.data.impressions || '' : '',
-                conclusions: informeDetalle.data ? informeDetalle.data.conclusions || '' : ''
+                history: informeDetalle.data.history || '',
+                techniques: informeDetalle.data.techniques || '',
+                findings: informeDetalle.data.findings || '',
+                impressions: informeDetalle.data.impressions || '',
+                conclusions: informeDetalle.data.conclusions || ''
+            });
+            setExamFlags((prev) => {
+                if (Array.isArray(informeDetalle.data.flags)) return informeDetalle.data.flags;
+                if (cachedExamMeta) return cachedExamMeta.flags;
+                return prev;
+            });
+            setExamTagIds((prev) => {
+                if (Array.isArray(informeDetalle.data.tag_ids)) return informeDetalle.data.tag_ids;
+                if (cachedExamMeta) return cachedExamMeta.tag_ids;
+                return prev;
             });
             setIsSigned(informeDetalle.data.is_reported || false);
         }
-    }, [informeDetalle?.data]);
+    }, [getExamMetaFromCachedLists, informeDetalle?.data]);
+
+    useEffect(() => {
+        if (initialFlagsFromParams.length > 0) {
+            setExamFlags(initialFlagsFromParams);
+        }
+        if (initialTagIdsFromParams.length > 0) {
+            setExamTagIds(initialTagIdsFromParams);
+        }
+    }, [flagsParam, tagIdsParam]);
+
+    const patientId = informeDetalle?.data?.patient_id;
+    const { historyData } = usePatientHistory(patientId);
+    const patientStudies = historyData?.data || [];
+
+    const [historyPdfUrl, setHistoryPdfUrl] = useState<string | null>(null);
+
+    const handleOpenHistoryPdf = (pdfPath: string) => {
+        const baseURL = import.meta.env.VITE_API_URL || '/api';
+        setHistoryPdfUrl(`${baseURL}/pdfs/${pdfPath}`);
+    };
+
+    const examId = informeDetalle?.data?.exam_id || informeGuid || '';
+
+    const handleUpdateExamFlags = useCallback((_examId: string, flags: string[]) => {
+        if (!examId) return;
+        const previousFlags = examFlags;
+        setExamFlags(flags);
+        updateFlags(
+            { examId, flags },
+            {
+                onError: () => setExamFlags(previousFlags),
+            }
+        );
+    }, [examId, examFlags, updateFlags]);
+
+    const handleUpdateExamTags = useCallback((_examId: string, tagIds: string[]) => {
+        if (!examId) return;
+        const previousTagIds = examTagIds;
+        setExamTagIds(tagIds);
+        updateTagIds(
+            { examId, tagIds },
+            {
+                onError: () => setExamTagIds(previousTagIds),
+            }
+        );
+    }, [examId, examTagIds, updateTagIds]);
 
     // Estado para trackear el último índice de placeholder encontrado
     const lastPlaceholderIndexRef = useRef<number>(-1);
@@ -152,8 +246,113 @@ export const RedactarInforme = () => {
     });
 
     // Estados para controlar la visibilidad de los sidebars
-    const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
     const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
+    const [rightSidebarTab, setRightSidebarTab] = useState<'history' | 'images' | 'ai'>('history');
+    const [rightSidebarWidth, setRightSidebarWidth] = useState(380);
+    const [isResizingRightSidebar, setIsResizingRightSidebar] = useState(false);
+    const [activeEditorField, setActiveEditorField] = useState<keyof typeof editorsRef.current | null>(null);
+    const rightSidebarResizeStartXRef = useRef(0);
+    const rightSidebarResizeStartWidthRef = useRef(380);
+
+    const getApiOrigin = useCallback(() => {
+        try {
+            const apiBaseUrl = import.meta.env.VITE_API_URL;
+            if (!apiBaseUrl) return window.location.origin;
+            return new URL(apiBaseUrl, window.location.origin).origin;
+        } catch {
+            return window.location.origin;
+        }
+    }, []);
+
+    const getImageUrlByFilename = useCallback((filename: string) => {
+        const safeStudyUID = encodeURIComponent(studyInstanceUID || '');
+        const safeFilename = encodeURIComponent(filename || '');
+        return `${getApiOrigin()}/api/images/study/${safeStudyUID}/file/${safeFilename}`;
+    }, [getApiOrigin, studyInstanceUID]);
+
+    const resolveImageUrl = useCallback((rawPath: string | undefined, filename: string) => {
+        const fallbackUrl = getImageUrlByFilename(filename);
+        if (!rawPath) return fallbackUrl;
+
+        if (rawPath.startsWith('data:image/')) return rawPath;
+
+        if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
+            try {
+                const parsed = new URL(rawPath);
+                if (window.location.protocol === 'https:' && parsed.protocol === 'http:') {
+                    parsed.protocol = 'https:';
+                }
+                return parsed.toString();
+            } catch {
+                return fallbackUrl;
+            }
+        }
+
+        if (rawPath.startsWith('/api/')) {
+            return `${getApiOrigin()}${rawPath}`;
+        }
+
+        if (rawPath.startsWith('api/')) {
+            return `${getApiOrigin()}/${rawPath}`;
+        }
+
+        if (rawPath.startsWith('/uploads') || rawPath.startsWith('/media')) {
+            return `${getApiOrigin()}${rawPath}`;
+        }
+
+        return fallbackUrl;
+    }, [getApiOrigin, getImageUrlByFilename]);
+
+    const getImageMimeType = useCallback((filename: string) => {
+        const lower = filename.toLowerCase();
+        if (lower.endsWith('.png')) return 'image/png';
+        if (lower.endsWith('.webp')) return 'image/webp';
+        return 'image/jpeg';
+    }, []);
+
+    const rightSidebarTabLabel = rightSidebarTab === 'history'
+            ? 'Historia clínica'
+            : rightSidebarTab === 'images'
+                ? 'Imágenes clave'
+                : 'Asistencia IA';
+    const RightSidebarTabIcon = rightSidebarTab === 'history'
+            ? FileText
+            : rightSidebarTab === 'images'
+                ? ImageIcon
+                : Sparkles;
+
+    const handleRightSidebarResizeStart = (e: React.MouseEvent) => {
+        e.preventDefault();
+        rightSidebarResizeStartXRef.current = e.clientX;
+        rightSidebarResizeStartWidthRef.current = rightSidebarWidth;
+        setIsResizingRightSidebar(true);
+    };
+
+    useEffect(() => {
+        if (!isResizingRightSidebar) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const delta = rightSidebarResizeStartXRef.current - e.clientX;
+            const nextWidth = Math.max(320, Math.min(560, rightSidebarResizeStartWidthRef.current + delta));
+            setRightSidebarWidth(nextWidth);
+        };
+
+        const handleMouseUp = () => {
+            setIsResizingRightSidebar(false);
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+    }, [isResizingRightSidebar]);
 
     const toggleSection = (section: keyof typeof openSections) => {
         setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -233,12 +432,20 @@ export const RedactarInforme = () => {
     };
 
     const handleEditorReady = useCallback((editor: any, fieldName: string) => {
-        editorsRef.current[fieldName as keyof typeof editorsRef.current] = editor;
+        const field = fieldName as keyof typeof editorsRef.current;
+        editorsRef.current[field] = editor;
+        if (!currentFieldRef.current) {
+            currentFieldRef.current = fieldName;
+            setActiveEditorField(field);
+        }
         editor.on('focus', () => {
             currentFieldRef.current = fieldName;
+            setActiveEditorField(field);
             console.log(`📝 Campo activo: ${fieldName}`);
         });
     }, []);
+
+    const activeEditor = activeEditorField ? editorsRef.current[activeEditorField] : null;
 
     const findNextPlaceholder = useCallback(() => {
         const fieldOrder: Array<keyof typeof editorsRef.current> = ['techniques', 'findings', 'impressions', 'conclusions'];
@@ -335,15 +542,22 @@ export const RedactarInforme = () => {
 
     useEffect(() => {
         if (imagenes?.images && imagenes.images.length > 0) {
-            const formattedImages = imagenes.images.map((img, index) => ({
+            const formattedImages = imagenes.images.map((img, index) => {
+                const imageData = typeof img.data === 'string' ? img.data : '';
+                const imageUrl = imageData
+                    ? `data:${getImageMimeType(img.filename)};base64,${imageData}`
+                    : resolveImageUrl(img.path, img.filename);
+
+                return {
                 id: index + 1,
-                url: img.path,
+                url: imageUrl,
                 name: img.filename
-            }));
+                };
+            });
             setImages(formattedImages);
             setAllImages(formattedImages);
         }
-    }, [imagenes]);
+    }, [getImageMimeType, imagenes, resolveImageUrl]);
 
     useEffect(() => {
         findNextPlaceholderRef.current = findNextPlaceholder;
@@ -405,6 +619,7 @@ export const RedactarInforme = () => {
         }
 
         const dataToSave = {
+            history: formData.history,
             techniques: formData.techniques,
             findings: formData.findings,
             impressions: formData.impressions,
@@ -548,6 +763,12 @@ export const RedactarInforme = () => {
                 if (studyGroupId) params.set('study_group_id', studyGroupId);
                 if (windowId) params.set('windowId', windowId);
                 if (siguientePaso) params.set('siguiente_paso', siguientePaso);
+                if (Array.isArray(nextExamData.flags) && nextExamData.flags.length > 0) {
+                    params.set('flags', nextExamData.flags.join(','));
+                }
+                if (Array.isArray(nextExamData.tag_ids) && nextExamData.tag_ids.length > 0) {
+                    params.set('tag_ids', nextExamData.tag_ids.join(','));
+                }
 
                 const newUrl = `/estudios/redaccion/redactar-informe/${nextExamData.guid}/${nextExamData.study_instance_uid}?${params.toString()}`;
 
@@ -606,38 +827,59 @@ export const RedactarInforme = () => {
         </LayoutSinSidebar>;
     }
 
+    const reportData = (informeDetalle as any)?.data || {};
+    const patientName = reportData.patient_name || 'Carlos Fernández';
+    const patientIdentifier = reportData.patientid || reportData.patientit || reportData.patient?.patientit || reportData.patient?.patientid || '-';
+    const nationalCodeLabel = reportData.national_code || reportData.nationalcode || reportData.nationalCode || reportData.patient?.national_code || reportData.patient?.nationalcode || '-';
+    const sexLabel = reportData.sex === 'M' ? 'Masculino' : reportData.sex === 'F' ? 'Femenino' : (reportData.sex || '-');
+    const studyLabel = reportData.study_description || reportData.study_type_description || reportData.study_name || 'ANGIOTOMOGRAFÍA PELVIANA O VASOS ILÍACOS';
+    const modalityLabel = reportData.modality || reportData.modality_name || 'CT';
+    const accessionLabel = reportData.accession_number || reportData.localacc || reportData.admission_number || '-';
+    const dateLabel = reportData.exam_date || reportData.date || reportData.study_date || '13/12/2025';
+    const statLabel = reportData.stat || reportData.priority || 'A';
     return (
-        <LayoutSinSidebar>
-            <div className="">
+        <LayoutSinSidebar disableDefaultBackground>
+            <div className="min-h-[calc(100vh-84px)] bg-gray-50 dark:bg-[#0f1218] rounded-xl p-2 dark:text-gray-100">
                 {/* Header con botones de acción */}
-                <div className="flex justify-between items-center mb-6">
-                    <div className="relative bg-white rounded-xl p-4 shadow-md border-l-4 border-brand-purple flex items-center justify-between gap-4 w-full">
-                        <div className="flex items-start gap-4">
-                            <div className="bg-purple-100 rounded-full p-3 animate-in zoom-in duration-500">
-                                <User className="w-7 h-7 text-brand-purple" />
+                <div className="flex justify-between items-center mb-3">
+                    <div className="relative bg-white dark:bg-[#151922] rounded-lg p-3 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 w-full">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-gray-100 dark:bg-[#1e2430] rounded-full p-2.5">
+                                <User className="w-6 h-6 text-gray-600 dark:text-gray-300" />
                             </div>
                             <div className="flex-1">
-                                <h1 className="text-2xl font-bold text-gray-800 mb-1 animate-in fade-in slide-in-from-left-3 duration-500 delay-100">
-                                    {informeDetalle?.data?.patient_name || 'Carlos Fernández'}
+                                <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-1">
+                                    {patientName} - {patientIdentifier} - {sexLabel} - {nationalCodeLabel}
                                 </h1>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide animate-in fade-in duration-500 delay-200">
-                                        Número de Registro
-                                    </span>
-                                    <span className="text-sm font-bold text-brand-purple bg-purple-50 px-3 py-1 rounded-lg animate-in fade-in zoom-in-95 duration-500 delay-300">
-                                        NR {informeDetalle?.data?.admission_number}
-                                    </span>
-                                    <span className="text-sm font-bold text-brand-purple bg-purple-50 px-3 py-1 rounded-lg animate-in fade-in zoom-in-95 duration-500 delay-500">
-                                        {informeDetalle?.data?.sex === 'M' ? 'Masculino' : 'Femenino'}
-                                    </span>
+                                <p className="text-sm text-gray-600 dark:text-gray-300">
+                                    {studyLabel} - {modalityLabel} - {accessionLabel} - {dateLabel} - {statLabel}
+                                </p>
+                                <div className="mt-2 flex flex-wrap items-center gap-3">
+                                    <FlagsCell
+                                        examId={examId}
+                                        currentFlags={examFlags}
+                                        onUpdate={handleUpdateExamFlags}
+                                        isUpdating={isUpdatingFlags || isSigned || !examId}
+                                    />
+                                    <TagsCell
+                                        examId={examId}
+                                        currentTagIds={examTagIds}
+                                        availableTags={allTags}
+                                        onUpdate={handleUpdateExamTags}
+                                        isUpdating={isUpdatingTagIds || isSigned || !examId}
+                                    />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="flex gap-2">
                             <PrimaryButton onClick={handleOpenPdf}>
                                 <FileMinus />
                                 PDF
+                            </PrimaryButton>
+                            <PrimaryButton onClick={() => setIsTemplateModalOpen(true)}>
+                                <FileText />
+                                INFORMES PREDEFINIDOS
                             </PrimaryButton>
                             <PrimaryButton
                                 onClick={() => setIsSignModalOpen(true)}
@@ -667,166 +909,57 @@ export const RedactarInforme = () => {
 
                 {/* Layout de tres columnas con sidebars colapsables */}
                 <div className="relative">
-                    <div className="flex gap-2 items-start">
-                        {/* Columna izquierda */}
-                        <div className={`space-y-6 self-start transition-all duration-700 ease-in-out ${leftSidebarOpen
-                            ? 'w-[320px] opacity-100 translate-x-0'
-                            : 'w-0 opacity-0 -translate-x-full overflow-hidden'
-                            }`}>
-                            <div className={`min-w-[320px] space-y-4 transition-opacity duration-700 ease-in-out ${leftSidebarOpen ? 'opacity-100' : 'opacity-0'
-                                }`}>
-
-                                {/* Datos del examen */}
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all  hover:-translate-y-1 animate-in fade-in slide-in-from-left-4 duration-500">
-                                    <div
-                                        className="cursor-pointer bg-brand-purple px-4 py-3 flex justify-between items-center"
-                                        onClick={() => toggleSection('datosExamen')}
-                                    >
-                                        <h3 className="text-white font-semibold">Datos del examen</h3>
-                                        {openSections.datosExamen ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                                    </div>
-                                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.datosExamen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                        <div className="p-4 space-y-4">
-                                            <div>
-                                                <label className="text-xs text-gray-600 font-medium">Estudio</label>
-                                                <p className="text-sm font-medium mt-1">ANGIOTOMOGRAFÍA PELVIANA O VASOS ILÍACOS</p>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="text-xs text-gray-600 font-medium">Fecha</label>
-                                                    <p className="text-sm font-medium mt-1">13/12/2025</p>
-                                                </div>
-                                                <div>
-                                                    <label className="text-xs text-gray-600 font-medium">Modalidad</label>
-                                                    <p className="text-sm font-medium mt-1">CT</p>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="text-xs text-gray-600 font-medium">Médico Referente</label>
-                                                <p className="text-sm font-medium mt-1">-</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Datos técnicos */}
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all  hover:-translate-y-1 animate-in fade-in slide-in-from-left-4 duration-700" style={{ animationDelay: '100ms' }}>
-                                    <div
-                                        className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                        onClick={() => toggleSection('datosTecnicos')}
-                                    >
-                                        <h3 className="text-white font-semibold">Datos técnicos</h3>
-                                        {openSections.datosTecnicos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                                    </div>
-                                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.datosTecnicos ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                        <div className="p-6">
-                                            <label className="text-xs text-gray-600 font-medium">Stat</label>
-                                            <p className="text-sm font-medium mt-1">A</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Informes predefinidos */}
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all  hover:-translate-y-1 animate-in fade-in slide-in-from-left-4 duration-700" style={{ animationDelay: '200ms' }}>
-                                    <div
-                                        className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                        onClick={() => toggleSection('informesPredefinidos')}
-                                    >
-                                        <h3 className="text-white font-semibold">Informes predefinidos</h3>
-                                        {openSections.informesPredefinidos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                                    </div>
-                                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.informesPredefinidos ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                        <div className="p-6">
-                                            <label className="text-xs text-gray-600 font-medium">Predef Seleccionado</label>
-                                            <p className="text-sm font-medium mt-1 text-purple-400">
-                                                {selectedTemplate?.title || 'Ninguna plantilla seleccionada'}
-                                            </p>
-                                            <button
-                                                className="text-purple-600 text-sm mt-3 hover:underline"
-                                                onClick={() => setIsTemplateModalOpen(true)}
-                                            >
-                                                Cambiar plantilla
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Historia clínica */}
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all  hover:-translate-y-1 animate-in fade-in slide-in-from-left-4 duration-700" style={{ animationDelay: '300ms' }}>
-                                    <div
-                                        className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
-                                        onClick={() => toggleSection('historiaClinicaSidebar')}
-                                    >
-                                        <h3 className="text-white font-semibold">Historia clínica</h3>
-                                        {openSections.historiaClinicaSidebar ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
-                                    </div>
-                                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinicaSidebar ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                        <div className="p-6">
-                                            <Input value="sin info" disabled className="bg-gray-50" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Botón toggle sidebar izquierdo */}
-                        <div className="self-stretch">
-                            {leftSidebarOpen ? (
-                                <button
-                                    onClick={() => setLeftSidebarOpen(false)}
-                                    className="bg-blue-500 h-[calc(100vh-160px)] hover:bg-blue-600 hover:scale-100 text-white p-2 rounded-lg shadow-lg transition-all  animate-in fade-in zoom-in duration-500"
-                                    title="Ocultar panel de información"
-                                >
-                                    <PanelLeftClose className="w-4 h-4" />
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => setLeftSidebarOpen(true)}
-                                    className="h-[calc(100vh-160px)] bg-brand-purple hover:bg-purple-800 hover:scale-100 text-white p-2 rounded-lg shadow-lg transition-all  flex items-center justify-center animate-in fade-in zoom-in duration-500"
-                                    title="Mostrar panel de información"
-                                >
-                                    <PanelLeftOpen className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
-
+                    <div className="flex gap-1 items-start">
                         {/* Columna central */}
-                        <div className="flex-1 space-y-4 p-5 transition-all  ease-in-out min-w-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-y-auto h-[calc(100vh-160px)] animate-in fade-in zoom-in-95 duration-500">
+                        <div className="flex-1 space-y-2.5 p-2.5 transition-all ease-in-out min-w-0 bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-y-auto h-[calc(100vh-124px)] table-scrollbar-purple">
+
+                            {/* Toolbar única global */}
+                            <div className="sticky top-0 z-20 bg-gray-50 dark:bg-[#0f1218] rounded-md border border-gray-200 dark:border-gray-700 p-1.5 flex items-center gap-0.5 flex-wrap">
+                                <button onClick={() => activeEditor?.chain().focus().toggleBold().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('bold') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Negrita" disabled={!activeEditor || isSigned}><Bold className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().toggleItalic().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('italic') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Cursiva" disabled={!activeEditor || isSigned}><Italic className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().toggleUnderline().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('underline') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Subrayado" disabled={!activeEditor || isSigned}><UnderlineIcon className="w-4 h-4 dark:text-gray-200" /></button>
+                                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+                                <button onClick={() => activeEditor?.chain().focus().toggleOrderedList().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('orderedList') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Lista numerada" disabled={!activeEditor || isSigned}><ListOrdered className="w-4 h-4 dark:text-gray-200" /></button>
+                                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('left').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'left' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Alinear izquierda" disabled={!activeEditor || isSigned}><AlignLeft className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('center').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'center' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Centrar" disabled={!activeEditor || isSigned}><AlignCenter className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('right').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'right' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Alinear derecha" disabled={!activeEditor || isSigned}><AlignRight className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('justify').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'justify' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Justificar" disabled={!activeEditor || isSigned}><AlignJustify className="w-4 h-4 dark:text-gray-200" /></button>
+                                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+                                <button onClick={() => activeEditor?.chain().focus().undo().run()} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600" type="button" title="Deshacer" disabled={!activeEditor || !activeEditor?.can?.().undo() || isSigned}><Undo className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().redo().run()} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600" type="button" title="Rehacer" disabled={!activeEditor || !activeEditor?.can?.().redo() || isSigned}><Redo className="w-4 h-4 dark:text-gray-200" /></button>
+                            </div>
 
                             {/* Historia Clínica */}
-                            <div className="bg-white rounded-xl shadow-sm border border-red-300 overflow-hidden relative hover:shadow-md transition-all duration-300 hover:-translate-y-1">
+                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden relative">
                                 <div
-                                    className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
                                     onClick={() => toggleSection('historiaClinica')}
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <h3 className="text-white font-semibold">Historia Clínica</h3>
-                                        <span className="text-xs bg-red-500 text-white px-3 py-1 rounded-full font-medium flex items-center gap-1">
-                                            🔒 Campo Bloqueado
-                                        </span>
-                                    </div>
-                                    {openSections.historiaClinica ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Historia Clínica</h3>
+                                    {openSections.historiaClinica ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
                                 </div>
                                 <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinica ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2">
                                         <textarea
-                                            className="w-full h-20 p-3 border-2 border-red-200 rounded-md bg-red-50 text-gray-500 resize-none cursor-not-allowed"
-                                            placeholder="Historia clínica escrita por el técnico..."
-                                            disabled
-                                            value={informeDetalle?.data?.history}
+                                            className="w-full h-20 p-3 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-[#1e2430] text-gray-800 dark:text-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-brand-purple/40"
+                                            placeholder="Historia clínica..."
+                                            disabled={isSigned}
+                                            value={formData.history}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, history: e.target.value }))}
                                         />
                                     </div>
                                 </div>
                             </div>
 
                             {/* Técnica de examen */}
-                            <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden hover:shadow-md transition-all duration-300 hover:-translate-y-1">
+                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                                 <div
-                                    className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
                                     onClick={() => toggleSection('tecnica')}
                                 >
-                                    <h3 className="text-white font-semibold">Técnica de examen</h3>
-                                    {openSections.tecnica ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Técnica de examen</h3>
+                                    {openSections.tecnica ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
                                 </div>
                                 <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.tecnica ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2 space-y-2">
@@ -840,6 +973,7 @@ export const RedactarInforme = () => {
                                             onDrop={(e) => handleDrop(e, 'techniques', editorsRef.current.techniques)}
                                             onEditorReady={(editor) => handleEditorReady(editor, 'techniques')}
                                             readOnly={isSigned}
+                                            showToolbar={false}
 
                                         />
                                     </div>
@@ -847,13 +981,13 @@ export const RedactarInforme = () => {
                             </div>
 
                             {/* Hallazgos */}
-                            <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
+                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                                 <div
-                                    className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
                                     onClick={() => toggleSection('hallazgos')}
                                 >
-                                    <h3 className="text-white font-semibold">Hallazgos</h3>
-                                    {openSections.hallazgos ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Hallazgos</h3>
+                                    {openSections.hallazgos ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
                                 </div>
                                 <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.hallazgos ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2 space-y-2">
@@ -867,19 +1001,20 @@ export const RedactarInforme = () => {
                                             onDrop={(e) => handleDrop(e, 'findings', editorsRef.current.findings)}
                                             onEditorReady={(editor) => handleEditorReady(editor, 'findings')}
                                             readOnly={isSigned}
+                                            showToolbar={false}
                                         />
                                     </div>
                                 </div>
                             </div>
 
                             {/* Impresiones */}
-                            <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
+                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                                 <div
-                                    className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
                                     onClick={() => toggleSection('impresiones')}
                                 >
-                                    <h3 className="text-white font-semibold">Impresiones</h3>
-                                    {openSections.impresiones ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Impresiones</h3>
+                                    {openSections.impresiones ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
                                 </div>
                                 <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.impresiones ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2 space-y-2">
@@ -893,19 +1028,20 @@ export const RedactarInforme = () => {
                                             onDrop={(e) => handleDrop(e, 'impressions', editorsRef.current.impressions)}
                                             onEditorReady={(editor) => handleEditorReady(editor, 'impressions')}
                                             readOnly={isSigned}
+                                            showToolbar={false}
                                         />
                                     </div>
                                 </div>
                             </div>
 
                             {/* Conclusiones */}
-                            <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
+                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                                 <div
-                                    className="cursor-pointer bg-brand-purple px-6 py-4 flex justify-between items-center"
+                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
                                     onClick={() => toggleSection('conclusiones')}
                                 >
-                                    <h3 className="text-white font-semibold">Conclusiones</h3>
-                                    {openSections.conclusiones ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
+                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Conclusiones</h3>
+                                    {openSections.conclusiones ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
                                 </div>
                                 <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.conclusiones ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2 space-y-2">
@@ -919,6 +1055,7 @@ export const RedactarInforme = () => {
                                             onDrop={(e) => handleDrop(e, 'conclusions', editorsRef.current.conclusions)}
                                             onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')}
                                             readOnly={isSigned}
+                                            showToolbar={false}
                                         />
                                     </div>
                                 </div>
@@ -930,71 +1067,148 @@ export const RedactarInforme = () => {
                             {rightSidebarOpen ? (
                                 <button
                                     onClick={() => setRightSidebarOpen(false)}
-                                    className="bg-blue-500 h-[calc(100vh-160px)] hover:bg-blue-600 hover:scale-100 text-white p-2 rounded-lg shadow-lg transition-all  animate-in fade-in zoom-in duration-500"
-                                    title="Ocultar panel de imágenes"
+                                    className="bg-gray-200 dark:bg-[#1f2937] h-[calc(100vh-124px)] hover:bg-gray-300 dark:hover:bg-[#2a3444] text-gray-700 dark:text-gray-200 p-1.5 rounded-md border border-gray-300 dark:border-gray-700 transition-colors"
+                                    title={`Ocultar panel lateral (${rightSidebarTabLabel})`}
                                 >
-                                    <PanelRightClose className="w-4 h-4" />
+                                    <RightSidebarTabIcon className="w-4 h-4" />
                                 </button>
                             ) : (
                                 <button
                                     onClick={() => setRightSidebarOpen(true)}
-                                    className="h-[calc(100vh-160px)] bg-brand-purple hover:bg-purple-800 hover:scale-100 text-white p-2 rounded-lg shadow-lg transition-all  flex items-center justify-center animate-in fade-in zoom-in duration-500"
-                                    title="Mostrar panel de imágenes"
+                                    className="h-[calc(100vh-124px)] bg-gray-200 dark:bg-[#1f2937] hover:bg-gray-300 dark:hover:bg-[#2a3444] text-gray-700 dark:text-gray-200 p-1.5 rounded-md border border-gray-300 dark:border-gray-700 transition-colors flex items-center justify-center"
+                                    title={`Mostrar panel lateral (${rightSidebarTabLabel})`}
                                 >
-                                    <Image className="w-4 h-4" />
+                                    <RightSidebarTabIcon className="w-4 h-4" />
                                 </button>
                             )}
                         </div>
 
                         {/* Columna derecha - Imágenes */}
-                        <div className={`self-start space-y-4 transition-all duration-700 ease-in-out ${rightSidebarOpen
-                            ? 'w-[320px] opacity-100'
-                            : 'w-0 opacity-0 overflow-hidden'
-                            }`}>
-                            <div className={`min-w-[320px] transition-opacity duration-700 ease-in-out ${rightSidebarOpen ? 'opacity-100' : 'opacity-0'
-                                }`}>
+                        <div
+                            className={`self-start relative space-y-3 shrink-0 origin-right overflow-hidden ${isResizingRightSidebar ? '' : 'transition-opacity duration-200 ease-out'} ${rightSidebarOpen ? 'opacity-100' : 'opacity-0'}`}
+                            style={{ width: rightSidebarOpen ? `${rightSidebarWidth}px` : '0px' }}
+                        >
+                            {rightSidebarOpen && (
+                                <button
+                                    type="button"
+                                    onMouseDown={handleRightSidebarResizeStart}
+                                    className="absolute -left-1 top-0 h-full w-2 cursor-col-resize z-20"
+                                    title="Redimensionar panel lateral"
+                                />
+                            )}
+                            <div className={`${rightSidebarOpen ? 'opacity-100' : 'opacity-0'} w-full`}>
 
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full animate-in fade-in slide-in-from-right-4 duration-700  hover:shadow-md transition-shadow">
-                                    <div
-                                        className="cursor-pointer bg-brand-purple px-4 py-3 flex items-center justify-between shrink-0  transition-colors duration-200"
-                                        onClick={() => toggleSection('imagenes')}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <ImageIcon className="w-5 h-5 text-white" />
-                                            <h3 className="text-white font-semibold whitespace-nowrap">Imágenes</h3>
-                                        </div>
-                                        <div className={`transition-transform duration-300 ${openSections.imagenes ? 'rotate-180' : ''}`}>
-                                            <ChevronDown className="w-5 h-5 text-white" />
+                                <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-full">
+                                    <div className="bg-gray-100 dark:bg-[#1e2430] px-2 py-2 border-b border-gray-200 dark:border-gray-700">
+                                        <div className="grid grid-cols-3 gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setRightSidebarTab('history')}
+                                                className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-semibold transition-colors ${rightSidebarTab === 'history'
+                                                    ? 'bg-white dark:bg-[#151922] text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
+                                                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#273043]'
+                                                    }`}
+                                            >
+                                                <FileText className="w-3.5 h-3.5" />
+                                                Historia
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setRightSidebarTab('images')}
+                                                className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-semibold transition-colors ${rightSidebarTab === 'images'
+                                                    ? 'bg-white dark:bg-[#151922] text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
+                                                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#273043]'
+                                                    }`}
+                                            >
+                                                <ImageIcon className="w-3.5 h-3.5" />
+                                                Imágenes clave
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setRightSidebarTab('ai')}
+                                                className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-semibold transition-colors ${rightSidebarTab === 'ai'
+                                                    ? 'bg-white dark:bg-[#151922] text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
+                                                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#273043]'
+                                                    }`}
+                                            >
+                                                <Sparkles className="w-3.5 h-3.5" />
+                                                Asistencia IA
+                                            </button>
                                         </div>
                                     </div>
-                                    {openSections.imagenes && (
+                                    {rightSidebarTab === 'history' ? (
+                                        <div className="p-3 h-[calc(100vh-170px)] overflow-y-auto table-scrollbar-purple">
+                                            {patientStudies.length === 0 ? (
+                                                <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-4">Sin estudios previos</p>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    {patientStudies.map((study: any) => (
+                                                        <div key={study.guid} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e2430] px-3 py-2">
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{study.estudio}</p>
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400">{study.modalidad} · {study.fecha}</p>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenHistoryPdf(study.pdf_path)}
+                                                                className="shrink-0 p-1 rounded hover:bg-brand-purple/10 dark:hover:bg-purple-800/30"
+                                                                title="Ver PDF"
+                                                            >
+                                                                <FileIcon className="w-4 h-4 text-brand-purple dark:text-purple-400" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : rightSidebarTab === 'images' ? (
                                         <div className="transition-all duration-300 ease-in-out flex-1 overflow-hidden">
-                                            <div className="p-4 h-[calc(100vh-210px)] flex flex-col">
-                                                <p className="text-xs text-gray-500 text-center mb-4 shrink-0">
+                                            <div className="p-3 h-[calc(100vh-170px)] flex flex-col">
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 text-center mb-4 shrink-0">
                                                     Arrastra las imágenes a los campos de texto
                                                 </p>
-                                                <div className="max-h-[700px] overflow-y-auto space-y-4 pr-2">
+                                                <div className="max-h-[620px] overflow-y-auto space-y-2 pr-1 table-scrollbar-purple">
                                                     {images.map((image, index) => (
                                                         <div
                                                             key={image.id}
                                                             draggable
                                                             onDragStart={() => handleDragStart(image)}
                                                             onDragEnd={handleDragEnd}
-                                                            className={`cursor-grab active:cursor-grabbing rounded-lg overflow-hidden border-2 border-gray-200 hover:border-purple-400 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 ${draggedImage?.id === image.id ? 'opacity-50 scale-95' : ''
+                                                            className={`cursor-grab active:cursor-grabbing rounded-md overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 transition-colors ${draggedImage?.id === image.id ? 'opacity-50 scale-95' : ''
                                                                 }`}
                                                             style={{ animationDelay: `${index * 50}ms` }}
                                                         >
                                                             <img
                                                                 src={image.url}
                                                                 alt={image.name}
+                                                                onError={(e) => {
+                                                                    const fallbackUrl = getImageUrlByFilename(image.name);
+                                                                    if (e.currentTarget.src !== fallbackUrl) {
+                                                                        e.currentTarget.src = fallbackUrl;
+                                                                    }
+                                                                }}
                                                                 className="w-full h-auto object-cover"
                                                             />
-                                                            <div className="p-2 bg-gray-50 text-center">
-                                                                <p className="text-sm font-medium text-gray-700">{image.name}</p>
+                                                            <div className="p-2 bg-gray-50 dark:bg-[#2a2e32] text-center">
+                                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{image.name}</p>
                                                             </div>
                                                         </div>
                                                     ))}
                                                 </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="p-3 h-[calc(100vh-170px)] flex flex-col gap-2">
+                                            <div className="rounded-md border border-dashed border-gray-300 dark:border-gray-600 p-3 bg-gray-50 dark:bg-[#1e2430]">
+                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Asistencia IA</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                    Aquí verás sugerencias para mejorar redacción, estructura y claridad del informe.
+                                                </p>
+                                            </div>
+                                            <div className="rounded-md border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-[#111827] flex-1">
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    Selecciona texto del informe para recibir ayuda contextual.
+                                                </p>
                                             </div>
                                         </div>
                                     )}
@@ -1040,12 +1254,13 @@ export const RedactarInforme = () => {
                         if (hasChanges) {
                             setIsConfirmationModalOpen(true);
                         } else {
-                            setFormData({
+                            setFormData(prev => ({
+                                ...prev,
                                 techniques: selectedTemplate.technique || '',
                                 findings: selectedTemplate.findings || '',
                                 impressions: selectedTemplate.impression || '',
                                 conclusions: selectedTemplate.conclusion || ''
-                            });
+                            }));
                             setIsTemplateModalOpen(false);
                             toast.success('Plantilla aplicada exitosamente');
                         }
@@ -1061,12 +1276,13 @@ export const RedactarInforme = () => {
                 onClose={() => setIsConfirmationModalOpen(false)}
                 onConfirm={() => {
                     if (selectedTemplate) {
-                        setFormData({
+                        setFormData(prev => ({
+                            ...prev,
                             techniques: selectedTemplate.technique || '',
                             findings: selectedTemplate.findings || '',
                             impressions: selectedTemplate.impression || '',
                             conclusions: selectedTemplate.conclusion || ''
-                        });
+                        }));
                         setIsConfirmationModalOpen(false);
                         setIsTemplateModalOpen(false);
                         toast.success('Plantilla aplicada exitosamente');
@@ -1095,6 +1311,25 @@ export const RedactarInforme = () => {
                 onCloseTab={handleCloseTab}
                 onStay={handleStayOnPage}
             />
+
+            {/* Modal PDF historial */}
+            {historyPdfUrl && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setHistoryPdfUrl(null)}>
+                    <div className="relative bg-white dark:bg-[#151922] rounded-lg shadow-2xl w-[80vw] h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Informe previo</span>
+                            <button
+                                type="button"
+                                onClick={() => setHistoryPdfUrl(null)}
+                                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                <X className="w-4 h-4 text-gray-500 dark:text-gray-300" />
+                            </button>
+                        </div>
+                        <iframe src={historyPdfUrl} className="flex-1 w-full rounded-b-lg" title="Informe previo" />
+                    </div>
+                </div>
+            )}
         </LayoutSinSidebar>
     )
 }

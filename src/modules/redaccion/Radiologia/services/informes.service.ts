@@ -91,6 +91,15 @@ export const getAllTags = async () => {
     }
 }
 
+export const getPatientHistory = async (patientId: string) => {
+    try {
+        const response = await api.get(`/patients/${patientId}/history`);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
 // Versión para desbloquear al cerrar la ventana - usa fetch con keepalive
 export const unblockExamOnUnload = (exam_id: string): void => {
     // Obtener baseURL de manera más confiable
