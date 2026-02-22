@@ -48,7 +48,7 @@ export const InformePredefinidos = () => {
     };
     return (
         <MainLayout isOverflow={false}>
-            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm h-full flex flex-col">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm h-full flex flex-col">
                 {/* Header */}
                 <div className="mb-6">
                     <div className="flex items-center gap-3 mb-4">

@@ -46,6 +46,15 @@ export const getHistoryPatient = async ({ patientId }: { patientId: string }) =>
     }
 }
 
+export const createPatientUser = async (patientGuid: string) => {
+    try {
+        const response = await api.post(`/patients/${patientGuid}/create-user`);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
 export const postViewImagenDicom = async ({ imageId, userId }: { imageId?: string, userId?: string }) => {
 
     try {

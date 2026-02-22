@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTheme } from "@/context/ThemeContext";
 //shadcn ui
 import {
     Table,
@@ -46,6 +47,7 @@ export function TablaDynamic<T extends Record<string, any>>({
     onToggleColumn,
     additionalControls,
     tableBackgroundImage,
+    tableBackgroundImageDark,
     sortColumn: controlledSortColumn,
     sortDirection: controlledSortDirection,
     onSortChange,
@@ -68,6 +70,9 @@ export function TablaDynamic<T extends Record<string, any>>({
         ? (controlledSortColumn ? { key: controlledSortColumn, direction: controlledSortDirection || "asc" } : null)
         : internalSortConfig;
     const [bgRevealed, setBgRevealed] = useState(false);
+    const { actualTheme } = useTheme();
+    const isDark = actualTheme === 'dark';
+    const hasBgImage = !!(tableBackgroundImage || tableBackgroundImageDark);
 
     useEffect(() => {
         if (tableBackgroundImage) {
@@ -194,33 +199,58 @@ export function TablaDynamic<T extends Record<string, any>>({
 
     return (
         <div className={cn("space-y-4 mt-5 flex flex-col flex-1 min-h-0", className)}>
+            {/* Contenedor externo: fondo fijo + borde. NO tiene overflow para que la imagen no scrollee */}
             <div
                 className={cn(
-                    "rounded-md border relative flex-1 overflow-y-auto overflow-x-auto table-scrollbar-purple",
-                    maxHeight && "overflow-y-auto",
-                    tableBackgroundImage && "bg-white/82 dark:bg-background/90"
+                    "rounded-md border dark:border-[rgba(255,255,255,0.07)] relative flex-1 overflow-hidden dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+                    (tableBackgroundImage || tableBackgroundImageDark) && "bg-white/82 dark:bg-background/78"
                 )}
-                style={{
-                    ...(maxHeight ? { maxHeight } : {}),
-                    ...(tableBackgroundImage ? {
-                        backgroundImage: `url(${tableBackgroundImage})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        backgroundBlendMode: 'overlay',
-                    } : {}),
-                }}
+                style={maxHeight ? { maxHeight } : {}}
             >
+                {/* Capa light — queda fija, no scrollea */}
                 {tableBackgroundImage && (
                     <div
+                        className="absolute inset-0 pointer-events-none transition-opacity duration-700 ease-in-out"
+                        style={{
+                            backgroundImage: `url(${tableBackgroundImage})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            backgroundBlendMode: 'overlay',
+                            opacity: isDark && tableBackgroundImageDark ? 0 : 1,
+                        }}
+                    />
+                )}
+                {/* Capa dark — queda fija, no scrollea */}
+                {tableBackgroundImageDark && (
+                    <div
+                        className="absolute inset-0 pointer-events-none transition-opacity duration-700 ease-in-out"
+                        style={{
+                            backgroundImage: `url(${tableBackgroundImageDark})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            backgroundBlendMode: 'overlay',
+                            opacity: isDark ? 1 : 0,
+                        }}
+                    />
+                )}
+                {/* Máscara permanente: blanca en light, negra en dark */}
+                {(tableBackgroundImage || tableBackgroundImageDark) && (
+                    <div className="absolute inset-0 z-1 bg-white/78 pointer-events-none transition-[background-color] duration-700 ease-in-out dark:bg-[#0f0820]/75" />
+                )}
+                {/* Máscara de reveal inicial (fade out al cargar) */}
+                {(tableBackgroundImage || tableBackgroundImageDark) && (
+                    <div
                         className={cn(
-                            "absolute inset-0 z-1 bg-purple-50 dark:bg-purple-950/20 pointer-events-none transition-opacity duration-1000 ease-out",
+                            "absolute inset-0 z-1 bg-purple-50/80 dark:bg-[#0a0b14]/65 pointer-events-none transition-opacity duration-1200 ease-out",
                             bgRevealed ? "opacity-0" : "opacity-100"
                         )}
                     />
                 )}
-                <Table className={cn("relative z-2 w-full", tableClassName)}>
-                    <TableHeader className="bg-brand-purple sticky top-0 z-3">
-                        <TableRow className="bg-brand-purple hover:bg-brand-purple border-b-0">
+                {/* Contenedor interno: aquí ocurre el scroll, encima del fondo fijo */}
+                <div className="relative z-2 h-full overflow-y-auto overflow-x-auto table-scrollbar-purple">
+                <Table className={cn("w-full", tableClassName)}>
+                    <TableHeader className="bg-brand-purple dark:bg-gradient-to-r dark:from-[#3b1066] dark:to-[#2d0d52] sticky top-0 z-3 dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
+                        <TableRow className="bg-brand-purple dark:bg-transparent hover:bg-brand-purple dark:hover:bg-transparent border-b-0">
                             {columns.map((column, index) => {
                                 const colKey = column.key as string;
                                 const filterActive = !!columnFilters[colKey]?.trim();
@@ -341,7 +371,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                             </TableRow>
                         ) : paginatedData.length === 0 ? (
                             <>
-                                <TableRow className="bg-card dark:bg-transparent">
+                                <TableRow className="bg-card dark:bg-[#1a1b24]/45">
                                     <TableCell
                                         colSpan={
                                             columns.length +
@@ -377,9 +407,13 @@ export function TablaDynamic<T extends Record<string, any>>({
                                         <TableRow
                                             key={getRowIndex(index)}
                                             className={cn(
-                                                "bg-card dark:bg-transparent",
-                                                (onRowClick || onRowDoubleClick) && "cursor-pointer hover:bg-muted/50 dark:hover:bg-muted",
-                                                isSelected && "bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-100/80 dark:hover:bg-purple-900/40 border-l-4 border-l-brand-purple dark:border-l-purple-500",
+                                                "transition-colors duration-150",
+                                                hasBgImage
+                                                    ? "bg-transparent"
+                                                    : "bg-card dark:bg-[#1a1b24]/45",
+                                                (onRowClick || onRowDoubleClick) && hasBgImage && "cursor-pointer hover:bg-white/30 dark:hover:bg-purple-900/25",
+                                                (onRowClick || onRowDoubleClick) && !hasBgImage && "cursor-pointer hover:bg-muted/50 dark:hover:bg-purple-900/25",
+                                                isSelected && "bg-purple-100 dark:bg-purple-900/40 hover:bg-purple-100/80 dark:hover:bg-purple-900/50 border-l-4 border-l-brand-purple dark:border-l-purple-400 dark:shadow-[inset_4px_0_8px_rgba(139,92,246,0.15)]",
                                                 "animate-in fade-in duration-300 ease-out"
                                             )}
                                             style={{
@@ -444,7 +478,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 })}
                                 {preserveTableHeight && pagination && paginatedData.length < pagination.pageSize &&
                                     Array.from({ length: pagination.pageSize - paginatedData.length }).map((_, index) => (
-                                        <TableRow key={`empty-row-${index}`} className="bg-card dark:bg-transparent">
+                                        <TableRow key={`empty-row-${index}`} className={hasBgImage ? "bg-transparent" : "bg-card dark:bg-transparent"}>
                                             <TableCell
                                                 colSpan={
                                                     columns.length +
@@ -461,7 +495,8 @@ export function TablaDynamic<T extends Record<string, any>>({
                         )}
                     </TableBody>
                 </Table>
-            </div>
+                </div>{/* fin contenedor scroll interno */}
+            </div>{/* fin contenedor fondo fijo */}
             {pagination && onPaginationChange && (
                 <div className={cn(
                     stickyPagination && "sticky bottom-0 z-4 bg-card/95 dark:bg-card/95 backdrop-blur-sm border-t border-border"

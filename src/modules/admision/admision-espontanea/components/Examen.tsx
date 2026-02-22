@@ -6,6 +6,7 @@ import { useEquiposPorLocacion, useEstudiosPorModalidad, useModalidades, usePart
 import TablaDynamic from "@/components/TableDynamic"
 import type { TableColumn } from "@/types/table"
 import fondoImage from "@/assets/fondo1.png"
+import backDarkImage from "@/assets/back-dark.jpg";
 
 interface ExamenProps {
     selectedPatient: Patient | null;
@@ -242,6 +243,7 @@ export const Examen = ({
                             perPageOptions={[10, 20, 50]}
                             maxHeight="56vh"
                             tableBackgroundImage={fondoImage}
+                            tableBackgroundImageDark={backDarkImage}
                             tableClassName="table-fixed w-full"
                             preserveTableHeight
                         />

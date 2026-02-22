@@ -47,11 +47,11 @@ export const ConfirmationModal = ({
             case "warning":
             default:
                 return {
-                    bgColor: "from-yellow-50 to-amber-50",
-                    borderColor: "border-yellow-200",
+                    bgColor: "from-transparent to-transparent",
+                    borderColor: "border-yellow-400/80",
                     iconColor: "text-yellow-600",
-                    textColor: "text-yellow-900",
-                    descColor: "text-yellow-700"
+                    textColor: "text-yellow-700 dark:text-yellow-400",
+                    descColor: "text-foreground"
                 };
         }
     };
@@ -67,7 +67,7 @@ export const ConfirmationModal = ({
         >
             <div className="space-y-6">
                 {/* Alerta informativa */}
-                <div className={`bg-linear-to-r ${styles.bgColor} border ${styles.borderColor} rounded-xl p-4 flex items-start gap-3`}>
+                <div className={`bg-card border-2 border-dashed ${styles.borderColor} rounded-xl p-4 flex items-start gap-3`}>
                     <AlertTriangle className={`h-6 w-6 ${styles.iconColor} shrink-0 mt-0.5`} />
                     <div className="flex-1">
                         <p className={`text-sm font-medium ${styles.textColor}`}>

@@ -20,3 +20,30 @@ export const postDetalleEjecucion = async (data: DetalleEjecucionRequest, guid: 
         throw error;
     }
 };
+
+export const updateExecutionFlags = async (examId: string, flags: string[]) => {
+    try {
+        const response = await api.patch(`/examinations/${examId}/flags`, { flags });
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const updateExecutionTagIds = async (examId: string, tag_ids: string[]) => {
+    try {
+        const response = await api.patch(`/examinations/${examId}/tag_ids`, { tag_ids });
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const getExecutionAllTags = async () => {
+    try {
+        const response = await api.get('/tags/all');
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};

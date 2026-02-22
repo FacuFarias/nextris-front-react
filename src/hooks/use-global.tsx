@@ -28,7 +28,8 @@ interface MedicosAll {
 interface ImagenesPorEstudio {
     images: Array<{
         filename: string;
-        path: string;
+        path?: string;
+        data?: string;
         size: number;
     }>;
     images_count: number;

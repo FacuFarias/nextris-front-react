@@ -16,6 +16,7 @@ import { MisDatos } from "@/modules/mis-datos/MisDatos";
 import { CrearInforme } from "@/modules/redaccion/informe-predefinidos/crear-informe/CrearInforme";
 import { UnificacionPaciente } from "@/modules/administracion/unificacion-paciente/UnificacionPaciente";
 import { ReasignacionExamenes } from "@/modules/administracion/reasignacion-examenes/ReasignacionExamenes";
+import { Demograficos } from "@/modules/administracion/demograficos/Demograficos";
 import { CargarEstudios } from "@/modules/redaccion/cargar-estudios/CargarEstudios";
 import { ChangePassword } from "@/modules/auth/change-password/ChangePassword";
 
@@ -27,6 +28,10 @@ const router = createBrowserRouter([
     {
         path: "/login",
         element: <Login />,
+    },
+    {
+        path: "/pacientes",
+        element: <Login initialIsPatient={true} />,
     },
     {
         path: "/inicio",
@@ -46,7 +51,7 @@ const router = createBrowserRouter([
     },
     {/*buscar pacientes*/ },
     {
-        path: "/pacientes",
+        path: "/buscar-pacientes",
         element: (
             <ProtectedRoute allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo"]}>
                 <BuscarPaciente />
@@ -54,7 +59,7 @@ const router = createBrowserRouter([
         ),
     },
     {
-        path: "/pacientes/historial-paciente",
+        path: "/buscar-pacientes/historial-paciente",
         element: (
             <ProtectedRoute allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo"]}>
                 <HistorialPaciente />
@@ -94,7 +99,10 @@ const router = createBrowserRouter([
     {
         path: "/nueva-admision",
         element: (
-            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]}>
+            <ProtectedRoute
+                allowedRoles={["Sysadmin", "Administrativo"]}
+                requiredPermissions={["tabs.admissions.view", "admissions.view", "admissions.admit_appointments"]}
+            >
                 <AdmisionCita />
             </ProtectedRoute>
         ),
@@ -102,7 +110,10 @@ const router = createBrowserRouter([
     {
         path: "/admision-espontanea",
         element: (
-            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]}>
+            <ProtectedRoute
+                allowedRoles={["Sysadmin", "Administrativo"]}
+                requiredPermissions={["tabs.admissions.view", "admissions.view", "admissions.create_spontaneous"]}
+            >
                 <AdmisionEspontanea />
             </ProtectedRoute>
         ),
@@ -208,6 +219,14 @@ const router = createBrowserRouter([
         element: (
             <ProtectedRoute allowedRoles={["Sysadmin"]}>
                 <ReasignacionExamenes />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/administracion/demograficos",
+        element: (
+            <ProtectedRoute allowedRoles={["Sysadmin"]}>
+                <Demograficos />
             </ProtectedRoute>
         ),
     },

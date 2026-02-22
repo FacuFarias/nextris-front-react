@@ -30,7 +30,13 @@ export type InformeDetalle = {
         guid: string;
         exam_id: string;
         patient_id: string;
+        patientid?: string;
+        national_code?: string;
         admission_number: string;
+        accession_number?: string;
+        study_description?: string;
+        modality?: string;
+        exam_date?: string;
         findings: string;
         impressions: string;
         techniques: string;

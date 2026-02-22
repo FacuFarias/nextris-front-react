@@ -102,8 +102,8 @@ export const Examen = ({
                 {/* Panel izquierdo - Estudios disponibles */}
                 <div className="lg:col-span-2 space-y-6">
                     {/* Filtros */}
-                    <div className="bg-card dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2 dark:text-gray-200">
+                    <div className="bg-card dark:bg-[#1a1b24]/80 rounded-lg border border-purple-100 dark:border-[rgba(255,255,255,0.07)] shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.3)] p-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2 dark:text-gray-100">
                             <ClipboardList className="w-5 h-5 text-brand-purple dark:text-purple-400" />
                             ESTUDIOS DISPONIBLES
                         </h3>
@@ -119,7 +119,7 @@ export const Examen = ({
                                     value={selectedTipoExamen}
                                     disabled={isLoadingTiposExamen}
                                 >
-                                    <SelectTrigger className="w-full h-10 border border-gray-300 dark:border-gray-600 focus:border-brand-purple focus:ring-brand-purple bg-white dark:bg-gray-700 dark:text-gray-200">
+                                    <SelectTrigger className="w-full h-10 border border-gray-300 dark:border-[rgba(255,255,255,0.1)] focus:border-brand-purple focus:ring-brand-purple bg-white dark:bg-[#252636] dark:text-gray-100">
                                         <SelectValue placeholder="Seleccionar modalidad" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -147,7 +147,7 @@ export const Examen = ({
                                     value={selectedParteCuerpo}
                                     disabled={isLoadingPartesCuerpo || !selectedTipoExamen}
                                 >
-                                    <SelectTrigger className="w-full h-10 border border-gray-300 dark:border-gray-600 focus:border-brand-purple focus:ring-brand-purple bg-white dark:bg-gray-700 dark:text-gray-200">
+                                    <SelectTrigger className="w-full h-10 border border-gray-300 dark:border-[rgba(255,255,255,0.1)] focus:border-brand-purple focus:ring-brand-purple bg-white dark:bg-[#252636] dark:text-gray-100">
                                         <SelectValue placeholder="Seleccionar parte del cuerpo" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -176,8 +176,8 @@ export const Examen = ({
                                 {/* Tabla */}
                                 <div className="rounded-md border  overflow-hidden">
                                     <Table>
-                                        <TableHeader className="bg-brand-purple dark:bg-purple-900">
-                                            <TableRow className="hover:bg-brand-purple dark:hover:bg-purple-900 border-b-0">
+                                        <TableHeader className="bg-brand-purple dark:bg-gradient-to-r dark:from-[#3b1066] dark:to-[#2d0d52] sticky top-0 z-10 dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
+                                            <TableRow className="hover:bg-brand-purple dark:bg-transparent dark:hover:bg-transparent border-b-0">
                                                 <TableHead className="text-white font-semibold">CÓDIGO</TableHead>
                                                 <TableHead className="text-white font-semibold">DESCRIPCIÓN</TableHead>
                                                 <TableHead className="text-white font-semibold">MODALIDAD</TableHead>
@@ -205,9 +205,9 @@ export const Examen = ({
                                                             <TableRow
                                                                 key={estudio.guid}
                                                                 onClick={() => toggleEstudioSelection(estudio)}
-                                                                className={`cursor-pointer transition-colors ${isSelected
-                                                                    ? 'bg-purple-100 hover:bg-purple-100/80 dark:bg-purple-900/50 dark:hover:bg-purple-900/70 border-l-4 border-l-brand-purple dark:border-l-purple-400'
-                                                                    : 'hover:bg-purple-50 dark:hover:bg-gray-700/50'
+                                                                className={`cursor-pointer transition-colors duration-150 dark:bg-[#1a1b24]/45 ${isSelected
+                                                                    ? 'bg-purple-100 hover:bg-purple-100/80 dark:bg-purple-900/40 dark:hover:bg-purple-900/55 border-l-4 border-l-brand-purple dark:border-l-purple-400 dark:shadow-[inset_4px_0_8px_rgba(139,92,246,0.15)]'
+                                                                    : 'hover:bg-purple-50 dark:hover:bg-purple-900/25'
                                                                     }`}
                                                             >
                                                                 <TableCell className="font-medium dark:text-gray-200">{estudio.externalcode}</TableCell>
@@ -273,8 +273,8 @@ export const Examen = ({
                 {/* Panel derecho - Estudio seleccionado */}
                 <div className="space-y-6 ">
                     {/* Card Estudio Seleccionado */}
-                    <div className="bg-card  rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm overflow-hidden ">
-                        <div className="bg-brand-purple dark:bg-purple-900 p-4 text-white">
+                    <div className="bg-card dark:bg-[#1a1b24]/80 rounded-lg border border-purple-100 dark:border-[rgba(255,255,255,0.07)] shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.3)] overflow-hidden">
+                        <div className="bg-brand-purple dark:bg-gradient-to-r dark:from-[#3b1066] dark:to-[#2d0d52] p-4 text-white dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                     <Check className="w-5 h-5" />
@@ -293,7 +293,7 @@ export const Examen = ({
                                 {/* Lista de estudios seleccionados */}
                                 <div className="max-h-[400px] overflow-y-auto space-y-3">
                                     {selectedEstudios.map((estudio) => (
-                                        <div key={estudio.guid} className="border border-purple-200 dark:border-gray-600 rounded-lg p-3 bg-purple-50/50 dark:bg-[#2a2e32] relative">
+                                        <div key={estudio.guid} className="border border-purple-200 dark:border-[rgba(139,92,246,0.15)] rounded-lg p-3 bg-purple-50/50 dark:bg-[#1c1d28] relative transition-colors dark:hover:border-[rgba(139,92,246,0.25)]">
                                             <button
                                                 onClick={() => removeEstudio(estudio.guid)}
                                                 className="absolute top-2 right-2 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
@@ -321,10 +321,10 @@ export const Examen = ({
                                 </div>
 
                                 {/* Botón para continuar */}
-                                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <div className="pt-4 border-t border-gray-200 dark:border-[rgba(255,255,255,0.07)]">
                                     <Button
                                         onClick={() => onContinue?.(selectedEstudios)}
-                                        className="w-full bg-brand-purple hover:bg-brand-purple/90 dark:bg-purple-700 dark:hover:bg-purple-800 text-white font-semibold py-3 rounded-lg transition-all shadow-md hover:shadow-lg"
+                                        className="w-full bg-brand-purple hover:bg-brand-purple/90 dark:bg-gradient-to-r dark:from-purple-700 dark:to-purple-900 dark:hover:from-purple-600 dark:hover:to-purple-800 text-white font-semibold py-3 rounded-lg transition-all shadow-md dark:shadow-[0_0_20px_rgba(139,92,246,0.35)] hover:shadow-lg"
                                     >
                                         <Check className="w-4 h-4 mr-2" />
                                         CONTINUAR CON {selectedEstudios.length} ESTUDIO{selectedEstudios.length > 1 ? 'S' : ''}

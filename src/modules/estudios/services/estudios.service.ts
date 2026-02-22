@@ -19,4 +19,25 @@ export const estudiosService = {
 
         return response.data;
     },
+
+    /**
+     * Abre el PDF del informe en una nueva pestaña
+     */
+    openReport: async (examId: string): Promise<void> => {
+        const response = await api.get(`/patient-portal/examinations/${examId}/report`, {
+            responseType: "blob",
+        });
+        const url = URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+        window.open(url, "_blank");
+    },
+
+    /**
+     * Comparte el informe de un estudio por email a un médico externo
+     */
+    shareStudy: async (examId: string, email: string, doctorName?: string): Promise<void> => {
+        await api.post(`/patient-portal/examinations/${examId}/share`, {
+            email,
+            doctor_name: doctorName || "",
+        });
+    },
 };

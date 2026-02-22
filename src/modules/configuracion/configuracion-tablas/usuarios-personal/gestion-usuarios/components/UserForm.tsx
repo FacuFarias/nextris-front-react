@@ -1,17 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PrimaryButton, SecondaryButton } from "@/components";
-import type { UserFormData, UserMedicalSubmitData } from "../types/users.types";
+import type { PermissionItem, UserFormData, UserMedicalSubmitData } from "../types/users.types";
 import { useRoles, useUserLocations, useUserMedicalData } from "../hooks/useUsers";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLocations } from "../../../institucional/locations/hooks/useLocations";
 import { Loader2, MapPin, Search } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { userService } from "../services/users.service";
 
 interface UserFormProps {
-    onSubmit: (data: UserFormData, locationIds?: string[], medicalData?: UserMedicalSubmitData) => void;
+    onSubmit: (data: UserFormData, locationIds?: string[], medicalData?: UserMedicalSubmitData, permissionCodes?: string[]) => void;
     onCancel: () => void;
     initialData?: Partial<UserFormData>;
     userId?: string;
@@ -60,6 +62,11 @@ export const UserForm = ({
         aclaracion_firma: "",
         firma_digital: undefined as File | undefined,
     });
+    const [activeRightTab, setActiveRightTab] = useState<"locations" | "permissions">("locations");
+    const [permissionCatalog, setPermissionCatalog] = useState<PermissionItem[]>([]);
+    const [selectedPermissionCodes, setSelectedPermissionCodes] = useState<Set<string>>(new Set());
+    const [isPermissionsLoading, setIsPermissionsLoading] = useState(false);
+    const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
 
     const allLocations = Array.isArray(locations?.data) ? locations.data : [];
     const isLoadingUserLocations = isLoadingLocations || isLoadingAssignedLocations;
@@ -68,6 +75,18 @@ export const UserForm = ({
         location.name?.toLowerCase().includes(locationSearch.toLowerCase()) ||
         location.description?.toLowerCase().includes(locationSearch.toLowerCase())
     );
+
+    const permissionsByModule = useMemo(() => {
+        const map = new Map<string, PermissionItem[]>();
+
+        for (const permission of permissionCatalog) {
+            const existing = map.get(permission.module) || [];
+            existing.push(permission);
+            map.set(permission.module, existing);
+        }
+
+        return Array.from(map.entries()).sort(([moduleA], [moduleB]) => moduleA.localeCompare(moduleB));
+    }, [permissionCatalog]);
 
     const selectedRole = roles?.data?.find((role) => role.guid === formData.role_id);
     const normalizedRoleDescription = (selectedRole?.description || "")
@@ -134,6 +153,7 @@ export const UserForm = ({
 
     useEffect(() => {
         setLocationSearch("");
+        setActiveRightTab("locations");
 
         if (!isEditing) {
             setSelectedLocationIds(new Set());
@@ -144,6 +164,58 @@ export const UserForm = ({
             });
         }
     }, [isEditing, userId]);
+
+    useEffect(() => {
+        let isCancelled = false;
+
+        const loadPermissions = async () => {
+            setIsPermissionsLoading(true);
+            try {
+                const [catalogResponse, userPermissionsResponse] = await Promise.all([
+                    userService.getPermissionsCatalog(),
+                    isEditing && userId ? userService.getUserPermissions(userId) : Promise.resolve(null),
+                ]);
+
+                if (isCancelled) {
+                    return;
+                }
+
+                const catalogData = Array.isArray(catalogResponse?.data) ? catalogResponse.data : [];
+                setPermissionCatalog(catalogData);
+
+                const customCodes = Array.isArray(userPermissionsResponse?.data?.custom_permissions)
+                    ? userPermissionsResponse.data.custom_permissions
+                    : [];
+
+                setSelectedPermissionCodes(new Set(customCodes));
+            } catch {
+                if (!isCancelled) {
+                    setPermissionCatalog([]);
+                    setSelectedPermissionCodes(new Set());
+                }
+            } finally {
+                if (!isCancelled) {
+                    setIsPermissionsLoading(false);
+                }
+            }
+        };
+
+        loadPermissions();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [isEditing, userId]);
+
+    useEffect(() => {
+        setExpandedModules((prev) => {
+            const next: Record<string, boolean> = {};
+            for (const [moduleName] of permissionsByModule) {
+                next[moduleName] = prev[moduleName] ?? true;
+            }
+            return next;
+        });
+    }, [permissionsByModule]);
 
     useEffect(() => {
         if (fetchedMedicalData?.data) {
@@ -180,7 +252,7 @@ export const UserForm = ({
             }
             : undefined;
 
-        onSubmit(dataToSubmit, Array.from(selectedLocationIds), medicalData);
+        onSubmit(dataToSubmit, Array.from(selectedLocationIds), medicalData, Array.from(selectedPermissionCodes));
     };
 
     const handleChange = (field: keyof UserFormData, value: any) => {
@@ -210,6 +282,27 @@ export const UserForm = ({
 
     const handleMedicalChange = (field: "matricula_nacional" | "aclaracion_firma", value: string) => {
         setMedicalFormData((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const handleTogglePermissionCode = (code: string, checked: boolean) => {
+        setSelectedPermissionCodes((prev) => {
+            const next = new Set(prev);
+
+            if (checked) {
+                next.add(code);
+            } else {
+                next.delete(code);
+            }
+
+            return next;
+        });
+    };
+
+    const toggleModuleExpanded = (moduleName: string) => {
+        setExpandedModules((prev) => ({
+            ...prev,
+            [moduleName]: !(prev[moduleName] ?? true),
+        }));
     };
 
     return (
@@ -406,98 +499,181 @@ export const UserForm = ({
                 </div>
 
                 <div className="space-y-1.5 border rounded-lg p-2.5">
-                    <div>
-                        <h3 className="text-base font-semibold">Ubicaciones</h3>
-                        <p className="text-sm text-muted-foreground">
-                            {isEditing
-                                ? "Seleccione las locations donde el usuario puede operar"
-                                : "Las ubicaciones se asignan al editar el usuario"}
-                        </p>
-                    </div>
+                    <Tabs value={activeRightTab} onValueChange={(value) => setActiveRightTab(value as "locations" | "permissions") }>
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="locations">Ubicaciones</TabsTrigger>
+                            <TabsTrigger value="permissions">Permisos</TabsTrigger>
+                        </TabsList>
 
-                    <>
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                                placeholder="Buscar ubicación..."
-                                value={locationSearch}
-                                onChange={(e) => setLocationSearch(e.target.value)}
-                                className="pl-9"
-                            />
-                        </div>
-
-                        {!isLoadingUserLocations && allLocations.length > 0 && (
-                            <div className="flex items-center gap-2 pb-2 border-b">
-                                <Checkbox
-                                    id="select-all-user-locations"
-                                    checked={selectedLocationIds.size === allLocations.length}
-                                    onCheckedChange={(checked) => handleSelectAllLocations(Boolean(checked))}
-                                />
-                                <Label htmlFor="select-all-user-locations" className="text-sm font-medium cursor-pointer">
-                                    Seleccionar todas ({selectedLocationIds.size}/{allLocations.length})
-                                </Label>
-                            </div>
-                        )}
-
-                        <div className="max-h-[290px] overflow-y-auto overflow-x-hidden space-y-0.5 pr-1">
-                            {isLoadingUserLocations ? (
-                                <div className="flex justify-center items-center h-20">
-                                    <Loader2 className="h-6 w-6 animate-spin text-brand-purple" />
-                                </div>
-                            ) : filteredLocations.length === 0 ? (
-                                <p className="text-sm text-muted-foreground text-center py-4">
-                                    {locationSearch ? "No se encontraron ubicaciones" : "No hay ubicaciones disponibles"}
+                        <TabsContent value="locations" className="space-y-2 mt-3">
+                            <div>
+                                <h3 className="text-base font-semibold">Ubicaciones</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    {isEditing
+                                        ? "Seleccione las locations donde el usuario puede operar"
+                                        : "Asigne las ubicaciones del usuario"}
                                 </p>
-                            ) : (
-                                filteredLocations.map((location) => (
-                                    (() => {
+                            </div>
+
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    placeholder="Buscar ubicación..."
+                                    value={locationSearch}
+                                    onChange={(e) => setLocationSearch(e.target.value)}
+                                    className="pl-9"
+                                />
+                            </div>
+
+                            {!isLoadingUserLocations && allLocations.length > 0 && (
+                                <div className="flex items-center gap-2 pb-2 border-b">
+                                    <Checkbox
+                                        id="select-all-user-locations"
+                                        checked={selectedLocationIds.size === allLocations.length}
+                                        onCheckedChange={(checked) => handleSelectAllLocations(Boolean(checked))}
+                                    />
+                                    <Label htmlFor="select-all-user-locations" className="text-sm font-medium cursor-pointer">
+                                        Seleccionar todas ({selectedLocationIds.size}/{allLocations.length})
+                                    </Label>
+                                </div>
+                            )}
+
+                            <div className="max-h-[290px] overflow-y-auto overflow-x-hidden space-y-0.5 pr-1">
+                                {isLoadingUserLocations ? (
+                                    <div className="flex justify-center items-center h-20">
+                                        <Loader2 className="h-6 w-6 animate-spin text-brand-purple" />
+                                    </div>
+                                ) : filteredLocations.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground text-center py-4">
+                                        {locationSearch ? "No se encontraron ubicaciones" : "No hay ubicaciones disponibles"}
+                                    </p>
+                                ) : (
+                                    filteredLocations.map((location) => {
                                         const isSelected = selectedLocationIds.has(location.guid);
 
                                         return (
-                                    <div
-                                        key={location.guid}
-                                        className={`flex w-full items-center gap-3 p-2 rounded-md border transition-colors duration-200 ease-out ${
-                                            isSelected
-                                                ? "bg-brand-purple/5 border-brand-purple/40"
-                                                : "border-transparent hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        <Checkbox
-                                            id={`location-${location.guid}`}
-                                            checked={isSelected}
-                                            onCheckedChange={(checked) =>
-                                                handleLocationCheckedChange(location.guid, Boolean(checked))
-                                            }
-                                        />
-                                        <button
-                                            type="button"
-                                            className="flex w-full items-center gap-3 min-w-0 flex-1 text-left"
-                                            onClick={() =>
-                                                handleLocationCheckedChange(
-                                                    location.guid,
-                                                    !isSelected
-                                                )
-                                            }
-                                        >
-                                            <MapPin
-                                                className={`h-4 w-4 shrink-0 transition-colors duration-200 ${
-                                                    isSelected ? "text-brand-purple" : "text-gray-400"
+                                            <div
+                                                key={location.guid}
+                                                className={`flex w-full items-center gap-3 p-2 rounded-md border transition-colors duration-200 ease-out ${
+                                                    isSelected
+                                                        ? "bg-brand-purple/5 border-brand-purple/40"
+                                                        : "border-transparent hover:bg-gray-50"
                                                 }`}
-                                            />
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-medium truncate">{location.name}</p>
-                                                {location.address && (
-                                                    <p className="text-xs text-muted-foreground truncate">{location.address}</p>
+                                            >
+                                                <Checkbox
+                                                    id={`location-${location.guid}`}
+                                                    checked={isSelected}
+                                                    onCheckedChange={(checked) =>
+                                                        handleLocationCheckedChange(location.guid, Boolean(checked))
+                                                    }
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="flex w-full items-center gap-3 min-w-0 flex-1 text-left"
+                                                    onClick={() => handleLocationCheckedChange(location.guid, !isSelected)}
+                                                >
+                                                    <MapPin
+                                                        className={`h-4 w-4 shrink-0 transition-colors duration-200 ${
+                                                            isSelected ? "text-brand-purple" : "text-gray-400"
+                                                        }`}
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-medium truncate">{location.name}</p>
+                                                        {location.address && (
+                                                            <p className="text-xs text-muted-foreground truncate">{location.address}</p>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </TabsContent>
+
+                        <TabsContent value="permissions" className="space-y-2 mt-3">
+                            <div>
+                                <h3 className="text-base font-semibold">Permisos</h3>
+                                <p className="text-sm text-muted-foreground">Defina permisos personalizados del usuario</p>
+                            </div>
+
+                            {isPermissionsLoading ? (
+                                <div className="flex justify-center items-center h-24">
+                                    <Loader2 className="h-6 w-6 animate-spin text-brand-purple" />
+                                </div>
+                            ) : permissionsByModule.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center py-4">No hay permisos disponibles.</p>
+                            ) : (
+                                <div className="max-h-[320px] overflow-y-auto space-y-3 pr-1">
+                                    {permissionsByModule.map(([moduleName, modulePermissions]) => {
+                                        const checkedCount = modulePermissions.reduce(
+                                            (count, permission) => count + (selectedPermissionCodes.has(permission.code) ? 1 : 0),
+                                            0,
+                                        );
+                                        const allChecked = modulePermissions.length > 0 && checkedCount === modulePermissions.length;
+                                        const someChecked = checkedCount > 0 && checkedCount < modulePermissions.length;
+                                        const isExpanded = expandedModules[moduleName] ?? true;
+                                        const moduleCheckboxId = `perm-module-${moduleName.replace(/\s+/g, "-").toLowerCase()}`;
+
+                                        return (
+                                            <div key={moduleName} className="border rounded-md p-3 space-y-2">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <Checkbox
+                                                            id={moduleCheckboxId}
+                                                            checked={allChecked ? true : someChecked ? "indeterminate" : false}
+                                                            onCheckedChange={(checked) => {
+                                                                const shouldCheckAll = Boolean(checked);
+                                                                modulePermissions.forEach((permission) => {
+                                                                    handleTogglePermissionCode(permission.code, shouldCheckAll);
+                                                                });
+                                                            }}
+                                                        />
+                                                        <Label htmlFor={moduleCheckboxId} className="cursor-pointer text-sm font-semibold capitalize truncate">
+                                                            {moduleName}
+                                                        </Label>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className="text-xs text-muted-foreground hover:text-foreground"
+                                                        onClick={() => toggleModuleExpanded(moduleName)}
+                                                        aria-expanded={isExpanded}
+                                                    >
+                                                        {isExpanded ? "Ocultar" : "Mostrar"}
+                                                    </button>
+                                                </div>
+
+                                                {isExpanded && (
+                                                    <div className="grid grid-cols-1 gap-2">
+                                                        {modulePermissions.map((permission) => {
+                                                            const isChecked = selectedPermissionCodes.has(permission.code);
+                                                            const checkboxId = `perm-${permission.code}`;
+
+                                                            return (
+                                                                <div key={permission.code} className="flex items-start gap-2 rounded-md p-2 hover:bg-muted/40">
+                                                                    <Checkbox
+                                                                        id={checkboxId}
+                                                                        checked={isChecked}
+                                                                        onCheckedChange={(checked) =>
+                                                                            handleTogglePermissionCode(permission.code, Boolean(checked))
+                                                                        }
+                                                                    />
+                                                                    <Label htmlFor={checkboxId} className="cursor-pointer leading-snug">
+                                                                        <span className="block text-sm font-medium">{permission.description}</span>
+                                                                        <span className="block text-xs text-muted-foreground">{permission.code}</span>
+                                                                    </Label>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 )}
                                             </div>
-                                        </button>
-                                    </div>
                                         );
-                                    })()
-                                ))
+                                    })}
+                                </div>
                             )}
-                        </div>
-                    </>
+                        </TabsContent>
+                    </Tabs>
                 </div>
             </div>
 

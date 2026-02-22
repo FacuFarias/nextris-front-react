@@ -4,6 +4,7 @@ interface User {
     email: string;
     id: string;
     name: string;
+    permissions?: string[];
     requires_password_change: boolean;
     role_id: string;
     surname: string;

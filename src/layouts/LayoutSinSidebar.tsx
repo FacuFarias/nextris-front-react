@@ -3,9 +3,10 @@ import fondoImage from "@/assets/fondo1.png";
 
 interface LayoutSinSidebarProps {
     children: ReactNode;
+    disableDefaultBackground?: boolean;
 }
 
-export const LayoutSinSidebar = ({ children }: LayoutSinSidebarProps) => {
+export const LayoutSinSidebar = ({ children, disableDefaultBackground = false }: LayoutSinSidebarProps) => {
     return (
         <div className="min-h-screen flex flex-col bg-background">
             {/* Mobile Header */}
@@ -19,16 +20,18 @@ export const LayoutSinSidebar = ({ children }: LayoutSinSidebarProps) => {
                 {/* Main Content - Sin sidebar */}
                 <main className="flex-1 flex flex-col relative w-full">
                     {/* Background con overlay morado */}
-                    <div
-                        className="absolute inset-0 z-0"
-                        style={{
-                            backgroundImage: `url(${fondoImage})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            backgroundRepeat: 'no-repeat',
-                            backgroundAttachment: 'fixed',
-                        }}
-                    />
+                    {!disableDefaultBackground && (
+                        <div
+                            className="absolute inset-0 z-0"
+                            style={{
+                                backgroundImage: `url(${fondoImage})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundAttachment: 'fixed',
+                            }}
+                        />
+                    )}
 
                     {/* Content Area */}
                     <div className="flex-1 p-4 md:p-6 lg:p-3 relative z-10">

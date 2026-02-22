@@ -373,7 +373,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
     return (
         <div className="space-y-6">
             {/* Tarjeta principal con layout solicitado */}
-            <div className="bg-card dark:bg-[#2a2e32] rounded-lg border border-purple-100 shadow-sm p-6">
+            <div className="bg-card dark:bg-[#1a1b24]/80 rounded-lg border border-purple-100 dark:border-[rgba(255,255,255,0.07)] shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.3)] p-6">
                 <div className="flex items-center gap-2 mb-4">
                     <Monitor className="w-5 h-5 text-brand-purple dark:text-purple-400" />
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
@@ -393,7 +393,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                 value={selectedEquipoLocal}
                                 disabled={isLoadingEquipos || equiposFiltrados.length === 0}
                             >
-                                <SelectTrigger className="w-full h-11! border-2 border-gray-300 focus:border-brand-purple focus:ring-brand-purple bg-white text-base">
+                                <SelectTrigger className="w-full h-11! border-2 border-gray-300 dark:border-[rgba(255,255,255,0.1)] focus:border-brand-purple focus:ring-brand-purple bg-white dark:bg-[#252636] dark:text-gray-100 text-base">
                                     <SelectValue placeholder={
                                         isLoadingEquipos
                                             ? "Cargando equipos..."
@@ -432,7 +432,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                 type="date"
                                 value={selectedDate}
                                 onChange={(e) => handleDateChange(e.target.value)}
-                                className="w-full h-11 px-4 border-2 border-gray-300 rounded-lg focus:border-brand-purple focus:ring-2 focus:ring-brand-purple focus:outline-none bg-white text-gray-700 text-base"
+                                className="w-full h-11 px-4 border-2 border-gray-300 dark:border-[rgba(255,255,255,0.1)] rounded-lg focus:border-brand-purple dark:focus:border-purple-500 focus:ring-2 focus:ring-brand-purple focus:outline-none bg-white dark:bg-[#252636] text-gray-700 dark:text-gray-100 dark:[color-scheme:dark] text-base"
                             />
                         </div>
                         {/* Modalidades seleccionadas */}
@@ -448,7 +448,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                         )}
                         {/* Panel de estudios seleccionados */}
                         {selectedEstudios && selectedEstudios.length > 0 && (
-                            <div className="bg-gray-50 dark:bg-[#2a2e32] rounded-lg border border-purple-100 shadow-sm p-4">
+                            <div className="bg-gray-50 dark:bg-[#1c1d28] rounded-lg border border-purple-100 dark:border-[rgba(255,255,255,0.07)] shadow-sm p-4">
                                 <div className="flex items-center gap-2 mb-2">
                                     <ClipboardList className="w-5 h-5 text-brand-purple dark:text-purple-400" />
                                     <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">
@@ -469,10 +469,10 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                         const isAgendado = estudiosAgendados.has(estudio.guid || estudio.externalcode);
                                         const baseClasses = "draggable-study inline-flex items-center gap-2 rounded-lg px-4 py-3";
                                         const activeClasses = isAgendado
-                                            ? "disabled-study bg-blue-50 border-2 border-blue-500 cursor-not-allowed"
+                                            ? "disabled-study bg-blue-50 dark:bg-blue-950/40 border-2 border-blue-500 dark:border-blue-700 cursor-not-allowed"
                                             : isActive
-                                                ? "bg-green-50 border-2 border-green-500 cursor-move hover:bg-green-100 hover:border-green-600 hover:shadow-md"
-                                                : "disabled-study bg-gray-100 border-2 border-gray-300 cursor-not-allowed opacity-60";
+                                                ? "bg-green-50 dark:bg-green-950/40 border-2 border-green-500 dark:border-green-700 cursor-move hover:bg-green-100 dark:hover:bg-green-950/60 hover:border-green-600 hover:shadow-md"
+                                                : "disabled-study bg-gray-100 dark:bg-[#1c1d28] border-2 border-gray-300 dark:border-[rgba(255,255,255,0.08)] cursor-not-allowed opacity-60";
                                         return (
                                             <div
                                                 key={estudio.guid || index}
@@ -482,14 +482,14 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                                 <GripVertical className={`w-5 h-5 ${isAgendado ? 'text-blue-600' : isActive ? 'text-green-600' : 'text-gray-400'}`} />
                                                 <div className="flex flex-col">
                                                     <div className="flex items-center gap-2">
-                                                        <span className={`text-sm font-bold ${isAgendado ? 'text-blue-700' : isActive ? 'text-green-700' : 'text-gray-500'}`}>
+                                                        <span className={`text-sm font-bold ${isAgendado ? 'text-blue-700 dark:text-blue-400' : isActive ? 'text-green-700 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
                                                             {estudio.externalcode}
                                                         </span>
                                                         <span className={`text-xs px-2 py-1 rounded-full font-semibold ${isAgendado
-                                                            ? 'bg-blue-100 text-blue-800'
+                                                            ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300'
                                                             : isActive
-                                                                ? 'bg-green-100 text-green-800'
-                                                                : 'bg-gray-200 text-gray-600'
+                                                                ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300'
+                                                                : 'bg-gray-200 dark:bg-[#252636] text-gray-600 dark:text-gray-400'
                                                             }`}>
                                                             {estudio.modalityName}
                                                         </span>
@@ -499,7 +499,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <span className={`text-xs mt-1 ${isAgendado ? 'text-blue-700' : isActive ? 'text-gray-700' : 'text-gray-500'}`}>
+                                                    <span className={`text-xs mt-1 ${isAgendado ? 'text-blue-700 dark:text-blue-400' : isActive ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}`}>
                                                         {estudio.description}
                                                     </span>
                                                 </div>
@@ -577,6 +577,65 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                         }
                                         .fc .fc-col-header-cell.fc-desired-date-header {
                                             background-color: rgba(139, 92, 246, 0.18) !important;
+                                        }
+                                        /* Dark mode — FullCalendar base */
+                                        .dark .fc {
+                                            color: #e5e7eb;
+                                        }
+                                        .dark .fc .fc-scrollgrid,
+                                        .dark .fc .fc-scrollgrid td,
+                                        .dark .fc .fc-scrollgrid th {
+                                            border-color: rgba(255,255,255,0.07) !important;
+                                        }
+                                        /* Líneas de tiempo (horizontales) */
+                                        .dark .fc .fc-timegrid-slot {
+                                            border-color: rgba(255,255,255,0.05) !important;
+                                        }
+                                        .dark .fc .fc-timegrid-slot-minor {
+                                            border-color: rgba(255,255,255,0.03) !important;
+                                        }
+                                        /* Columnas de días (verticales) */
+                                        .dark .fc .fc-timegrid-col {
+                                            border-color: rgba(255,255,255,0.07) !important;
+                                        }
+                                        /* Encabezado de días */
+                                        .dark .fc .fc-col-header-cell {
+                                            background-color: #1c1d28 !important;
+                                            border-color: rgba(255,255,255,0.07) !important;
+                                        }
+                                        .dark .fc .fc-col-header-cell-cushion {
+                                            color: #a78bfa !important;
+                                        }
+                                        /* Fondo del calendario */
+                                        .dark .fc .fc-timegrid-body,
+                                        .dark .fc .fc-view {
+                                            background-color: #111318 !important;
+                                        }
+                                        /* Eje de horas */
+                                        .dark .fc .fc-timegrid-axis,
+                                        .dark .fc .fc-timegrid-axis-cushion {
+                                            color: #9ca3af !important;
+                                            border-color: rgba(255,255,255,0.07) !important;
+                                        }
+                                        /* Slot label (horas) */
+                                        .dark .fc .fc-timegrid-slot-label-cushion {
+                                            color: #9ca3af !important;
+                                        }
+                                        /* Hoy */
+                                        .dark .fc .fc-day-today {
+                                            background-color: rgba(139, 92, 246, 0.07) !important;
+                                        }
+                                        /* Indicador "ahora" */
+                                        .dark .fc .fc-timegrid-now-indicator-line {
+                                            border-color: rgba(139, 92, 246, 0.8) !important;
+                                        }
+                                        .dark .fc .fc-timegrid-now-indicator-arrow {
+                                            border-top-color: rgba(139, 92, 246, 0.8) !important;
+                                            border-bottom-color: rgba(139, 92, 246, 0.8) !important;
+                                        }
+                                        /* Toolbar */
+                                        .dark .fc .fc-toolbar-title {
+                                            color: #e5e7eb !important;
                                         }
                                     `}</style>
                                     <FullCalendar
@@ -717,7 +776,7 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                 </div>
                             </div>
                         ) : (
-                            <div className="bg-purple-50 dark:bg-[#2a2e32] border-2 border-dashed border-purple-300 rounded-lg p-8 text-center h-full flex flex-col items-center justify-center">
+                            <div className="bg-purple-50 dark:bg-[#1c1d28] border-2 border-dashed border-purple-300 dark:border-purple-900/60 rounded-lg p-8 text-center h-full flex flex-col items-center justify-center">
                                 <Calendar className="w-16 h-16 mx-auto mb-4 text-purple-300" />
                                 <p className="text-gray-600 font-medium dark:text-gray-200">
                                     Seleccione un equipo para ver el calendario

@@ -2,6 +2,7 @@ import { useState } from "react";
 import TablaDynamic from "@/components/TableDynamic";
 import { getUserColumns, getUserActions } from "./components/columns";
 import { useUsers } from "./hooks/useUsers";
+import { userService } from "./services/users.service";
 import { UserModal } from "./components/UserModal";
 import { ResetPasswordModal } from "./components/ResetPasswordModal";
 import type { User, UserFormData, UserMedicalSubmitData } from "./types/users.types";
@@ -49,17 +50,36 @@ export const GestionUsuarios = () => {
         setIsResetPasswordModalOpen(false);
         setSelectedUser(null);
     };
-    const handleSubmit = (data: UserFormData, locationIds?: string[], medicalData?: UserMedicalSubmitData) => {
+
+    const handleSubmit = (data: UserFormData, locationIds?: string[], medicalData?: UserMedicalSubmitData, permissionCodes?: string[]) => {
         if (selectedUser) {
             // Actualizar
             updateUser(
                 { id: selectedUser.guid, data },
                 {
                     onSuccess: () => {
-                        const saveMedicalIfNeeded = () => {
-                            if (!medicalData) {
+                        const savePermissionsIfNeeded = () => {
+                            if (!permissionCodes) {
                                 toast.success("Usuario actualizado exitosamente");
                                 handleCloseModal();
+                                return;
+                            }
+
+                            userService
+                                .setUserPermissions(selectedUser.guid, permissionCodes)
+                                .then(() => {
+                                    toast.success("Usuario actualizado exitosamente");
+                                    handleCloseModal();
+                                })
+                                .catch((error: any) => {
+                                    const message = error?.response?.data?.message || "Usuario actualizado, pero falló el guardado de permisos";
+                                    toast.error(message);
+                                });
+                        };
+
+                        const saveMedicalIfNeeded = () => {
+                            if (!medicalData) {
+                                savePermissionsIfNeeded();
                                 return;
                             }
 
@@ -67,8 +87,7 @@ export const GestionUsuarios = () => {
                                 { userId: selectedUser.guid, medicalData },
                                 {
                                     onSuccess: () => {
-                                        toast.success("Usuario actualizado exitosamente");
-                                        handleCloseModal();
+                                        savePermissionsIfNeeded();
                                     },
                                     onError: (error: any) => {
                                         const message = error?.response?.data?.message || "Error al guardar los datos médicos";
@@ -114,10 +133,28 @@ export const GestionUsuarios = () => {
                 onSuccess: (response: any) => {
                     const createdUserId = response?.data?.user_id;
 
-                    const saveMedicalIfNeeded = () => {
-                        if (!(medicalData && createdUserId)) {
+                    const savePermissionsIfNeeded = () => {
+                        if (!(createdUserId && permissionCodes)) {
                             toast.success("Usuario creado exitosamente");
                             handleCloseModal();
+                            return;
+                        }
+
+                        userService
+                            .setUserPermissions(createdUserId, permissionCodes)
+                            .then(() => {
+                                toast.success("Usuario creado exitosamente");
+                                handleCloseModal();
+                            })
+                            .catch((error: any) => {
+                                const message = error?.response?.data?.message || "Usuario creado, pero falló el guardado de permisos";
+                                toast.error(message);
+                            });
+                    };
+
+                    const saveMedicalIfNeeded = () => {
+                        if (!(medicalData && createdUserId)) {
+                            savePermissionsIfNeeded();
                             return;
                         }
 
@@ -125,8 +162,7 @@ export const GestionUsuarios = () => {
                             { userId: createdUserId, medicalData },
                             {
                                 onSuccess: () => {
-                                    toast.success("Usuario médico creado exitosamente");
-                                    handleCloseModal();
+                                    savePermissionsIfNeeded();
                                 },
                                 onError: (error: any) => {
                                     const message = error?.response?.data?.message || "Usuario creado, pero falló el guardado de datos médicos";
@@ -265,6 +301,7 @@ export const GestionUsuarios = () => {
                 userName={selectedUser ? `${selectedUser.name} ${selectedUser.surname}` : ""}
                 isLoading={false}
             />
+
         </div>
     )
 }

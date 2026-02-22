@@ -88,7 +88,7 @@ export const getObrasSocialesPorLocacion = async (locationGuid: string) => {
 
 export const getImagenesPorEstudio = async (studyGuid: string) => {
     try {
-        const response = await api.get(`/images/study/${studyGuid}?format=list`);
+        const response = await api.get(`/images/study/${studyGuid}?format=base64`);
         return response.data.data;
     } catch (error) {
         throw error;

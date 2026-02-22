@@ -8,6 +8,7 @@ import { Search, UserPlus } from "lucide-react";
 import { DynamicBreadcrumb, InputSearch, Modal } from "@/components";
 import { useDebounce } from "@uidotdev/usehooks";
 import fondoImage from "@/assets/patients.jpg";
+import backDarkImage from "@/assets/back-dark.jpg";
 
 //hooks and services
 import { useBuscarPaciente } from "./hooks/use-buscar-paciente";
@@ -24,7 +25,9 @@ import { IsAdmin } from "@/components/IsAdmin";
 import { EliminarPaciente } from "./components/EliminarPaciente";
 
 import { CreatePatientForm } from "./components/CreatePatientForm";
+import { CrearUsuarioPaciente } from "./components/CrearUsuarioPaciente";
 import { useTableColumns } from "@/hooks/use-table-columns";
+import { useAuth } from "@/context/AuthContext";
 
 export const BuscarPaciente = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -33,6 +36,7 @@ export const BuscarPaciente = () => {
     const [hideWithoutStudies, setHideWithoutStudies] = useState(false);
     const useDebounceSearch = useDebounce(searchTerm, 300);
     const navigate = useNavigate();
+    const { authData } = useAuth();
     const createPatientMutation = useCreatePatient();
     const editPatientMutation = useEditPatient();
     //crear/editar paciente modal
@@ -41,7 +45,13 @@ export const BuscarPaciente = () => {
     //eliminar paciente modal
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+    //crear usuario modal
+    const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
     const { visibleColumns, filteredColumns, toggleColumn } = useTableColumns({ columns: patientColumns });
+    const userPermissions = Array.isArray((authData?.user as any)?.permissions)
+        ? ((authData?.user as any)?.permissions as string[])
+        : [];
+    const canManagePatients = userPermissions.includes('*') || userPermissions.includes('patients.manage');
     // Funciones para las acciones de la tabla
     const handleEditPatient = (patient: Patient) => {
         setSelectedPatient(patient);
@@ -60,17 +70,24 @@ export const BuscarPaciente = () => {
         setSelectedPatient(patient);
     };
 
+    const handleCreateUser = (patient: Patient) => {
+        setSelectedPatient(patient);
+        setIsCreateUserModalOpen(true);
+    };
+
     const handleViewHistory = (patient: Patient) => {
         // Solo navegar si tiene estudios
         if (patient.study_count === 0) return;
-        navigate(`/pacientes/historial-paciente`, { state: { patient } });
+        navigate(`/buscar-pacientes/historial-paciente`, { state: { patient } });
     };
 
     // Generar las acciones con las funciones
     const patientActions = getPatientActions(
         handleEditPatient,
         handleDeletePatient,
-        handleViewHistory
+        handleViewHistory,
+        handleCreateUser,
+        canManagePatients,
     );
     const { patientsData, isLoading } = useBuscarPaciente({ page, per_page: perPage, search: useDebounceSearch, hide_without_studies: hideWithoutStudies });
 
@@ -130,16 +147,16 @@ export const BuscarPaciente = () => {
 
     return (
         <MainLayout>
-            <div className="bg-card/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm border border-border z-10 h-full flex flex-col overflow-hidden">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm border border-border dark:border-[rgba(255,255,255,0.06)] dark:shadow-[0_8px_48px_rgba(0,0,0,0.5),0_0_0_1px_rgba(139,92,246,0.08)] z-10 h-full flex flex-col overflow-hidden">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
                 {/* Header */}
                 <div className="flex items-center gap-2 sm:gap-3 mb-4 ">
-                    <div className="bg-brand-purple dark:bg-purple-700 p-2 rounded-lg">
+                    <div className="bg-brand-purple dark:bg-gradient-to-br dark:from-purple-600 dark:to-purple-900 p-2 rounded-lg dark:shadow-[0_0_16px_rgba(139,92,246,0.5),0_2px_8px_rgba(0,0,0,0.4)]">
                         <Search className="w-3 h-3 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400">Pacientes</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400 dark:drop-shadow-[0_0_8px_rgba(167,139,250,0.3)]">Pacientes</h1>
                 </div>
 
                 {/* Barra de búsqueda */}
@@ -188,6 +205,7 @@ export const BuscarPaciente = () => {
                     }}
                     perPageOptions={[10, 20, 50, 100]}
                     tableBackgroundImage={fondoImage}
+                    tableBackgroundImageDark={backDarkImage}
                     allColumns={patientColumns}
                     visibleColumns={visibleColumns}
                     onToggleColumn={toggleColumn}
@@ -232,6 +250,19 @@ export const BuscarPaciente = () => {
                     <EliminarPaciente
                         patient={selectedPatient}
                         onClose={() => setIsDeleteModalOpen(false)}
+                    />
+                </Modal>
+
+                {/* Modal para crear usuario de Paciente */}
+                <Modal
+                    isOpen={isCreateUserModalOpen}
+                    onClose={() => setIsCreateUserModalOpen(false)}
+                    title="Crear Usuario"
+                    size="lg"
+                >
+                    <CrearUsuarioPaciente
+                        patient={selectedPatient}
+                        onClose={() => setIsCreateUserModalOpen(false)}
                     />
                 </Modal>
             </div>

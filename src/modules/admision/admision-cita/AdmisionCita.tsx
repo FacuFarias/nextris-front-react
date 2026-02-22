@@ -9,6 +9,7 @@ import TablaDynamic from "@/components/TableDynamic";
 import { ModalAdmision } from "./components/ModalAdmision";
 import type { Admision } from "./types/admision.type";
 import fondoImage from "@/assets/calendar.jpg";
+import backDarkImage from "@/assets/back-dark.jpg";
 
 export const AdmisionCita = () => {
 
@@ -48,7 +49,7 @@ export const AdmisionCita = () => {
 
     return (
         <MainLayout>
-            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
@@ -90,6 +91,7 @@ export const AdmisionCita = () => {
                     }}
                     perPageOptions={[10, 20, 50, 100]}
                     tableBackgroundImage={fondoImage}
+                    tableBackgroundImageDark={backDarkImage}
                     stickyPagination
                     emptyMessage={
                         <div className='flex flex-col items-center justify-center py-12 space-y-4'>

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getDetalleEjecucion, postDetalleEjecucion } from '../services/detalle-ejecucion.service';
+import { getDetalleEjecucion, getExecutionAllTags, postDetalleEjecucion, updateExecutionFlags, updateExecutionTagIds } from '../services/detalle-ejecucion.service';
 import { ejecucionKeys } from '../../constants/query-keys';
 import type { DetalleEjecucionRequest, DetalleEjecucionResponse } from '../types/detalle-ejecucion.type';
 import { toast } from 'sonner';
@@ -51,5 +51,86 @@ export const useDetalleEjecucionPost = (guid: string, onSuccessCallback?: () => 
         error,
         postDetalleEjecucion: mutate,
         isLoading: isPending,
+    };
+};
+
+export const useDetalleEjecucionUpdateFlags = (guid: string) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (flags: string[]) => updateExecutionFlags(guid, flags),
+        onMutate: async (flags) => {
+            await queryClient.cancelQueries({ queryKey: ejecucionKeys.detail(guid) });
+            const previousDetail = queryClient.getQueryData(ejecucionKeys.detail(guid));
+
+            queryClient.setQueryData(ejecucionKeys.detail(guid), (old: any) => {
+                if (!old?.data) return old;
+                return {
+                    ...old,
+                    data: {
+                        ...old.data,
+                        flags,
+                    },
+                };
+            });
+
+            return { previousDetail };
+        },
+        onError: (error: any, _variables, context: any) => {
+            if (context?.previousDetail) {
+                queryClient.setQueryData(ejecucionKeys.detail(guid), context.previousDetail);
+            }
+            toast.error(error.response?.data?.message || 'Error al actualizar banderas');
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ejecucionKeys.detail(guid) });
+        },
+    });
+};
+
+export const useDetalleEjecucionUpdateTagIds = (guid: string) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (tagIds: string[]) => updateExecutionTagIds(guid, tagIds),
+        onMutate: async (tagIds) => {
+            await queryClient.cancelQueries({ queryKey: ejecucionKeys.detail(guid) });
+            const previousDetail = queryClient.getQueryData(ejecucionKeys.detail(guid));
+
+            queryClient.setQueryData(ejecucionKeys.detail(guid), (old: any) => {
+                if (!old?.data) return old;
+                return {
+                    ...old,
+                    data: {
+                        ...old.data,
+                        tag_ids: tagIds,
+                    },
+                };
+            });
+
+            return { previousDetail };
+        },
+        onError: (error: any, _variables, context: any) => {
+            if (context?.previousDetail) {
+                queryClient.setQueryData(ejecucionKeys.detail(guid), context.previousDetail);
+            }
+            toast.error(error.response?.data?.message || 'Error al actualizar tags');
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ejecucionKeys.detail(guid) });
+        },
+    });
+};
+
+export const useDetalleEjecucionAllTags = () => {
+    const { data, isLoading } = useQuery({
+        queryKey: ['tags', 'all'],
+        queryFn: getExecutionAllTags,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    return {
+        allTags: data?.data ?? [],
+        isLoading,
     };
 };

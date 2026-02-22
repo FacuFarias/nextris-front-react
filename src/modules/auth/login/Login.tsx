@@ -2,8 +2,13 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { LoginCard } from "./components/LoginCard";
 import { BackgroundEffects } from "@/components/BackgroundEffects";
-export const Login = () => {
-    const [isPatient, setIsPatient] = useState(true);
+
+interface LoginProps {
+    initialIsPatient?: boolean;
+}
+
+export const Login = ({ initialIsPatient = false }: LoginProps) => {
+    const [isPatient, setIsPatient] = useState(initialIsPatient);
 
     return (
         <div className={cn(

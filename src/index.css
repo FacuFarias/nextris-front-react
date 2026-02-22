@@ -81,36 +81,24 @@
 }
 
 .dark {
-  /* GRIS OSCURO - Opción actual más suave */
-  /* --background: oklch(0.25 0 0); */
-  --background: rgb(33, 37, 41);
+  --background: #111318;
   --foreground: oklch(0.985 0 0);
-  --card: rgb(33, 37, 41);
+  --card: #1a1b24;
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.30 0 0);
+  --popover: #1e1f2b;
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.25 0 0);
-  --secondary: oklch(0.35 0 0);
+  --primary-foreground: oklch(0.20 0 0);
+  --secondary: #252636;
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.35 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.35 0 0);
+  --muted: #1e1f2b;
+  --muted-foreground: oklch(0.65 0 0);
+  --accent: #252636;
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-
-  /* MORADO OSCURO - Descomenta esto si prefieres morado:
-  --background: oklch(0.22 0.08 290);
-  --card: oklch(0.27 0.08 290);
-  --popover: oklch(0.27 0.08 290);
-  --primary-foreground: oklch(0.22 0.08 290);
-  --secondary: oklch(0.32 0.08 290);
-  --muted: oklch(0.32 0.08 290);
-  --accent: oklch(0.32 0.08 290);
-  */
-  --ring: oklch(0.556 0 0);
+  --border: rgba(255, 255, 255, 0.07);
+  --input: rgba(255, 255, 255, 0.10);
+  --ring: oklch(0.45 0.15 280);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -123,12 +111,7 @@
   --sidebar-accent: oklch(0.35 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-
-  /* MORADO OSCURO para sidebar - Descomenta si usas el tema morado:
-  --sidebar: oklch(0.27 0.08 290);
-  --sidebar-accent: oklch(0.32 0.08 290);
-  */
+  --sidebar-ring: oklch(0.45 0.15 280);
 }
 
 @layer base {
@@ -147,6 +130,203 @@
   html.changing-theme *::after {
     transition: none !important;
   }
+}
+
+/* ============================================
+   Dark Mode — Animaciones y efectos de cards
+   ============================================ */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes login-card-entry {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+    filter: blur(8px);
+  }
+  65% {
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.login-card-entry {
+  animation: login-card-entry 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes shimmer-line {
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(220%); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ---- Inicio container (light mode) ---- */
+.inicio-container {
+  background: linear-gradient(160deg, #ffffff 0%, #fdfaff 60%, #f8f4ff 100%);
+  border-color: rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(68, 15, 109, 0.04);
+}
+
+/* ---- Card base (light mode) ---- */
+.menu-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, #ffffff 0%, #fdfaff 100%);
+  border-color: rgba(0, 0, 0, 0.07);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Tinte sutil en esquina superior izquierda (light) */
+.menu-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 0% 0%, rgba(68, 15, 109, 0.03) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* Línea shimmer superior en hover (light) */
+.menu-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(68, 15, 109, 0.5), transparent);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+.menu-card:hover::after {
+  animation: shimmer-line 0.6s ease forwards;
+}
+
+/* Card hover light — lift + purple glow */
+.menu-card:hover {
+  background: linear-gradient(145deg, #fdf5ff 0%, #f8eeff 100%);
+  border-color: rgba(68, 15, 109, 0.2);
+  box-shadow:
+    0 0 0 1px rgba(68, 15, 109, 0.08),
+    0 4px 16px rgba(68, 15, 109, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+/* ---- Ícono (light mode) ---- */
+.menu-card-icon {
+  background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.menu-card:hover .menu-card-icon {
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 1), 0 0 8px rgba(68, 15, 109, 0.1);
+}
+
+/* ---- Section title (ambos modos, dark sobreescribe abajo) ---- */
+.section-title-dark {
+  border-left: 2px solid rgba(68, 15, 109, 0.5);
+  padding-left: 0.5rem;
+}
+
+/* Card base en dark mode */
+.dark .menu-card {
+  background: linear-gradient(145deg, #1c1d28 0%, #14151d 100%);
+  border-color: rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Tinte sutil de brillo en esquina superior izquierda */
+.dark .menu-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 0% 0%, rgba(139, 92, 246, 0.06) 0%, transparent 60%);
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  opacity: 1;
+}
+
+/* Línea shimmer superior en hover */
+.dark .menu-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.7), transparent);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+.dark .menu-card:hover::after {
+  animation: shimmer-line 0.6s ease forwards;
+}
+
+/* Card hover — lift + glow */
+.dark .menu-card:hover {
+  background: linear-gradient(145deg, #21222f 0%, #191a27 100%);
+  border-color: rgba(139, 92, 246, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.12),
+    0 4px 16px rgba(139, 92, 246, 0.12),
+    0 12px 40px rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Ícono en dark mode */
+.dark .menu-card-icon {
+  background: linear-gradient(135deg, rgba(109, 40, 217, 0.25) 0%, rgba(76, 29, 149, 0.35) 100%);
+  box-shadow: inset 0 1px 0 rgba(167, 139, 250, 0.15);
+}
+
+.dark .menu-card:hover .menu-card-icon {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.35) 0%, rgba(91, 33, 182, 0.45) 100%);
+  box-shadow: inset 0 1px 0 rgba(167, 139, 250, 0.25), 0 0 12px rgba(139, 92, 246, 0.2);
+}
+
+/* Encabezados de sección en dark mode */
+.dark .section-title-dark {
+  border-left: 2px solid rgba(139, 92, 246, 0.65);
+  padding-left: 0.5rem;
+}
+
+/* Contenedor principal en dark mode */
+.dark .inicio-container {
+  background: linear-gradient(160deg, #1c1d28 0%, #111318 60%, #0f1018 100%);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(139, 92, 246, 0.05);
+}
+
+/* ---- Contenedor de páginas internas (dark mode) ---- */
+.page-dark-gradient {
+  background: linear-gradient(160deg, #fdfaff 0%, #f8f4ff 100%);
+}
+
+.dark .page-dark-gradient {
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(109, 40, 217, 0.13) 0%, transparent 55%),
+    radial-gradient(ellipse at 92% 100%, rgba(76, 29, 149, 0.08) 0%, transparent 45%),
+    linear-gradient(160deg, #1a1730 0%, #131221 40%, #0d0e16 100%);
 }
 
 /* TipTap Editor Styles */

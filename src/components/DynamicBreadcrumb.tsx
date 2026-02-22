@@ -13,6 +13,7 @@ import {
 const routeNames: Record<string, string> = {
     inicio: "Inicio",
     pacientes: "Pacientes",
+    "buscar-pacientes": "Pacientes",
     "historial-paciente": "Historial",
     citas: "Citas",
     cita: "Cita",

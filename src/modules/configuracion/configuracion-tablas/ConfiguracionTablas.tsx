@@ -132,7 +132,7 @@ export const ConfiguracionTablas = () => {
 
     return (
         <MainLayout>
-            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-auto">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-auto">
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-4">
                     <div className="bg-brand-purple p-2 rounded-lg">

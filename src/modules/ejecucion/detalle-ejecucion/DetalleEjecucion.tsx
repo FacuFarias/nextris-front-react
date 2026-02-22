@@ -1,29 +1,86 @@
 import { MainLayout } from '@/layouts/layout';
 import { Eye, FileText, HelpCircle, MoveHorizontal, AlertCircle, Camera, ClipboardList, Play, ArrowLeft } from 'lucide-react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useDetalleEjecucion, useDetalleEjecucionPost } from './hooks/use-detalle-ejecucion';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useDetalleEjecucion, useDetalleEjecucionAllTags, useDetalleEjecucionPost, useDetalleEjecucionUpdateFlags, useDetalleEjecucionUpdateTagIds } from './hooks/use-detalle-ejecucion';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PrimaryButton } from '@/components';
 import type { DetalleEjecucionRequest } from './types/detalle-ejecucion.type';
 import { Button } from '@/components/ui/button';
+import { FlagsCell } from '@/modules/redaccion/Radiologia/components/FlagsCell';
+import { TagsCell } from '@/modules/redaccion/Radiologia/components/TagsCell';
 
 export const DetalleEjecucion = () => {
     const { guid } = useParams<{ guid: string }>();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { detalleData, isLoading } = useDetalleEjecucion(guid!);
+    const { allTags } = useDetalleEjecucionAllTags();
+    const { mutate: updateFlags, isPending: isUpdatingFlags } = useDetalleEjecucionUpdateFlags(guid!);
+    const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useDetalleEjecucionUpdateTagIds(guid!);
+    const flagsParam = searchParams.get('flags');
+    const tagIdsParam = searchParams.get('tag_ids');
+    const initialFlagsFromParams = flagsParam
+        ? flagsParam.split(',').map((value) => value.trim()).filter(Boolean)
+        : [];
+    const initialTagIdsFromParams = tagIdsParam
+        ? tagIdsParam.split(',').map((value) => value.trim()).filter(Boolean)
+        : [];
+
     const [historiaClinica, setHistoriaClinica] = useState(detalleData?.data?.history || '');
     const [preguntaClinica, setPreguntaClinica] = useState(detalleData?.data?.clinical_question || '');
     const [lateralidad, setLateralidad] = useState(detalleData?.data?.laterality || '');
     const [stat, setStat] = useState(detalleData?.data?.stat ? 'Si' : 'No');
     const [numeroVistas, setNumeroVistas] = useState(detalleData?.data?.number_of_views?.toString() || '');
     const [otrosDetalles, setOtrosDetalles] = useState(detalleData?.data?.other_details || '');
+    const [examFlags, setExamFlags] = useState<string[]>(initialFlagsFromParams);
+    const [examTagIds, setExamTagIds] = useState<string[]>(initialTagIdsFromParams);
 
     const isRX = detalleData?.data?.study_type?.toUpperCase().startsWith('RX');
     const { postDetalleEjecucion } = useDetalleEjecucionPost(guid!, () => {
         navigate('/ejecucion');
     });
+
+    useEffect(() => {
+        if (!detalleData?.data) return;
+
+        setHistoriaClinica(detalleData.data.history || '');
+        setPreguntaClinica(detalleData.data.clinical_question || '');
+        setLateralidad(detalleData.data.laterality || '');
+        setStat(detalleData.data.stat ? 'Si' : 'No');
+        setNumeroVistas(detalleData.data.number_of_views?.toString() || '');
+        setOtrosDetalles(detalleData.data.other_details || '');
+
+        if (Array.isArray(detalleData.data.flags)) {
+            setExamFlags(detalleData.data.flags);
+        } else if (initialFlagsFromParams.length > 0) {
+            setExamFlags(initialFlagsFromParams);
+        }
+
+        if (Array.isArray(detalleData.data.tag_ids)) {
+            setExamTagIds(detalleData.data.tag_ids);
+        } else if (initialTagIdsFromParams.length > 0) {
+            setExamTagIds(initialTagIdsFromParams);
+        }
+    }, [detalleData?.data, flagsParam, tagIdsParam]);
+
+    const handleUpdateFlags = (_examId: string, flags: string[]) => {
+        const previousFlags = examFlags;
+        setExamFlags(flags);
+        updateFlags(flags, {
+            onError: () => setExamFlags(previousFlags),
+        });
+    };
+
+    const handleUpdateTags = (_examId: string, tagIds: string[]) => {
+        const previousTagIds = examTagIds;
+        setExamTagIds(tagIds);
+        updateTagIds(tagIds, {
+            onError: () => setExamTagIds(previousTagIds),
+        });
+    };
+
     const handleEjecutarOrden = () => {
         const data: DetalleEjecucionRequest = {
             history: historiaClinica,
@@ -39,7 +96,7 @@ export const DetalleEjecucion = () => {
 
     return (
         <MainLayout>
-            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10">
                 {/* Botón volver */}
                 <Button
                     onClick={() => navigate(-1)}
@@ -180,6 +237,37 @@ export const DetalleEjecucion = () => {
                                 placeholder="Observaciones adicionales, preparación del paciente, etc."
                                 className="w-full min-h-[100px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-purple focus:border-transparent transition-all duration-200 resize-none"
                             />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label className="flex items-center gap-2 text-brand-purple font-semibold text-base">
+                                    Banderas
+                                </Label>
+                                <div className="min-h-[42px] border border-gray-300 rounded-lg px-3 py-2">
+                                    <FlagsCell
+                                        examId={guid || ''}
+                                        currentFlags={examFlags}
+                                        onUpdate={handleUpdateFlags}
+                                        isUpdating={isUpdatingFlags || !guid}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="flex items-center gap-2 text-brand-purple font-semibold text-base">
+                                    Tags
+                                </Label>
+                                <div className="min-h-[42px] border border-gray-300 rounded-lg px-3 py-2">
+                                    <TagsCell
+                                        examId={guid || ''}
+                                        currentTagIds={examTagIds}
+                                        availableTags={allTags}
+                                        onUpdate={handleUpdateTags}
+                                        isUpdating={isUpdatingTagIds || !guid}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

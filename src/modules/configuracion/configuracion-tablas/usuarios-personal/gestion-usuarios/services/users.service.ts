@@ -7,6 +7,8 @@ import type {
     UserLocationsResponse,
     UserMedicalDataResponse,
     UserMedicalSubmitData,
+    PermissionsCatalogResponse,
+    UserPermissionsResponse,
 } from '../types/users.types';
 
 export const userService = {
@@ -71,6 +73,23 @@ export const userService = {
         }
 
         await api.post(`/config/users/${userId}/medical-data`, formData);
+    },
+
+    getPermissionsCatalog: async (): Promise<PermissionsCatalogResponse> => {
+        const response = await api.get('/config/permissions');
+        return response.data;
+    },
+
+    getUserPermissions: async (userId: string): Promise<UserPermissionsResponse> => {
+        const response = await api.get(`/config/users/${userId}/permissions`);
+        return response.data;
+    },
+
+    setUserPermissions: async (userId: string, permissionCodes: string[]): Promise<UserPermissionsResponse> => {
+        const response = await api.put(`/config/users/${userId}/permissions`, {
+            permission_codes: permissionCodes,
+        });
+        return response.data;
     },
 };
 

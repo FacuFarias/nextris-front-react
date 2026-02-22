@@ -8,6 +8,8 @@ export type Ejecucion = {
     equipment: string;
     admission_number: string;
     accession_number: string;
+    flags?: string[];
+    tag_ids?: string[];
 }
 
 export type EjecucionResponse = {

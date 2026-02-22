@@ -1,6 +1,110 @@
 import { cn } from "@/lib/utils";
+import { useEffect, useRef } from "react";
 import pacientesImg from "@/assets/auth/pacientes.jpg";
 import medicoImg from "@/assets/auth/medico.jpg";
+
+const PATIENT_COLORS: [number, number, number][] = [
+    [13, 148, 136],   // teal-600
+    [8, 145, 178],    // cyan-600
+    [5, 150, 105],    // emerald-600
+];
+
+const STAFF_COLORS: [number, number, number][] = [
+    [167, 139, 250],  // violet-400
+    [139, 92, 246],   // violet-500
+    [216, 180, 254],  // violet-300
+];
+
+const ParticleCanvas = ({ isPatient }: { isPatient: boolean }) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        let w = window.innerWidth;
+        let h = window.innerHeight;
+        canvas.width = w;
+        canvas.height = h;
+
+        const onResize = () => {
+            w = window.innerWidth;
+            h = window.innerHeight;
+            canvas.width = w;
+            canvas.height = h;
+        };
+        window.addEventListener("resize", onResize);
+
+        type P = {
+            x: number; y: number; r: number;
+            alpha: number; targetAlpha: number;
+            vx: number; vy: number;
+            ci: number; life: number; maxLife: number;
+        };
+
+        const mkP = (fromBottom = true): P => ({
+            x: Math.random() * w,
+            y: fromBottom ? h + Math.random() * 50 : Math.random() * h,
+            r: Math.random() * 2.8 + 0.6,
+            alpha: 0,
+            targetAlpha: Math.random() * 0.55 + 0.25,
+            vx: (Math.random() - 0.5) * 0.35,
+            vy: -(Math.random() * 0.55 + 0.15),
+            ci: Math.floor(Math.random() * 3),
+            life: 0,
+            maxLife: Math.random() * 200 + 80,
+        });
+
+        const ps: P[] = Array.from({ length: 65 }, () => mkP(false));
+        let raf: number;
+
+        const draw = () => {
+            ctx.clearRect(0, 0, w, h);
+            const palette = isPatient ? PATIENT_COLORS : STAFF_COLORS;
+
+            for (let i = 0; i < ps.length; i++) {
+                const p = ps[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life++;
+
+                const fd = 25;
+                if (p.life < fd) {
+                    p.alpha = Math.min(p.targetAlpha, p.alpha + p.targetAlpha / fd);
+                } else if (p.life > p.maxLife - fd) {
+                    p.alpha = Math.max(0, p.alpha - p.targetAlpha / fd);
+                }
+
+                if (p.life >= p.maxLife) {
+                    ps[i] = mkP(true);
+                    continue;
+                }
+
+                const [r, g, b] = palette[p.ci];
+                ctx.shadowBlur = p.r * 6;
+                ctx.shadowColor = `rgba(${r},${g},${b},${p.alpha * 0.8})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${r},${g},${b},${p.alpha})`;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            raf = requestAnimationFrame(draw);
+        };
+
+        draw();
+
+        return () => {
+            cancelAnimationFrame(raf);
+            window.removeEventListener("resize", onResize);
+        };
+    }, [isPatient]);
+
+    return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />;
+};
 
 interface BackgroundEffectsProps {
     isPatient: boolean;
@@ -54,6 +158,9 @@ export const BackgroundEffects = ({ isPatient }: BackgroundEffectsProps) => {
                 backgroundImage: `radial-gradient(circle at 1px 1px, ${isPatient ? 'rgb(20 184 166 / 0.3)' : 'rgb(167 139 250 / 0.3)'} 1px, transparent 0)`,
                 backgroundSize: '40px 40px'
             }} />
+
+            {/* Particles */}
+            <ParticleCanvas isPatient={isPatient} />
 
             {/* Medical cross patterns for patient */}
             {isPatient && (

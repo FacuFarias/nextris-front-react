@@ -49,7 +49,7 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
 
     return (
         <div className={cn(
-            "w-full max-w-md p-8 rounded-3xl shadow-card transition-theme animate-scale-in",
+            "w-full max-w-md p-8 rounded-3xl shadow-card transition-theme login-card-entry",
             "bg-card/95 backdrop-blur-xl border border-border/50"
         )}>
             <div className="mb-8 animate-slide-up">

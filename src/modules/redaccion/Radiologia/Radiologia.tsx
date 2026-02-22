@@ -5,7 +5,7 @@ import { HandHelping, RefreshCcw, Loader2 } from "lucide-react"
 import { useMemo, useState, useEffect, useRef, useCallback } from "react"
 import { useInformes, useBlockExam, useUnblockExam, useUpdateFlags, useUpdateTagIds, useAllTags, useUpdateGeneralNotes } from "./hooks/use-informes"
 import { useCrossWindowSync } from "./redactar-informe/hooks/use-cross-windows"
-import { getInformesActions, getFlagsColumn, getTagsColumn, getGeneralNotesAction, informeColumns } from "./components/columns"
+import { getInformesActions, getFlagsColumn, getTagsColumn, getGeneralNotesAction, getPatientNameColumn, informeColumns } from "./components/columns"
 import TablaDynamic from "@/components/TableDynamic"
 import type { Informes } from "./types/informes.types"
 import type { FilterPreset, FilterPresetFilters } from "./types/filter-preset.types"
@@ -22,11 +22,16 @@ import { useBodyParts } from "@/modules/configuracion/configuracion-tablas/exame
 import { useModalidades } from "@/modules/configuracion/configuracion-tablas/examenes/modalidades"
 import { useGrupoEstudio } from "@/modules/configuracion/configuracion-tablas/examenes/grupos-estudio"
 import { useFilterPresets } from "./hooks/use-filter-presets"
+import { useAuth } from "@/context/AuthContext"
 import fondoImage from "@/assets/redaccion.jpg"
+import backDarkImage from "@/assets/back-dark.jpg";
 
 export const Radiologia = () => {
     // Hook para sincronizar entre ventanas
     useCrossWindowSync();
+
+    const { authData } = useAuth();
+    const isAdmin = authData?.user?.name === "Administrador";
 
     // Ref para guardar las ventanas del visor de imágenes (windowId -> Window)
     const viewerWindowsRef = useRef<Map<string, Window>>(new Map());
@@ -52,7 +57,7 @@ export const Radiologia = () => {
     const [selectedInforme, setSelectedInforme] = useState<Informes | null>(null);
     const [isBlocking, setIsBlocking] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<string[]>(
-        [...informeColumns.map(col => col.key as string), "flags", "tag_ids", "report_date"]
+        ["patient_name", ...informeColumns.map(col => col.key as string), "flags", "tag_ids", "report_date"]
     );
     const [sortColumn, setSortColumn] = useState("");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -100,6 +105,21 @@ export const Radiologia = () => {
         updateGeneralNotes({ examId, notes });
     }, [updateGeneralNotes]);
 
+    const handleAdminUnlock = useCallback(async (examId: string) => {
+        try {
+            await unblockExam(examId);
+            toast.success('Examen desbloqueado');
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Error al desbloquear el examen');
+        }
+    }, [unblockExam]);
+
+    // Columna de paciente con tooltip de bloqueo y opción de desbloqueo para admin
+    const patientNameColumn = useMemo(
+        () => getPatientNameColumn(isAdmin ? handleAdminUnlock : null, isAdmin),
+        [handleAdminUnlock, isAdmin]
+    );
+
     // Columna de banderas generada con el handler actual
     const flagsColumn = useMemo(
         () => getFlagsColumn(handleUpdateFlags, isUpdatingFlags),
@@ -112,8 +132,8 @@ export const Radiologia = () => {
         [allTags, handleUpdateTagIds, isUpdatingTagIds]
     );
 
-    // Todas las columnas disponibles (estáticas + banderas + tags)
-    const allColumns = useMemo(() => [...informeColumns, flagsColumn, tagsColumn], [flagsColumn, tagsColumn]);
+    // Todas las columnas disponibles (paciente + estáticas + banderas + tags)
+    const allColumns = useMemo(() => [patientNameColumn, ...informeColumns, flagsColumn, tagsColumn], [patientNameColumn, flagsColumn, tagsColumn]);
 
     // Columnas visibles (incluye banderas si está en la lista)
     const filteredColumns = useMemo(
@@ -445,7 +465,7 @@ export const Radiologia = () => {
 
     return (
         <MainLayout>
-            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-3 shadow-sm z-10 h-full flex flex-col overflow-hidden">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
@@ -723,6 +743,7 @@ export const Radiologia = () => {
                     visibleColumns={visibleColumns}
                     onToggleColumn={toggleColumn}
                     tableBackgroundImage={fondoImage}
+                    tableBackgroundImageDark={backDarkImage}
                     sortColumn={sortColumn}
                     sortDirection={sortDirection}
                     onSortChange={handleSortChange}

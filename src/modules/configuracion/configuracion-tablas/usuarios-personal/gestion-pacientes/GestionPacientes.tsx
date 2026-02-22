@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import TablaDynamic from "@/components/TableDynamic";
 import { getPatientColumns, getPatientActions } from "./components/columns";
 import { usePatients } from "./hooks/usePatients";
@@ -13,6 +13,30 @@ export const GestionPacientes = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+
+    const allColumns = useMemo(() => getPatientColumns(), []);
+    const [visibleColumns, setVisibleColumns] = useState<string[]>(
+        () => getPatientColumns().map(col => col.key as string)
+    );
+
+    const toggleColumn = useCallback((columnKey: string) => {
+        setVisibleColumns(prev => {
+            if (prev.includes(columnKey)) {
+                if (prev.length === 1) {
+                    toast.error('Debe mantener al menos una columna visible');
+                    return prev;
+                }
+                return prev.filter(key => key !== columnKey);
+            } else {
+                return [...prev, columnKey];
+            }
+        });
+    }, []);
+
+    const filteredColumns = useMemo(
+        () => allColumns.filter(col => visibleColumns.includes(col.key as string)),
+        [allColumns, visibleColumns]
+    );
 
     const {
         patients,
@@ -107,7 +131,6 @@ export const GestionPacientes = () => {
         }
     };
 
-    const patientColumns = getPatientColumns();
     const patientActions = getPatientActions(
         handleOpenModal,
         handleOpenResetPasswordModal,
@@ -129,25 +152,30 @@ export const GestionPacientes = () => {
                 </button>
             </div>
 
-            {isLoading ? (
-                <div className='flex justify-center items-center h-40'>
-                    <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
-                </div>
-            ) : (
-                <TablaDynamic
-                    data={Array.isArray(patients?.data) ? patients.data : []}
-                    columns={patientColumns}
-                    showIndex
-                    actions={patientActions}
-                    pagination={{
-                        page,
-                        pageSize,
-                        serverSide: false,
-                        total: Array.isArray(patients?.data) ? patients.data.length : 0,
-                    }}
-                    onPaginationChange={handlePaginationChange}
-                />
-            )}
+            <TablaDynamic
+                data={Array.isArray(patients?.data) ? patients.data : []}
+                columns={filteredColumns}
+                showIndex
+                loading={isLoading}
+                actions={patientActions}
+                pagination={{
+                    page,
+                    pageSize,
+                    serverSide: false,
+                    total: Array.isArray(patients?.data) ? patients.data.length : 0,
+                }}
+                onPaginationChange={handlePaginationChange}
+                perPageValue={pageSize}
+                onPerPageChange={(value) => {
+                    setPageSize(value);
+                    setPage(1);
+                }}
+                perPageOptions={[5, 8, 10, 20, 50]}
+                allColumns={allColumns}
+                visibleColumns={visibleColumns}
+                onToggleColumn={toggleColumn}
+                preserveTableHeight
+            />
 
             <PatientModal
                 isOpen={isModalOpen}

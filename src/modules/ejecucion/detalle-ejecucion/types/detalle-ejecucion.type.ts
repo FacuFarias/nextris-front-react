@@ -14,6 +14,8 @@ export type DetalleEjecucion = {
     stat: boolean;
     number_of_views: number;
     other_details: string;
+    flags?: string[];
+    tag_ids?: string[];
 };
 
 

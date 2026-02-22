@@ -1,4 +1,4 @@
-import { Archive, Image, Link2, RefreshCw, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Archive, Image, Link2, RefreshCw, Loader2, ChevronLeft, ChevronRight, Search, ArrowRight, CheckCircle2, ScanLine } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -116,259 +116,325 @@ export const VincularImagenTab = () => {
         setSearchDNI(value);
         setOrdenesPagina(1);
     };
+
+    const bothSelected = selectedEstudio && selectedOrden;
+
     return (
         <>
-            <div className="mb-2">
+            {/* Selector de dirección */}
+            <div className="mb-5">
                 <DireccionSelector
                     selectedDireccion={selectedDireccion}
                     onDireccionChange={handleDireccionChange}
                     isRow={true}
                 />
             </div>
+
             {selectedDireccion && (
-                <>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* TARJETA 1: Estudios Cargados Sin Vincular */}
-                        <div className="bg-white dark:bg-[#2a2e32] rounded-lg shadow-lg overflow-hidden">
-                            {/* Header Morado */}
-                            <div className="bg-brand-purple p-6 text-white mb-4">
-                                <div className="flex items-start justify-between">
+                <div className="flex flex-col gap-4">
+                    {/* Grilla de dos paneles */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                        {/* ── PANEL IZQUIERDO: Estudios Sin Vincular ── */}
+                        <div className="flex flex-col rounded-xl overflow-hidden border border-purple-200 dark:border-purple-900 shadow-sm">
+                            {/* Header */}
+                            <div className="bg-gradient-to-r from-brand-purple to-purple-700 px-5 py-4 text-white">
+                                <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="bg-white/20 p-2 rounded-lg">
-                                            <Archive className="w-6 h-6" />
+                                        <div className="bg-white/15 p-2 rounded-lg">
+                                            <Archive className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h2 className="text-xl font-bold">Estudios Cargados Sin Vincular</h2>
-                                            <p className="text-sm text-white/80 mt-1">Estudios DICOM que aún no están vinculados a ninguna orden</p>
+                                            <h2 className="text-base font-semibold leading-tight">Estudios Sin Vincular</h2>
+                                            <p className="text-xs text-white/70 mt-0.5">DICOM sin orden asignada</p>
                                         </div>
                                     </div>
-
-
-                                    <Badge className="bg-red-500 text-white px-3 py-1 text-sm font-bold">
-                                        {estudiosNoVinculadosData?.data?.total || 0}
-                                    </Badge>
+                                    <div className="flex items-center gap-2">
+                                        <span className="bg-white/20 text-white text-xs font-bold px-2.5 py-1 rounded-full">
+                                            {estudiosNoVinculadosData?.data?.total ?? 0}
+                                        </span>
+                                        <button
+                                            onClick={() => refetchEstudiosNoVinculados()}
+                                            disabled={isLoading}
+                                            className="bg-white/15 hover:bg-white/25 p-1.5 rounded-lg transition-colors disabled:opacity-50"
+                                            title="Actualizar"
+                                        >
+                                            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Contenido Blanco */}
-                            <div className="">
-                                <Button
-                                    onClick={() => refetchEstudiosNoVinculados()}
-                                    disabled={isLoading}
-                                    className="w-full sm:w-auto bg-brand-purple hover:bg-brand-purple/90 text-white mb-6"
-                                >
-                                    <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                                    ACTUALIZAR
-                                </Button>
+                            {/* Tabla */}
+                            <div className="flex-1 flex flex-col bg-white dark:bg-[#2a2e32]">
+                                {/* Cabecera tabla */}
+                                <div className="grid grid-cols-3 px-4 py-2.5 bg-gray-50 dark:bg-[#23272b] border-b border-gray-200 dark:border-gray-700">
+                                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Paciente</span>
+                                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Mod</span>
+                                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Fecha</span>
+                                </div>
 
-                                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                                    <div className="grid grid-cols-3 gap-4 p-4 bg-brand-purple text-white font-semibold text-sm">
-                                        <div>PACIENTE</div>
-                                        <div>MOD</div>
-                                        <div>FECHA</div>
-                                    </div>
+                                {/* Filas */}
+                                <div className="flex-1 overflow-y-auto" style={{ maxHeight: '360px' }}>
                                     {isLoading ? (
-                                        <div className="p-12 text-center bg-gray-50 dark:bg-[#2a2e32]">
-                                            <Loader2 className="w-8 h-8 animate-spin text-brand-purple dark:text-purple-400 mx-auto" />
+                                        <div className="flex items-center justify-center py-16">
+                                            <Loader2 className="w-7 h-7 animate-spin text-brand-purple/60" />
                                         </div>
                                     ) : totalEstudios === 0 ? (
-                                        <div className="p-12 text-center bg-gray-50 dark:bg-[#2a2e32]">
-                                            <div className="flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500">
-                                                <Archive className="w-12 h-12" />
-                                                <p className="text-sm">No hay estudios sin vincular</p>
+                                        <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
+                                            <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-full">
+                                                <Archive className="w-8 h-8" />
                                             </div>
+                                            <p className="text-sm">No hay estudios sin vincular</p>
                                         </div>
                                     ) : (
-                                        <>
-                                            <div className="max-h-96 overflow-y-auto">
-                                                {estudiosActuales.map((estudio) => (
-                                                    <div
-                                                        key={estudio.guid}
-                                                        onClick={() => handleEstudioClick(estudio)}
-                                                        className={`grid grid-cols-3 gap-4 p-4 cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors border-b border-gray-100 dark:border-gray-700 ${selectedEstudio?.guid === estudio.guid ? 'bg-purple-100 dark:bg-purple-900/50 border-l-4 border-l-brand-purple dark:border-l-purple-400' : ''
-                                                            }`}
-                                                    >
-                                                        <div className="text-sm font-medium text-gray-800 dark:text-gray-200">{estudio.patient_name}</div>
-                                                        <div className="text-sm text-gray-600 dark:text-gray-400">{estudio.modality}</div>
-                                                        <div className="text-sm text-gray-600 dark:text-gray-400">{formatDate(estudio.study_date)}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            {/* Paginación de Estudios */}
-                                            {totalPaginasEstudios > 1 && (
-                                                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-[#2a2e32] border-t border-gray-200 dark:border-gray-700">
-                                                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                                                        Mostrando {((estudiosPagina - 1) * estudiosPerPage) + 1} - {Math.min(estudiosPagina * estudiosPerPage, totalEstudios)} de {totalEstudios}
-                                                    </div>
+                                        estudiosActuales.map((estudio) => {
+                                            const isSelected = selectedEstudio?.guid === estudio.guid;
+                                            return (
+                                                <div
+                                                    key={estudio.guid}
+                                                    onClick={() => handleEstudioClick(estudio)}
+                                                    className={`grid grid-cols-3 px-4 py-3 cursor-pointer transition-all border-b border-gray-100 dark:border-gray-700/60 group
+                                                        ${isSelected
+                                                            ? 'bg-brand-purple/10 dark:bg-purple-900/30 border-l-2 border-l-brand-purple'
+                                                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'
+                                                        }`}
+                                                >
                                                     <div className="flex items-center gap-2">
-                                                        <Button
-                                                            onClick={() => setEstudiosPagina(prev => Math.max(1, prev - 1))}
-                                                            disabled={estudiosPagina === 1}
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <ChevronLeft className="w-4 h-4" />
-                                                        </Button>
-                                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            {estudiosPagina} / {totalPaginasEstudios}
-                                                        </span>
-                                                        <Button
-                                                            onClick={() => setEstudiosPagina(prev => Math.min(totalPaginasEstudios, prev + 1))}
-                                                            disabled={estudiosPagina === totalPaginasEstudios}
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <ChevronRight className="w-4 h-4" />
-                                                        </Button>
+                                                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-brand-purple flex-shrink-0" />}
+                                                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{estudio.patient_name}</span>
                                                     </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="inline-block text-xs font-semibold bg-purple-100 dark:bg-purple-900/40 text-brand-purple dark:text-purple-300 px-2 py-0.5 rounded-md">
+                                                            {estudio.modality}
+                                                        </span>
+                                                        {estudio.instance_count > 1 && (
+                                                            <span className="inline-block text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-md">
+                                                                {estudio.instance_count}i
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400 self-center">{formatDate(estudio.study_date)}</span>
                                                 </div>
-                                            )}
-                                        </>
+                                            );
+                                        })
                                     )}
                                 </div>
+
+                                {/* Paginación */}
+                                {totalPaginasEstudios > 1 && (
+                                    <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-[#23272b] border-t border-gray-200 dark:border-gray-700">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            {((estudiosPagina - 1) * estudiosPerPage) + 1}–{Math.min(estudiosPagina * estudiosPerPage, totalEstudios)} de {totalEstudios}
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            <Button onClick={() => setEstudiosPagina(p => Math.max(1, p - 1))} disabled={estudiosPagina === 1} variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                                <ChevronLeft className="w-3.5 h-3.5" />
+                                            </Button>
+                                            <span className="text-xs text-gray-600 dark:text-gray-300 min-w-[48px] text-center">{estudiosPagina} / {totalPaginasEstudios}</span>
+                                            <Button onClick={() => setEstudiosPagina(p => Math.min(totalPaginasEstudios, p + 1))} disabled={estudiosPagina === totalPaginasEstudios} variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                                <ChevronRight className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
-                        {/* TARJETA 2: Órdenes Sin Imagen */}
-                        <div className="bg-white dark:bg-[#2a2e32] rounded-lg shadow-lg overflow-hidden">
-                            {/* Header Morado */}
-                            <div className="bg-brand-purple p-6 text-white">
-                                <div className="flex items-start justify-between">
+                        {/* ── PANEL DERECHO: Órdenes Sin Imagen ── */}
+                        <div className="flex flex-col rounded-xl overflow-hidden border border-cyan-200 dark:border-cyan-900 shadow-sm">
+                            {/* Header */}
+                            <div className="bg-gradient-to-r from-cyan-600 to-cyan-500 px-5 py-4 text-white">
+                                <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="bg-white/20 p-2 rounded-lg">
-                                            <Image className="w-6 h-6" />
+                                        <div className="bg-white/15 p-2 rounded-lg">
+                                            <ScanLine className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h2 className="text-xl font-bold">Órdenes Sin Imagen</h2>
-                                            <p className="text-sm text-white/80 mt-1">Órdenes/exámenes que no tienen imágenes DICOM asociadas</p>
+                                            <h2 className="text-base font-semibold leading-tight">Órdenes Sin Imagen</h2>
+                                            <p className="text-xs text-white/70 mt-0.5">Exámenes sin DICOM asociado</p>
                                         </div>
                                     </div>
-                                    <Badge className="bg-cyan-400 text-white px-3 py-1 text-sm font-bold">
-                                        {ordenesSinImagenData?.data?.total || 0}
-                                    </Badge>
+                                    <div className="flex items-center gap-2">
+                                        <span className="bg-white/20 text-white text-xs font-bold px-2.5 py-1 rounded-full">
+                                            {ordenesSinImagenData?.data?.total ?? 0}
+                                        </span>
+                                        <button
+                                            onClick={() => refetchOrdenesSinImagen()}
+                                            disabled={isLoadingOrdenes}
+                                            className="bg-white/15 hover:bg-white/25 p-1.5 rounded-lg transition-colors disabled:opacity-50"
+                                            title="Actualizar"
+                                        >
+                                            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingOrdenes ? 'animate-spin' : ''}`} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Buscadores integrados en el header */}
+                                <div className="flex gap-2 mt-3">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/50" />
+                                        <input
+                                            placeholder="Buscar por nombre..."
+                                            className="w-full bg-white/15 placeholder-white/50 text-white text-xs pl-8 pr-3 py-1.5 rounded-lg border border-white/20 focus:outline-none focus:border-white/50 focus:bg-white/20 transition-all"
+                                            value={searchName}
+                                            onChange={(e) => handleSearchNameChange(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="relative w-28">
+                                        <input
+                                            placeholder="DNI..."
+                                            className="w-full bg-white/15 placeholder-white/50 text-white text-xs px-3 py-1.5 rounded-lg border border-white/20 focus:outline-none focus:border-white/50 focus:bg-white/20 transition-all"
+                                            value={searchDNI}
+                                            onChange={(e) => handleSearchDNIChange(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Contenido Blanco */}
-                            <div className="p-6">
-                                <div className="flex gap-2 mb-6">
-                                    <Input
-                                        placeholder="Buscar por nombre..."
-                                        className="border-gray-300"
-                                        value={searchName}
-                                        onChange={(e) => handleSearchNameChange(e.target.value)}
-                                    />
-                                    <Input
-                                        placeholder="DNI..."
-                                        className="border-gray-300 w-32"
-                                        value={searchDNI}
-                                        onChange={(e) => handleSearchDNIChange(e.target.value)}
-                                    />
-                                    <Button
-                                        onClick={() => refetchOrdenesSinImagen()}
-                                        disabled={isLoadingOrdenes}
-                                        className="bg-brand-purple hover:bg-brand-purple/90 text-white"
-                                    >
-                                        <RefreshCw className={`w-4 h-4 ${isLoadingOrdenes ? 'animate-spin' : ''}`} />
-                                    </Button>
+                            {/* Tabla */}
+                            <div className="flex-1 flex flex-col bg-white dark:bg-[#2a2e32]">
+                                {/* Cabecera tabla */}
+                                <div className="grid grid-cols-4 px-4 py-2.5 bg-gray-50 dark:bg-[#23272b] border-b border-gray-200 dark:border-gray-700">
+                                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Paciente</span>
+                                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide col-span-1">Estudio</span>
+                                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">ACC</span>
+                                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Fecha</span>
                                 </div>
 
-                                {/* Tabla */}
-                                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                                    <div className="grid grid-cols-4 gap-4 p-4 bg-brand-purple text-white font-semibold text-sm">
-                                        <div>PACIENTE</div>
-                                        <div>ESTUDIO</div>
-                                        <div>ACC</div>
-                                        <div>FECHA</div>
-                                    </div>
+                                {/* Filas */}
+                                <div className="flex-1 overflow-y-auto" style={{ maxHeight: '360px' }}>
                                     {isLoadingOrdenes ? (
-                                        <div className="p-12 text-center bg-gray-50 dark:bg-[#2a2e32]">
-                                            <Loader2 className="w-8 h-8 animate-spin text-brand-purple dark:text-purple-400 mx-auto" />
+                                        <div className="flex items-center justify-center py-16">
+                                            <Loader2 className="w-7 h-7 animate-spin text-cyan-500/60" />
                                         </div>
                                     ) : totalOrdenes === 0 ? (
-                                        <div className="p-12 text-center bg-gray-50 dark:bg-[#2a2e32]">
-                                            <div className="flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500">
-                                                <Image className="w-12 h-12" />
-                                                <p className="text-sm">No hay órdenes sin imagen</p>
+                                        <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
+                                            <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-full">
+                                                <Image className="w-8 h-8" />
                                             </div>
+                                            <p className="text-sm">No hay órdenes sin imagen</p>
                                         </div>
                                     ) : (
-                                        <>
-                                            <div className="max-h-96 overflow-y-auto">
-                                                {ordenesActuales.map((orden) => (
-                                                    <div
-                                                        key={orden.guid}
-                                                        onClick={() => handleOrdenClick(orden)}
-                                                        className={`grid grid-cols-4 gap-4 p-4 cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors border-b border-gray-100 dark:border-gray-700 ${selectedOrden?.guid === orden.guid ? 'bg-purple-100 dark:bg-purple-900/50 border-l-4 border-l-brand-purple dark:border-l-purple-400' : ''
-                                                            }`}
-                                                    >
-                                                        <div className="text-sm font-medium text-gray-800 dark:text-gray-200">{orden.patient_name}</div>
-                                                        <div className="text-sm text-gray-600 dark:text-gray-400 truncate" title={orden.study_type}>{orden.study_type}</div>
-                                                        <div className="text-sm text-gray-600 dark:text-gray-400">{orden.accession}</div>
-                                                        <div className="text-sm text-gray-600 dark:text-gray-400">{formatDate(orden.date)}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            {/* Paginación de Órdenes */}
-                                            {totalPaginasOrdenes > 1 && (
-                                                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-[#2a2e32] border-t border-gray-200 dark:border-gray-700">
-                                                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                                                        Mostrando {((ordenesPagina - 1) * ordenesPerPage) + 1} - {Math.min(ordenesPagina * ordenesPerPage, totalOrdenes)} de {totalOrdenes}
-                                                    </div>
+                                        ordenesActuales.map((orden) => {
+                                            const isSelected = selectedOrden?.guid === orden.guid;
+                                            return (
+                                                <div
+                                                    key={orden.guid}
+                                                    onClick={() => handleOrdenClick(orden)}
+                                                    className={`grid grid-cols-4 px-4 py-3 cursor-pointer transition-all border-b border-gray-100 dark:border-gray-700/60 group
+                                                        ${isSelected
+                                                            ? 'bg-cyan-50 dark:bg-cyan-900/20 border-l-2 border-l-cyan-500'
+                                                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'
+                                                        }`}
+                                                >
                                                     <div className="flex items-center gap-2">
-                                                        <Button
-                                                            onClick={() => setOrdenesPagina(prev => Math.max(1, prev - 1))}
-                                                            disabled={ordenesPagina === 1}
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <ChevronLeft className="w-4 h-4" />
-                                                        </Button>
-                                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            {ordenesPagina} / {totalPaginasOrdenes}
-                                                        </span>
-                                                        <Button
-                                                            onClick={() => setOrdenesPagina(prev => Math.min(totalPaginasOrdenes, prev + 1))}
-                                                            disabled={ordenesPagina === totalPaginasOrdenes}
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <ChevronRight className="w-4 h-4" />
-                                                        </Button>
+                                                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />}
+                                                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{orden.patient_name}</span>
                                                     </div>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate self-center" title={orden.study_type}>{orden.study_type}</span>
+                                                    <span className="text-xs font-mono text-gray-600 dark:text-gray-300 self-center">{orden.accession}</span>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400 self-center">{formatDate(orden.date)}</span>
                                                 </div>
-                                            )}
-                                        </>
+                                            );
+                                        })
                                     )}
                                 </div>
+
+                                {/* Paginación */}
+                                {totalPaginasOrdenes > 1 && (
+                                    <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-[#23272b] border-t border-gray-200 dark:border-gray-700">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            {((ordenesPagina - 1) * ordenesPerPage) + 1}–{Math.min(ordenesPagina * ordenesPerPage, totalOrdenes)} de {totalOrdenes}
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            <Button onClick={() => setOrdenesPagina(p => Math.max(1, p - 1))} disabled={ordenesPagina === 1} variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                                <ChevronLeft className="w-3.5 h-3.5" />
+                                            </Button>
+                                            <span className="text-xs text-gray-600 dark:text-gray-300 min-w-[48px] text-center">{ordenesPagina} / {totalPaginasOrdenes}</span>
+                                            <Button onClick={() => setOrdenesPagina(p => Math.min(totalPaginasOrdenes, p + 1))} disabled={ordenesPagina === totalPaginasOrdenes} variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                                <ChevronRight className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Sección de vinculación */}
-                    <div className="mt-8 bg-white/50 dark:bg-[#2a2e32] backdrop-blur-sm rounded-lg p-6 border-2 border-dashed border-gray-300 dark:border-gray-600">
-                        <div className="flex items-center justify-center gap-3 text-gray-600 dark:text-gray-400">
-                            <div className="bg-orange-100 p-2 rounded-lg">
-                                <Archive className="w-5 h-5 text-orange-600" />
+                    {/* ── BARRA DE VINCULACIÓN ── */}
+                    <div className={`rounded-xl border-2 transition-all duration-300 overflow-hidden
+                        ${bothSelected
+                            ? 'border-brand-purple bg-brand-purple/5 dark:bg-brand-purple/10 shadow-md'
+                            : 'border-dashed border-gray-200 dark:border-gray-600 bg-gray-50/50 dark:bg-[#23272b]/50'
+                        }`}
+                    >
+                        {bothSelected ? (
+                            /* Muestra las selecciones cuando ambas están elegidas */
+                            <div className="px-5 py-4 flex flex-col sm:flex-row items-center gap-4">
+                                {/* Estudio seleccionado */}
+                                <div className="flex-1 bg-white dark:bg-[#2a2e32] rounded-lg px-4 py-2.5 border border-purple-200 dark:border-purple-800">
+                                    <p className="text-xs text-brand-purple font-semibold mb-0.5 flex items-center gap-1">
+                                        <Archive className="w-3 h-3" /> Estudio
+                                    </p>
+                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{selectedEstudio.patient_name}</p>
+                                    <p className="text-xs text-gray-400">{selectedEstudio.modality} · {formatDate(selectedEstudio.study_date)}</p>
+                                </div>
+
+                                {/* Flecha */}
+                                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-brand-purple text-white flex-shrink-0 shadow-md">
+                                    <ArrowRight className="w-4 h-4" />
+                                </div>
+
+                                {/* Orden seleccionada */}
+                                <div className="flex-1 bg-white dark:bg-[#2a2e32] rounded-lg px-4 py-2.5 border border-cyan-200 dark:border-cyan-800">
+                                    <p className="text-xs text-cyan-600 font-semibold mb-0.5 flex items-center gap-1">
+                                        <ScanLine className="w-3 h-3" /> Orden
+                                    </p>
+                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{selectedOrden.patient_name}</p>
+                                    <p className="text-xs text-gray-400 truncate">{selectedOrden.study_type} · {selectedOrden.accession}</p>
+                                </div>
+
+                                {/* Botón vincular */}
+                                <Button
+                                    onClick={handleVincular}
+                                    className="bg-brand-purple hover:bg-brand-purple/90 text-white px-5 py-2.5 h-auto flex items-center gap-2 flex-shrink-0 shadow-md"
+                                >
+                                    <Link2 className="w-4 h-4" />
+                                    Vincular
+                                </Button>
                             </div>
-                            <p className="text-sm font-medium">Selecciona un estudio cargado (izquierda) y una orden sin imagen (derecha) para vincularlos</p>
-                        </div>
-                        <div className="mt-4 flex justify-center">
-                            <Button
-                                onClick={handleVincular}
-                                disabled={!selectedEstudio || !selectedOrden}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <Link2 className="w-4 h-4 mr-2" />
-                                Vincular Estudio Seleccionado
-                            </Button>
-                        </div>
+                        ) : (
+                            /* Estado vacío / instrucción */
+                            <div className="flex items-center justify-center gap-3 px-5 py-5 text-gray-400 dark:text-gray-500">
+                                <div className="flex items-center gap-2 text-sm">
+                                    <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold transition-colors
+                                        ${selectedEstudio ? 'border-brand-purple text-brand-purple bg-brand-purple/10' : 'border-gray-300 dark:border-gray-600'}`}>
+                                        1
+                                    </span>
+                                    <span className={selectedEstudio ? 'text-brand-purple font-medium' : ''}>
+                                        {selectedEstudio ? selectedEstudio.patient_name : 'Selecciona un estudio (izquierda)'}
+                                    </span>
+                                </div>
+                                <ArrowRight className="w-4 h-4 flex-shrink-0" />
+                                <div className="flex items-center gap-2 text-sm">
+                                    <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold transition-colors
+                                        ${selectedOrden ? 'border-cyan-500 text-cyan-500 bg-cyan-500/10' : 'border-gray-300 dark:border-gray-600'}`}>
+                                        2
+                                    </span>
+                                    <span className={selectedOrden ? 'text-cyan-600 font-medium' : ''}>
+                                        {selectedOrden ? selectedOrden.patient_name : 'Selecciona una orden (derecha)'}
+                                    </span>
+                                </div>
+                                <ArrowRight className="w-4 h-4 flex-shrink-0" />
+                                <div className="flex items-center gap-2 text-sm">
+                                    <span className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center flex-shrink-0 text-xs font-bold">3</span>
+                                    <span>Vincular</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                </>
+                </div>
             )}
 
             {/* Modal de confirmación */}

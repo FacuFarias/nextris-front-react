@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { distribucionService } from "./services/distribucion.service";
 import fondoImage from "@/assets/mail.jpg";
+import backDarkImage from "@/assets/dark-calendar.jpg";
 
 export const Distribucion = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -129,7 +130,7 @@ export const Distribucion = () => {
 
     return (
         <MainLayout>
-            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-hidden">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
@@ -178,6 +179,7 @@ export const Distribucion = () => {
                     }}
                     perPageOptions={[10, 20, 50, 100]}
                     tableBackgroundImage={fondoImage}
+                    tableBackgroundImageDark={backDarkImage}
                     stickyPagination
                 />
 

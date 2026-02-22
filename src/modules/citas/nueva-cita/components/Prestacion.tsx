@@ -101,7 +101,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
 
     return (
         <div className="space-y-6">
-            <div className="bg-card dark:bg-[#2a2e32] rounded-lg border border-purple-100 shadow-sm p-6">
+            <div className="bg-card dark:bg-[#1a1b24]/80 rounded-lg border border-purple-100 dark:border-[rgba(255,255,255,0.07)] shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.3)] p-6">
                 <div className="flex items-center gap-2 mb-4">
                     <ClipboardList className="w-5 h-5 text-brand-purple dark:text-purple-400" />
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
@@ -109,7 +109,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                     </h3>
                 </div>
 
-                <div className="mb-4 p-4 bg-purple-50 dark:bg-[#3a3e42] rounded-lg">
+                <div className="mb-4 p-4 bg-purple-50 dark:bg-[#252636] rounded-lg border border-purple-100 dark:border-[rgba(255,255,255,0.07)]">
                     <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
                         <User className="w-4 h-4 text-brand-purple dark:text-purple-400" />
                         <span className="font-semibold">Paciente:</span>
@@ -130,7 +130,9 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                             return (
                                 <div
                                     key={ev.id || idx}
-                                    className={`bg-white border-2 rounded-lg dark:bg-[#2a2e32] shadow-sm p-4 transition-all ${isComplete ? 'border-green-300 bg-green-50' : 'border-purple-200'
+                                    className={`border-2 rounded-lg shadow-sm p-4 transition-all ${isComplete
+                                            ? 'bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-800'
+                                            : 'bg-white dark:bg-[#1c1d28] border-purple-200 dark:border-[rgba(139,92,246,0.15)]'
                                         }`}
                                 >
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -181,7 +183,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                                                     onValueChange={(value) => handlePhysicianChange(ev.id, value)}
                                                     disabled={isLoadingMedicos}
                                                 >
-                                                    <SelectTrigger className="w-full py-6 border-2 border-gray-300 focus:border-brand-purple">
+                                                    <SelectTrigger className="w-full py-6 border-2 border-gray-300 dark:border-[rgba(255,255,255,0.1)] focus:border-brand-purple dark:focus:border-purple-500 dark:bg-[#252636] dark:text-gray-100">
                                                         <SelectValue placeholder="Seleccione médico..." />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -211,7 +213,7 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                                                     onValueChange={(value) => handleObraSocialChange(ev.id, value)}
                                                     disabled={isLoadingObrasSociales}
                                                 >
-                                                    <SelectTrigger className="w-full py-6 border-2 border-gray-300 focus:border-brand-purple">
+                                                    <SelectTrigger className="w-full py-6 border-2 border-gray-300 dark:border-[rgba(255,255,255,0.1)] focus:border-brand-purple dark:focus:border-purple-500 dark:bg-[#252636] dark:text-gray-100">
                                                         <SelectValue placeholder="Seleccione obra social..." />
                                                     </SelectTrigger>
                                                     <SelectContent>

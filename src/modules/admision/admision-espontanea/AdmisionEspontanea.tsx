@@ -118,7 +118,7 @@ export const AdmisionEspontanea = () => {
 
     return (
         <MainLayout>
-            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10">
                 {/* Header con Tabs integrados */}
                 <div className="mb-6">
                     <div className="flex items-center gap-3 mb-4">

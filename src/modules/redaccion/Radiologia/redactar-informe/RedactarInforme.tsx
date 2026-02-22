@@ -839,9 +839,9 @@ export const RedactarInforme = () => {
     const statLabel = reportData.stat || reportData.priority || 'A';
     return (
         <LayoutSinSidebar disableDefaultBackground>
-            <div className="min-h-[calc(100vh-84px)] bg-gray-50 dark:bg-[#0f1218] rounded-xl p-2 dark:text-gray-100">
+            <div className="h-[calc(100vh-24px)] bg-gray-50 dark:bg-[#0f1218] rounded-xl p-2 dark:text-gray-100 flex flex-col overflow-hidden">
                 {/* Header con botones de acción */}
-                <div className="flex justify-between items-center mb-3">
+                <div className="flex justify-between items-center mb-3 shrink-0">
                     <div className="relative bg-white dark:bg-[#151922] rounded-lg p-3 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 w-full">
                         <div className="flex items-center gap-3">
                             <div className="bg-gray-100 dark:bg-[#1e2430] rounded-full p-2.5">
@@ -908,10 +908,10 @@ export const RedactarInforme = () => {
                 </div>
 
                 {/* Layout de tres columnas con sidebars colapsables */}
-                <div className="relative">
-                    <div className="flex gap-1 items-start">
+                <div className="flex-1 min-h-0 relative">
+                    <div className="flex gap-1 h-full">
                         {/* Columna central */}
-                        <div className="flex-1 space-y-2.5 p-2.5 transition-all ease-in-out min-w-0 bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-y-auto h-[calc(100vh-124px)] table-scrollbar-purple">
+                        <div className="flex-1 space-y-2.5 p-2.5 transition-all ease-in-out min-w-0 bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-y-auto h-full table-scrollbar-purple">
 
                             {/* Toolbar única global */}
                             <div className="sticky top-0 z-20 bg-gray-50 dark:bg-[#0f1218] rounded-md border border-gray-200 dark:border-gray-700 p-1.5 flex items-center gap-0.5 flex-wrap">
@@ -939,10 +939,10 @@ export const RedactarInforme = () => {
                                     <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Historia Clínica</h3>
                                     {openSections.historiaClinica ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
                                 </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinica ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinica ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2">
                                         <textarea
-                                            className="w-full h-20 p-3 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-[#1e2430] text-gray-800 dark:text-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-brand-purple/40"
+                                            className="w-full h-20 p-3 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-[#1e2430] text-gray-800 dark:text-gray-200 resize-y focus:outline-none focus:ring-2 focus:ring-brand-purple/40"
                                             placeholder="Historia clínica..."
                                             disabled={isSigned}
                                             value={formData.history}
@@ -961,7 +961,7 @@ export const RedactarInforme = () => {
                                     <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Técnica de examen</h3>
                                     {openSections.tecnica ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
                                 </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.tecnica ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.tecnica ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2 space-y-2">
                                         <RichTextEditor
                                             value={formData.techniques}
@@ -974,7 +974,7 @@ export const RedactarInforme = () => {
                                             onEditorReady={(editor) => handleEditorReady(editor, 'techniques')}
                                             readOnly={isSigned}
                                             showToolbar={false}
-
+                                            className="resize-y overflow-auto"
                                         />
                                     </div>
                                 </div>
@@ -989,7 +989,7 @@ export const RedactarInforme = () => {
                                     <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Hallazgos</h3>
                                     {openSections.hallazgos ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
                                 </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.hallazgos ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.hallazgos ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2 space-y-2">
                                         <RichTextEditor
                                             value={formData.findings}
@@ -1002,6 +1002,7 @@ export const RedactarInforme = () => {
                                             onEditorReady={(editor) => handleEditorReady(editor, 'findings')}
                                             readOnly={isSigned}
                                             showToolbar={false}
+                                            className="resize-y overflow-auto"
                                         />
                                     </div>
                                 </div>
@@ -1016,7 +1017,7 @@ export const RedactarInforme = () => {
                                     <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Impresiones</h3>
                                     {openSections.impresiones ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
                                 </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.impresiones ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.impresiones ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2 space-y-2">
                                         <RichTextEditor
                                             value={formData.impressions}
@@ -1029,6 +1030,7 @@ export const RedactarInforme = () => {
                                             onEditorReady={(editor) => handleEditorReady(editor, 'impressions')}
                                             readOnly={isSigned}
                                             showToolbar={false}
+                                            className="resize-y overflow-auto"
                                         />
                                     </div>
                                 </div>
@@ -1043,7 +1045,7 @@ export const RedactarInforme = () => {
                                     <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Conclusiones</h3>
                                     {openSections.conclusiones ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
                                 </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.conclusiones ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.conclusiones ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <div className="p-2 space-y-2">
                                         <RichTextEditor
                                             value={formData.conclusions}
@@ -1056,6 +1058,7 @@ export const RedactarInforme = () => {
                                             onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')}
                                             readOnly={isSigned}
                                             showToolbar={false}
+                                            className="resize-y overflow-auto"
                                         />
                                     </div>
                                 </div>
@@ -1067,7 +1070,7 @@ export const RedactarInforme = () => {
                             {rightSidebarOpen ? (
                                 <button
                                     onClick={() => setRightSidebarOpen(false)}
-                                    className="bg-gray-200 dark:bg-[#1f2937] h-[calc(100vh-124px)] hover:bg-gray-300 dark:hover:bg-[#2a3444] text-gray-700 dark:text-gray-200 p-1.5 rounded-md border border-gray-300 dark:border-gray-700 transition-colors"
+                                    className="bg-gray-200 dark:bg-[#1f2937] h-full hover:bg-gray-300 dark:hover:bg-[#2a3444] text-gray-700 dark:text-gray-200 p-1.5 rounded-md border border-gray-300 dark:border-gray-700 transition-colors"
                                     title={`Ocultar panel lateral (${rightSidebarTabLabel})`}
                                 >
                                     <RightSidebarTabIcon className="w-4 h-4" />
@@ -1075,7 +1078,7 @@ export const RedactarInforme = () => {
                             ) : (
                                 <button
                                     onClick={() => setRightSidebarOpen(true)}
-                                    className="h-[calc(100vh-124px)] bg-gray-200 dark:bg-[#1f2937] hover:bg-gray-300 dark:hover:bg-[#2a3444] text-gray-700 dark:text-gray-200 p-1.5 rounded-md border border-gray-300 dark:border-gray-700 transition-colors flex items-center justify-center"
+                                    className="h-full bg-gray-200 dark:bg-[#1f2937] hover:bg-gray-300 dark:hover:bg-[#2a3444] text-gray-700 dark:text-gray-200 p-1.5 rounded-md border border-gray-300 dark:border-gray-700 transition-colors flex items-center justify-center"
                                     title={`Mostrar panel lateral (${rightSidebarTabLabel})`}
                                 >
                                     <RightSidebarTabIcon className="w-4 h-4" />
@@ -1085,7 +1088,7 @@ export const RedactarInforme = () => {
 
                         {/* Columna derecha - Imágenes */}
                         <div
-                            className={`self-start relative space-y-3 shrink-0 origin-right overflow-hidden ${isResizingRightSidebar ? '' : 'transition-opacity duration-200 ease-out'} ${rightSidebarOpen ? 'opacity-100' : 'opacity-0'}`}
+                            className={`relative shrink-0 h-full origin-right overflow-hidden ${isResizingRightSidebar ? '' : 'transition-opacity duration-200 ease-out'} ${rightSidebarOpen ? 'opacity-100' : 'opacity-0'}`}
                             style={{ width: rightSidebarOpen ? `${rightSidebarWidth}px` : '0px' }}
                         >
                             {rightSidebarOpen && (
@@ -1096,10 +1099,10 @@ export const RedactarInforme = () => {
                                     title="Redimensionar panel lateral"
                                 />
                             )}
-                            <div className={`${rightSidebarOpen ? 'opacity-100' : 'opacity-0'} w-full`}>
+                            <div className={`${rightSidebarOpen ? 'opacity-100' : 'opacity-0'} w-full h-full flex flex-col`}>
 
-                                <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-full">
-                                    <div className="bg-gray-100 dark:bg-[#1e2430] px-2 py-2 border-b border-gray-200 dark:border-gray-700">
+                                <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-full flex flex-col">
+                                    <div className="bg-gray-100 dark:bg-[#1e2430] px-2 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
                                         <div className="grid grid-cols-3 gap-1">
                                             <button
                                                 type="button"
@@ -1137,7 +1140,7 @@ export const RedactarInforme = () => {
                                         </div>
                                     </div>
                                     {rightSidebarTab === 'history' ? (
-                                        <div className="p-3 h-[calc(100vh-170px)] overflow-y-auto table-scrollbar-purple">
+                                        <div className="p-3 flex-1 min-h-0 overflow-y-auto table-scrollbar-purple">
                                             {patientStudies.length === 0 ? (
                                                 <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-4">Sin estudios previos</p>
                                             ) : (
@@ -1162,12 +1165,11 @@ export const RedactarInforme = () => {
                                             )}
                                         </div>
                                     ) : rightSidebarTab === 'images' ? (
-                                        <div className="transition-all duration-300 ease-in-out flex-1 overflow-hidden">
-                                            <div className="p-3 h-[calc(100vh-170px)] flex flex-col">
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 text-center mb-4 shrink-0">
-                                                    Arrastra las imágenes a los campos de texto
-                                                </p>
-                                                <div className="max-h-[620px] overflow-y-auto space-y-2 pr-1 table-scrollbar-purple">
+                                        <div className="flex-1 min-h-0 p-3 flex flex-col overflow-hidden">
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mb-4 shrink-0">
+                                                Arrastra las imágenes a los campos de texto
+                                            </p>
+                                            <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 table-scrollbar-purple">
                                                     {images.map((image, index) => (
                                                         <div
                                                             key={image.id}
@@ -1194,11 +1196,10 @@ export const RedactarInforme = () => {
                                                             </div>
                                                         </div>
                                                     ))}
-                                                </div>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="p-3 h-[calc(100vh-170px)] flex flex-col gap-2">
+                                        <div className="p-3 flex-1 min-h-0 flex flex-col gap-2 overflow-y-auto">
                                             <div className="rounded-md border border-dashed border-gray-300 dark:border-gray-600 p-3 bg-gray-50 dark:bg-[#1e2430]">
                                                 <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Asistencia IA</p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">

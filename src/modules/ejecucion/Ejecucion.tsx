@@ -8,6 +8,7 @@ import { useEjecucion } from './hooks/use-ejecucion';
 import TablaDynamic from '@/components/TableDynamic';
 import { ejecucionColumns, getEjecucionActions } from './components/columns';
 import fondoImage from "@/assets/ejecucion.jpg";
+import backDarkImage from "@/assets/back-dark.jpg";
 import type { Ejecucion as EjecucionType } from './types/ejecucion.type';
 
 export const Ejecucion = () => {
@@ -35,12 +36,21 @@ export const Ejecucion = () => {
     };
 
     const handleVerDetalle = (ejecucion: EjecucionType) => {
-        navigate(`/ejecucion/detalle/${ejecucion.guid}`);
+        const params = new URLSearchParams();
+        if (Array.isArray(ejecucion.flags) && ejecucion.flags.length > 0) {
+            params.set('flags', ejecucion.flags.join(','));
+        }
+        if (Array.isArray(ejecucion.tag_ids) && ejecucion.tag_ids.length > 0) {
+            params.set('tag_ids', ejecucion.tag_ids.join(','));
+        }
+
+        const query = params.toString();
+        navigate(`/ejecucion/detalle/${ejecucion.guid}${query ? `?${query}` : ''}`);
     };
 
     return (
         <MainLayout>
-            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
 
@@ -89,6 +99,7 @@ export const Ejecucion = () => {
                     }}
                     perPageOptions={[10, 20, 50, 100]}
                     tableBackgroundImage={fondoImage}
+                    tableBackgroundImageDark={backDarkImage}
                 />
 
 

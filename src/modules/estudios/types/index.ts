@@ -13,6 +13,7 @@ export interface Study {
     location: string;
     urgency: "Urgente" | "Normal";
     report_date: string | null;
+    study_uid: string | null;
 }
 
 

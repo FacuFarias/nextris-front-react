@@ -5,7 +5,7 @@ import type { UserFormData, UserMedicalSubmitData } from "../types/users.types";
 interface UserModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: UserFormData, locationIds?: string[], medicalData?: UserMedicalSubmitData) => void;
+    onSubmit: (data: UserFormData, locationIds?: string[], medicalData?: UserMedicalSubmitData, permissionCodes?: string[]) => void;
     initialData?: Partial<UserFormData>;
     userId?: string;
     isLoading?: boolean;

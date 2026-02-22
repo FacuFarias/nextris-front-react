@@ -1,32 +1,59 @@
 import type { TableAction, TableColumn } from "@/types/table";
 import type { Informes } from "../types/informes.types";
 import { fechaYhora } from "@/lib/fechaYhora";
-import { ClipboardPlus, FileText, Image, Lock } from "lucide-react";
+import { ClipboardPlus, FileText, Image, Lock, LockOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FlagsCell } from "./FlagsCell";
 import { TagsCell } from "./TagsCell";
 import { GeneralNotesCell } from "./GeneralNotesCell";
 import type { Tag } from "@/modules/configuracion/configuracion-tablas/institucional/tags";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Columna de paciente: generada dinámicamente para incluir el handler de desbloqueo admin
+export const getPatientNameColumn = (
+    onAdminUnlock: ((examId: string) => void) | null,
+    isAdmin: boolean,
+): TableColumn<Informes> => ({
+    key: "patient_name",
+    label: "PACIENTE",
+    className: "font-medium",
+    sortable: true,
+    filterable: true,
+    render: (value: string, informe: Informes) => (
+        <div className="flex items-center gap-2">
+            {informe.blocked_by && informe.blocked_by_name && (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        {isAdmin ? (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAdminUnlock?.(informe.guid);
+                                }}
+                                className="cursor-pointer text-yellow-600 hover:text-red-400 transition-colors"
+                                title=""
+                            >
+                                <LockOpen className="w-4 h-4" />
+                            </button>
+                        ) : (
+                            <span className="text-yellow-600">
+                                <Lock className="w-4 h-4" />
+                            </span>
+                        )}
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Bloqueado por: <strong>{informe.blocked_by_name}</strong></p>
+                        {isAdmin && <p className="text-xs opacity-75 mt-0.5">Click para desbloquear</p>}
+                    </TooltipContent>
+                </Tooltip>
+            )}
+            <span>{value}</span>
+        </div>
+    ),
+});
 
 // Configuración de columnas para usuarios
 const informeColumns: TableColumn<Informes>[] = [
-    {
-        key: "patient_name",
-        label: "PACIENTE",
-        className: "font-medium",
-        sortable: true,
-        filterable: true,
-        render: (value: string, informe: Informes) => (
-            <div className="flex items-center gap-2">
-                {informe.blocked_by && informe.blocked_by_name && (
-                    <div className="relative group">
-                        <Lock className="w-4 h-4 text-yellow-600" />
-                    </div>
-                )}
-                <span>{value}</span>
-            </div>
-        ),
-    },
     {
         key: "patient_dni",
         label: "DNI",

@@ -32,7 +32,7 @@ export const UseLogin = () => {
             toast.success(data?.message || "¡Inicio de sesión exitoso!", {
                 position: "top-right",
             });
-            navigate("/inicio");
+            navigate(data?.user?.user_type === "patient" ? "/estudios" : "/inicio");
         },
         onError: (error) => {
             console.error("Error during login:", error);

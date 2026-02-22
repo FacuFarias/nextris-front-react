@@ -20,6 +20,7 @@ import { actualizarCita } from "../service/cita.service"
 import { toast } from "sonner"
 import { citasKeys } from "../constants/query-keys"
 import fondoImage from "@/assets/calendar.jpg"
+import backDarkImage from "@/assets/back-dark.jpg";
 
 
 
@@ -97,7 +98,7 @@ export const EditarCita = () => {
     );
     return (
         <MainLayout>
-            <div className="bg-card backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0">
                 {/* Breadcrumb */}
                 <DynamicBreadcrumb />
                 {/* Header con Tabs integrados */}
@@ -135,6 +136,7 @@ export const EditarCita = () => {
                         perPageOptions={[10, 20, 50, 100]}
                         actions={citasActions}
                         tableBackgroundImage={fondoImage}
+                        tableBackgroundImageDark={backDarkImage}
                         stickyPagination
                     />
                 </div>

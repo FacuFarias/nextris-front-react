@@ -9,6 +9,8 @@ export interface Patient {
     phone?: string;
     study_count?: number;
     surname: string;
+    username?: string | null;
+    user_status?: string | null;
 }
 
 

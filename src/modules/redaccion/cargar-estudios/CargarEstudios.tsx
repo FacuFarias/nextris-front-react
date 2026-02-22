@@ -141,7 +141,7 @@ export const CargarEstudios = () => {
 
     return (
         <MainLayout>
-            <div className="bg-card dark:bg-[#2a2e32] backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm z-10 overflow-y-auto">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10 overflow-y-auto">
                 {/* Header con Tabs integrados */}
                 <div className="mb-6">
                     {/* Tabs */}

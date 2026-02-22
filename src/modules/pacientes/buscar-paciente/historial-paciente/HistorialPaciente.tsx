@@ -10,6 +10,7 @@ import { getHistoryPatientActions, historyColumns } from './components/columns';
 import { DynamicBreadcrumb } from '@/components/DynamicBreadcrumb';
 import { Button } from '@/components/ui/button';
 import fondoImage from "@/assets/fondo1.png";
+import backDarkImage from "@/assets/back-dark.jpg";
 import { useDebounce } from '@uidotdev/usehooks';
 
 export const HistorialPaciente = () => {
@@ -68,7 +69,7 @@ export const HistorialPaciente = () => {
 
     return (
         <MainLayout>
-            <div className="bg-card/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm border border-border z-10 h-full flex flex-col overflow-hidden">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm border border-border z-10 h-full flex flex-col overflow-hidden">
                 <DynamicBreadcrumb />
 
                 {/* Header */}
@@ -119,6 +120,7 @@ export const HistorialPaciente = () => {
                     }}
                     perPageOptions={[10, 20, 50, 100]}
                     tableBackgroundImage={fondoImage}
+                    tableBackgroundImageDark={backDarkImage}
                 />
             </div>
         </MainLayout>

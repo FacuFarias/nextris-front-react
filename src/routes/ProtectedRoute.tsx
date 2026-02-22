@@ -7,15 +7,30 @@ import { toast } from "sonner";
 interface ProtectedRouteProps {
     children: React.ReactNode;
     allowedRoles?: string[]; // Si está vacío, todos los usuarios autenticados pueden acceder
+    requiredPermissions?: string[];
 }
 
-export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions }: ProtectedRouteProps) => {
     const { isAuthenticated, isLoading, authData } = useAuth();
     const hasShownErrorRef = useRef(false);
 
-    // Validar roles si se especifican
     const userRole = authData?.user?.user_type;
-    const hasAccess = !allowedRoles || allowedRoles.length === 0 || (userRole && allowedRoles.includes(userRole));
+    const userPermissions = Array.isArray((authData?.user as any)?.permissions)
+        ? ((authData?.user as any)?.permissions as string[])
+        : [];
+
+    const hasRoleConstraint = Array.isArray(allowedRoles) && allowedRoles.length > 0;
+    const hasPermissionConstraint = Array.isArray(requiredPermissions) && requiredPermissions.length > 0;
+
+    const hasRoleAccess = hasRoleConstraint ? Boolean(userRole && allowedRoles?.includes(userRole)) : false;
+    const hasPermissionAccess = hasPermissionConstraint
+        ? (userPermissions.includes("*") || requiredPermissions!.some((permission) => userPermissions.includes(permission)))
+        : false;
+
+    const hasAccess =
+        (!hasRoleConstraint && !hasPermissionConstraint)
+            ? true
+            : (hasRoleAccess || hasPermissionAccess);
 
     // Mostrar error si no tiene acceso (solo una vez)
     useEffect(() => {

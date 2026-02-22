@@ -27,6 +27,7 @@ interface MenuItem {
     icon: React.ReactNode;
     path?: string;
     allowedRoles?: string[]; // Si está vacío, todos pueden verlo
+    requiredPermissions?: string[];
 
 }
 
@@ -46,7 +47,7 @@ const menuSections: MenuSection[] = [
                 title: "Buscar Pacientes",
                 description: "Consulta y gestiona pacientes registrados",
                 icon: <Users className="w-5 h-5" />,
-                path: "/pacientes",
+                path: "/buscar-pacientes",
                 allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo"],
             },
             {
@@ -87,6 +88,7 @@ const menuSections: MenuSection[] = [
                 description: "Gestiona admisiones desde agenda",
                 icon: <UserPlus className="w-5 h-5" />,
                 allowedRoles: ["Sysadmin", "Administrativo"],
+                requiredPermissions: ["tabs.admissions.view", "admissions.view", "admissions.admit_appointments"],
             },
             {
                 id: "adm-espontanea",
@@ -95,6 +97,7 @@ const menuSections: MenuSection[] = [
                 description: "Registra ingresos sin cita previa",
                 icon: <UserCog className="w-5 h-5" />,
                 allowedRoles: ["Sysadmin", "Administrativo"],
+                requiredPermissions: ["tabs.admissions.view", "admissions.view", "admissions.create_spontaneous"],
             },
         ],
     },
@@ -249,87 +252,84 @@ export const Inicio = () => {
     };
 
     // Función para verificar si el usuario tiene permiso para ver un item
-    const hasAccess = (allowedRoles?: string[]) => {
-        if (!allowedRoles || allowedRoles.length === 0) return true; // Si no hay roles definidos, todos pueden verlo
-        if (!authData?.user?.user_type) return false;
-        return allowedRoles.includes(authData.user.user_type);
+    const hasAccess = (allowedRoles?: string[], requiredPermissions?: string[]) => {
+        const role = authData?.user?.user_type;
+        const userPermissions = Array.isArray((authData?.user as any)?.permissions)
+            ? ((authData?.user as any)?.permissions as string[])
+            : [];
+
+        const hasRoleConstraint = Array.isArray(allowedRoles) && allowedRoles.length > 0;
+        const hasPermissionConstraint = Array.isArray(requiredPermissions) && requiredPermissions.length > 0;
+
+        if (!hasRoleConstraint && !hasPermissionConstraint) return true;
+
+        const roleAccess = hasRoleConstraint ? Boolean(role && allowedRoles!.includes(role)) : false;
+        const permissionAccess = hasPermissionConstraint
+            ? (userPermissions.includes("*") || requiredPermissions!.some((permission) => userPermissions.includes(permission)))
+            : false;
+
+        return roleAccess || permissionAccess;
     };
 
     // Filtrar secciones y items según el rol del usuario
     const filteredSections = menuSections
         .map(section => ({
             ...section,
-            items: section.items.filter(item => hasAccess(item.allowedRoles))
+            items: section.items.filter(item => hasAccess(item.allowedRoles, item.requiredPermissions))
         }))
         .filter(section => section.items.length > 0); // Solo mostrar secciones que tengan items visibles
 
 
+    // Calcular offset de índice global para el stagger entre secciones
+    const sectionOffsets = filteredSections.reduce<number[]>((acc, _, i) => {
+        acc.push(i === 0 ? 0 : acc[i - 1] + filteredSections[i - 1].items.length);
+        return acc;
+    }, []);
+
     return (
         <MainLayout>
             <div className="space-y-4">
-                <div className="rounded-2xl bg-card/95 backdrop-blur-sm p-4 space-y-3 border border-border shadow-sm">
+                <div className="inicio-container rounded-2xl bg-card/95 backdrop-blur-sm p-4 space-y-3 border border-border shadow-sm">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-2">
                         <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400">
-                            Bienvenido <span>{authData?.user?.user_type}: {authData?.user.username}</span>
+                            Bienvenido{" "}
+                            <span className="dark:text-purple-300">{authData?.user?.user_type}: {authData?.user.username}</span>
                         </h1>
                         <div className="flex flex-col items-end">
                             <div className="flex items-center gap-2 text-brand-purple dark:text-purple-400">
-                                <Clock className="w-5 h-5" />
-                                <span className="text-2xl font-bold font-mono">{formatTime()}</span>
+                                <Clock className="w-5 h-5 dark:drop-shadow-[0_0_6px_rgba(167,139,250,0.5)]" />
+                                <span className="text-2xl font-bold font-mono dark:drop-shadow-[0_0_8px_rgba(167,139,250,0.4)]">
+                                    {formatTime()}
+                                </span>
                             </div>
                             <span className="text-xs text-muted-foreground capitalize">{formatDate()}</span>
                         </div>
                     </div>
-                    {filteredSections.map((section, index) => (
+
+                    {filteredSections.map((section, sectionIndex) => (
                         <section
                             key={section.id}
-                            className={index < filteredSections.length - 1 ? "pb-3 border-b border-border" : ""}
+                            className={sectionIndex < filteredSections.length - 1 ? "pb-3 border-b border-border" : ""}
                         >
-                            <h2 className="text-xs font-semibold text-brand-purple dark:text-purple-400 mb-2 uppercase tracking-wide">
+                            <h2 className="section-title-dark text-xs font-semibold text-brand-purple dark:text-purple-400 mb-2 uppercase tracking-widest">
                                 {section.title}
                             </h2>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                                {section.items.map((item) => {
-                                    if (item.path) {
-                                        return (
-                                            <Link
-                                                key={item.id}
-                                                to={item.path}
-                                                onClick={() => handleItemClick(item)}
-                                                className="group cursor-pointer rounded-lg dark:bg-[#2a2e32] hover:shadow-sm transition-all duration-200 border border-border p-2.5 flex items-center gap-2 min-h-[68px] hover:bg-accent/50"
-                                            >
-                                                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-md p-2 shrink-0 group-hover:bg-purple-200 dark:group-hover:bg-purple-800/40 transition-all duration-200">
-                                                    <div className="text-brand-purple dark:text-purple-400 group-hover:scale-105 transition-transform duration-200">
-                                                        {item.icon}
-                                                    </div>
-                                                </div>
+                                {section.items.map((item, itemIndex) => {
+                                    const globalIdx = sectionOffsets[sectionIndex] + itemIndex;
+                                    const animDelay = `${globalIdx * 55}ms`;
+                                    const cardClasses =
+                                        "menu-card animate-fade-in-up group cursor-pointer rounded-lg border border-border p-2.5 flex items-center gap-2 min-h-[68px] hover:bg-accent/50 dark:hover:bg-transparent transition-all duration-300";
 
-                                                <div className="min-w-0">
-                                                    <h3 className="text-sm font-semibold text-foreground leading-tight truncate">
-                                                        {item.title}
-                                                    </h3>
-                                                    <p className="text-xs text-muted-foreground leading-tight mt-0.5 truncate">
-                                                        {item.description}
-                                                    </p>
-                                                </div>
-                                            </Link>
-                                        );
-                                    }
-
-                                    return (
-                                        <div
-                                            key={item.id}
-                                            onClick={() => handleItemClick(item)}
-                                            className="group cursor-pointer rounded-lg dark:bg-[#2a2e32] hover:shadow-sm transition-all duration-200 border border-border p-2.5 flex items-center gap-2 min-h-[68px] hover:bg-accent/50"
-                                        >
-                                            <div className="bg-purple-100 dark:bg-purple-900/30 rounded-md p-2 shrink-0 group-hover:bg-purple-200 dark:group-hover:bg-purple-800/40 transition-all duration-200">
-                                                <div className="text-brand-purple dark:text-purple-400 group-hover:scale-105 transition-transform duration-200">
+                                    const iconNode = (
+                                        <>
+                                            <div className="menu-card-icon bg-purple-100 rounded-md p-2 shrink-0 transition-all duration-300">
+                                                <div className="text-brand-purple dark:text-purple-400 group-hover:scale-110 transition-transform duration-300">
                                                     {item.icon}
                                                 </div>
                                             </div>
-
                                             <div className="min-w-0">
                                                 <h3 className="text-sm font-semibold text-foreground leading-tight truncate">
                                                     {item.title}
@@ -338,6 +338,31 @@ export const Inicio = () => {
                                                     {item.description}
                                                 </p>
                                             </div>
+                                        </>
+                                    );
+
+                                    if (item.path) {
+                                        return (
+                                            <Link
+                                                key={item.id}
+                                                to={item.path}
+                                                onClick={() => handleItemClick(item)}
+                                                className={cardClasses}
+                                                style={{ animationDelay: animDelay }}
+                                            >
+                                                {iconNode}
+                                            </Link>
+                                        );
+                                    }
+
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            onClick={() => handleItemClick(item)}
+                                            className={cardClasses}
+                                            style={{ animationDelay: animDelay }}
+                                        >
+                                            {iconNode}
                                         </div>
                                     );
                                 })}

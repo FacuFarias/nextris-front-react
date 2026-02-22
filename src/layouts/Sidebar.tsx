@@ -16,13 +16,16 @@ import {
     User,
     UploadCloud,
     Home,
+    Briefcase,
+    Sun,
+    Moon,
+    Monitor,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface SidebarProps {
     isOpen: boolean;
@@ -33,8 +36,9 @@ interface MenuItem {
     icon: React.ElementType;
     label: string;
     path?: string;
-    subItems?: { icon: React.ElementType; label: string; path: string; allowedRoles?: string[] }[];
+    subItems?: { icon: React.ElementType; label: string; path: string; allowedRoles?: string[]; requiredPermissions?: string[] }[];
     allowedRoles?: string[];
+    requiredPermissions?: string[];
 }
 
 const menuItems: MenuItem[] = [
@@ -42,12 +46,12 @@ const menuItems: MenuItem[] = [
         icon: Home,
         label: "Inicio",
         path: "/inicio",
-        allowedRoles: ["Sysadmin", "Medico", "Tecnico", "patient", "Administrativo"],
+        allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo"],
     },
     {
         icon: Users,
         label: "Pacientes",
-        path: "/pacientes",
+        path: "/buscar-pacientes",
         allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo"],
     },
     {
@@ -69,16 +73,19 @@ const menuItems: MenuItem[] = [
     {
         icon: CalendarPlus, label: "Admision",
         allowedRoles: ["Sysadmin", "Administrativo"],
+        requiredPermissions: ["tabs.admissions.view", "admissions.view"],
         subItems: [
             {
                 icon: CalendarPlus,
                 label: "Adm por cita",
                 path: "/nueva-admision",
+                requiredPermissions: ["admissions.admit_appointments"],
             },
             {
                 icon: CalendarPlus,
                 label: "Adm espontánea",
                 path: "/admision-espontanea",
+                requiredPermissions: ["admissions.create_spontaneous"],
             },
             {
                 icon: CalendarPlus,
@@ -110,14 +117,8 @@ const menuItems: MenuItem[] = [
     },
     { icon: Navigation, label: "Distribucion", path: "/distribucion", allowedRoles: ["Sysadmin", "Administrativo"], },
     {
-        icon: Settings,
-        label: "Configuraciones",
-        path: "/configuraciones/tablas",
-        allowedRoles: ["Sysadmin"],
-    },
-    {
-        icon: Settings,
-        label: "Administración",
+        icon: Briefcase,
+        label: "Gestión",
         path: "/administracion",
         subItems: [
             {
@@ -132,7 +133,19 @@ const menuItems: MenuItem[] = [
                 path: "/administracion/reasignacion-examenes",
                 allowedRoles: ["Sysadmin"]
             },
+            {
+                icon: Users,
+                label: "Demográficos",
+                path: "/administracion/demograficos",
+                allowedRoles: ["Sysadmin"]
+            },
         ]
+    },
+    {
+        icon: Settings,
+        label: "Configuraciones",
+        path: "/configuraciones/tablas",
+        allowedRoles: ["Sysadmin"],
     },
     {
         icon: BookPlus,
@@ -151,30 +164,58 @@ const menuItems: MenuItem[] = [
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
     const { authData, logout } = useAuth();
-    const { actualTheme } = useTheme();
+    const { theme, setTheme, actualTheme } = useTheme();
+
+    const cycleTheme = () => {
+        if (theme === 'light') setTheme('dark');
+        else if (theme === 'dark') setTheme('system');
+        else setTheme('light');
+    };
+
+    const themeIcon = theme === 'light'
+        ? <Sun className="w-4 h-4" />
+        : theme === 'dark'
+            ? <Moon className="w-4 h-4" />
+            : <Monitor className="w-4 h-4" />;
+
+    const themeLabel = theme === 'light' ? 'Modo claro' : theme === 'dark' ? 'Modo oscuro' : 'Modo sistema';
     const navigate = useNavigate();
     const location = useLocation();
 
     const userRole = authData?.user?.user_type || "";
+    const userPermissions = Array.isArray((authData?.user as any)?.permissions)
+        ? ((authData?.user as any)?.permissions as string[])
+        : [];
 
-    const hasAccess = (allowedRoles?: string[]) => {
-        if (!allowedRoles || allowedRoles.length === 0) return true;
-        return allowedRoles.includes(userRole);
+    const hasAccess = (allowedRoles?: string[], requiredPermissions?: string[]) => {
+        const hasRoleConstraint = Array.isArray(allowedRoles) && allowedRoles.length > 0;
+        const hasPermissionConstraint = Array.isArray(requiredPermissions) && requiredPermissions.length > 0;
+
+        if (!hasRoleConstraint && !hasPermissionConstraint) {
+            return true;
+        }
+
+        const roleAccess = hasRoleConstraint ? allowedRoles!.includes(userRole) : false;
+        const permissionAccess = hasPermissionConstraint
+            ? (userPermissions.includes("*") || requiredPermissions!.some((permission) => userPermissions.includes(permission)))
+            : false;
+
+        return roleAccess || permissionAccess;
     };
 
     const filteredMenuItems = useMemo(() =>
         menuItems.map(item => {
-            if (!hasAccess(item.allowedRoles)) return null;
+            if (!hasAccess(item.allowedRoles, item.requiredPermissions)) return null;
 
             if (item.subItems) {
-                const filteredSubItems = item.subItems.filter(subItem => hasAccess(subItem.allowedRoles));
+                const filteredSubItems = item.subItems.filter(subItem => hasAccess(subItem.allowedRoles, subItem.requiredPermissions));
                 if (filteredSubItems.length === 0) return null;
                 return { ...item, subItems: filteredSubItems };
             }
 
             return item;
         }).filter(Boolean) as MenuItem[]
-        , [userRole]);
+        , [userRole, userPermissions]);
 
     // Inicializar ya con los items que corresponden a la ruta actual abiertos
     const [expandedItems, setExpandedItems] = useState<string[]>(() =>
@@ -208,11 +249,20 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 }}>
                 <div className="flex flex-col h-full">
                     {/* Logo */}
-                    <div className="h-14 flex items-center px-3 border-b border-purple-800/30 cursor-pointer" onClick={() => navigate("/inicio")}>
-                        <img src={logo} alt="NextRIS Logo" className="w-6 h-6 brightness-105" />
-                        <span className="ml-2 font-display text-base font-bold text-white">
-                            Next<span className="text-purple-400">RIS</span>
-                        </span>
+                    <div className="h-14 flex items-center px-3 border-b border-purple-800/30">
+                        <div className="flex items-center flex-1 cursor-pointer" onClick={() => navigate(userRole === "patient" ? "/estudios" : "/inicio")}>
+                            <img src={logo} alt="NextRIS Logo" className="w-6 h-6 brightness-105" />
+                            <span className="ml-2 font-display text-base font-bold text-white">
+                                Next<span className="text-purple-400">RIS</span>
+                            </span>
+                        </div>
+                        <button
+                            onClick={cycleTheme}
+                            className="p-1.5 rounded-lg hover:bg-purple-700/50 transition-colors text-white"
+                            title={themeLabel}
+                        >
+                            {themeIcon}
+                        </button>
                     </div>
 
                     {/* Menu Items */}
@@ -306,11 +356,6 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                 <p className="text-xs font-medium text-white truncate">{authData?.user.username}</p>
                                 <p className="text-[10px] text-purple-300">{authData?.user?.user_type}</p>
                             </div>
-                        </div>
-
-                        {/* Theme Toggle */}
-                        <div className="mt-2 flex items-center justify-center">
-                            <ThemeToggle />
                         </div>
 
                         <button

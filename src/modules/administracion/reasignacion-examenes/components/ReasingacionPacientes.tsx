@@ -74,8 +74,8 @@ export const ReasingacionPacientes = ({ selectedEstudio, handleSubmit }: Reasing
                     {/* Sección de cards */}
                     <div className="space-y-4">
                         {/* Card del Estudio a Reasignar */}
-                        <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
-                            <h3 className="text-sm font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                        <div className="bg-purple-50/60 dark:bg-transparent rounded-lg p-4 border border-dashed border-purple-300 dark:border-purple-500">
+                            <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-400 mb-3 flex items-center gap-2">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
@@ -83,26 +83,26 @@ export const ReasingacionPacientes = ({ selectedEstudio, handleSubmit }: Reasing
                             </h3>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <p className="text-xs text-purple-600 font-medium">Nombre del paciente</p>
-                                    <p className="text-sm text-gray-900 font-semibold mt-1">
+                                    <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Nombre del paciente</p>
+                                    <p className="text-sm text-gray-900 dark:text-gray-100 font-semibold mt-1">
                                         {selectedEstudio && selectedEstudio.patient_name || 'N/A'}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-purple-600 font-medium">Accesión N°</p>
-                                    <p className="text-sm text-gray-900 font-semibold mt-1">
+                                    <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Accesión N°</p>
+                                    <p className="text-sm text-gray-900 dark:text-gray-100 font-semibold mt-1">
                                         {selectedEstudio && selectedEstudio.localacc || 'N/A'}
                                     </p>
                                 </div>
                                 <div className="col-span-2">
-                                    <p className="text-xs text-purple-600 font-medium">Descripción del estudio</p>
-                                    <p className="text-sm text-gray-900 font-semibold mt-1">
+                                    <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Descripción del estudio</p>
+                                    <p className="text-sm text-gray-900 dark:text-gray-100 font-semibold mt-1">
                                         {selectedEstudio && selectedEstudio.study_description || 'N/A'}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-purple-600 font-medium">Fecha de realizado</p>
-                                    <p className="text-sm text-gray-900 font-semibold mt-1">
+                                    <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Fecha de realizado</p>
+                                    <p className="text-sm text-gray-900 dark:text-gray-100 font-semibold mt-1">
                                         {selectedEstudio && selectedEstudio.createdon || 'N/A'}
                                     </p>
                                 </div>
@@ -117,8 +117,8 @@ export const ReasingacionPacientes = ({ selectedEstudio, handleSubmit }: Reasing
                         </div>
 
                         {/* Card del Paciente Destino */}
-                        <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200 mb-4">
-                            <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                        <div className="bg-blue-50/60 dark:bg-transparent rounded-lg p-4 border border-dashed border-blue-300 dark:border-blue-500 mb-4">
+                            <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-400 mb-3 flex items-center gap-2">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
@@ -126,20 +126,20 @@ export const ReasingacionPacientes = ({ selectedEstudio, handleSubmit }: Reasing
                             </h3>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <p className="text-xs text-blue-600 font-medium">Nombre</p>
-                                    <p className="text-sm text-gray-900 font-semibold mt-1">
+                                    <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Nombre</p>
+                                    <p className="text-sm text-gray-900 dark:text-gray-100 font-semibold mt-1">
                                         {selectedPatient && selectedPatient.name || 'N/A'}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-blue-600 font-medium">Apellido</p>
-                                    <p className="text-sm text-gray-900 font-semibold mt-1">
+                                    <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Apellido</p>
+                                    <p className="text-sm text-gray-900 dark:text-gray-100 font-semibold mt-1">
                                         {selectedPatient && selectedPatient.surname || 'N/A'}
                                     </p>
                                 </div>
                                 <div className="col-span-2">
-                                    <p className="text-xs text-blue-600 font-medium">DNI</p>
-                                    <p className="text-sm text-gray-900 font-semibold mt-1">
+                                    <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">DNI</p>
+                                    <p className="text-sm text-gray-900 dark:text-gray-100 font-semibold mt-1">
                                         {selectedPatient && selectedPatient.nationalcode || 'N/A'}
                                     </p>
                                 </div>

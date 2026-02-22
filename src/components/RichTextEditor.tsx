@@ -30,6 +30,7 @@ interface RichTextEditorProps {
     onDrop?: (e: React.DragEvent) => void;
     onEditorReady?: (editor: any) => void;
     readOnly?: boolean;
+    showToolbar?: boolean;
 }
 
 export const RichTextEditor = ({
@@ -42,7 +43,8 @@ export const RichTextEditor = ({
     onDragLeave,
     onDrop,
     onEditorReady,
-    readOnly = false
+    readOnly = false,
+    showToolbar = true
 }: RichTextEditorProps) => {
     const editor = useEditor({
         extensions: [
@@ -64,7 +66,7 @@ export const RichTextEditor = ({
         },
         editorProps: {
             attributes: {
-                class: 'prose max-w-none focus:outline-none min-h-[150px] p-3 dark:prose-invert dark:text-gray-200',
+                class: 'prose max-w-none focus:outline-none min-h-[120px] p-2 dark:prose-invert dark:text-gray-200',
             },
         },
     });
@@ -89,32 +91,9 @@ export const RichTextEditor = ({
 
     return (
         <div className={`relative border dark:border-gray-700 rounded-md bg-white dark:bg-[#2a2e32] ${dragOver ? 'border-purple-500 border-2 bg-purple-50 dark:bg-purple-900/20' : ''} ${className}`}>
-            {/* Marca de agua BLOQUEADO - detrás de todo */}
-            {readOnly && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-                    <span
-                        className="text-white font-bold text-[40px] select-none transform -rotate-45"
-                        style={{
-                            textShadow: `
-                                -2px -2px 0 #eab308,
-                                2px -2px 0 #eab308,
-                                -2px 2px 0 #eab308,
-                                2px 2px 0 #eab308,
-                                -2px 0 0 #eab308,
-                                2px 0 0 #eab308,
-                                0 -2px 0 #eab308,
-                                0 2px 0 #eab308
-                            `
-                        }}
-                    >
-                        BLOQUEADO
-                    </span>
-                </div>
-            )}
-
             {/* Indicador de solo lectura */}
             {readOnly && (
-                <div className="relative z-10 flex items-center gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 border-b border-yellow-200 dark:border-yellow-800">
+                <div className="relative z-10 flex items-center gap-2 px-2 py-1.5 bg-yellow-50 dark:bg-yellow-900/30 border-b border-yellow-200 dark:border-yellow-800">
                     <Lock className="w-4 h-4 text-yellow-700 dark:text-yellow-400" />
                     <span className="text-xs font-medium text-yellow-700 dark:text-yellow-400">
                         Campo bloqueado - Documento firmado
@@ -123,11 +102,11 @@ export const RichTextEditor = ({
             )}
 
             {/* Barra de herramientas */}
-            <div className="relative z-10 flex items-center gap-1 p-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-[#2a2e32] flex-wrap">
+            {showToolbar && <div className="relative z-10 flex items-center gap-0.5 px-1.5 py-1 border-b dark:border-gray-700 bg-gray-50 dark:bg-[#2a2e32] flex-wrap">
                 {/* Formato de texto */}
                 <button
                     onClick={() => editor.chain().focus().toggleBold().run()}
-                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive('bold') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive('bold') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Negrita"
                     disabled={readOnly}
@@ -136,7 +115,7 @@ export const RichTextEditor = ({
                 </button>
                 <button
                     onClick={() => editor.chain().focus().toggleItalic().run()}
-                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive('italic') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive('italic') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Cursiva"
                     disabled={readOnly}
@@ -145,7 +124,7 @@ export const RichTextEditor = ({
                 </button>
                 <button
                     onClick={() => editor.chain().focus().toggleUnderline().run()}
-                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive('underline') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive('underline') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Subrayado"
                     disabled={readOnly}
@@ -153,11 +132,11 @@ export const RichTextEditor = ({
                     <UnderlineIcon className="w-4 h-4 dark:text-gray-200" />
                 </button>
 
-                <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
 
                 <button
                     onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive('orderedList') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive('orderedList') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Lista numerada"
                     disabled={readOnly}
@@ -165,12 +144,12 @@ export const RichTextEditor = ({
                     <ListOrdered className="w-4 h-4 dark:text-gray-200" />
                 </button>
 
-                <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
 
                 {/* Alineación */}
                 <button
                     onClick={() => editor.chain().focus().setTextAlign('left').run()}
-                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive({ textAlign: 'left' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive({ textAlign: 'left' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Alinear a la izquierda"
                     disabled={readOnly}
@@ -179,7 +158,7 @@ export const RichTextEditor = ({
                 </button>
                 <button
                     onClick={() => editor.chain().focus().setTextAlign('center').run()}
-                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive({ textAlign: 'center' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive({ textAlign: 'center' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Centrar"
                     disabled={readOnly}
@@ -188,7 +167,7 @@ export const RichTextEditor = ({
                 </button>
                 <button
                     onClick={() => editor.chain().focus().setTextAlign('right').run()}
-                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive({ textAlign: 'right' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive({ textAlign: 'right' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Alinear a la derecha"
                     disabled={readOnly}
@@ -197,7 +176,7 @@ export const RichTextEditor = ({
                 </button>
                 <button
                     onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-                    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive({ textAlign: 'justify' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${editor.isActive({ textAlign: 'justify' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
                     type="button"
                     title="Justificar"
                     disabled={readOnly}
@@ -205,12 +184,12 @@ export const RichTextEditor = ({
                     <AlignJustify className="w-4 h-4 dark:text-gray-200" />
                 </button>
 
-                <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
 
                 {/* Deshacer/Rehacer */}
                 <button
                     onClick={() => editor.chain().focus().undo().run()}
-                    className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                    className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                     type="button"
                     title="Deshacer"
                     disabled={!editor.can().undo() || readOnly}
@@ -219,14 +198,14 @@ export const RichTextEditor = ({
                 </button>
                 <button
                     onClick={() => editor.chain().focus().redo().run()}
-                    className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                    className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                     type="button"
                     title="Rehacer"
                     disabled={!editor.can().redo() || readOnly}
                 >
                     <Redo className="w-4 h-4 dark:text-gray-200" />
                 </button>
-            </div>
+            </div>}
 
             {/* Editor con overlay cuando está bloqueado */}
             <div className={`relative ${readOnly ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}`}>

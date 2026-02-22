@@ -7,35 +7,45 @@ export const getPatientColumns = (): TableColumn<Patient>[] => [
         key: "username",
         label: "USUARIO",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
     },
     {
         key: "name",
         label: "NOMBRE",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
         render: (_value, row) => `${row.name}`,
     },
     {
         key: "national_number",
         label: "DNI/CI",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
         render: (value) => value || "-",
     },
     {
         key: "email",
         label: "EMAIL",
         className: "font-medium",
+        sortable: true,
+        filterable: true,
         render: (value) => value || "-",
     },
     {
         key: "phone",
         label: "TELÉFONO",
         className: "font-medium",
+        filterable: true,
         render: (value) => value || "-",
     },
     {
         key: "birthdate",
         label: "FECHA NAC.",
         className: "font-medium",
+        sortable: true,
         render: (value) => {
             if (!value) return "-";
             return new Date(value.toString()).toLocaleDateString();
@@ -45,6 +55,7 @@ export const getPatientColumns = (): TableColumn<Patient>[] => [
         key: "gender",
         label: "GÉNERO",
         className: "font-medium",
+        sortable: true,
         render: (value) => {
             if (!value) return "-";
             const genders = { M: "Masculino", F: "Femenino", O: "Otro" };
@@ -55,6 +66,7 @@ export const getPatientColumns = (): TableColumn<Patient>[] => [
         key: "is_active",
         label: "ESTADO",
         className: "font-medium",
+        sortable: true,
         render: (_value, row) => (
             <span className={`px-2 py-1 rounded-full text-xs ${row.is_active
                 ? 'bg-green-100 text-green-800'

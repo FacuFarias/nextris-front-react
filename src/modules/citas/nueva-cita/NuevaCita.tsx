@@ -6,10 +6,11 @@ import { PrimaryButton } from "@/components/PrimaryButton"
 import { DireccionSelector } from "@/components/DireccionSelector"
 //hooks
 import { useDebounce } from "@uidotdev/usehooks"
+import { useLocationsInstitutional } from "@/hooks/use-locations"
 //layout
 import { MainLayout } from "@/layouts/layout"
 //icons and react
-import { Calendar, User, ClipboardList, FileCheck, UserPlus, Loader2, CircleCheck } from "lucide-react"
+import { Calendar, User, ClipboardList, FileCheck, UserPlus, Loader2, CircleCheck, MapPin } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPaciente";
 import { usePacienteDireccion } from "@/modules/admision/admision-espontanea/hooks/use-paciente-direccion"
@@ -21,7 +22,7 @@ import { Prestacion } from "./components/Prestacion"
 export const NuevaCita = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedDireccion, setSelectedDireccion] = useState<string>("");
-    const [activeTab, setActiveTab] = useState<string>("paciente");
+    const [activeTab, setActiveTab] = useState<string>("ubicacion");
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
     const [selectedEstudios, setSelectedEstudios] = useState<any[]>([]);
     const [, setSelectedAgenda] = useState<any>(null);
@@ -29,6 +30,8 @@ export const NuevaCita = () => {
     const [allEvents, setAllEvents] = useState<{ [equipoGuid: string]: any[] }>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
     const { mutate: fetchPacientesDireccion, data: pacientesData, isPending } = usePacienteDireccion();
+    const { data: locationsData } = useLocationsInstitutional();
+    const hasSingleLocation = (locationsData?.data?.length ?? 0) === 1;
     //modal agregar paciente
     const [, setIsModalOpen] = useState(false);
     //hook para crear paciente
@@ -41,6 +44,7 @@ export const NuevaCita = () => {
     // Estado de completado de cada paso
     const hasEvents = Object.values(allEvents).flat().some(ev => !ev.extendedProps?.blocked);
     const completedSteps = {
+        ubicacion: !!selectedDireccion,
         paciente: !!selectedPatient,
         examen: selectedEstudios.length > 0,
         agenda: hasEvents,
@@ -68,12 +72,25 @@ export const NuevaCita = () => {
         return () => window.removeEventListener("resize", updateIndicator)
     }, [updateIndicator])
 
+    // Auto-seleccionar si solo hay una ubicación
+    useEffect(() => {
+        if (locationsData?.data?.length === 1 && !selectedDireccion) {
+            const singleLocation = locationsData.data[0];
+            setSelectedDireccion(singleLocation.guid);
+            fetchPacientesDireccion({ uuid: singleLocation.guid, searchTerm: "" });
+            setActiveTab("paciente");
+        }
+    }, [locationsData]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const handleDireccionChange = (direccionId: string) => {
         setSelectedDireccion(direccionId);
 
-        fetchPacientesDireccion(
-            { uuid: direccionId, searchTerm: debouncedSearch },
-        );
+        if (direccionId) {
+            fetchPacientesDireccion(
+                { uuid: direccionId, searchTerm: debouncedSearch },
+            );
+            setActiveTab("paciente");
+        }
     };
 
     const handleAddPatient = () => {
@@ -91,12 +108,15 @@ export const NuevaCita = () => {
         setSelectedEstudios([]);
         setSelectedEquipo(null);
         setSearchTerm("");
-        setSelectedDireccion("");
         setAllEvents({});
 
-        setTimeout(() => {
-            setActiveTab("paciente");
-        }, 300);
+        if (hasSingleLocation) {
+            // No limpiar la dirección, volver directo a paciente
+            setTimeout(() => setActiveTab("paciente"), 300);
+        } else {
+            setSelectedDireccion("");
+            setTimeout(() => setActiveTab("ubicacion"), 300);
+        }
     };
     // Ejecutar búsqueda cuando cambie el término de búsqueda debounced
     /*  useEffect(() => {
@@ -108,31 +128,45 @@ export const NuevaCita = () => {
      }, [debouncedSearch, selectedDireccion]); */
     return (
         <MainLayout>
-            <div className="bg-card/80 backdrop-blur-sm rounded-lg p-3 sm:p-6 shadow-sm border border-border z-10 h-full flex flex-col overflow-hidden">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm border border-border z-10 h-full flex flex-col overflow-hidden">
                 {/* Header con Tabs integrados */}
                 <div className="">
                     <div className="flex items-center gap-3 mb-2">
-                        <div className="bg-brand-purple p-2 rounded-lg">
+                        <div className="bg-brand-purple dark:bg-gradient-to-br dark:from-purple-600 dark:to-purple-900 p-2 rounded-lg dark:shadow-[0_0_16px_rgba(139,92,246,0.5),0_2px_8px_rgba(0,0,0,0.4)]">
                             <Calendar className="w-6 h-6 text-white" />
                         </div>
-                        <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400">Crear cita</h1>
+                        <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400 dark:drop-shadow-[0_0_8px_rgba(167,139,250,0.3)]">Crear cita</h1>
                     </div>
                     {/* Tabs modernos */}
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         <div className="relative shrink-0">
                             <TabsList
                                 ref={tabsListRef}
-                                className="bg-transparent border-b border-gray-200 dark:border-gray-700 rounded-none h-auto p-0 justify-start gap-0 w-full"
+                                className="bg-transparent border-b border-gray-200 dark:border-[rgba(255,255,255,0.08)] rounded-none h-auto p-0 justify-start gap-0 w-full"
                             >
+                                {!hasSingleLocation && (
+                                    <TabsTrigger
+                                        value="ubicacion"
+                                        ref={(el) => {
+                                            if (el) tabRefs.current.set("ubicacion", el)
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none"
+                                    >
+                                        <MapPin className="w-4 h-4" />
+                                        <span>1. Ubicación</span>
+                                        {completedSteps.ubicacion && <CircleCheck className="w-4 h-4 text-green-500" />}
+                                    </TabsTrigger>
+                                )}
                                 <TabsTrigger
                                     value="paciente"
+                                    disabled={!selectedDireccion}
                                     ref={(el) => {
                                         if (el) tabRefs.current.set("paciente", el)
                                     }}
-                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none"
+                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     <User className="w-4 h-4" />
-                                    <span>1. Paciente {selectedPatient ? `: ${selectedPatient.name} ${selectedPatient.surname}` : ''}</span>
+                                    <span>{hasSingleLocation ? '1' : '2'}. Paciente {selectedPatient ? `: ${selectedPatient.name} ${selectedPatient.surname}` : ''}</span>
                                     {completedSteps.paciente && <CircleCheck className="w-4 h-4 text-green-500" />}
                                 </TabsTrigger>
                                 <TabsTrigger
@@ -144,7 +178,7 @@ export const NuevaCita = () => {
                                     className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     <ClipboardList className="w-4 h-4" />
-                                    <span>2. Examen</span>
+                                    <span>{hasSingleLocation ? '2' : '3'}. Examen</span>
                                     {completedSteps.examen && <CircleCheck className="w-4 h-4 text-green-500" />}
                                 </TabsTrigger>
                                 <TabsTrigger
@@ -156,7 +190,7 @@ export const NuevaCita = () => {
                                     className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     <ClipboardList className="w-4 h-4" />
-                                    <span>3. Agenda {selectedEstudios.length > 0 && `(${selectedEstudios.length})`}</span>
+                                    <span>{hasSingleLocation ? '3' : '4'}. Agenda {selectedEstudios.length > 0 && `(${selectedEstudios.length})`}</span>
                                     {completedSteps.agenda && <CircleCheck className="w-4 h-4 text-green-500" />}
                                 </TabsTrigger>
                                 <TabsTrigger
@@ -168,7 +202,7 @@ export const NuevaCita = () => {
                                     className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     <FileCheck className="w-4 h-4" />
-                                    <span>4. Prestación</span>
+                                    <span>{hasSingleLocation ? '4' : '5'}. Prestación</span>
                                 </TabsTrigger>
                             </TabsList>
                             <div
@@ -177,16 +211,20 @@ export const NuevaCita = () => {
                             />
                         </div>
 
+                        {/* Tab Content - Ubicación (oculto si solo hay una ubicación) */}
+                        {!hasSingleLocation && (
+                            <TabsContent value="ubicacion" className="mt-6">
+                                <DireccionSelector
+                                    selectedDireccion={selectedDireccion}
+                                    onDireccionChange={handleDireccionChange}
+                                    isPending={isPending}
+                                    isRow={false}
+                                />
+                            </TabsContent>
+                        )}
+
                         {/* Tab Content - Paciente */}
                         <TabsContent value="paciente" className="mt-6 space-y-2">
-                            {/* Selector de Dirección */}
-                            <DireccionSelector
-                                selectedDireccion={selectedDireccion}
-                                onDireccionChange={handleDireccionChange}
-                                isPending={isPending}
-                                isRow={true}
-                            />
-
                             {/* Barra de búsqueda */}
                             {selectedDireccion && (
                                 <div className="w-full">
@@ -199,7 +237,7 @@ export const NuevaCita = () => {
                             )}
 
                             {/* Tabla de pacientes */}
-                            <div className="bg-card dark:bg-[#2a2e32]  rounded-lg border border-purple-100 dark:border-gray-700 p-2">
+                            <div className="bg-card dark:bg-[#1a1b24]/80 rounded-lg border border-purple-100 dark:border-[rgba(255,255,255,0.07)] p-2">
                                 <div className="w-full flex justify-end">
                                     <div className="flex gap-2">
                                         {selectedPatient && (

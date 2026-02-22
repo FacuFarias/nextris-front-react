@@ -67,3 +67,27 @@ export interface UserMedicalSubmitData {
     matricula_nacional: string;
     firma_digital?: File;
 }
+
+export interface PermissionItem {
+    code: string;
+    module: string;
+    action: string;
+    description: string;
+}
+
+export interface PermissionsCatalogResponse {
+    success: boolean;
+    data: PermissionItem[];
+}
+
+export interface UserPermissionsData {
+    user_id: string;
+    custom_permissions: string[];
+    effective_permissions: string[];
+    catalog: PermissionItem[];
+}
+
+export interface UserPermissionsResponse {
+    success: boolean;
+    data: UserPermissionsData;
+}
