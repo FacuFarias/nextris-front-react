@@ -12,7 +12,7 @@ export const getInformes = async ({ page = 1, per_page = 8, search = "", show_re
 
 export const getInformeDetalle = async (guid: string | undefined) => {
     try {
-        const response = await api.get(`/examinations/${guid}/report`);
+        const response = await api.get(`/examinations/${guid}/report?debug_sr=1`);
         return response.data;
     } catch (error) {
         throw error;

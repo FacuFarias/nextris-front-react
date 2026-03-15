@@ -94,3 +94,12 @@ export const getImagenesPorEstudio = async (studyGuid: string) => {
         throw error;
     }
 }
+
+export const deleteImagenDeEstudio = async (studyGuid: string, filename: string) => {
+    try {
+        const response = await api.delete(`/images/study/${studyGuid}/file/${encodeURIComponent(filename)}`);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}

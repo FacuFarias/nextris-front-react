@@ -12,10 +12,12 @@ import { Button } from '@/components/ui/button';
 import fondoImage from "@/assets/fondo1.png";
 import backDarkImage from "@/assets/back-dark.jpg";
 import { useDebounce } from '@uidotdev/usehooks';
+import { useAuth } from '@/context/AuthContext';
 
 export const HistorialPaciente = () => {
     const location = useLocation()
     const navigate = useNavigate()
+    const { authData } = useAuth();
     const [searchTerm, setSearchTerm] = useState("");
     const debouncedSearch = useDebounce(searchTerm, 300);
     const [page, setPage] = useState(1);
@@ -24,7 +26,11 @@ export const HistorialPaciente = () => {
     const { viewImagenDicom } = useViewImagenDicom();
 
     const onViewImage = (patient: HistoryPatient) => {
-        viewImagenDicom({ imageId: patient.guid, userId: location?.state?.patient.guid! });
+        const currentUserId = authData?.user?.id;
+        if (!currentUserId) {
+            return;
+        }
+        viewImagenDicom({ imageId: patient.guid, userId: currentUserId });
     };
 
     const onViewReport = (patient: HistoryPatient) => {

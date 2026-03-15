@@ -4,7 +4,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PrimaryButton, SecondaryButton } from "@/components";
 import type { EquipmentScheduleFormData } from "../types/equipment-schedules.types";
-import { useEquipment } from "../../maquinas/hooks/useEquipment";
 
 interface EquipmentScheduleFormProps {
     onSubmit: (data: EquipmentScheduleFormData) => void;
@@ -30,18 +29,14 @@ export const EquipmentScheduleForm = ({
     isLoading = false,
 }: EquipmentScheduleFormProps) => {
     const [formData, setFormData] = useState<EquipmentScheduleFormData>({
-        equipment_id: initialData?.equipment_id || "",
         day: initialData?.day || "",
         time_from: initialData?.time_from || "",
         time_to: initialData?.time_to || "",
     });
 
-    const { equipment } = useEquipment();
-
     useEffect(() => {
         if (initialData) {
             setFormData({
-                equipment_id: initialData.equipment_id || "",
                 day: initialData.day || "",
                 time_from: initialData.time_from || "",
                 time_to: initialData.time_to || "",
@@ -61,28 +56,6 @@ export const EquipmentScheduleForm = ({
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 space-y-2">
-                    <Label htmlFor="equipment_id">
-                        Máquina <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                        value={formData.equipment_id}
-                        onValueChange={(value) => handleChange("equipment_id", value)}
-                        required
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Seleccione una máquina" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {equipment?.data?.map((equip) => (
-                                <SelectItem key={equip.guid} value={equip.guid}>
-                                    {equip.description}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
                 <div className="col-span-2 space-y-2">
                     <Label htmlFor="day">
                         Día <span className="text-red-500">*</span>

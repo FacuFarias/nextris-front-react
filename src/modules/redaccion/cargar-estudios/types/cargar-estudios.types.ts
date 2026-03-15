@@ -15,6 +15,7 @@ interface EstudioNoVinculado {
     uploaded_by: string;
     pacs_status: string;
     file_size_mb: number;
+    instance_count?: number;
 }
 export interface EstudiosNoVinculados {
     success: boolean;

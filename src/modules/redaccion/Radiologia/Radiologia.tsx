@@ -23,6 +23,7 @@ import { useModalidades } from "@/modules/configuracion/configuracion-tablas/exa
 import { useGrupoEstudio } from "@/modules/configuracion/configuracion-tablas/examenes/grupos-estudio"
 import { useFilterPresets } from "./hooks/use-filter-presets"
 import { useAuth } from "@/context/AuthContext"
+import { getDicomViewerUrl } from "@/services/dicomViewer"
 import fondoImage from "@/assets/redaccion.jpg"
 import backDarkImage from "@/assets/back-dark.jpg";
 
@@ -360,23 +361,31 @@ export const Radiologia = () => {
         // Abrir visor de imágenes si el informe tiene imágenes
         let viewerWindow: Window | null = null;
         if (informe.is_image) {
-            // Usar el wrapper en lugar del visor directo
-            const viewerWrapperUrl = `/viewer-wrapper.html?StudyInstanceUIDs=${informe.study_instance_uid}`;
-
+            // Abrir ventana inmediatamente para evitar bloqueo de popups
             viewerWindow = window.open(
-                viewerWrapperUrl, // 👈 Ahora apunta al wrapper local
-                `viewer_${windowId}`, // Usar un nombre único por windowId
+                '',
+                `viewer_${windowId}`,
                 `toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=no,width=1400,height=900,top=50,left=-1920,titlebar=no`
             );
 
-            // Guardar referencia a la ventana del visor
             if (viewerWindow) {
-                viewerWindowsRef.current.set(windowId, viewerWindow);
-                console.log('📺 Ventana del visor guardada para windowId:', windowId);
-                console.log('🗺️ Total de ventanas guardadas:', viewerWindowsRef.current.size);
-                console.log('🔑 WindowIds guardados:', Array.from(viewerWindowsRef.current.keys()));
-            } else {
-                console.log('❌ No se pudo abrir la ventana del visor');
+                viewerWindow.document.write('<html><head><title>Cargando visor DICOM...</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#1a1a2e;color:#fff"><p>Abriendo visor DICOM...</p></body></html>');
+                try {
+                    const data = await getDicomViewerUrl(authData!.user.id, informe.guid);
+                    viewerWindow.location.href = data.viewer_url;
+                    viewerWindowsRef.current.set(windowId, viewerWindow);
+                } catch (error: any) {
+                    viewerWindow.close();
+                    viewerWindow = null;
+                    const status = error.response?.status;
+                    if (status === 403) {
+                        toast.error('No tienes permisos para ver las imágenes de esta ubicación');
+                    } else if (status === 404) {
+                        toast.error('El examen no tiene imágenes asociadas');
+                    } else {
+                        toast.error(error.response?.data?.message || 'No se pudo abrir el visor DICOM');
+                    }
+                }
             }
         }
         const reportLeft = informe.is_image ? 2500 : 100;
@@ -423,12 +432,29 @@ export const Radiologia = () => {
     };
 
 
-    const handleViewImagenes = (informe: Informes) => {
-        //abrir en otra pestaña
-        window.open(
-            `https://viewer.nextris.cloud/viewer?StudyInstanceUIDs=${informe.study_instance_uid}`,
-            '_blank',
-        );
+    const handleViewImagenes = async (informe: Informes) => {
+        // Abrir ventana inmediatamente para evitar bloqueo de popups
+        const viewerWindow = window.open('', '_blank', 'width=1400,height=900,resizable=yes,scrollbars=yes');
+        if (!viewerWindow) {
+            toast.error('Por favor, permite popups para abrir el visor DICOM');
+            return;
+        }
+        viewerWindow.document.write('<html><head><title>Cargando visor DICOM...</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#1a1a2e;color:#fff"><p>Abriendo visor DICOM...</p></body></html>');
+
+        try {
+            const data = await getDicomViewerUrl(authData!.user.id, informe.guid);
+            viewerWindow.location.href = data.viewer_url;
+        } catch (error: any) {
+            viewerWindow.close();
+            const status = error.response?.status;
+            if (status === 403) {
+                toast.error('No tienes permisos para ver las imágenes de esta ubicación');
+            } else if (status === 404) {
+                toast.error('El examen no tiene imágenes asociadas');
+            } else {
+                toast.error(error.response?.data?.message || 'No se pudo abrir el visor DICOM');
+            }
+        }
     };
     const handleViewPdf = (informe: Informes) => {
         window.open(

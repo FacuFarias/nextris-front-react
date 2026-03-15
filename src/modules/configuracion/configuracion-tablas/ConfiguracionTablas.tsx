@@ -9,6 +9,7 @@ import { Locations } from "./institucional/locations"
 import { ObrasSociales } from "./institucional/obras-sociales"
 import { DominioPacientes } from "./institucional/dominio-pacientes"
 import { Tags } from "./institucional/tags"
+import { RelParserFacility } from "./institucional/rel-parser-facility/RelParserFacility"
 
 // Exámenes
 import { TiposEstudio } from "./examenes/tipos-estudio"
@@ -182,6 +183,7 @@ export const ConfiguracionTablas = () => {
                                 { value: "obras-sociales", label: "Obras Sociales" },
                                 { value: "dominio-pacientes", label: "Dominio de Pacientes" },
                                 { value: "tags", label: "Tags" },
+                                { value: "rel-parser-facility", label: "Rel Parser Facility" },
                             ]}
                         >
                             <TabsContent value="facilities" className="p-4">
@@ -198,6 +200,9 @@ export const ConfiguracionTablas = () => {
                             </TabsContent>
                             <TabsContent value="tags" className="p-4">
                                 <Tags />
+                            </TabsContent>
+                            <TabsContent value="rel-parser-facility" className="p-4">
+                                <RelParserFacility />
                             </TabsContent>
                         </AnimatedSubTabs>
                     </TabsContent>

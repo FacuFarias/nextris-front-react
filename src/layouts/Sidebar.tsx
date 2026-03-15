@@ -20,17 +20,17 @@ import {
     Sun,
     Moon,
     Monitor,
+    FileCode2,
+    ListTree,
+    Scale,
+    Files,
+    Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
-
-interface SidebarProps {
-    isOpen: boolean;
-    onClose: () => void;
-}
 
 interface MenuItem {
     icon: React.ElementType;
@@ -39,6 +39,11 @@ interface MenuItem {
     subItems?: { icon: React.ElementType; label: string; path: string; allowedRoles?: string[]; requiredPermissions?: string[] }[];
     allowedRoles?: string[];
     requiredPermissions?: string[];
+}
+
+interface SidebarProps {
+    isOpen: boolean;
+    onClose: () => void;
 }
 
 const menuItems: MenuItem[] = [
@@ -146,6 +151,39 @@ const menuItems: MenuItem[] = [
         label: "Configuraciones",
         path: "/configuraciones/tablas",
         allowedRoles: ["Sysadmin"],
+    },
+    {
+        icon: FileCode2,
+        label: "Reportes estructurados",
+        allowedRoles: ["Sysadmin"],
+        subItems: [
+            {
+                icon: FileCode2,
+                label: "Lista de parser",
+                path: "/reportes-estructurados/lista-parser",
+            },
+            {
+                icon: ListTree,
+                label: "Mapeo de variables",
+                path: "/reportes-estructurados/mapeo-variables",
+            },
+            {
+                icon: Scale,
+                label: "Conceptos y criterios",
+                path: "/reportes-estructurados/conceptos-criterios",
+            },
+            {
+                icon: Files,
+                label: "Plantillas inteligentes",
+                path: "/reportes-estructurados/plantillas-inteligentes",
+            },
+        ],
+    },
+    {
+        icon: Sparkles,
+        label: "Nexi",
+        path: "/nexi",
+        allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo"],
     },
     {
         icon: BookPlus,

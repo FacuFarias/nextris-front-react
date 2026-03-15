@@ -19,6 +19,8 @@ import { ReasignacionExamenes } from "@/modules/administracion/reasignacion-exam
 import { Demograficos } from "@/modules/administracion/demograficos/Demograficos";
 import { CargarEstudios } from "@/modules/redaccion/cargar-estudios/CargarEstudios";
 import { ChangePassword } from "@/modules/auth/change-password/ChangePassword";
+import { ReportesEstructurados } from "@/modules/reportes-estructurados/ReportesEstructurados";
+import { Nexi } from "@/modules/nexi/Nexi";
 
 const router = createBrowserRouter([
     {
@@ -204,6 +206,38 @@ const router = createBrowserRouter([
             </ProtectedRoute>
         ),
     },
+    {
+        path: "/reportes-estructurados/lista-parser",
+        element: (
+            <ProtectedRoute allowedRoles={["Sysadmin"]}>
+                <ReportesEstructurados />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/reportes-estructurados/mapeo-variables",
+        element: (
+            <ProtectedRoute allowedRoles={["Sysadmin"]}>
+                <ReportesEstructurados />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/reportes-estructurados/conceptos-criterios",
+        element: (
+            <ProtectedRoute allowedRoles={["Sysadmin"]}>
+                <ReportesEstructurados />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/reportes-estructurados/plantillas-inteligentes",
+        element: (
+            <ProtectedRoute allowedRoles={["Sysadmin"]}>
+                <ReportesEstructurados />
+            </ProtectedRoute>
+        ),
+    },
     {/*Administracion*/ },
 
     {
@@ -244,6 +278,15 @@ const router = createBrowserRouter([
         element: (
             <ProtectedRoute allowedRoles={["patient"]}>
                 <MisDatos />
+            </ProtectedRoute>
+        ),
+    },
+    {/*Nexi IA*/},
+    {
+        path: "/nexi",
+        element: (
+            <ProtectedRoute allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo"]}>
+                <Nexi />
             </ProtectedRoute>
         ),
     }

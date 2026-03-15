@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { useUnificacionPaciente } from "./hooks/useUnificacionPaciente";
 
 export const UnificacionPaciente = () => {
-    const [searchTerm, setSearchTerm] = useState("");
+    const [searchTerm] = useState("");
     const [selectedDireccion, setSelectedDireccion] = useState<string>("");
     const [selectedPatients, setSelectedPatients] = useState<Patient[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);

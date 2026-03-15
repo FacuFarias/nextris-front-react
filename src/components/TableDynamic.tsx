@@ -194,8 +194,9 @@ export function TablaDynamic<T extends Record<string, any>>({
     const visibleActions = (row: T) =>
         actions.filter((action) => !action.hidden?.(row));
 
-    // Each button is w-8 (32px) + gap-1 (4px between buttons), plus 4px base
-    const actionsColumnWidth = actions.length > 0 ? actions.length * 36 + 4 : 90;
+    // Each button is w-8 (32px) + gap-1 (4px between buttons), plus 4px base.
+    // Keep a minimum width so the header label "Acciones" is fully visible.
+    const actionsColumnWidth = actions.length > 0 ? Math.max(actions.length * 36 + 4, 92) : 92;
 
     return (
         <div className={cn("space-y-4 mt-5 flex flex-col flex-1 min-h-0", className)}>

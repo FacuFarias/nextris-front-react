@@ -2,7 +2,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { useAllTags, useInformeDetalle, useUpdateFlags, useUpdateReport, useUpdateTagIds, useUnblockExam, useBlockExam, usePatientHistory } from "../hooks/use-informes";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, User, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, User, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -42,7 +42,7 @@ export const RedactarInforme = () => {
         : [];
 
     const { informeDetalle, isLoading } = useInformeDetalle(informeGuid);
-    const { data: imagenes } = useImagenesPorEstudio(studyInstanceUID || '');
+    const { data: imagenes, refetch: refetchImagenes, deleteImagen } = useImagenesPorEstudio(studyInstanceUID || '');
     const updateReportMutation = useUpdateReport(informeGuid || '');
     const { mutate: updateFlags, isPending: isUpdatingFlags } = useUpdateFlags();
     const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useUpdateTagIds();
@@ -162,6 +162,17 @@ export const RedactarInforme = () => {
     }, [getExamMetaFromCachedLists, informeDetalle?.data]);
 
     useEffect(() => {
+        const srDebug = (informeDetalle as any)?.debug_sr;
+        if (!srDebug) return;
+
+        console.log('[SR DEBUG] study_instance_uid:', srDebug.study_instance_uid);
+        console.log('[SR DEBUG] sr_variable_keys_count:', srDebug.sr_variable_keys_count);
+        console.log('[SR DEBUG] sr_variable_keys_sample:', srDebug.sr_variable_keys_sample);
+        console.log('[SR DEBUG] placeholders_before:', srDebug.placeholders_before);
+        console.log('[SR DEBUG] placeholders_after:', srDebug.placeholders_after);
+    }, [informeDetalle]);
+
+    useEffect(() => {
         if (initialFlagsFromParams.length > 0) {
             setExamFlags(initialFlagsFromParams);
         }
@@ -225,10 +236,14 @@ export const RedactarInforme = () => {
         conclusions: null
     });
 
+    // Ref para rastrear imágenes ya cargadas (evita reemplazar las arrastradas al campo)
+    const loadedImageNamesRef = useRef<Set<string>>(new Set());
+
     // Estado para las imágenes disponibles
     const [images, setImages] = useState<Array<{ id: number; url: string; name: string }>>([]);
     const [allImages, setAllImages] = useState<Array<{ id: number; url: string; name: string }>>([]);
     const [draggedImage, setDraggedImage] = useState<{ id: number; url: string; name: string } | null>(null);
+    const [draggedVariableValue, setDraggedVariableValue] = useState<string | null>(null);
     const [dragOverField, setDragOverField] = useState<string | null>(null);
 
     // Estado para controlar qué secciones están abiertas/cerradas
@@ -247,7 +262,7 @@ export const RedactarInforme = () => {
 
     // Estados para controlar la visibilidad de los sidebars
     const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
-    const [rightSidebarTab, setRightSidebarTab] = useState<'history' | 'images' | 'ai'>('history');
+    const [rightSidebarTab, setRightSidebarTab] = useState<'history' | 'images' | 'variables' | 'ai'>('history');
     const [rightSidebarWidth, setRightSidebarWidth] = useState(380);
     const [isResizingRightSidebar, setIsResizingRightSidebar] = useState(false);
     const [activeEditorField, setActiveEditorField] = useState<keyof typeof editorsRef.current | null>(null);
@@ -314,11 +329,15 @@ export const RedactarInforme = () => {
             ? 'Historia clínica'
             : rightSidebarTab === 'images'
                 ? 'Imágenes clave'
+                : rightSidebarTab === 'variables'
+                    ? 'Variables'
                 : 'Asistencia IA';
     const RightSidebarTabIcon = rightSidebarTab === 'history'
             ? FileText
             : rightSidebarTab === 'images'
                 ? ImageIcon
+                : rightSidebarTab === 'variables'
+                    ? Braces
                 : Sparkles;
 
     const handleRightSidebarResizeStart = (e: React.MouseEvent) => {
@@ -403,10 +422,22 @@ export const RedactarInforme = () => {
 
     const handleDragStart = (image: { id: number; url: string; name: string }) => {
         setDraggedImage(image);
+        setDraggedVariableValue(null);
+    };
+
+    const handleVariableDragStart = (e: React.DragEvent, variableValue: string) => {
+        const value = String(variableValue || '').trim();
+        if (!value) return;
+
+        setDraggedVariableValue(value);
+        setDraggedImage(null);
+        e.dataTransfer.setData('text/plain', value);
+        e.dataTransfer.effectAllowed = 'copy';
     };
 
     const handleDragEnd = () => {
         setDraggedImage(null);
+        setDraggedVariableValue(null);
         setDragOverField(null);
     };
 
@@ -421,6 +452,16 @@ export const RedactarInforme = () => {
 
     const handleDrop = (e: React.DragEvent, _field: string, editor: any) => {
         e.preventDefault();
+        const droppedText = (e.dataTransfer.getData('text/plain') || '').trim();
+        const variableToInsert = (draggedVariableValue || droppedText || '').trim();
+
+        if (variableToInsert && editor) {
+            editor.chain().focus().insertContent(variableToInsert).run();
+            setDraggedVariableValue(null);
+            setDragOverField(null);
+            return;
+        }
+
         if (draggedImage && editor) {
             editor.chain().focus().setImage({
                 src: draggedImage.url,
@@ -428,6 +469,7 @@ export const RedactarInforme = () => {
                 title: draggedImage.name
             }).run();
             setImages(prev => prev.filter(img => img.id !== draggedImage.id));
+            setDragOverField(null);
         }
     };
 
@@ -541,23 +583,43 @@ export const RedactarInforme = () => {
     };
 
     useEffect(() => {
-        if (imagenes?.images && imagenes.images.length > 0) {
-            const formattedImages = imagenes.images.map((img, index) => {
-                const imageData = typeof img.data === 'string' ? img.data : '';
-                const imageUrl = imageData
-                    ? `data:${getImageMimeType(img.filename)};base64,${imageData}`
-                    : resolveImageUrl(img.path, img.filename);
+        if (!imagenes?.images?.length) return;
 
-                return {
-                id: index + 1,
-                url: imageUrl,
-                name: img.filename
-                };
-            });
+        const formattedImages = imagenes.images.map((img, index) => {
+            const imageData = typeof img.data === 'string' ? img.data : '';
+            const imageUrl = imageData
+                ? `data:${getImageMimeType(img.filename)};base64,${imageData}`
+                : resolveImageUrl(img.path, img.filename);
+            return { id: index + 1, url: imageUrl, name: img.filename };
+        });
+
+        const newImages = formattedImages.filter(img => !loadedImageNamesRef.current.has(img.name));
+
+        if (newImages.length === 0) return;
+
+        newImages.forEach(img => loadedImageNamesRef.current.add(img.name));
+
+        if (loadedImageNamesRef.current.size === newImages.length) {
+            // Carga inicial: todas las imágenes son nuevas
             setImages(formattedImages);
             setAllImages(formattedImages);
+        } else {
+            // Actualización incremental: solo agregar las nuevas al panel
+            setAllImages(formattedImages);
+            setImages(prev => [...prev, ...newImages]);
         }
     }, [getImageMimeType, imagenes, resolveImageUrl]);
+
+    // Refrescar imágenes clave cuando el usuario vuelve al redactor (ej: desde el visor DICOM)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                refetchImagenes();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [refetchImagenes]);
 
     useEffect(() => {
         findNextPlaceholderRef.current = findNextPlaceholder;
@@ -828,6 +890,9 @@ export const RedactarInforme = () => {
     }
 
     const reportData = (informeDetalle as any)?.data || {};
+    const srVariables: Array<{ key?: string; name?: string; value?: string }> = Array.isArray(reportData.sr_variables)
+        ? reportData.sr_variables
+        : [];
     const patientName = reportData.patient_name || 'Carlos Fernández';
     const patientIdentifier = reportData.patientid || reportData.patientit || reportData.patient?.patientit || reportData.patient?.patientid || '-';
     const nationalCodeLabel = reportData.national_code || reportData.nationalcode || reportData.nationalCode || reportData.patient?.national_code || reportData.patient?.nationalcode || '-';
@@ -1103,7 +1168,7 @@ export const RedactarInforme = () => {
 
                                 <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-full flex flex-col">
                                     <div className="bg-gray-100 dark:bg-[#1e2430] px-2 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
-                                        <div className="grid grid-cols-3 gap-1">
+                                        <div className="grid grid-cols-4 gap-1">
                                             <button
                                                 type="button"
                                                 onClick={() => setRightSidebarTab('history')}
@@ -1137,6 +1202,17 @@ export const RedactarInforme = () => {
                                                 <Sparkles className="w-3.5 h-3.5" />
                                                 Asistencia IA
                                             </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setRightSidebarTab('variables')}
+                                                className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-semibold transition-colors ${rightSidebarTab === 'variables'
+                                                    ? 'bg-white dark:bg-[#151922] text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
+                                                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#273043]'
+                                                    }`}
+                                            >
+                                                <Braces className="w-3.5 h-3.5" />
+                                                Variables
+                                            </button>
                                         </div>
                                     </div>
                                     {rightSidebarTab === 'history' ? (
@@ -1166,9 +1242,19 @@ export const RedactarInforme = () => {
                                         </div>
                                     ) : rightSidebarTab === 'images' ? (
                                         <div className="flex-1 min-h-0 p-3 flex flex-col overflow-hidden">
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mb-4 shrink-0">
-                                                Arrastra las imágenes a los campos de texto
-                                            </p>
+                                            <div className="flex items-center justify-between mb-4 shrink-0">
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    Arrastra las imágenes a los campos de texto
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => refetchImagenes()}
+                                                    title="Actualizar imágenes"
+                                                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-brand-purple dark:hover:text-purple-400 transition-colors"
+                                                >
+                                                    <RefreshCcw className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
                                             <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 table-scrollbar-purple">
                                                     {images.map((image, index) => (
                                                         <div
@@ -1176,10 +1262,28 @@ export const RedactarInforme = () => {
                                                             draggable
                                                             onDragStart={() => handleDragStart(image)}
                                                             onDragEnd={handleDragEnd}
-                                                            className={`cursor-grab active:cursor-grabbing rounded-md overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 transition-colors ${draggedImage?.id === image.id ? 'opacity-50 scale-95' : ''
+                                                            className={`relative group cursor-grab active:cursor-grabbing rounded-md overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 transition-colors ${draggedImage?.id === image.id ? 'opacity-50 scale-95' : ''
                                                                 }`}
                                                             style={{ animationDelay: `${index * 50}ms` }}
                                                         >
+                                                            <button
+                                                                type="button"
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    try {
+                                                                        await deleteImagen(image.name);
+                                                                        loadedImageNamesRef.current.delete(image.name);
+                                                                        setImages(prev => prev.filter(img => img.id !== image.id));
+                                                                        setAllImages(prev => prev.filter(img => img.id !== image.id));
+                                                                    } catch {
+                                                                        toast.error('No se pudo eliminar la imagen');
+                                                                    }
+                                                                }}
+                                                                className="absolute top-1 right-1 z-10 p-0.5 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+                                                                title="Eliminar imagen"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                            </button>
                                                             <img
                                                                 src={image.url}
                                                                 alt={image.name}
@@ -1197,6 +1301,28 @@ export const RedactarInforme = () => {
                                                         </div>
                                                     ))}
                                             </div>
+                                        </div>
+                                    ) : rightSidebarTab === 'variables' ? (
+                                        <div className="p-3 flex-1 min-h-0 overflow-y-auto table-scrollbar-purple">
+                                            {srVariables.length === 0 ? (
+                                                <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-4">Sin variables SR para este estudio</p>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    {srVariables.map((variable, index) => (
+                                                        <div
+                                                            key={`${variable.key || variable.name || 'var'}-${index}`}
+                                                            draggable={Boolean(String(variable.value || '').trim())}
+                                                            onDragStart={(e) => handleVariableDragStart(e, String(variable.value || ''))}
+                                                            onDragEnd={handleDragEnd}
+                                                            className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e2430] p-2.5 cursor-grab active:cursor-grabbing hover:border-gray-300 dark:hover:border-gray-500 transition-colors"
+                                                            title="Arrastra el valor al editor"
+                                                        >
+                                                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 break-all">{variable.name || variable.key || '-'}</p>
+                                                            <p className="text-sm text-brand-purple dark:text-purple-300 mt-1 break-all">{variable.value || '-'}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="p-3 flex-1 min-h-0 flex flex-col gap-2 overflow-y-auto">

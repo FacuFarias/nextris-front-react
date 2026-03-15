@@ -1,7 +1,5 @@
 import { Archive, Image, Link2, RefreshCw, Loader2, ChevronLeft, ChevronRight, Search, ArrowRight, CheckCircle2, ScanLine } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { DireccionSelector, PrimaryButton, SecondaryButton } from "@/components"
 import { useState, useMemo } from "react"
 import { useEstudiosNoVinculados, useSearchExams, useVincularEstudio } from "../hooks/use-cargar-estudios"
@@ -208,7 +206,7 @@ export const VincularImagenTab = () => {
                                                         <span className="inline-block text-xs font-semibold bg-purple-100 dark:bg-purple-900/40 text-brand-purple dark:text-purple-300 px-2 py-0.5 rounded-md">
                                                             {estudio.modality}
                                                         </span>
-                                                        {estudio.instance_count > 1 && (
+                                                        {(estudio.instance_count ?? 0) > 1 && (
                                                             <span className="inline-block text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-md">
                                                                 {estudio.instance_count}i
                                                             </span>

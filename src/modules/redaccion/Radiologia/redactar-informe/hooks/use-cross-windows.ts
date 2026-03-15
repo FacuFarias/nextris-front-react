@@ -44,7 +44,7 @@ export const useCrossWindowSync = () => {
         const channel = getBroadcastChannel();
 
         const handleMessage = (event: MessageEvent<BroadcastMessage>) => {
-            const { type, windowId, guid, studyInstanceUid } = event.data;
+            const { type, windowId, guid } = event.data;
 
 
             switch (type) {

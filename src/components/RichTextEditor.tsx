@@ -1,4 +1,5 @@
 import { useEditor, EditorContent } from '@tiptap/react';
+import { Node } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
@@ -33,6 +34,57 @@ interface RichTextEditorProps {
     showToolbar?: boolean;
 }
 
+const VariableChip = Node.create({
+    name: 'variableChip',
+    group: 'inline',
+    inline: true,
+    atom: true,
+    selectable: true,
+
+    addAttributes() {
+        return {
+            variableName: {
+                default: '',
+                parseHTML: (element) => {
+                    const attrValue = element.getAttribute('data-variable-name');
+                    if (attrValue) {
+                        return attrValue;
+                    }
+
+                    // Fallback para contenido legacy: extraer desde {texto}
+                    const rawText = (element.textContent || '').trim();
+                    const match = rawText.match(/^\{(.+)\}$/);
+                    return match ? match[1] : rawText;
+                },
+                renderHTML: (attributes) => ({
+                    'data-variable-name': attributes.variableName,
+                }),
+            },
+        };
+    },
+
+    parseHTML() {
+        return [
+            {
+                tag: 'span[data-variable-chip="true"]',
+            },
+        ];
+    },
+
+    renderHTML({ HTMLAttributes }) {
+        const variableName = String(HTMLAttributes.variableName || HTMLAttributes['data-variable-name'] || '');
+        return [
+            'span',
+            {
+                'data-variable-chip': 'true',
+                'data-variable-name': variableName,
+                contenteditable: 'false',
+            },
+            `{${variableName}}`,
+        ];
+    },
+});
+
 export const RichTextEditor = ({
     value,
     onChange,
@@ -51,6 +103,7 @@ export const RichTextEditor = ({
             StarterKit.configure({
                 underline: false,
             }),
+            VariableChip,
             Underline,
             TextAlign.configure({
                 types: ['heading', 'paragraph'],
@@ -66,7 +119,7 @@ export const RichTextEditor = ({
         },
         editorProps: {
             attributes: {
-                class: 'prose max-w-none focus:outline-none min-h-[120px] p-2 dark:prose-invert dark:text-gray-200',
+                class: 'prose max-w-none focus:outline-none min-h-[120px] p-2 dark:prose-invert dark:text-gray-200 prose-code:before:content-[""] prose-code:after:content-[""] [&_code]:inline-block [&_code]:bg-purple-100 dark:[&_code]:bg-purple-900/40 [&_code]:text-purple-800 dark:[&_code]:text-purple-200 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:font-semibold [&_code]:border [&_code]:border-purple-200 dark:[&_code]:border-purple-700 [&_code]:not-italic [&_[data-variable-chip="true"]]:inline-block [&_[data-variable-chip="true"]]:bg-purple-100 dark:[&_[data-variable-chip="true"]]:bg-purple-900/40 [&_[data-variable-chip="true"]]:text-purple-800 dark:[&_[data-variable-chip="true"]]:text-purple-200 [&_[data-variable-chip="true"]]:px-1.5 [&_[data-variable-chip="true"]]:py-0.5 [&_[data-variable-chip="true"]]:rounded-md [&_[data-variable-chip="true"]]:font-semibold [&_[data-variable-chip="true"]]:border [&_[data-variable-chip="true"]]:border-purple-200 dark:[&_[data-variable-chip="true"]]:border-purple-700 [&_[data-variable-chip="true"]]:select-none',
             },
         },
     });
