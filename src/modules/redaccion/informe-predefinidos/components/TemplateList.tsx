@@ -31,6 +31,7 @@ export const TemplateList = ({
     onBodypartClick
 }: TemplateListProps) => {
     const [studyTypeFilter, setStudyTypeFilter] = useState<string>("");
+    const [reportTypeFilter, setReportTypeFilter] = useState<string>("");
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -46,7 +47,8 @@ export const TemplateList = ({
     const { data, isLoading, isError, error } = useTemplates(
         studyTypeFilter || undefined,
         modalityId,
-        bodypartId
+        bodypartId,
+        reportTypeFilter || undefined
     );
     /* const { data: estudios } = useEstudiosPorModalidad(); */
     const deleteMutation = useDeleteTemplate();
@@ -90,6 +92,11 @@ export const TemplateList = ({
         }));
     }, [bodyParts]);
 
+    const reportTypeOptions = useMemo(() => ([
+        { value: 'simple', label: 'Simple' },
+        { value: 'inteligente', label: 'Inteligente' },
+    ]), []);
+
     // Resetear página cuando cambian los filtros
     const handleFilterChange = (value: string) => {
         setStudyTypeFilter(value);
@@ -115,13 +122,19 @@ export const TemplateList = ({
         setCurrentPage(1);
     };
 
+    const handleReportTypeFilterChange = (value: string) => {
+        setReportTypeFilter(value);
+        setCurrentPage(1);
+    };
+
     // Verificar si hay filtros activos
-    const hasActiveFilters = searchTerm || studyTypeFilter || modalityId || bodypartId;
+    const hasActiveFilters = searchTerm || studyTypeFilter || modalityId || bodypartId || reportTypeFilter;
 
     // Limpiar todos los filtros
     const handleClearFilters = () => {
         setSearchTerm("");
         setStudyTypeFilter("");
+        setReportTypeFilter("");
         if (onModalityClick) onModalityClick("");
         if (onBodypartClick) onBodypartClick("");
         setCurrentPage(1);
@@ -163,7 +176,7 @@ export const TemplateList = ({
     return (
         <div className="space-y-4 h-full flex flex-col">
             {/* Filtros y búsqueda */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                 {/* Búsqueda */}
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -206,6 +219,16 @@ export const TemplateList = ({
                     searchPlaceholder="Buscar parte del cuerpo..."
                 />
 
+                {/* Filtro por tipo de informe */}
+                <Autocomplete
+                    options={reportTypeOptions}
+                    value={reportTypeFilter}
+                    onValueChange={handleReportTypeFilterChange}
+                    placeholder="Filtrar por tipo de informe"
+                    emptyMessage="No se encontraron tipos de informe."
+                    searchPlaceholder="Buscar tipo de informe..."
+                />
+
                 {/* Botón crear nueva plantilla */}
                 <PrimaryButton onClick={() => navigate("/estudios/crear-informe")}>
                     <Plus className="h-4 w-4 mr-2" />
@@ -246,11 +269,11 @@ export const TemplateList = ({
                             No se encontraron plantillas
                         </h3>
                         <p className="text-gray-600 dark:text-gray-400 mb-6">
-                            {searchTerm || studyTypeFilter
+                            {searchTerm || studyTypeFilter || reportTypeFilter
                                 ? "Intenta ajustar tus filtros de búsqueda"
                                 : "Aún no hay plantillas creadas"}
                         </p>
-                        {!searchTerm && !studyTypeFilter && (
+                        {!searchTerm && !studyTypeFilter && !reportTypeFilter && (
                             <PrimaryButton onClick={() => navigate("/redaccion/crear-informe")}>
                                 <Plus className="h-4 w-4 mr-2" />
                                 Crear primera plantilla

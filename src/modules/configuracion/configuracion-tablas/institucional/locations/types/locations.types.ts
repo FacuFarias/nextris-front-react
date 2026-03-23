@@ -3,7 +3,8 @@ export interface Location {
     description: string;
     facility_id: string;
     facility_name: string;
-    status: 'active' | 'inactive';
+    code?: string;
+    status: 'Active' | 'Inactive' | 'active' | 'inactive' | string;
     address: string;
     city: string;
     state: string;
@@ -11,8 +12,10 @@ export interface Location {
     country: string;
     phone: string;
     name: string;
-    email: string;
+    email?: string;
+    mail?: string;
     timezone: string;
+    logo_path?: string;
     created_at: string;
     updated_at: string;
 }
@@ -26,6 +29,7 @@ export interface LocationsResponse {
 export interface LocationFormData {
     description: string;
     facility_id: string;
+    code?: string;
     status?: 'Active' | 'Inactive';
     address?: string;
     city?: string;
@@ -36,4 +40,6 @@ export interface LocationFormData {
     phone?: string;
     email?: string;
     timezone?: string;
+    logo?: File;
+    logo_path?: string;
 }

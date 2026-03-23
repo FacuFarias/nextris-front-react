@@ -1,12 +1,14 @@
 import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { useAllTags, useInformeDetalle, useUpdateFlags, useUpdateReport, useUpdateTagIds, useUnblockExam, useBlockExam, usePatientHistory } from "../hooks/use-informes";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { putRedactarInforme } from "../services/informes.service";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, User, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, User, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces, Search } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { toast } from "sonner";
+import { criteriaService, type ParserVariableTreeNode, type StructuredCriterion, type CriterionEvaluationResult } from "@/services/criteria.service";
 import { useTemplates } from "@/modules/redaccion/informe-predefinidos/hooks/use-templates";
 import type { Template } from "@/modules/redaccion/informe-predefinidos/types/informe-pred.types";
 import { ConfirmationModal } from "../components/ConfirmationModal";
@@ -20,6 +22,13 @@ import { CloseTabModal, NextExamModal, SignModal, TemplateModal } from "../compo
 import { clearWindowStorage, notifyGuidChange, notifyViewerUpdate } from "./hooks/use-cross-windows";
 import { FlagsCell } from "../components/FlagsCell";
 import { TagsCell } from "../components/TagsCell";
+
+const normalizeVariableKey = (value: string | null | undefined): string =>
+    String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
 
 export const RedactarInforme = () => {
     const { informeGuid, studyInstanceUID } = useParams();
@@ -42,6 +51,10 @@ export const RedactarInforme = () => {
         : [];
 
     const { informeDetalle, isLoading } = useInformeDetalle(informeGuid);
+    const reportData = (informeDetalle as any)?.data || {};
+    const reportStudyTypeId = String(reportData.study_type_id || '').trim();
+    const reportLocationId = String(reportData.location_id || '').trim();
+    const structuredReportsEnabled = Boolean(reportData.structured_reports_enabled);
     const { data: imagenes, refetch: refetchImagenes, deleteImagen } = useImagenesPorEstudio(studyInstanceUID || '');
     const updateReportMutation = useUpdateReport(informeGuid || '');
     const { mutate: updateFlags, isPending: isUpdatingFlags } = useUpdateFlags();
@@ -69,7 +82,14 @@ export const RedactarInforme = () => {
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
 
     // Hooks para plantillas
-    const { data: templatesData } = useTemplates(studyTypeFilter || undefined);
+    const activeStudyTypeFilter = studyTypeFilter || reportStudyTypeId;
+    const reportTypeFilter = structuredReportsEnabled ? undefined : 'simple';
+    const { data: templatesData } = useTemplates(
+        activeStudyTypeFilter || undefined,
+        undefined,
+        undefined,
+        reportTypeFilter,
+    );
     // En tu componente
     const { mutateAsync: verifyCredentials } = useVerifyCredentials();
     const { mutateAsync: signReport } = useSignReport();
@@ -107,14 +127,33 @@ export const RedactarInforme = () => {
 
 
 
-    // Filtrar plantillas por búsqueda local
-    const filteredTemplates = templatesData?.data?.filter((template) => {
+    // Filtrar plantillas por búsqueda local y priorizar segun modulo/facility.
+    const searchMatchedTemplates = templatesData?.data?.filter((template) => {
         const searchLower = searchTerm.toLowerCase();
         return (
             template.title.toLowerCase().includes(searchLower) ||
             template.study_type_description?.toLowerCase().includes(searchLower)
         );
     }) || [];
+
+    const matchingIntelligentTemplates = searchMatchedTemplates.filter((template) => {
+        if (template.report_type !== 'inteligente') return false;
+        const locationIds = Array.isArray(template.location_ids) ? template.location_ids : [];
+        if (!reportLocationId) return true;
+        return locationIds.length === 0 || locationIds.includes(reportLocationId);
+    });
+
+    const simpleTemplates = searchMatchedTemplates.filter((template) => template.report_type === 'simple');
+
+    const preferredTemplates = structuredReportsEnabled
+        ? (matchingIntelligentTemplates.length > 0 ? matchingIntelligentTemplates : simpleTemplates)
+        : simpleTemplates;
+
+    const fallbackTemplates = structuredReportsEnabled
+        ? searchMatchedTemplates.filter((template) => !preferredTemplates.some((preferred) => preferred.guid === template.guid))
+        : [];
+
+    const filteredTemplates = [...preferredTemplates, ...fallbackTemplates];
 
     const getExamMetaFromCachedLists = useCallback(() => {
         const cachedQueries = queryClient.getQueriesData({ queryKey: informesKeys.lists() });
@@ -243,7 +282,11 @@ export const RedactarInforme = () => {
     const [images, setImages] = useState<Array<{ id: number; url: string; name: string }>>([]);
     const [allImages, setAllImages] = useState<Array<{ id: number; url: string; name: string }>>([]);
     const [draggedImage, setDraggedImage] = useState<{ id: number; url: string; name: string } | null>(null);
-    const [draggedVariableValue, setDraggedVariableValue] = useState<string | null>(null);
+    const [draggedVariableValue, setDraggedVariableValue] = useState<{
+        type: 'variable' | 'criterion';
+        text: string;
+        label?: string;
+    } | null>(null);
     const [dragOverField, setDragOverField] = useState<string | null>(null);
 
     // Estado para controlar qué secciones están abiertas/cerradas
@@ -264,6 +307,14 @@ export const RedactarInforme = () => {
     const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
     const [rightSidebarTab, setRightSidebarTab] = useState<'history' | 'images' | 'variables' | 'ai'>('history');
     const [rightSidebarWidth, setRightSidebarWidth] = useState(380);
+    const [srVariableTree, setSrVariableTree] = useState<ParserVariableTreeNode[]>([]);
+    const [expandedSrNodeIds, setExpandedSrNodeIds] = useState<Record<string, boolean>>({});
+    const [isLoadingSrTree, setIsLoadingSrTree] = useState(false);
+    const [srSearchQuery, setSrSearchQuery] = useState('');
+    const [iaCriteria, setIaCriteria] = useState<StructuredCriterion[]>([]);
+    const [isLoadingCriteria, setIsLoadingCriteria] = useState(false);
+    const [criteriaEvalResult, setCriteriaEvalResult] = useState<CriterionEvaluationResult | null>(null);
+    const [showAllCriteria, setShowAllCriteria] = useState(false);
     const [isResizingRightSidebar, setIsResizingRightSidebar] = useState(false);
     const [activeEditorField, setActiveEditorField] = useState<keyof typeof editorsRef.current | null>(null);
     const rightSidebarResizeStartXRef = useRef(0);
@@ -425,13 +476,29 @@ export const RedactarInforme = () => {
         setDraggedVariableValue(null);
     };
 
-    const handleVariableDragStart = (e: React.DragEvent, variableValue: string) => {
-        const value = String(variableValue || '').trim();
+    const handleVariableDragStart = (
+        e: React.DragEvent,
+        payload: { type?: 'variable' | 'criterion'; text: string; label?: string } | string
+    ) => {
+        const normalizedPayload = typeof payload === 'string'
+            ? { type: 'variable' as const, text: payload, label: payload }
+            : {
+                type: payload.type || 'variable',
+                text: payload.text,
+                label: payload.label || payload.text,
+            };
+        const value = String(normalizedPayload.text || '').trim();
         if (!value) return;
 
-        setDraggedVariableValue(value);
+        setDraggedVariableValue({
+            type: normalizedPayload.type,
+            text: value,
+            label: String(normalizedPayload.label || value).trim(),
+        });
         setDraggedImage(null);
         e.dataTransfer.setData('text/plain', value);
+        e.dataTransfer.setData('application/x-nextris-chip-type', normalizedPayload.type);
+        e.dataTransfer.setData('application/x-nextris-chip-label', String(normalizedPayload.label || value).trim());
         e.dataTransfer.effectAllowed = 'copy';
     };
 
@@ -453,10 +520,39 @@ export const RedactarInforme = () => {
     const handleDrop = (e: React.DragEvent, _field: string, editor: any) => {
         e.preventDefault();
         const droppedText = (e.dataTransfer.getData('text/plain') || '').trim();
-        const variableToInsert = (draggedVariableValue || droppedText || '').trim();
+        const draggedChipType = (e.dataTransfer.getData('application/x-nextris-chip-type') || '').trim();
+        const draggedChipLabel = (e.dataTransfer.getData('application/x-nextris-chip-label') || '').trim();
+        const chipData = draggedVariableValue || (droppedText
+            ? {
+                type: (draggedChipType === 'criterion' ? 'criterion' : 'variable') as 'variable' | 'criterion',
+                text: droppedText,
+                label: draggedChipLabel || droppedText,
+            }
+            : null);
 
-        if (variableToInsert && editor) {
-            editor.chain().focus().insertContent(variableToInsert).run();
+        if (chipData && editor) {
+            editor
+                .chain()
+                .focus()
+                .insertContent([
+                    {
+                        type: chipData.type === 'criterion' ? 'criterionChip' : 'variableChip',
+                        attrs: chipData.type === 'criterion'
+                            ? {
+                                criterionName: chipData.label || chipData.text,
+                                displayText: chipData.text,
+                            }
+                            : {
+                                variableName: chipData.label || chipData.text,
+                                displayText: chipData.text,
+                            },
+                    },
+                    {
+                        type: 'text',
+                        text: ' ',
+                    },
+                ])
+                .run();
             setDraggedVariableValue(null);
             setDragOverField(null);
             return;
@@ -625,6 +721,41 @@ export const RedactarInforme = () => {
         findNextPlaceholderRef.current = findNextPlaceholder;
     }, [findNextPlaceholder]);
 
+    useEffect(() => {
+        if (rightSidebarTab !== 'ai') return;
+        const manifestId = reportData.sr_parser_manifest_id;
+        if (!manifestId) return;
+        setIsLoadingCriteria(true);
+        setCriteriaEvalResult(null);
+        const variablesRecord: Record<string, any> = {};
+        const rawVars: Array<{ key?: string; name?: string; value?: string }> =
+            Array.isArray(reportData.sr_variables) ? reportData.sr_variables : [];
+        rawVars.forEach((v) => {
+            const val = String(v.value || '').trim();
+            if (!val) return;
+            if (v.key) variablesRecord[v.key] = val;
+            if (v.name) variablesRecord[v.name] = val;
+        });
+        criteriaService.list(Number(manifestId), false)
+            .then(async (data) => {
+                const criteria = Array.isArray(data) ? data : [];
+                setIaCriteria(criteria);
+                if (criteria.length > 0) {
+                    try {
+                        const evalResult = await criteriaService.evaluate({
+                            parser_manifest_id: Number(manifestId),
+                            variables: variablesRecord,
+                        });
+                        setCriteriaEvalResult(evalResult);
+                    } catch {
+                        setCriteriaEvalResult(null);
+                    }
+                }
+            })
+            .catch(() => setIaCriteria([]))
+            .finally(() => setIsLoadingCriteria(false));
+    }, [rightSidebarTab, reportData.sr_parser_manifest_id, reportData.sr_variables]);
+
 
 
     useEffect(() => {
@@ -724,6 +855,15 @@ export const RedactarInforme = () => {
                     queryKey: informesKeys.lists()
                 });
             } else {
+                // 2. Guardar siempre el contenido actual antes de firmar.
+                await putRedactarInforme(informeGuid || '', {
+                    techniques: formData.techniques,
+                    findings: formData.findings,
+                    impressions: formData.impressions,
+                    conclusions: formData.conclusions,
+                    mark_as_reported: false,
+                });
+
                 // 2. Preparar payload para firmar
                 const payload: Record<string, string> = {};
 
@@ -881,6 +1021,331 @@ export const RedactarInforme = () => {
             window.close();
         }
     };
+
+    const srVariables = useMemo<Array<{ key?: string; name?: string; value?: string }>>(
+        () => (Array.isArray(reportData.sr_variables) ? reportData.sr_variables : []),
+        [reportData.sr_variables]
+    );
+
+    const srValueByKey = useMemo(() => {
+        const map = new Map<string, string>();
+
+        const addValue = (rawKey: string | undefined, rawValue: string | undefined) => {
+            const value = String(rawValue || '').trim();
+            if (!value) return;
+
+            const key = String(rawKey || '').trim();
+            if (!key) return;
+
+            const normalized = normalizeVariableKey(key);
+            if (normalized && !map.has(normalized)) {
+                map.set(normalized, value);
+            }
+
+            const lower = key.toLowerCase();
+            if (lower && !map.has(lower)) {
+                map.set(lower, value);
+            }
+        };
+
+        srVariables.forEach((item) => {
+            addValue(item.key, item.value);
+            addValue(item.name, item.value);
+        });
+
+        return map;
+    }, [srVariables]);
+
+    const criteriaDisplayItems = useMemo(() => {
+        const evaluatedById = new Map(
+            (criteriaEvalResult?.evaluated_items || []).map((item) => [item.criterion_id, item])
+        );
+        const matchedById = new Map(
+            (criteriaEvalResult?.matches || []).map((item) => [item.criterion_id, item])
+        );
+
+        const statusOrder: Record<'then' | 'else' | 'none', number> = {
+            then: 0,
+            else: 1,
+            none: 2,
+        };
+
+        const items = iaCriteria.map((criterion) => {
+            const ruleDefinition = (criterion.rule_definition || {}) as Record<string, any>;
+            const elseFallbackText = String(ruleDefinition.else_output_text || '').trim();
+            const evaluatedItem = evaluatedById.get(criterion.id);
+            const matchedItem = matchedById.get(criterion.id);
+            const evaluatedBranch = String(evaluatedItem?.branch || '').toLowerCase();
+            const isMatched = typeof evaluatedItem?.matched === 'boolean'
+                ? evaluatedItem.matched
+                : Boolean(matchedItem);
+            const evaluatedText = String(evaluatedItem?.output_text || '').trim();
+            const matchedText = String(matchedItem?.output_text || '').trim();
+            const resolvedText = criteriaEvalResult
+                ? (evaluatedText || matchedText || (!isMatched ? elseFallbackText : ''))
+                : String(criterion.output_text || '').trim();
+
+            let status: 'then' | 'else' | 'none' = 'none';
+            if (resolvedText) {
+                if (criteriaEvalResult) {
+                    if (evaluatedBranch === 'else' || (!isMatched && elseFallbackText)) {
+                        status = 'else';
+                    } else if (evaluatedBranch === 'then' || isMatched) {
+                        status = 'then';
+                    }
+                } else {
+                    status = 'then';
+                }
+            }
+
+            const displayText = resolvedText || (criteriaEvalResult && evaluatedBranch === 'else'
+                ? 'No cumple condicion (sin texto alternativo configurado)'
+                : '');
+
+            return {
+                criterion,
+                status,
+                isMatched,
+                evaluatedBranch,
+                displayText,
+                dragText: resolvedText,
+                canDrag: Boolean(resolvedText),
+            };
+        });
+
+        return items.sort((a, b) => {
+            const byStatus = statusOrder[a.status] - statusOrder[b.status];
+            if (byStatus !== 0) return byStatus;
+            const byPriority = (a.criterion.priority ?? 0) - (b.criterion.priority ?? 0);
+            if (byPriority !== 0) return byPriority;
+            return a.criterion.id - b.criterion.id;
+        });
+    }, [iaCriteria, criteriaEvalResult]);
+
+    const visibleCriteriaItems = useMemo(() => {
+        if (showAllCriteria) return criteriaDisplayItems;
+        return criteriaDisplayItems.filter((item) => item.status !== 'none');
+    }, [criteriaDisplayItems, showAllCriteria]);
+
+    const expandAllGroupNodes = useCallback((nodes: ParserVariableTreeNode[]) => {
+        const next: Record<string, boolean> = {};
+
+        const walk = (items: ParserVariableTreeNode[]) => {
+            items.forEach((node) => {
+                if (node.type === 'group') {
+                    next[node.id] = true;
+                    if (Array.isArray(node.children) && node.children.length > 0) {
+                        walk(node.children);
+                    }
+                }
+            });
+        };
+
+        walk(nodes || []);
+        return next;
+    }, []);
+
+    const hydrateTreeWithValues = useCallback((nodes: ParserVariableTreeNode[]): ParserVariableTreeNode[] => {
+        const resolveValue = (node: ParserVariableTreeNode): string => {
+            const metadata = node.metadata || {};
+            const existingValue = String((metadata as any).value || '').trim();
+            if (existingValue) {
+                return existingValue;
+            }
+
+            const candidates = [
+                String(metadata.variable_key || '').trim(),
+                String(metadata.variable_name || '').trim(),
+                String(node.label || '').trim(),
+            ].filter(Boolean);
+
+            for (const candidate of candidates) {
+                const normalized = normalizeVariableKey(candidate);
+                if (normalized && srValueByKey.has(normalized)) {
+                    return srValueByKey.get(normalized) || '';
+                }
+
+                const lower = candidate.toLowerCase();
+                if (lower && srValueByKey.has(lower)) {
+                    return srValueByKey.get(lower) || '';
+                }
+            }
+
+            return '';
+        };
+
+        const walk = (items: ParserVariableTreeNode[]): ParserVariableTreeNode[] =>
+            items.map((node) => {
+                if (node.type === 'group') {
+                    const children = Array.isArray(node.children) ? walk(node.children) : [];
+                    return {
+                        ...node,
+                        children,
+                        children_count: children.length,
+                    };
+                }
+
+                const value = resolveValue(node);
+                return {
+                    ...node,
+                    metadata: {
+                        ...(node.metadata || {}),
+                        value,
+                        has_value: Boolean(value),
+                    } as ParserVariableTreeNode['metadata'],
+                };
+            });
+
+        return walk(nodes || []);
+    }, [srValueByKey]);
+
+    useEffect(() => {
+        const embeddedTree = Array.isArray(reportData.sr_variable_tree) ? reportData.sr_variable_tree : [];
+        if (embeddedTree.length > 0) {
+            const hydrated = hydrateTreeWithValues(embeddedTree);
+            setSrVariableTree(hydrated);
+            setExpandedSrNodeIds(expandAllGroupNodes(hydrated));
+            return;
+        }
+
+        const parserManifestId = Number(reportData.sr_parser_manifest_id || 0);
+        if (!parserManifestId) {
+            setSrVariableTree([]);
+            setExpandedSrNodeIds({});
+            return;
+        }
+
+        let cancelled = false;
+
+        const loadTree = async () => {
+            setIsLoadingSrTree(true);
+            try {
+                const treeResponse = await criteriaService.listParserVariableTree(parserManifestId);
+                if (cancelled) return;
+
+                const nodes = Array.isArray(treeResponse.nodes) ? treeResponse.nodes : [];
+                const hydrated = hydrateTreeWithValues(nodes);
+                setSrVariableTree(hydrated);
+                setExpandedSrNodeIds(expandAllGroupNodes(hydrated));
+            } catch {
+                if (!cancelled) {
+                    setSrVariableTree([]);
+                    setExpandedSrNodeIds({});
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsLoadingSrTree(false);
+                }
+            }
+        };
+
+        loadTree();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        reportData.sr_parser_manifest_id,
+        reportData.sr_variable_tree,
+        expandAllGroupNodes,
+        hydrateTreeWithValues,
+    ]);
+
+    const toggleSrNodeExpanded = (nodeId: string) => {
+        setExpandedSrNodeIds((prev) => ({ ...prev, [nodeId]: !prev[nodeId] }));
+    };
+
+    const filterSrTree = (nodes: ParserVariableTreeNode[], query: string): ParserVariableTreeNode[] => {
+        const q = query.trim().toLowerCase();
+        if (!q) return nodes;
+        return nodes.reduce<ParserVariableTreeNode[]>((acc, node) => {
+            if (node.type === 'group') {
+                const filteredChildren = filterSrTree(node.children || [], q);
+                if (filteredChildren.length > 0) {
+                    acc.push({ ...node, children: filteredChildren });
+                }
+            } else {
+                const label = (node.label || '').toLowerCase();
+                const value = String((node.metadata as any)?.value || '').toLowerCase();
+                if (label.includes(q) || value.includes(q)) {
+                    acc.push(node);
+                }
+            }
+            return acc;
+        }, []);
+    };
+
+    const renderSrTreeNodes = (nodes: ParserVariableTreeNode[], depth = 0) => {
+        const leftPadding = 8 + depth * 14;
+
+        return nodes.map((node) => {
+            const isGroup = node.type === 'group';
+            const isExpanded = Boolean(expandedSrNodeIds[node.id]);
+            const value = String((node.metadata as any)?.value || '').trim();
+            const displayValue = value || 'No disponible';
+            const canDrag = Boolean(value);
+
+            return (
+                <div key={node.id} className="space-y-1">
+                    <button
+                        type="button"
+                        className={`w-full rounded-md border px-2 py-1.5 text-left ${
+                            isGroup
+                                ? 'border-gray-200 dark:border-gray-700 bg-background/60 hover:border-brand-purple/60'
+                                : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e2430]'
+                        }`}
+                        style={{ paddingLeft: `${leftPadding}px` }}
+                        onClick={() => {
+                            if (isGroup) {
+                                toggleSrNodeExpanded(node.id);
+                            }
+                        }}
+                        draggable={!isGroup && canDrag}
+                        onDragStart={(e) => {
+                            if (!isGroup && canDrag) {
+                                handleVariableDragStart(e, { type: 'variable', text: value, label: node.label });
+                            }
+                        }}
+                        onDragEnd={handleDragEnd}
+                        title={!isGroup && canDrag ? 'Arrastra el valor al editor' : undefined}
+                    >
+                        <div className="flex items-center gap-1">
+                            {isGroup ? (
+                                isExpanded ? (
+                                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                ) : (
+                                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                                )
+                            ) : (
+                                <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-purple" />
+                            )}
+                            <span className="truncate text-xs font-semibold text-gray-700 dark:text-gray-200">{node.label}</span>
+                            {isGroup && (
+                                <span className="ml-auto text-[10px] text-muted-foreground">{node.children_count || 0}</span>
+                            )}
+                        </div>
+
+                        {!isGroup && (
+                            <p
+                                className={`mt-1 break-all text-sm ${
+                                    value
+                                        ? 'text-brand-purple dark:text-purple-300'
+                                        : 'text-gray-500 dark:text-gray-400 italic'
+                                }`}
+                            >
+                                {displayValue}
+                            </p>
+                        )}
+                    </button>
+
+                    {isGroup && isExpanded && Array.isArray(node.children) && node.children.length > 0 && (
+                        <div className="space-y-1">{renderSrTreeNodes(node.children, depth + 1)}</div>
+                    )}
+                </div>
+            );
+        });
+    };
+
     if (isLoading) {
         return <LayoutSinSidebar>
             <div className="flex justify-center items-center h-40">
@@ -889,10 +1354,6 @@ export const RedactarInforme = () => {
         </LayoutSinSidebar>;
     }
 
-    const reportData = (informeDetalle as any)?.data || {};
-    const srVariables: Array<{ key?: string; name?: string; value?: string }> = Array.isArray(reportData.sr_variables)
-        ? reportData.sr_variables
-        : [];
     const patientName = reportData.patient_name || 'Carlos Fernández';
     const patientIdentifier = reportData.patientid || reportData.patientit || reportData.patient?.patientit || reportData.patient?.patientid || '-';
     const nationalCodeLabel = reportData.national_code || reportData.nationalcode || reportData.nationalCode || reportData.patient?.national_code || reportData.patient?.nationalcode || '-';
@@ -1200,7 +1661,7 @@ export const RedactarInforme = () => {
                                                     }`}
                                             >
                                                 <Sparkles className="w-3.5 h-3.5" />
-                                                Asistencia IA
+                                                IA / Criterios
                                             </button>
                                             <button
                                                 type="button"
@@ -1303,16 +1764,69 @@ export const RedactarInforme = () => {
                                             </div>
                                         </div>
                                     ) : rightSidebarTab === 'variables' ? (
-                                        <div className="p-3 flex-1 min-h-0 overflow-y-auto table-scrollbar-purple">
-                                            {srVariables.length === 0 ? (
+                                        <div className="flex flex-col flex-1 min-h-0">
+                                            {/* Buscador */}
+                                            <div className="px-3 pt-3 pb-2 shrink-0">
+                                                <div className="relative">
+                                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                                                    <input
+                                                        type="text"
+                                                        value={srSearchQuery}
+                                                        onChange={(e) => setSrSearchQuery(e.target.value)}
+                                                        placeholder="Buscar variable..."
+                                                        className="w-full rounded-md border border-gray-200 dark:border-gray-700 bg-background py-1.5 pl-8 pr-7 text-xs text-gray-700 dark:text-gray-200 placeholder:text-muted-foreground outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple/40 transition-colors"
+                                                    />
+                                                    {srSearchQuery && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSrSearchQuery('')}
+                                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                                        >
+                                                            <X className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {/* Contenido */}
+                                            <div className="px-3 pb-3 flex-1 min-h-0 overflow-y-auto table-scrollbar-purple">
+                                            {isLoadingSrTree ? (
+                                                <div className="flex items-center justify-center mt-4">
+                                                    <Loader2 className="animate-spin w-5 h-5 text-brand-purple" />
+                                                </div>
+                                            ) : srVariableTree.length > 0 ? (
+                                                (() => {
+                                                    const filtered = filterSrTree(srVariableTree, srSearchQuery);
+                                                    return filtered.length > 0 ? (
+                                                        <div className="space-y-1">
+                                                            {renderSrTreeNodes(filtered)}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-4">Sin resultados</p>
+                                                    );
+                                                })()
+                                            ) : srVariables.length === 0 ? (
                                                 <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-4">Sin variables SR para este estudio</p>
                                             ) : (
                                                 <div className="space-y-2">
-                                                    {srVariables.map((variable, index) => (
+                                                    {srVariables
+                                                        .filter((variable) => {
+                                                            if (!srSearchQuery.trim()) return true;
+                                                            const q = srSearchQuery.trim().toLowerCase();
+                                                            return (
+                                                                (variable.name || '').toLowerCase().includes(q) ||
+                                                                (variable.key || '').toLowerCase().includes(q) ||
+                                                                String(variable.value || '').toLowerCase().includes(q)
+                                                            );
+                                                        })
+                                                        .map((variable, index) => (
                                                         <div
                                                             key={`${variable.key || variable.name || 'var'}-${index}`}
                                                             draggable={Boolean(String(variable.value || '').trim())}
-                                                            onDragStart={(e) => handleVariableDragStart(e, String(variable.value || ''))}
+                                                            onDragStart={(e) => handleVariableDragStart(e, {
+                                                                type: 'variable',
+                                                                text: String(variable.value || ''),
+                                                                label: variable.name || variable.key || String(variable.value || ''),
+                                                            })}
                                                             onDragEnd={handleDragEnd}
                                                             className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e2430] p-2.5 cursor-grab active:cursor-grabbing hover:border-gray-300 dark:hover:border-gray-500 transition-colors"
                                                             title="Arrastra el valor al editor"
@@ -1323,19 +1837,113 @@ export const RedactarInforme = () => {
                                                     ))}
                                                 </div>
                                             )}
+                                            </div>
                                         </div>
                                     ) : (
-                                        <div className="p-3 flex-1 min-h-0 flex flex-col gap-2 overflow-y-auto">
-                                            <div className="rounded-md border border-dashed border-gray-300 dark:border-gray-600 p-3 bg-gray-50 dark:bg-[#1e2430]">
-                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Asistencia IA</p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                    Aquí verás sugerencias para mejorar redacción, estructura y claridad del informe.
-                                                </p>
+                                        <div className="flex flex-col flex-1 min-h-0 overflow-y-auto table-scrollbar-purple">
+                                            {/* Asistencia IA placeholder */}
+                                            <div className="p-3 shrink-0">
+                                                <div className="rounded-md border border-dashed border-gray-300 dark:border-gray-600 p-3 bg-gray-50 dark:bg-[#1e2430]">
+                                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Asistencia IA</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                        Aquí verás sugerencias para mejorar redacción, estructura y claridad del informe.
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div className="rounded-md border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-[#111827] flex-1">
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                    Selecciona texto del informe para recibir ayuda contextual.
-                                                </p>
+                                            {/* Criterios del tipo de estudio */}
+                                            <div className="px-3 pb-3 flex flex-col gap-2">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Criterios</p>
+                                                    <label className="flex items-center gap-1.5 select-none cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={showAllCriteria}
+                                                            onChange={(e) => setShowAllCriteria(e.target.checked)}
+                                                            className="h-3.5 w-3.5 rounded border-gray-300 text-brand-purple focus:ring-brand-purple"
+                                                        />
+                                                        <span className="text-[10px] text-gray-500 dark:text-gray-400">Mostrar todos</span>
+                                                    </label>
+                                                </div>
+                                                {isLoadingCriteria ? (
+                                                    <div className="flex items-center justify-center py-4">
+                                                        <Loader2 className="animate-spin w-5 h-5 text-brand-purple" />
+                                                    </div>
+                                                ) : !reportData.sr_parser_manifest_id ? (
+                                                    <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">No hay parser SR asociado a este tipo de estudio</p>
+                                                ) : iaCriteria.length === 0 ? (
+                                                    <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">Sin criterios definidos para este tipo de estudio</p>
+                                                ) : visibleCriteriaItems.length === 0 ? (
+                                                    <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">No hay criterios con salida. Activa "Mostrar todos" para ver los pendientes.</p>
+                                                ) : (
+                                                    visibleCriteriaItems
+                                                        .map(({ criterion, status, isMatched, evaluatedBranch, displayText, dragText, canDrag }) => {
+                                                            return (
+                                                                <div
+                                                                    key={criterion.id}
+                                                                    draggable={canDrag}
+                                                                    onDragStart={(e) => {
+                                                                        if (canDrag) {
+                                                                            handleVariableDragStart(e, {
+                                                                                type: 'criterion',
+                                                                                text: dragText,
+                                                                                label: criterion.criterion_name,
+                                                                            });
+                                                                        }
+                                                                    }}
+                                                                    onDragEnd={handleDragEnd}
+                                                                    className={`rounded-md border p-2.5 transition-colors ${
+                                                                        status === 'then'
+                                                                            ? 'border-green-300 dark:border-green-600 bg-green-100/90 dark:bg-green-900/35 shadow-[0_0_0_1px_rgba(34,197,94,0.25)] cursor-grab active:cursor-grabbing'
+                                                                            : status === 'else'
+                                                                                ? 'border-orange-300 dark:border-orange-600 bg-orange-100/90 dark:bg-orange-900/35 shadow-[0_0_0_1px_rgba(251,146,60,0.25)] cursor-grab active:cursor-grabbing'
+                                                                                : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e2430] opacity-45'
+                                                                    }`}
+                                                                    title={canDrag ? 'Arrastra el resultado al editor' : undefined}
+                                                                >
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        {criteriaEvalResult && (
+                                                                            <span className={`shrink-0 text-xs font-bold leading-none ${
+                                                                                isMatched ? 'text-green-500 dark:text-green-400' : 'text-gray-400'
+                                                                            }`}>
+                                                                                {isMatched ? '✓' : '✗'}
+                                                                            </span>
+                                                                        )}
+                                                                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 flex-1 truncate">
+                                                                            {criterion.criterion_name}
+                                                                        </span>
+                                                                        {criteriaEvalResult && evaluatedBranch && (
+                                                                            <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                                                                                status === 'else'
+                                                                                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
+                                                                                    : status === 'then'
+                                                                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                                                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                                                                            }`}>
+                                                                                {status.toUpperCase()}
+                                                                            </span>
+                                                                        )}
+                                                                        {typeof criterion.priority === 'number' && (
+                                                                            <span className="shrink-0 rounded-full bg-brand-purple/10 px-1.5 py-0.5 text-[10px] font-medium text-brand-purple dark:text-purple-300">
+                                                                                P{criterion.priority}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    {displayText && (
+                                                                        <p className={`text-xs break-words whitespace-pre-wrap ${
+                                                                            isMatched
+                                                                                ? 'text-green-700 dark:text-green-300'
+                                                                                : 'text-gray-500 dark:text-gray-400'
+                                                                        }`}>{displayText}</p>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })
+                                                )}
+                                                {!showAllCriteria && criteriaDisplayItems.length > visibleCriteriaItems.length && (
+                                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 text-right">
+                                                        Mostrando {visibleCriteriaItems.length} de {criteriaDisplayItems.length} criterios
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     )}

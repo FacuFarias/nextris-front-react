@@ -1,5 +1,5 @@
 import { MainLayout } from "@/layouts/layout"
-import { UploadCloud, FolderOpen, FileText, Sparkles, Rocket, CheckCircle, Loader2, RefreshCw, Archive, Calendar } from "lucide-react"
+import { UploadCloud, FolderOpen, FileText, Sparkles, Rocket, CheckCircle, Loader2, RefreshCw, Archive, Calendar, Unlink2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { useState, useRef, useEffect, useCallback } from "react"
@@ -7,7 +7,7 @@ import { DireccionSelector } from "@/components"
 import { Progress } from "@/components/ui/progress"
 import { useCargarEstudios, useEstudiosNoVinculados } from "./hooks/use-cargar-estudios"
 import { Badge } from "@/components/ui/badge"
-import { VincularImagenTab } from "./components"
+import { DesvincularImagenTab, VincularImagenTab } from "./components"
 
 export const CargarEstudios = () => {
     const [files, setFiles] = useState<File[]>([])
@@ -25,7 +25,7 @@ export const CargarEstudios = () => {
     const [activeTab, setActiveTab] = useState("cargar-dicom")
     const tabsListRef = useRef<HTMLDivElement>(null)
     const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
-    const [pill, setPill] = useState({ left: 0, top: 0, width: 0, height: 0 })
+    const [indicator, setIndicator] = useState({ left: 0, width: 0 })
 
     const handleDireccionChange = (direccionId: string) => {
         setSelectedDireccion(direccionId);
@@ -34,18 +34,16 @@ export const CargarEstudios = () => {
          ); */
     };
 
-    // Función para actualizar la posición de la píldora animada
+    // Replica el estilo de tabs de Admision Espontanea (linea inferior animada).
     const updatePill = useCallback(() => {
         const el = tabRefs.current.get(activeTab)
         const container = tabsListRef.current
         if (el && container) {
             const cr = container.getBoundingClientRect()
             const tr = el.getBoundingClientRect()
-            setPill({
+            setIndicator({
                 left: tr.left - cr.left,
-                top: tr.top - cr.top,
                 width: tr.width,
-                height: tr.height,
             })
         }
     }, [activeTab])
@@ -141,21 +139,21 @@ export const CargarEstudios = () => {
 
     return (
         <MainLayout>
-            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10 overflow-y-auto">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0 overflow-hidden">
                 {/* Header con Tabs integrados */}
-                <div className="mb-6">
+                <div className="flex flex-col flex-1 min-h-0">
                     {/* Tabs */}
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col flex-1 min-h-0">
                         <TabsList
                             ref={tabsListRef}
-                            className="relative bg-gray-50 dark:bg-[#2a2e32] border-b border-gray-200 dark:border-gray-600 rounded-lg h-auto p-1 px-2 justify-start gap-1 w-auto inline-flex"
+                            className="relative bg-transparent border-b border-gray-200 dark:border-gray-700 rounded-none h-auto p-0 justify-start gap-0 w-full"
                         >
                             <TabsTrigger
                                 value="cargar-dicom"
                                 ref={(el) => {
                                     if (el) tabRefs.current.set("cargar-dicom", el)
                                 }}
-                                className="px-3 py-1.5 text-xs font-medium rounded-full text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none relative z-1"
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none"
                             >
                                 Cargar Estudio Dicom
                             </TabsTrigger>
@@ -164,18 +162,30 @@ export const CargarEstudios = () => {
                                 ref={(el) => {
                                     if (el) tabRefs.current.set("vincular-imagen", el)
                                 }}
-                                className="px-3 py-1.5 text-xs font-medium rounded-full text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none relative z-1"
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none"
                             >
                                 Vincular Imagen
                             </TabsTrigger>
-                            {/* Píldora animada */}
+                            <TabsTrigger
+                                value="desvincular-imagen"
+                                ref={(el) => {
+                                    if (el) tabRefs.current.set("desvincular-imagen", el)
+                                }}
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none"
+                            >
+                                <span className="inline-flex items-center gap-1">
+                                    <Unlink2 className="w-3.5 h-3.5" />
+                                    Desvincular Imagen
+                                </span>
+                            </TabsTrigger>
+                            {/* Indicador lineal animado */}
                             <div
-                                className="absolute rounded-full bg-brand-purple transition-all duration-300 ease-in-out z-0"
-                                style={{ left: pill.left, top: pill.top, width: pill.width, height: pill.height }}
+                                className="absolute bottom-0 h-0.5 bg-brand-purple transition-all duration-300 ease-in-out"
+                                style={{ left: indicator.left, width: indicator.width }}
                             />
                         </TabsList>
 
-                        <TabsContent value="cargar-dicom" className="mt-6">
+                        <TabsContent value="cargar-dicom" className="mt-6 overflow-y-auto">
                             {/* Header del tab */}
                             <div className="mb-6">
                                 <div className="flex items-center gap-2 mb-2">
@@ -197,8 +207,8 @@ export const CargarEstudios = () => {
                                             onDragLeave={handleDragLeave}
                                             onDrop={handleDrop}
                                             className={`border-2 border-dashed rounded-lg p-12 transition-all mt-3 ${isDragging
-                                                ? 'border-brand-purple bg-purple-50'
-                                                : 'border-gray-300 bg-white dark:bg-[#2a2e32]'
+                                                ? 'border-brand-purple bg-transparent'
+                                                : 'border-gray-300 bg-transparent'
                                                 }`}
                                         >
                                             <div className="flex flex-col items-center justify-center gap-4">
@@ -320,7 +330,7 @@ export const CargarEstudios = () => {
                                                     estudiosNoVinculadosData?.data?.data?.map((estudio) => (
                                                         <div
                                                             key={estudio.guid}
-                                                            className="bg-white dark:bg-[#2a2e32] border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow"
+                                                            className="bg-transparent border border-gray-200/70 dark:border-gray-700/70 rounded-lg p-4 hover:bg-white/5 transition-colors"
                                                         >
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-start gap-3 flex-1">
@@ -362,8 +372,12 @@ export const CargarEstudios = () => {
 
                         </TabsContent>
 
-                        <TabsContent value="vincular-imagen" className="mt-6">
+                        <TabsContent value="vincular-imagen" className="mt-6 overflow-y-auto">
                             <VincularImagenTab />
+                        </TabsContent>
+
+                        <TabsContent value="desvincular-imagen" className="mt-6 overflow-y-auto">
+                            <DesvincularImagenTab />
                         </TabsContent>
                     </Tabs>
 

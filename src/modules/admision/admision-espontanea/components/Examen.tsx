@@ -155,12 +155,12 @@ export const Examen = ({
                 {/* Panel izquierdo - Estudios disponibles */}
                 <div className="lg:col-span-2 space-y-6 min-w-0">
                     {/* Filtros */}
-                    <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm p-6">
+                    <div className="bg-transparent rounded-lg border border-blue-200/60 dark:border-blue-500/30 shadow-sm p-6">
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             {/* Select Modalidad */}
                             <div className="space-y-2">
-                                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider dark:text-gray-200">
+                                <label className="text-xs font-semibold text-blue-700 uppercase tracking-wider dark:text-blue-300">
                                     Modalidad
                                 </label>
                                 <Select
@@ -168,7 +168,7 @@ export const Examen = ({
                                     value={selectedTipoExamen}
                                     disabled={isLoadingTiposExamen}
                                 >
-                                    <SelectTrigger className="w-full h-10 border border-gray-300 focus:border-brand-purple focus:ring-brand-purple bg-white">
+                                    <SelectTrigger className="w-full h-10 bg-white dark:bg-[#0f1628] border-2 border-blue-200 dark:border-blue-500/40 hover:border-blue-300 dark:hover:border-blue-400 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:focus:ring-blue-500/30">
                                         <SelectValue placeholder="Seleccionar modalidad" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -188,7 +188,7 @@ export const Examen = ({
 
                             {/* Select Parte del Cuerpo */}
                             <div className="space-y-2">
-                                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider dark:text-gray-200">
+                                <label className="text-xs font-semibold text-blue-700 uppercase tracking-wider dark:text-blue-300">
                                     Parte del cuerpo
                                 </label>
                                 <Select
@@ -196,7 +196,7 @@ export const Examen = ({
                                     value={selectedParteCuerpo}
                                     disabled={isLoadingPartesCuerpo || !selectedTipoExamen}
                                 >
-                                    <SelectTrigger className="w-full h-10 border border-gray-300 focus:border-brand-purple focus:ring-brand-purple bg-white dark:bg-[#2a2e32] dark:border-gray-700">
+                                    <SelectTrigger className="w-full h-10 bg-white dark:bg-[#0f1628] border-2 border-blue-200 dark:border-blue-500/40 hover:border-blue-300 dark:hover:border-blue-400 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:focus:ring-blue-500/30">
                                         <SelectValue placeholder="Seleccionar parte del cuerpo" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -253,7 +253,7 @@ export const Examen = ({
                 {/* Panel derecho - Estudio seleccionado */}
                 <div className="space-y-6 min-w-0">
                     {/* Card Estudio Seleccionado */}
-                    <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                    <div className="bg-transparent rounded-lg border border-purple-200/60 dark:border-purple-500/30 shadow-sm overflow-hidden">
                         <div className="bg-brand-purple p-4 text-white">
                             <div className="flex items-center gap-2 mb-2">
                                 <Check className="w-5 h-5" />
@@ -295,7 +295,7 @@ export const Examen = ({
                     </div>
 
                     {/* Card Equipos */}
-                    <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm max-h-[400px] overflow-y-auto">
+                    <div className="bg-transparent rounded-lg border border-purple-200/60 dark:border-purple-500/30 shadow-sm max-h-[400px] overflow-y-auto">
                         <div className="bg-brand-purple p-4 text-white flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <h3 className="font-semibold uppercase text-sm tracking-wider">Equipos</h3>

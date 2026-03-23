@@ -56,6 +56,16 @@ export const TemplateCard = ({
                             </h3>
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge
+                                variant="outline"
+                                className={`text-xs py-0 px-1.5 h-5 ${template.report_type === 'inteligente'
+                                        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900 dark:text-amber-200 dark:border-amber-700'
+                                        : 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600'
+                                    }`}
+                            >
+                                {template.report_type === 'inteligente' ? 'Inteligente' : 'Simple'}
+                            </Badge>
+
                             {template.study_type_description && (
                                 <Badge
                                     variant="outline"

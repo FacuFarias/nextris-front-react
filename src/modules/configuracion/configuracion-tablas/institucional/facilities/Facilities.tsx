@@ -103,7 +103,8 @@ export const Facilities = () => {
                 onClose={handleCloseModal}
                 onSubmit={handleSubmit}
                 initialData={selectedFacility ? {
-                    description: selectedFacility.description,
+                    description: selectedFacility.description || selectedFacility.name || "",
+                    id_patientdomain: selectedFacility.id_patientdomain || selectedFacility.patientdomain_id || "",
                     // SMTP Config
                     smtp_server: selectedFacility.smtp_config?.smtp_server,
                     smtp_port: selectedFacility.smtp_config?.smtp_port,
@@ -111,22 +112,22 @@ export const Facilities = () => {
                     smtp_password: selectedFacility.smtp_config?.smtp_password,
                     smtp_from: selectedFacility.smtp_config?.smtp_from,
                     smtp_from_name: selectedFacility.smtp_config?.smtp_from_name,
-                    smtp_use_tls: selectedFacility.smtp_config?.smtp_use_tls,
+                    smtp_use_tls: selectedFacility.smtp_config?.smtp_use_tls ?? selectedFacility.smtp_config?.use_tls,
                     // Backend Config
-                    backend_db_user: selectedFacility.backend_config?.backend_db_user,
-                    backend_db_password: selectedFacility.backend_config?.backend_db_password,
-                    backend_db_host: selectedFacility.backend_config?.backend_db_host,
-                    backend_db_port: selectedFacility.backend_config?.backend_db_port,
-                    backend_db_name: selectedFacility.backend_config?.backend_db_name,
-                    backend_base_folder: selectedFacility.backend_config?.backend_base_folder,
-                    backend_ipserver: selectedFacility.backend_config?.backend_ipserver,
+                    backend_db_user: selectedFacility.backend_config?.backend_db_user ?? selectedFacility.backend_config?.db_user,
+                    backend_db_password: selectedFacility.backend_config?.backend_db_password ?? selectedFacility.backend_config?.db_password,
+                    backend_db_host: selectedFacility.backend_config?.backend_db_host ?? selectedFacility.backend_config?.db_host,
+                    backend_db_port: selectedFacility.backend_config?.backend_db_port ?? selectedFacility.backend_config?.db_port,
+                    backend_db_name: selectedFacility.backend_config?.backend_db_name ?? selectedFacility.backend_config?.db_name,
+                    backend_base_folder: selectedFacility.backend_config?.backend_base_folder ?? selectedFacility.backend_config?.base_folder,
+                    backend_ipserver: selectedFacility.backend_config?.backend_ipserver ?? selectedFacility.backend_config?.ipserver,
                     // WhatsApp Config
-                    whatsapp_api_url: selectedFacility.whatsapp_config?.whatsapp_api_url,
-                    whatsapp_token: selectedFacility.whatsapp_config?.whatsapp_token,
-                    whatsapp_phone_number_id: selectedFacility.whatsapp_config?.whatsapp_phone_number_id,
-                    whatsapp_business_account_id: selectedFacility.whatsapp_config?.whatsapp_business_account_id,
-                    whatsapp_webhook_verify_token: selectedFacility.whatsapp_config?.whatsapp_webhook_verify_token,
-                    whatsapp_is_active: selectedFacility.whatsapp_config?.whatsapp_is_active,
+                    whatsapp_api_url: selectedFacility.whatsapp_config?.whatsapp_api_url ?? selectedFacility.whatsapp_config?.api_url,
+                    whatsapp_token: selectedFacility.whatsapp_config?.whatsapp_token ?? selectedFacility.whatsapp_config?.api_token,
+                    whatsapp_phone_number_id: selectedFacility.whatsapp_config?.whatsapp_phone_number_id ?? selectedFacility.whatsapp_config?.phone_number_id,
+                    whatsapp_business_account_id: selectedFacility.whatsapp_config?.whatsapp_business_account_id ?? selectedFacility.whatsapp_config?.business_account_id,
+                    whatsapp_webhook_verify_token: selectedFacility.whatsapp_config?.whatsapp_webhook_verify_token ?? selectedFacility.whatsapp_config?.webhook_verify_token,
+                    whatsapp_is_active: selectedFacility.whatsapp_config?.whatsapp_is_active ?? selectedFacility.whatsapp_config?.is_active,
                 } : undefined}
                 isLoading={false}
             />

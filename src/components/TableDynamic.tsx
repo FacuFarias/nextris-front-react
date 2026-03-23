@@ -54,7 +54,9 @@ export function TablaDynamic<T extends Record<string, any>>({
     tableClassName,
     preserveTableHeight = false,
     stickyPagination = false,
+    compactSpacing = false,
 }: DynamicTableProps<T>) {
+    const getColumnKey = (column: TableColumn<T>) => String(column.key);
     const isControlledSort = controlledSortColumn !== undefined && onSortChange !== undefined;
 
     const [internalSortConfig, setInternalSortConfig] = useState<{
@@ -65,6 +67,21 @@ export function TablaDynamic<T extends Record<string, any>>({
     const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
     const [openFilterColumn, setOpenFilterColumn] = useState<string | null>(null);
     const filterInputRef = useRef<HTMLInputElement>(null);
+    const tableFrameRef = useRef<HTMLDivElement>(null);
+    const tableHeaderRef = useRef<HTMLTableSectionElement>(null);
+    const [internalVisibleColumns, setInternalVisibleColumns] = useState<string[]>(() =>
+        columns.map((column) => getColumnKey(column))
+    );
+    const [minVisibleRows, setMinVisibleRows] = useState<number>(pagination?.pageSize ?? 0);
+
+    useEffect(() => {
+        const nextColumnKeys = columns.map((column) => getColumnKey(column));
+        setInternalVisibleColumns((prev) => {
+            const kept = prev.filter((key) => nextColumnKeys.includes(key));
+            const newKeys = nextColumnKeys.filter((key) => !kept.includes(key));
+            return [...kept, ...newKeys];
+        });
+    }, [columns]);
 
     const sortConfig = isControlledSort
         ? (controlledSortColumn ? { key: controlledSortColumn, direction: controlledSortDirection || "asc" } : null)
@@ -73,6 +90,10 @@ export function TablaDynamic<T extends Record<string, any>>({
     const { actualTheme } = useTheme();
     const isDark = actualTheme === 'dark';
     const hasBgImage = !!(tableBackgroundImage || tableBackgroundImageDark);
+    const effectiveAllColumns = allColumns ?? columns;
+    const effectiveVisibleColumns = visibleColumns ?? internalVisibleColumns;
+    const visibleColumnSet = new Set(effectiveVisibleColumns);
+    const renderColumns = columns.filter((column) => visibleColumnSet.has(getColumnKey(column)));
 
     useEffect(() => {
         if (tableBackgroundImage) {
@@ -137,7 +158,8 @@ export function TablaDynamic<T extends Record<string, any>>({
     };
 
     const handleSort = (column: TableColumn<T>) => {
-        if (!column.sortable) return;
+        const isSortable = column.sortable !== false;
+        if (!isSortable) return;
 
         if (isControlledSort) {
             const columnKey = column.key as string;
@@ -165,7 +187,8 @@ export function TablaDynamic<T extends Record<string, any>>({
     };
 
     const getSortIcon = (column: TableColumn<T>) => {
-        if (!column.sortable) return null;
+        const isSortable = column.sortable !== false;
+        if (!isSortable) return null;
 
         if (sortConfig?.key === column.key) {
             return sortConfig.direction === "asc" ? (
@@ -194,14 +217,83 @@ export function TablaDynamic<T extends Record<string, any>>({
     const visibleActions = (row: T) =>
         actions.filter((action) => !action.hidden?.(row));
 
+    const handleToggleColumn = (columnKey: string) => {
+        if (onToggleColumn) {
+            onToggleColumn(columnKey);
+            return;
+        }
+
+        setInternalVisibleColumns((prev) => {
+            const allKeys = effectiveAllColumns.map((column) => getColumnKey(column));
+            const currentlyVisible = prev.includes(columnKey);
+
+            if (currentlyVisible && prev.length > 1) {
+                return prev.filter((key) => key !== columnKey);
+            }
+
+            if (!currentlyVisible && allKeys.includes(columnKey)) {
+                return [...prev, columnKey];
+            }
+
+            return prev;
+        });
+    };
+
     // Each button is w-8 (32px) + gap-1 (4px between buttons), plus 4px base.
     // Keep a minimum width so the header label "Acciones" is fully visible.
     const actionsColumnWidth = actions.length > 0 ? Math.max(actions.length * 36 + 4, 92) : 92;
 
+    useEffect(() => {
+        if (!preserveTableHeight || !pagination) return;
+
+        const recalculateVisibleRows = () => {
+            const frame = tableFrameRef.current;
+            if (!frame) return;
+
+            const headerHeight = tableHeaderRef.current?.getBoundingClientRect().height ?? 0;
+            const sampleRow = frame.querySelector("tbody tr[data-row-kind='measure']") as HTMLTableRowElement | null;
+            const rowHeight = sampleRow?.getBoundingClientRect().height ?? 36;
+
+            if (rowHeight <= 0) return;
+
+            const availableBodyHeight = frame.clientHeight - headerHeight;
+            const fittedRows = Math.max(1, Math.floor(availableBodyHeight / rowHeight));
+            const nextRows = Math.min(pagination.pageSize, fittedRows);
+
+            setMinVisibleRows((prev) => (prev === nextRows ? prev : nextRows));
+        };
+
+        recalculateVisibleRows();
+
+        if (typeof ResizeObserver !== "undefined" && tableFrameRef.current) {
+            const resizeObserver = new ResizeObserver(() => recalculateVisibleRows());
+            resizeObserver.observe(tableFrameRef.current);
+            return () => resizeObserver.disconnect();
+        }
+
+        window.addEventListener("resize", recalculateVisibleRows);
+        return () => window.removeEventListener("resize", recalculateVisibleRows);
+    }, [preserveTableHeight, pagination?.pageSize, paginatedData.length]);
+
+    const fillerRowsWhenEmpty = preserveTableHeight && pagination
+        ? Math.max(0, minVisibleRows - 1)
+        : 0;
+
+    const fillerRowsWithData = preserveTableHeight && pagination
+        ? Math.max(0, minVisibleRows - paginatedData.length)
+        : 0;
+
     return (
-        <div className={cn("space-y-4 mt-5 flex flex-col flex-1 min-h-0", className)}>
+        <div
+            className={cn(
+                "flex flex-col flex-1 min-h-0",
+                compactSpacing ? "mt-0 gap-0" : "mt-5 space-y-4",
+                className
+            )}
+        >
             {/* Contenedor externo: fondo fijo + borde. NO tiene overflow para que la imagen no scrollee */}
             <div
+                ref={tableFrameRef}
                 className={cn(
                     "rounded-md border dark:border-[rgba(255,255,255,0.07)] relative flex-1 overflow-hidden dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
                     (tableBackgroundImage || tableBackgroundImageDark) && "bg-white/82 dark:bg-background/78"
@@ -250,23 +342,25 @@ export function TablaDynamic<T extends Record<string, any>>({
                 {/* Contenedor interno: aquí ocurre el scroll, encima del fondo fijo */}
                 <div className="relative z-2 h-full overflow-y-auto overflow-x-auto table-scrollbar-purple">
                 <Table className={cn("w-full", tableClassName)}>
-                    <TableHeader className="bg-brand-purple dark:bg-gradient-to-r dark:from-[#3b1066] dark:to-[#2d0d52] sticky top-0 z-3 dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
+                    <TableHeader ref={tableHeaderRef} className="bg-brand-purple dark:bg-gradient-to-r dark:from-[#3b1066] dark:to-[#2d0d52] sticky top-0 z-3 dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
                         <TableRow className="bg-brand-purple dark:bg-transparent hover:bg-brand-purple dark:hover:bg-transparent border-b-0">
-                            {columns.map((column, index) => {
+                            {renderColumns.map((column, index) => {
                                 const colKey = column.key as string;
                                 const filterActive = !!columnFilters[colKey]?.trim();
                                 const isEditing = openFilterColumn === colKey;
+                                const isSortable = column.sortable !== false;
+                                const isFilterable = column.filterable !== false;
                                 return (
                                     <TableHead
                                         key={index}
                                         className={cn(
                                             "text-white py-0 px-2 text-xs group/header overflow-hidden",
                                             column.headerClassName,
-                                            column.sortable && !isEditing &&
+                                            isSortable && !isEditing &&
                                             "cursor-pointer select-none",
                                             column.hideOnMobile && "hidden md:table-cell"
                                         )}
-                                        onClick={() => !isEditing && handleSort(column)}
+                                        onClick={() => !isEditing && isSortable && handleSort(column)}
                                     >
                                         <div className="flex items-center">
                                             {isEditing ? (
@@ -314,7 +408,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                     ) : (
                                                         <span>{column.label}</span>
                                                     )}
-                                                    {column.filterable && (
+                                                    {isFilterable && (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -359,7 +453,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                             <TableRow>
                                 <TableCell
                                     colSpan={
-                                        columns.length +
+                                        renderColumns.length +
                                         (showIndex ? 1 : 0) +
                                         (actions.length > 0 ? 1 : 0)
                                     }
@@ -375,7 +469,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 <TableRow className="bg-card dark:bg-[#1a1b24]/45">
                                     <TableCell
                                         colSpan={
-                                            columns.length +
+                                            renderColumns.length +
                                             (showIndex ? 1 : 0) +
                                             (actions.length > 0 ? 1 : 0)
                                         }
@@ -384,12 +478,12 @@ export function TablaDynamic<T extends Record<string, any>>({
                                         {emptyMessage}
                                     </TableCell>
                                 </TableRow>
-                                {preserveTableHeight && pagination && pagination.pageSize > 1 &&
-                                    Array.from({ length: pagination.pageSize - 1 }).map((_, index) => (
-                                        <TableRow key={`empty-row-when-no-data-${index}`} className="bg-card dark:bg-transparent">
+                                {preserveTableHeight && pagination && fillerRowsWhenEmpty > 0 &&
+                                    Array.from({ length: fillerRowsWhenEmpty }).map((_, index) => (
+                                        <TableRow key={`empty-row-when-no-data-${index}`} data-row-kind="measure" className="bg-card dark:bg-transparent">
                                             <TableCell
                                                 colSpan={
-                                                    columns.length +
+                                                    renderColumns.length +
                                                     (showIndex ? 1 : 0) +
                                                     (actions.length > 0 ? 1 : 0)
                                                 }
@@ -407,6 +501,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                     return (
                                         <TableRow
                                             key={getRowIndex(index)}
+                                            data-row-kind="measure"
                                             className={cn(
                                                 "transition-colors duration-150",
                                                 hasBgImage
@@ -424,7 +519,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                             onClick={() => onRowClick?.(row, getRowIndex(index))}
                                             onDoubleClick={() => onRowDoubleClick?.(row, getRowIndex(index))}
                                         >
-                                            {columns.map((column, colIndex) => (
+                                            {renderColumns.map((column, colIndex) => (
                                                 <TableCell
                                                     key={colIndex}
                                                     className={cn(
@@ -477,12 +572,12 @@ export function TablaDynamic<T extends Record<string, any>>({
                                         </TableRow>
                                     );
                                 })}
-                                {preserveTableHeight && pagination && paginatedData.length < pagination.pageSize &&
-                                    Array.from({ length: pagination.pageSize - paginatedData.length }).map((_, index) => (
-                                        <TableRow key={`empty-row-${index}`} className={hasBgImage ? "bg-transparent" : "bg-card dark:bg-transparent"}>
+                                {preserveTableHeight && pagination && fillerRowsWithData > 0 &&
+                                    Array.from({ length: fillerRowsWithData }).map((_, index) => (
+                                        <TableRow key={`empty-row-${index}`} data-row-kind="measure" className={hasBgImage ? "bg-transparent" : "bg-card dark:bg-transparent"}>
                                             <TableCell
                                                 colSpan={
-                                                    columns.length +
+                                                    renderColumns.length +
                                                     (showIndex ? 1 : 0) +
                                                     (actions.length > 0 ? 1 : 0)
                                                 }
@@ -508,9 +603,9 @@ export function TablaDynamic<T extends Record<string, any>>({
                         perPageValue={perPageValue}
                         onPerPageChange={onPerPageChange}
                         perPageOptions={perPageOptions}
-                        columns={allColumns?.map(col => ({ key: col.key as string, label: col.label }))}
-                        visibleColumns={visibleColumns}
-                        onToggleColumn={onToggleColumn}
+                        columns={effectiveAllColumns.map(col => ({ key: col.key as string, label: col.label }))}
+                        visibleColumns={effectiveVisibleColumns}
+                        onToggleColumn={handleToggleColumn}
                         additionalControls={additionalControls}
                     />
                 </div>

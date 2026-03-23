@@ -9,11 +9,19 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { PrimaryButton, SecondaryButton } from "@/components";
 import { facilityFormSchema, type FacilityFormValues } from "../schemas/facility.schema";
 import type { FacilityFormData } from "../types/facilities.types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Database, MessageSquare } from "lucide-react";
+import { useDominioPacientes } from "../../dominio-pacientes/hooks/use-dominio-pacientes";
 
 interface FacilityFormProps {
     onSubmit: (data: FacilityFormData) => void;
@@ -28,10 +36,13 @@ export const FacilityForm = ({
     initialData,
     isLoading = false,
 }: FacilityFormProps) => {
+    const { dominioPacientes, isLoading: isLoadingDomains } = useDominioPacientes();
+
     const form = useForm<FacilityFormValues>({
         resolver: zodResolver(facilityFormSchema),
         defaultValues: {
             description: initialData?.description || "",
+            id_patientdomain: initialData?.id_patientdomain || "",
 
             // SMTP
             smtp_server: initialData?.smtp_server || "",
@@ -80,6 +91,41 @@ export const FacilityForm = ({
                                     disabled={isLoading}
                                 />
                             </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="id_patientdomain"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Dominio de pacientes</FormLabel>
+                            <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                disabled={isLoading || isLoadingDomains}
+                            >
+                                <FormControl className="w-full">
+                                    <SelectTrigger>
+                                        <SelectValue
+                                            placeholder={
+                                                isLoadingDomains
+                                                    ? "Cargando dominios..."
+                                                    : "Seleccione un dominio"
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {dominioPacientes?.data?.map((domain) => (
+                                        <SelectItem key={domain.guid} value={domain.guid}>
+                                            {domain.description}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                             <FormMessage />
                         </FormItem>
                     )}

@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import {
@@ -34,11 +35,13 @@ export const LocationForm = ({
     initialData,
     isLoading = false,
 }: LocationFormProps) => {
+    const [logoFile, setLogoFile] = useState<File | undefined>(undefined);
     const { facilities, isLoading: isLoadingFacilities } = useFacilities();
     const form = useForm<LocationFormValues>({
         resolver: zodResolver(locationFormSchema),
         defaultValues: {
             name: initialData?.name || "",
+            code: initialData?.code || "",
             facility_id: initialData?.facility_id || "",
             status: initialData?.status || undefined,
             address: initialData?.address || "",
@@ -54,9 +57,12 @@ export const LocationForm = ({
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit((data) => onSubmit(data as LocationFormData))} className="space-y-4">
-                {/* Descripción y Facility */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form
+                onSubmit={form.handleSubmit((data) => onSubmit({ ...(data as LocationFormData), logo: logoFile }))}
+                className="space-y-4"
+            >
+                {/* Descripción, Código y Facility */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField
                         control={form.control}
                         name="name"
@@ -68,6 +74,24 @@ export const LocationForm = ({
                                 <FormControl>
                                     <Input
                                         placeholder="Ej: Ubicación Principal"
+                                        {...field}
+                                        disabled={isLoading}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="code"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Código</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        placeholder="Ej: CCF"
                                         {...field}
                                         disabled={isLoading}
                                     />
@@ -288,6 +312,29 @@ export const LocationForm = ({
                             </FormItem>
                         )}
                     />
+                </div>
+
+                <div className="space-y-2">
+                    <FormLabel>Logo institucional</FormLabel>
+                    <Input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/gif,image/bmp"
+                        disabled={isLoading}
+                        onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            setLogoFile(file);
+                        }}
+                    />
+                    {initialData?.logo_path && !logoFile && (
+                        <p className="text-xs text-muted-foreground">
+                            Logo actual: {initialData.logo_path}
+                        </p>
+                    )}
+                    {logoFile && (
+                        <p className="text-xs text-muted-foreground">
+                            Nuevo archivo: {logoFile.name}
+                        </p>
+                    )}
                 </div>
 
                 {/* Botones de acción */}

@@ -7,6 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components";
+import TablaDynamic from "@/components/TableDynamic";
+import type { TableAction, TableColumn } from "@/types/table";
 import type { EquipmentSchedule, EquipmentScheduleFormData, EquipmentSchedulePayload } from "./types/equipment-schedules.types";
 import { useEquipment } from "../maquinas/hooks/useEquipment";
 import type { Equipment } from "../maquinas/types/equipment.types";
@@ -44,8 +46,10 @@ export const AgendasMaquinas = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
     const [editingSchedule, setEditingSchedule] = useState<EquipmentSchedule | null>(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(8);
+    const [equipmentPage, setEquipmentPage] = useState(1);
+    const [equipmentPageSize, setEquipmentPageSize] = useState(8);
+    const [schedulesPage, setSchedulesPage] = useState(1);
+    const [schedulesPageSize, setSchedulesPageSize] = useState(8);
     const [scheduleToDelete, setScheduleToDelete] = useState<EquipmentSchedule | null>(null);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [formData, setFormData] = useState<EquipmentScheduleFormData>({
@@ -145,18 +149,41 @@ export const AgendasMaquinas = () => {
         return indexA - indexB;
     }) || [];
 
+    const equipmentColumns: TableColumn<Equipment>[] = [
+        { key: "aeTitle", label: "AETitle" },
+        { key: "modality", label: "Modalidad" },
+        { key: "ip", label: "IP" },
+    ];
 
-    // Paginación
-    const totalItems = filteredEquipment.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedEquipment = filteredEquipment.slice(startIndex, endIndex);
+    const scheduleColumns: TableColumn<EquipmentSchedule>[] = [
+        {
+            key: "day",
+            label: "Dia",
+            render: (value) => <span className="capitalize">{DAYS_MAP[value as string] || value}</span>,
+        },
+        { key: "time_from", label: "Inicio" },
+        { key: "time_to", label: "Final" },
+    ];
+
+    const scheduleActions: TableAction<EquipmentSchedule>[] = [
+        {
+            label: "Editar agenda",
+            icon: <Edit className="h-4 w-4" />,
+            onClick: (schedule) => handleEdit(schedule),
+        },
+        {
+            label: "Eliminar agenda",
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: (schedule) => handleDelete(schedule),
+            variant: "destructive",
+        },
+    ];
+
 
     // Reset página cuando cambie el filtro
     const handleSearchChange = (value: string) => {
         setSearchTerm(value);
-        setCurrentPage(1);
+        setEquipmentPage(1);
     };
     return (
         <div className="space-y-4">
@@ -170,89 +197,33 @@ export const AgendasMaquinas = () => {
                             onChange={(e) => handleSearchChange(e.target.value)}
                             className="mb-4"
                         />
-                        {isLoading ? (
-                            <div className="flex justify-center items-center h-40">
-                                <Loader2 className="h-8 w-8 animate-spin text-brand-purple" />
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-brand-purple text-white">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-sm font-semibold uppercase">AETitle</th>
-                                            <th className="px-4 py-3 text-left text-sm font-semibold uppercase">Modalidad</th>
-                                            <th className="px-4 py-3 text-left text-sm font-semibold uppercase">IP</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {paginatedEquipment.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={3} className="text-center py-8 text-gray-500 italic">
-                                                    {searchTerm ? "No se encontraron equipos" : "No hay equipos disponibles"}
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            paginatedEquipment.map((equipment, idx) => (
-                                                <tr
-                                                    key={equipment.guid}
-                                                    className={`cursor-pointer border-b hover:bg-purple-50 transition-colors ${selectedEquipment?.guid === equipment.guid
-                                                        ? "bg-purple-100"
-                                                        : idx % 2 === 0
-                                                            ? "bg-gray-50"
-                                                            : "bg-white"
-                                                        }`}
-                                                    onClick={() => setSelectedEquipment(equipment)}
-                                                >
-                                                    <td className="px-4 py-2 text-sm">{equipment.aeTitle || "-"}</td>
-                                                    <td className="px-4 py-2 text-sm">{equipment.modality || "-"}</td>
-                                                    <td className="px-4 py-2 text-sm">{equipment.ip || "-"}</td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-
-                        {/* Paginación */}
-                        {totalPages > 1 && (
-                            <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                                <p className="text-sm text-gray-600">
-                                    Mostrando {startIndex + 1} - {Math.min(endIndex, totalItems)} de {totalItems} equipos
-                                </p>
-                                <div className="flex gap-2">
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                        disabled={currentPage === 1}
-                                    >
-                                        Anterior
-                                    </Button>
-                                    <div className="flex items-center gap-1">
-                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                                            <Button
-                                                key={page}
-                                                size="sm"
-                                                variant={currentPage === page ? "default" : "outline"}
-                                                className={currentPage === page ? "bg-brand-purple hover:bg-brand-purple/90" : ""}
-                                                onClick={() => setCurrentPage(page)}
-                                            >
-                                                {page}
-                                            </Button>
-                                        ))}
-                                    </div>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                        disabled={currentPage === totalPages}
-                                    >
-                                        Siguiente
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
+                        <TablaDynamic<Equipment>
+                            data={filteredEquipment}
+                            columns={equipmentColumns}
+                            loading={isLoading}
+                            selectedRow={selectedEquipment}
+                            rowIdKey="guid"
+                            onRowClick={(equipmentRow) => {
+                                setSelectedEquipment(equipmentRow);
+                                setSchedulesPage(1);
+                            }}
+                            pagination={{
+                                page: equipmentPage,
+                                pageSize: equipmentPageSize,
+                                serverSide: false,
+                                total: filteredEquipment.length,
+                            }}
+                            onPaginationChange={(newPage, newPageSize) => {
+                                setEquipmentPage(newPage);
+                                setEquipmentPageSize(newPageSize);
+                            }}
+                            perPageValue={equipmentPageSize}
+                            onPerPageChange={(value) => {
+                                setEquipmentPageSize(value);
+                                setEquipmentPage(1);
+                            }}
+                            emptyMessage={searchTerm ? "No se encontraron equipos" : "No hay equipos disponibles"}
+                        />
                     </CardContent>
                 </Card>
 
@@ -281,62 +252,27 @@ export const AgendasMaquinas = () => {
                                     <Loader2 className="h-8 w-8 animate-spin text-brand-purple" />
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead className="bg-brand-purple text-white">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left text-sm font-semibold uppercase">Día</th>
-                                                <th className="px-4 py-3 text-left text-sm font-semibold uppercase">Inicio</th>
-                                                <th className="px-4 py-3 text-left text-sm font-semibold uppercase">Final</th>
-                                                <th className="px-4 py-3 text-center text-sm font-semibold uppercase">
-                                                    Acciones
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {sortedSchedules.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={4} className="text-center py-8 text-gray-500 italic">
-                                                        No hay días de agenda configurados
-                                                    </td>
-                                                </tr>
-                                            ) : (
-                                                sortedSchedules.map((schedule, idx) => (
-                                                    <tr
-                                                        key={schedule.guid}
-                                                        className={`border-b ${idx % 2 === 0 ? "bg-gray-50" : "bg-white"}`}
-                                                    >
-                                                        <td className="px-4 py-3 text-sm capitalize">
-                                                            {schedule.day}
-                                                        </td>
-                                                        <td className="px-4 py-2 text-sm">{schedule.time_from}</td>
-                                                        <td className="px-4 py-2 text-sm">{schedule.time_to}</td>
-                                                        <td className="px-4 py-2">
-                                                            <div className="flex items-center justify-center gap-2">
-                                                                <Button
-                                                                    size="icon"
-                                                                    variant="ghost"
-                                                                    className="h-8 w-8 rounded-full bg-brand-purple hover:bg-purple-700 text-white"
-                                                                    onClick={() => handleEdit(schedule)}
-                                                                >
-                                                                    <Edit className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button
-                                                                    size="icon"
-                                                                    variant="ghost"
-                                                                    className="h-8 w-8 rounded-full bg-gray-400 hover:bg-gray-500 text-white"
-                                                                    onClick={() => handleDelete(schedule)}
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <TablaDynamic<EquipmentSchedule>
+                                    data={sortedSchedules}
+                                    columns={scheduleColumns}
+                                    actions={scheduleActions}
+                                    pagination={{
+                                        page: schedulesPage,
+                                        pageSize: schedulesPageSize,
+                                        serverSide: false,
+                                        total: sortedSchedules.length,
+                                    }}
+                                    onPaginationChange={(newPage, newPageSize) => {
+                                        setSchedulesPage(newPage);
+                                        setSchedulesPageSize(newPageSize);
+                                    }}
+                                    perPageValue={schedulesPageSize}
+                                    onPerPageChange={(value) => {
+                                        setSchedulesPageSize(value);
+                                        setSchedulesPage(1);
+                                    }}
+                                    emptyMessage="No hay dias de agenda configurados"
+                                />
                             )}
                         </CardContent>
                     </Card>

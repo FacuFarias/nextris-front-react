@@ -10,6 +10,7 @@ import { ObrasSociales } from "./institucional/obras-sociales"
 import { DominioPacientes } from "./institucional/dominio-pacientes"
 import { Tags } from "./institucional/tags"
 import { RelParserFacility } from "./institucional/rel-parser-facility/RelParserFacility"
+import { Modulos } from "./institucional/modulos"
 
 // Exámenes
 import { TiposEstudio } from "./examenes/tipos-estudio"
@@ -182,6 +183,7 @@ export const ConfiguracionTablas = () => {
                                 { value: "locations", label: "Ubicaciones" },
                                 { value: "obras-sociales", label: "Obras Sociales" },
                                 { value: "dominio-pacientes", label: "Dominio de Pacientes" },
+                                { value: "modulos", label: "Módulos" },
                                 { value: "tags", label: "Tags" },
                                 { value: "rel-parser-facility", label: "Rel Parser Facility" },
                             ]}
@@ -197,6 +199,9 @@ export const ConfiguracionTablas = () => {
                             </TabsContent>
                             <TabsContent value="dominio-pacientes" className="p-4">
                                 <DominioPacientes />
+                            </TabsContent>
+                            <TabsContent value="modulos" className="p-4">
+                                <Modulos />
                             </TabsContent>
                             <TabsContent value="tags" className="p-4">
                                 <Tags />

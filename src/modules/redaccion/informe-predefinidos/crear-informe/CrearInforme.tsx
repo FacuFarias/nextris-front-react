@@ -11,9 +11,40 @@ import { useCreateTemplate, useUpdateTemplate, useTemplate } from "../hooks/use-
 import { usePlaceholderNavigation } from "../hooks/use-placeholder-navigation";
 import { toast } from "sonner";
 import { useTiposEstudio } from "@/modules/configuracion/configuracion-tablas/examenes/tipos-estudio";
-import { Autocomplete } from "@/components/autocomplete";
+import { useLocationsInstitutional } from "@/hooks/use-locations";
+import { Autocomplete, type AutocompleteOption } from "@/components/autocomplete";
 import { parserFacilityRelService } from "@/services/parser-facility-rel.service";
-import { variableMappingService, type VariableMappingItem } from "@/services/variable-mapping.service";
+import { criteriaService, type ParserCriterionVariable, type StructuredCriterion } from "@/services/criteria.service";
+import type { ReportType } from "../types/informe-pred.types";
+
+const VARIABLE_PLACEHOLDER_REGEX = /\{[^{}]+\}|\[\[[^\]]+\]\]/g;
+
+const stripVariablePlaceholdersFromHtml = (html: string): string => {
+    if (!html) return html;
+
+    return html
+        .replace(/<span[^>]*data-variable-chip=["']true["'][^>]*>.*?<\/span>/gis, '')
+    .replace(/<span[^>]*data-criterion-chip=["']true["'][^>]*>.*?<\/span>/gis, '')
+        .replace(VARIABLE_PLACEHOLDER_REGEX, '')
+        .replace(/\s{2,}/g, ' ')
+        .replace(/>\s+</g, '><')
+        .trim();
+};
+
+const hasVariablePlaceholder = (value: string): boolean => {
+    if (!value) return false;
+
+    const regex = new RegExp(VARIABLE_PLACEHOLDER_REGEX.source, 'g');
+    return /data-variable-chip=["']true["']/i.test(value) || /data-criterion-chip=["']true["']/i.test(value) || regex.test(value);
+};
+
+interface StudyTypeVariableItem {
+    key: string;
+    displayName: string;
+    variableName: string;
+    canonicalCode?: string | null;
+    unit?: string | null;
+}
 
 export const CrearInforme = () => {
     const navigate = useNavigate();
@@ -30,17 +61,23 @@ export const CrearInforme = () => {
     const [conclusion, setConclusion] = useState("");
     const [technique, setTechnique] = useState("");
     const [isDefaultReport, setIsDefaultReport] = useState(false);
+    const [reportType, setReportType] = useState<ReportType>('simple');
     const [studyTypeFilter, setStudyTypeFilter] = useState<string>("");
     const [isStudySidebarOpen, setIsStudySidebarOpen] = useState(true);
     const [structuredVariables, setStructuredVariables] = useState("");
     const [criteria, setCriteria] = useState("");
     const [rightMetaTab, setRightMetaTab] = useState<'info' | 'variables' | 'criterios'>('info');
-    const [studyTypeVariables, setStudyTypeVariables] = useState<VariableMappingItem[]>([]);
+    const [studyTypeVariables, setStudyTypeVariables] = useState<StudyTypeVariableItem[]>([]);
+    const [relatedCriteria, setRelatedCriteria] = useState<StructuredCriterion[]>([]);
     const [isLoadingStudyTypeVariables, setIsLoadingStudyTypeVariables] = useState(false);
+    const [isLoadingRelatedCriteria, setIsLoadingRelatedCriteria] = useState(false);
     const [studyTypeVariablesError, setStudyTypeVariablesError] = useState<string>("");
+    const [relatedCriteriaError, setRelatedCriteriaError] = useState<string>("");
     const [variablesSearchTerm, setVariablesSearchTerm] = useState("");
+    const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([]);
+    const [locationsSearchTerm, setLocationsSearchTerm] = useState("");
     const [dragOverEditorField, setDragOverEditorField] = useState<(typeof editorFieldOrder)[number] | null>(null);
-    const draggedVariableNameRef = useRef<string>("");
+    const draggedChipRef = useRef<{ type: 'variable' | 'criterion'; value: string } | null>(null);
 
     // Hook para navegación de placeholders con F3
     const editorFieldOrder = ['technique', 'findings', 'impression', 'conclusion'] as const;
@@ -48,6 +85,21 @@ export const CrearInforme = () => {
     const [activeEditorField, setActiveEditorField] = useState<(typeof editorFieldOrder)[number] | null>(null);
     const currentFieldRef = useRef<(typeof editorFieldOrder)[number] | null>(null);
     const { tiposEstudio } = useTiposEstudio();
+    const { data: locationsData, isLoading: isLoadingLocations } = useLocationsInstitutional();
+
+    const selectedFacilityIds = useMemo<string[]>(() => {
+        if (!Array.isArray(locationsData?.data) || selectedLocationIds.length === 0) {
+            return [] as string[];
+        }
+
+        const selectedLocationsSet = new Set(selectedLocationIds);
+        const facilityIds: string[] = locationsData.data
+            .filter((location: any) => selectedLocationsSet.has(String(location.guid)))
+            .map((location: any) => String(location.facility_id || '').trim())
+            .filter(Boolean);
+
+        return Array.from(new Set(facilityIds));
+    }, [locationsData, selectedLocationIds]);
 
     const handleEditorReady = useCallback((editor: any, fieldName: (typeof editorFieldOrder)[number]) => {
         editorsRef.current[fieldName] = editor;
@@ -67,12 +119,17 @@ export const CrearInforme = () => {
 
     const handleVariableDragStart = (variableName: string) => {
         const normalized = (variableName || '').trim();
-        draggedVariableNameRef.current = normalized;
+        draggedChipRef.current = normalized ? { type: 'variable', value: normalized } : null;
+    };
+
+    const handleCriterionDragStart = (criterionName: string) => {
+        const normalized = (criterionName || '').trim();
+        draggedChipRef.current = normalized ? { type: 'criterion', value: normalized } : null;
     };
 
     const handleVariableDragEnd = () => {
         setDragOverEditorField(null);
-        draggedVariableNameRef.current = '';
+        draggedChipRef.current = null;
     };
 
     const handleEditorDragOver = (e: React.DragEvent, fieldName: (typeof editorFieldOrder)[number]) => {
@@ -86,23 +143,32 @@ export const CrearInforme = () => {
 
     const handleVariableDropInEditor = (e: React.DragEvent, fieldName: (typeof editorFieldOrder)[number]) => {
         e.preventDefault();
-        const variableName = (
-            draggedVariableNameRef.current ||
-            e.dataTransfer.getData('application/x-variable-name') ||
-            e.dataTransfer.getData('text/plain') ||
+        const editor = editorsRef.current[fieldName] as any;
+        const draggedChip = draggedChipRef.current;
+        const draggedCriterionName = e.dataTransfer.getData('application/x-criterion-name').trim();
+        const draggedVariableName = e.dataTransfer.getData('application/x-variable-name').trim();
+        const fallbackText = e.dataTransfer.getData('text/plain').trim();
+
+        const chipType = draggedChip?.type || (draggedCriterionName ? 'criterion' : 'variable');
+        const chipValue = (
+            draggedChip?.value ||
+            draggedCriterionName ||
+            draggedVariableName ||
+            fallbackText ||
             ''
         ).trim();
-        const editor = editorsRef.current[fieldName] as any;
 
-        if (editor && variableName) {
+        if (editor && chipValue) {
             editor
                 .chain()
                 .focus()
                 .insertContent([
                     {
-                        type: 'variableChip',
+                        type: chipType === 'criterion' ? 'criterionChip' : 'variableChip',
                         attrs: {
-                            variableName,
+                            ...(chipType === 'criterion'
+                                ? { criterionName: chipValue }
+                                : { variableName: chipValue }),
                         },
                     },
                     {
@@ -114,6 +180,7 @@ export const CrearInforme = () => {
         }
 
         setDragOverEditorField(null);
+            draggedChipRef.current = null;
     };
 
     // Efecto para cargar los datos cuando estamos en modo edición
@@ -126,8 +193,10 @@ export const CrearInforme = () => {
             setConclusion(template.conclusion || "");
             setTechnique(template.technique || "");
             setStudyTypeFilter(template.study_type_id || "");
+            setReportType((template.report_type as ReportType) || 'simple');
             setStructuredVariables((template as any).structured_variables || "");
             setCriteria((template as any).criteria || "");
+            setSelectedLocationIds(Array.isArray((template as any).location_ids) ? (template as any).location_ids : []);
         }
     }, [templateData, isEditMode]);
 
@@ -146,78 +215,123 @@ export const CrearInforme = () => {
     const createTemplateMutation = useCreateTemplate();
     const updateTemplateMutation = useUpdateTemplate();
 
-    // Cargar variables de parser relacionadas al study type seleccionado
+    // Cargar variables y criterios relacionados por study type + facility/location
     useEffect(() => {
-        const loadStudyTypeVariables = async () => {
+        const loadRelatedData = async () => {
             if (!studyTypeFilter) {
                 setStudyTypeVariables([]);
+                setRelatedCriteria([]);
                 setStudyTypeVariablesError("");
+                setRelatedCriteriaError("");
                 return;
             }
 
             setIsLoadingStudyTypeVariables(true);
+            setIsLoadingRelatedCriteria(true);
             setStudyTypeVariablesError("");
+            setRelatedCriteriaError("");
 
             try {
-                const [parsers, relations] = await Promise.all([
-                    parserFacilityRelService.listParsers(),
+                const [studytypeRelations, parserFacilityRelations] = await Promise.all([
                     parserFacilityRelService.listStudytypeRelations(),
+                    parserFacilityRelService.listRelations(),
                 ]);
 
                 const parserIdsForStudyType = new Set(
-                    relations
+                    studytypeRelations
                         .filter((rel) => String(rel.studytype_guid) === String(studyTypeFilter))
                         .map((rel) => rel.parser_manifest_id)
                 );
 
-                const parserFamilies = Array.from(
-                    new Set(
-                        parsers
-                            .filter((parser) => parserIdsForStudyType.has(parser.id))
-                            .map((parser) => parser.parser_family)
-                            .filter(Boolean)
-                    )
+                const parserIdsForFacilities = new Set(
+                    parserFacilityRelations
+                        .filter((rel) => selectedFacilityIds.includes(String(rel.facility_guid)))
+                        .map((rel) => rel.parser_manifest_id)
                 );
 
-                if (parserFamilies.length === 0) {
+                let parserIds = Array.from(parserIdsForStudyType);
+
+                if (selectedFacilityIds.length > 0) {
+                    const parserIdsMatchingFacilities = parserIds.filter((parserId) =>
+                        parserIdsForFacilities.has(parserId)
+                    );
+
+                    if (parserIdsMatchingFacilities.length > 0) {
+                        parserIds = parserIdsMatchingFacilities;
+                    }
+                }
+
+                if (parserIds.length === 0) {
                     setStudyTypeVariables([]);
+                    setRelatedCriteria([]);
                     return;
                 }
 
-                const mappingsResponses = await Promise.all(
-                    parserFamilies.map((family) => variableMappingService.listMappings(family, "generic"))
-                );
+                const [parserVariablesResponses, criteriaResponses] = await Promise.all([
+                    Promise.all(parserIds.map((parserId) => criteriaService.listParserVariables(parserId))),
+                    Promise.all(parserIds.map((parserId) => criteriaService.list(parserId, false))),
+                ]);
 
-                const allItems = mappingsResponses.flatMap((response) => response.items || []);
+                const allItems = parserVariablesResponses.flatMap((items) => items || []);
+                const allCriteria = criteriaResponses.flatMap((items) => items || []);
 
-                const uniqueBySignature = new Map<string, VariableMappingItem>();
+                const uniqueBySignature = new Map<string, StudyTypeVariableItem>();
                 allItems.forEach((item) => {
-                    const key = (item.canonical_name || "").trim().toLowerCase();
+                    const typedItem = item as ParserCriterionVariable;
+                    const variableName = (typedItem.variable_name || typedItem.variable_key || '').trim();
+                    const signature = (
+                        typedItem.semantic_signature ||
+                        typedItem.variable_key ||
+                        variableName
+                    ).trim().toLowerCase();
 
-                    if (key && !uniqueBySignature.has(key)) {
-                        uniqueBySignature.set(key, item);
+                    if (signature && !uniqueBySignature.has(signature)) {
+                        uniqueBySignature.set(signature, {
+                            key: typedItem.variable_key || variableName,
+                            displayName: variableName,
+                            variableName,
+                            canonicalCode: typedItem.canonical_code,
+                            unit: typedItem.unit,
+                        });
                     }
                 });
 
                 const variables = Array.from(uniqueBySignature.values()).sort((a, b) => {
-                    const nameA = (a.canonical_name || "").toLowerCase();
-                    const nameB = (b.canonical_name || "").toLowerCase();
+                    const nameA = (a.displayName || "").toLowerCase();
+                    const nameB = (b.displayName || "").toLowerCase();
                     return nameA.localeCompare(nameB);
                 });
 
+                const uniqueCriteria = new Map<number, StructuredCriterion>();
+                allCriteria
+                    .filter((criterion) => criterion.active !== false)
+                    .forEach((criterion) => {
+                        uniqueCriteria.set(criterion.id, criterion);
+                    });
+
+                const criteriaList = Array.from(uniqueCriteria.values()).sort(
+                    (a, b) => (a.priority || 9999) - (b.priority || 9999)
+                );
+
                 setStudyTypeVariables(variables);
+                setRelatedCriteria(criteriaList);
             } catch (error: any) {
                 setStudyTypeVariables([]);
+                setRelatedCriteria([]);
                 setStudyTypeVariablesError(
                     error?.response?.data?.error || "No se pudieron cargar variables relacionadas al tipo de estudio"
                 );
+                setRelatedCriteriaError(
+                    error?.response?.data?.error || "No se pudieron cargar criterios relacionados al tipo de estudio"
+                );
             } finally {
                 setIsLoadingStudyTypeVariables(false);
+                setIsLoadingRelatedCriteria(false);
             }
         };
 
-        loadStudyTypeVariables();
-    }, [studyTypeFilter]);
+        loadRelatedData();
+    }, [studyTypeFilter, reportType, selectedFacilityIds]);
 
     // Handler para guardar template
     const handleSaveTemplate = async () => {
@@ -229,15 +343,28 @@ export const CrearInforme = () => {
             toast.error("Debe seleccionar un tipo de estudio");
             return;
         }
+        if (reportType === 'inteligente' && selectedLocationIds.length === 0) {
+            toast.error("Debe vincular al menos una location para informes inteligentes");
+            return;
+        }
 
         try {
+            const sanitizedTechnique = reportType === 'simple' ? stripVariablePlaceholdersFromHtml(technique) : technique;
+            const sanitizedFindings = reportType === 'simple' ? stripVariablePlaceholdersFromHtml(findings) : findings;
+            const sanitizedImpression = reportType === 'simple' ? stripVariablePlaceholdersFromHtml(impression) : impression;
+            const sanitizedConclusion = reportType === 'simple' ? stripVariablePlaceholdersFromHtml(conclusion) : conclusion;
+
             const templatePayload = {
                 title: title.trim(),
                 study_type_id: studyTypeFilter,
-                findings: findings.trim() || undefined,
-                technique: technique.trim() || undefined,
-                impression: impression.trim() || undefined,
-                conclusion: conclusion.trim() || undefined,
+                findings: sanitizedFindings?.trim() || undefined,
+                technique: sanitizedTechnique?.trim() || undefined,
+                impression: sanitizedImpression?.trim() || undefined,
+                conclusion: sanitizedConclusion?.trim() || undefined,
+                report_type: reportType,
+                location_ids: reportType === 'inteligente' ? selectedLocationIds : [],
+                structured_variables: reportType === 'simple' ? '' : structuredVariables,
+                criteria: reportType === 'simple' ? '' : criteria,
                 is_default: isDefaultReport
             };
 
@@ -247,6 +374,17 @@ export const CrearInforme = () => {
                     id,
                     data: templatePayload
                 });
+
+                if (reportType === 'simple') {
+                    setTechnique(sanitizedTechnique || '');
+                    setFindings(sanitizedFindings || '');
+                    setImpression(sanitizedImpression || '');
+                    setConclusion(sanitizedConclusion || '');
+                    setStructuredVariables('');
+                    setCriteria('');
+                    setSelectedLocationIds([]);
+                }
+
                 toast.success("Plantilla actualizada exitosamente");
             } else {
                 // Modo creación: crear nueva plantilla
@@ -277,13 +415,65 @@ export const CrearInforme = () => {
         }));
     }, [tiposEstudio]);
 
+    const reportTypeOptions = useMemo(() => ([
+        { value: 'simple', label: 'Simple' },
+        { value: 'inteligente', label: 'Inteligente' },
+    ]), []);
+
     const filteredStudyTypeVariables = useMemo(() => {
         const term = variablesSearchTerm.trim().toLowerCase();
         if (!term) return studyTypeVariables;
         return studyTypeVariables.filter((variable) =>
-            (variable.canonical_name || '').toLowerCase().includes(term)
+            [variable.displayName, variable.key, variable.canonicalCode || '']
+                .join(' ')
+                .toLowerCase()
+                .includes(term)
         );
     }, [studyTypeVariables, variablesSearchTerm]);
+
+    const locationOptions = useMemo<AutocompleteOption[]>(() => {
+        if (!Array.isArray(locationsData?.data)) return [];
+        return locationsData.data.map((location: any) => ({
+            value: location.guid,
+            label: location.description || location.name || location.guid,
+        }));
+    }, [locationsData]);
+
+    const filteredLocationOptions = useMemo(() => {
+        const term = locationsSearchTerm.trim().toLowerCase();
+        if (!term) return locationOptions;
+        return locationOptions.filter((location: AutocompleteOption) =>
+            (location.label || '').toLowerCase().includes(term)
+        );
+    }, [locationOptions, locationsSearchTerm]);
+
+    const toggleLocation = (locationId: string) => {
+        setSelectedLocationIds((prev) =>
+            prev.includes(locationId)
+                ? prev.filter((id) => id !== locationId)
+                : [...prev, locationId]
+        );
+    };
+
+    const showStructuredTabs = reportType !== 'simple';
+
+    const hasPendingSimpleCleanup = useMemo(() => {
+        if (reportType !== 'simple') {
+            return false;
+        }
+
+        const hasVariablesInEditors = [technique, findings, impression, conclusion].some((field) =>
+            hasVariablePlaceholder(field || '')
+        );
+
+        return hasVariablesInEditors || Boolean(structuredVariables.trim()) || Boolean(criteria.trim());
+    }, [reportType, technique, findings, impression, conclusion, structuredVariables, criteria]);
+
+    useEffect(() => {
+        if (!showStructuredTabs && rightMetaTab !== 'info') {
+            setRightMetaTab('info');
+        }
+    }, [showStructuredTabs, rightMetaTab]);
 
     // Mostrar loader mientras se cargan los datos en modo edición
     if (isEditMode && isLoadingTemplate) {
@@ -300,7 +490,7 @@ export const CrearInforme = () => {
     }
 
     return (
-        <MainLayout isOverflow={false}>
+        <MainLayout>
             <div className="h-full min-h-0 bg-gray-50 dark:bg-[#0f1218] rounded-xl p-2 dark:text-gray-100 flex flex-col overflow-hidden">
                 <div className="flex justify-between items-center mb-3 shrink-0">
                     <div className="relative bg-white dark:bg-[#151922] rounded-lg p-3 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 w-full">
@@ -391,6 +581,7 @@ export const CrearInforme = () => {
                                         onDragLeave={handleEditorDragLeave}
                                         onDrop={(e) => handleVariableDropInEditor(e, 'technique')}
                                         showToolbar={false}
+                                        variableChipTone={hasPendingSimpleCleanup ? 'warning' : 'default'}
                                     />
                                 </div>
                             </div>
@@ -418,6 +609,7 @@ export const CrearInforme = () => {
                                         onDragLeave={handleEditorDragLeave}
                                         onDrop={(e) => handleVariableDropInEditor(e, 'findings')}
                                         showToolbar={false}
+                                        variableChipTone={hasPendingSimpleCleanup ? 'warning' : 'default'}
                                     />
                                 </div>
                             </div>
@@ -445,6 +637,7 @@ export const CrearInforme = () => {
                                         onDragLeave={handleEditorDragLeave}
                                         onDrop={(e) => handleVariableDropInEditor(e, 'impression')}
                                         showToolbar={false}
+                                        variableChipTone={hasPendingSimpleCleanup ? 'warning' : 'default'}
                                     />
                                 </div>
                             </div>
@@ -472,6 +665,7 @@ export const CrearInforme = () => {
                                         onDragLeave={handleEditorDragLeave}
                                         onDrop={(e) => handleVariableDropInEditor(e, 'conclusion')}
                                         showToolbar={false}
+                                        variableChipTone={hasPendingSimpleCleanup ? 'warning' : 'default'}
                                     />
                                 </div>
                             </div>
@@ -495,7 +689,7 @@ export const CrearInforme = () => {
                             <div className="w-full lg:w-[360px] shrink-0 h-full overflow-y-auto table-scrollbar-purple">
                                 <Card className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden p-0">
                                     <div className="bg-gray-100 dark:bg-[#1e2430] px-2 py-2 border-b border-gray-200 dark:border-gray-700">
-                                        <div className="grid grid-cols-3 gap-1">
+                                        <div className={`grid gap-1 ${showStructuredTabs ? 'grid-cols-3' : 'grid-cols-1'}`}>
                                             <button
                                                 type="button"
                                                 onClick={() => setRightMetaTab('info')}
@@ -506,26 +700,30 @@ export const CrearInforme = () => {
                                             >
                                                 Informacion general
                                             </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setRightMetaTab('variables')}
-                                                className={`px-2 py-1.5 rounded-md text-xs font-semibold transition-colors ${rightMetaTab === 'variables'
-                                                        ? 'bg-white dark:bg-[#151922] text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
-                                                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#273043]'
-                                                    }`}
-                                            >
-                                                Variables
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setRightMetaTab('criterios')}
-                                                className={`px-2 py-1.5 rounded-md text-xs font-semibold transition-colors ${rightMetaTab === 'criterios'
-                                                        ? 'bg-white dark:bg-[#151922] text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
-                                                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#273043]'
-                                                    }`}
-                                            >
-                                                Criterios
-                                            </button>
+                                            {showStructuredTabs && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setRightMetaTab('variables')}
+                                                        className={`px-2 py-1.5 rounded-md text-xs font-semibold transition-colors ${rightMetaTab === 'variables'
+                                                                ? 'bg-white dark:bg-[#151922] text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
+                                                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#273043]'
+                                                            }`}
+                                                    >
+                                                        Variables
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setRightMetaTab('criterios')}
+                                                        className={`px-2 py-1.5 rounded-md text-xs font-semibold transition-colors ${rightMetaTab === 'criterios'
+                                                                ? 'bg-white dark:bg-[#151922] text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
+                                                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#273043]'
+                                                            }`}
+                                                    >
+                                                        Criterios
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
 
@@ -557,6 +755,74 @@ export const CrearInforme = () => {
                                                 />
                                             </div>
 
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
+                                                    Tipo de informe:
+                                                </label>
+                                                <Autocomplete
+                                                    options={reportTypeOptions}
+                                                    value={reportType}
+                                                    onValueChange={(value) => setReportType((value || 'simple') as ReportType)}
+                                                    placeholder="Seleccionar tipo de informe"
+                                                    emptyMessage="No se encontraron tipos de informe."
+                                                    searchPlaceholder="Buscar tipo de informe..."
+                                                />
+                                            </div>
+
+                                            {reportType === 'inteligente' && (
+                                                <div className="space-y-2">
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Locations vinculadas:
+                                                    </label>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                        Seleccione una o mas locations para este informe inteligente.
+                                                    </p>
+
+                                                    <Input
+                                                        value={locationsSearchTerm}
+                                                        onChange={(e) => setLocationsSearchTerm(e.target.value)}
+                                                        placeholder="Buscar location..."
+                                                    />
+
+                                                    <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0f1218] p-2 max-h-[220px] overflow-y-auto table-scrollbar-purple space-y-1">
+                                                        {isLoadingLocations && (
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400">Cargando locations...</p>
+                                                        )}
+
+                                                        {!isLoadingLocations && filteredLocationOptions.length === 0 && (
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400">No se encontraron locations.</p>
+                                                        )}
+
+                                                        {!isLoadingLocations && filteredLocationOptions.map((location) => (
+                                                            <label
+                                                                key={location.value}
+                                                                className="flex items-center gap-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#151922] px-2 py-1.5 cursor-pointer"
+                                                            >
+                                                                <Checkbox
+                                                                    checked={selectedLocationIds.includes(location.value)}
+                                                                    onCheckedChange={() => toggleLocation(location.value)}
+                                                                />
+                                                                <span className="text-xs text-gray-700 dark:text-gray-200">{location.label}</span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+
+                                                    {selectedLocationIds.length > 0 && (
+                                                        <p className="text-xs text-brand-purple">
+                                                            {selectedLocationIds.length} location(es) seleccionada(s)
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {hasPendingSimpleCleanup && (
+                                                <div className="rounded-md border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20 p-2">
+                                                    <p className="text-xs text-red-700 dark:text-red-300 font-medium">
+                                                        Esta plantilla es Simple: las variables y criterios existentes se eliminaran al guardar.
+                                                    </p>
+                                                </div>
+                                            )}
+
                                             <div className="flex items-center space-x-2">
                                                 <Checkbox
                                                     id="default-report"
@@ -573,7 +839,7 @@ export const CrearInforme = () => {
                                         </div>
                                     )}
 
-                                    {rightMetaTab === 'variables' && (
+                                    {showStructuredTabs && rightMetaTab === 'variables' && (
                                         <div className="p-3">
                                             <div className="mb-3">
                                                 <textarea
@@ -586,7 +852,7 @@ export const CrearInforme = () => {
 
                                             <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0f1218] p-2">
                                                 <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                                    Variables del parser relacionadas al tipo de estudio
+                                                    Variables del parser asociado al tipo de estudio
                                                 </p>
 
                                                 <div className="mb-2">
@@ -627,11 +893,11 @@ export const CrearInforme = () => {
                                                     <div className="max-h-[280px] overflow-y-auto table-scrollbar-purple space-y-1 pr-1">
                                                         {filteredStudyTypeVariables.map((variable) => (
                                                             <div
-                                                                key={variable.canonical_name}
+                                                                key={variable.key}
                                                                 className="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#151922] p-2 cursor-grab active:cursor-grabbing"
                                                                 draggable
                                                                 onDragStart={(e) => {
-                                                                    const variableName = variable.canonical_name || "";
+                                                                    const variableName = variable.variableName || variable.displayName || "";
                                                                     handleVariableDragStart(variableName);
                                                                     e.dataTransfer.setData('application/x-variable-name', variableName);
                                                                     e.dataTransfer.setData('text/plain', variableName);
@@ -640,8 +906,13 @@ export const CrearInforme = () => {
                                                                 onDragEnd={handleVariableDragEnd}
                                                             >
                                                                 <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">
-                                                                    {variable.canonical_name}
+                                                                    {variable.displayName}
                                                                 </p>
+                                                                {(variable.canonicalCode || variable.unit) && (
+                                                                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                                                        {[variable.canonicalCode, variable.unit].filter(Boolean).join(' · ')}
+                                                                    </p>
+                                                                )}
                                                             </div>
                                                         ))}
                                                     </div>
@@ -650,7 +921,7 @@ export const CrearInforme = () => {
                                         </div>
                                     )}
 
-                                    {rightMetaTab === 'criterios' && (
+                                    {showStructuredTabs && rightMetaTab === 'criterios' && (
                                         <div className="p-3">
                                             <textarea
                                                 value={criteria}
@@ -658,6 +929,59 @@ export const CrearInforme = () => {
                                                 placeholder="Agrega criterios, reglas o validaciones para el uso de esta plantilla..."
                                                 className="w-full min-h-[120px] p-3 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-[#1e2430] text-gray-800 dark:text-gray-200 resize-y focus:outline-none focus:ring-2 focus:ring-brand-purple/40"
                                             />
+
+                                            <div className="mt-3 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0f1218] p-2">
+                                                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                                    Criterios del parser asociado al tipo de estudio
+                                                </p>
+
+                                                {!studyTypeFilter && (
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                        Selecciona un tipo de estudio en Informacion general para listar criterios.
+                                                    </p>
+                                                )}
+
+                                                {studyTypeFilter && isLoadingRelatedCriteria && (
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">Cargando criterios...</p>
+                                                )}
+
+                                                {studyTypeFilter && !isLoadingRelatedCriteria && relatedCriteriaError && (
+                                                    <p className="text-xs text-red-500">{relatedCriteriaError}</p>
+                                                )}
+
+                                                {studyTypeFilter && !isLoadingRelatedCriteria && !relatedCriteriaError && relatedCriteria.length === 0 && (
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                        No hay criterios relacionados para esta seleccion.
+                                                    </p>
+                                                )}
+
+                                                {studyTypeFilter && !isLoadingRelatedCriteria && !relatedCriteriaError && relatedCriteria.length > 0 && (
+                                                    <div className="max-h-[240px] overflow-y-auto table-scrollbar-purple space-y-1 pr-1">
+                                                        {relatedCriteria.map((criterion) => (
+                                                            <div
+                                                                key={criterion.id}
+                                                                className="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#151922] p-2 cursor-grab active:cursor-grabbing"
+                                                                draggable
+                                                                onDragStart={(e) => {
+                                                                    const criterionName = criterion.criterion_name || "";
+                                                                    handleCriterionDragStart(criterionName);
+                                                                    e.dataTransfer.setData('application/x-criterion-name', criterionName);
+                                                                    e.dataTransfer.setData('text/plain', criterionName);
+                                                                    e.dataTransfer.effectAllowed = 'copy';
+                                                                }}
+                                                                onDragEnd={handleVariableDragEnd}
+                                                            >
+                                                                <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">
+                                                                    {criterion.criterion_name}
+                                                                </p>
+                                                                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                                                    Prioridad: {criterion.priority}
+                                                                </p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </Card>

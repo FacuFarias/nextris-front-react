@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const locationFormSchema = z.object({
     name: z.string().min(1, "La descripción es requerida"),
+    code: z.string().optional(),
     facility_id: z.string().min(1, "La facility es requerida"),
     status: z.enum(["Active", "Inactive"]).optional(),
     address: z.string().optional(),

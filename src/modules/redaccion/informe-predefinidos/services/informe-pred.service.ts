@@ -16,7 +16,8 @@ import type {
 export const getTemplates = async (
     studyTypeId?: string,
     modalityId?: string,
-    bodypartId?: string
+    bodypartId?: string,
+    reportType?: string
 ): Promise<TemplateListResponse> => {
     try {
         const params = new URLSearchParams();
@@ -24,6 +25,7 @@ export const getTemplates = async (
         if (studyTypeId) params.append('study_type_id', studyTypeId);
         if (modalityId) params.append('modality_id', modalityId);
         if (bodypartId) params.append('bodypart_id', bodypartId);
+        if (reportType) params.append('report_type', reportType);
 
         const url = params.toString()
             ? `/templates?${params.toString()}`

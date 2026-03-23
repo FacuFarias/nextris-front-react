@@ -642,20 +642,32 @@ Authorization: Bearer <JWT_TOKEN>
 
 ---
 
-### 11. GET /institutional/locations/{location_id}/physicians
-Obtiene médicos solicitantes filtrados por ubicación específica.
+### 11. GET /institutional/physicians
+### 11b. GET /institutional/locations/{location_id}/physicians
+
+Obtiene médicos solicitantes del sistema, con opción de filtrar por ubicación específica.
 
 #### Description
-Retrieves a list of requesting physicians from the `isrequestingphysician` table filtered by location. These are physicians designated as requesting physicians for specific locations.
+Retrieves a list of requesting physicians from the `isrequestingphysician` table. Supports two modes:
+1. **Global mode** (`/institutional/physicians`): Returns ALL physicians from all locations
+2. **Filtered mode** (`/institutional/locations/{location_id}/physicians`): Returns physicians filtered by specific location
 
-**Source Table:** `nextris.isrequestingphysician` (WHERE location_id = {location_id})
-**Use Case:** When you need location-specific requesting physicians for appointment creation or location-based filtering. This table maintains physician-location relationships.
+**Source Table:** `nextris.isrequestingphysician`
+**Use Case:** 
+- Use global endpoint for configuration screens that need to show all physicians
+- Use filtered endpoint for location-specific appointment creation or workflows
 
 #### Parameters
 **Path Parameters:**
-- `location_id` (required): UUID de la ubicación
+- `location_id` (optional): UUID de la ubicación. Si no se proporciona, retorna todos los médicos.
 
-#### Request
+#### Request - Global (todos los médicos)
+```http
+GET /api/institutional/physicians
+Authorization: Bearer <JWT_TOKEN>
+```
+
+#### Request - Filtered (por ubicación)
 ```http
 GET /api/institutional/locations/a1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o6/physicians
 Authorization: Bearer <JWT_TOKEN>
@@ -670,21 +682,101 @@ Authorization: Bearer <JWT_TOKEN>
   "data": [
     {
       "guid": "584f6b5b-9eb6-438d-a63f-920a12adbfe9",
-      "description": "Dr. Juan Pérez"
+      "description": "Dr. Juan Pérez",
+      "location_id": "a1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o6",
+      "location_name": "Consultorio Principal"
     },
     {
       "guid": "7cbdd185-2efc-4a61-bff8-0eac3f715b20",
-      "description": "Dra. María García"
+      "description": "Dra. María García",
+      "location_id": null,
+      "location_name": null
     }
   ]
 }
 ```
 
+**Notas:**
+- **Cambio importante**: Ahora hay dos rutas disponibles para mayor flexibilidad
+- La ruta global `/institutional/physicians` retorna todos los médicos con información de ubicación (si está asignada)
+- La ruta filtrada mantiene compatibilidad con código existente
+- Los campos `location_id` y `location_name` pueden ser `null` si el médico no tiene ubicación asignada
+
 #### Errors
 ```json
 {
   "success": false,
-  "message": "El parámetro location_id es obligatorio"
+  "message": "Error al obtener médicos"
+}
+```
+
+---
+
+### 12. GET /institutional/health-insurances
+### 12b. GET /institutional/locations/{location_id}/health-insurances
+
+Obtiene obras sociales/seguros de salud del sistema, con opción de filtrar por ubicación específica.
+
+#### Description
+Retrieves a list of health insurances from the `ispricelist` table. Supports two modes:
+1. **Global mode** (`/institutional/health-insurances`): Returns ALL health insurances from all locations
+2. **Filtered mode** (`/institutional/locations/{location_id}/health-insurances`): Returns insurances filtered by specific location
+
+**Source Table:** `nextris.ispricelist`
+**Use Case:** 
+- Use global endpoint for configuration screens that need to show all insurances
+- Use filtered endpoint for location-specific admission or billing workflows
+
+#### Parameters
+**Path Parameters:**
+- `location_id` (optional): UUID de la ubicación. Si no se proporciona, retorna todas las obras sociales.
+
+#### Request - Global (todas las obras sociales)
+```http
+GET /api/institutional/health-insurances
+Authorization: Bearer <JWT_TOKEN>
+```
+
+#### Request - Filtered (por ubicación)
+```http
+GET /api/institutional/locations/a1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o6/health-insurances
+Authorization: Bearer <JWT_TOKEN>
+```
+
+#### Response
+**Status Code:** 200 OK
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "guid": "f3e2d1c0-b9a8-4756-8901-234567890abc",
+      "description": "OSDE",
+      "location_id": "a1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o6",
+      "location_name": "Sede Central"
+    },
+    {
+      "guid": "a1b2c3d4-e5f6-4789-0123-456789abcdef",
+      "description": "Swiss Medical",
+      "location_id": null,
+      "location_name": null
+    }
+  ]
+}
+```
+
+**Notas:**
+- **Cambio importante**: Ahora hay dos rutas disponibles para mayor flexibilidad
+- La ruta global `/institutional/health-insurances` retorna todas las obras sociales con información de ubicación (si está asignada)
+- La ruta filtrada mantiene compatibilidad con código existente
+- Los campos `location_id` y `location_name` pueden ser `null` si la obra social no tiene ubicación asignada
+
+#### Errors
+```json
+{
+  "success": false,
+  "message": "Error al obtener obras sociales"
 }
 ```
 
@@ -695,11 +787,13 @@ Authorization: Bearer <JWT_TOKEN>
 | Endpoint | Source Table | Scope | Use Case |
 |----------|-------------|-------|----------|
 | `GET /users_physician` | `nextris.tbuser` | System-wide | All physicians in the system |
+| `GET /institutional/physicians` | `nextris.isrequestingphysician` | System-wide | All requesting physicians (NEW) |
 | `GET /institutional/locations/{id}/physicians` | `nextris.isrequestingphysician` | Location-specific | Requesting physicians per location |
 
 **Key Differences:**
 - **Users Physicians (`/users_physician`)**: System-wide physician list from `tbuser` table. Returns physicians with "Medico" role.
-- **Requesting Physicians (`/institutional/locations/{id}/physicians`)**: Location-specific physicians from `isrequestingphysician` table. Returns physicians designated for specific locations.
+- **Requesting Physicians Global (`/institutional/physicians`)**: All requesting physicians from `isrequestingphysician` table with location info.
+- **Requesting Physicians Filtered (`/institutional/locations/{id}/physicians`)**: Location-specific physicians from `isrequestingphysician` table.
 
 ## Data Types
 

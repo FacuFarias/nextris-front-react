@@ -3,12 +3,12 @@ import { locationsService } from '../services/locations.service';
 import type { LocationFormData } from '../types/locations.types';
 import { locationsKeys } from '../constants/query-keys';
 
-export const useLocations = () => {
+export const useLocations = (includeInactive: boolean = false) => {
     const queryClient = useQueryClient();
 
     const { data: locations, isLoading, error } = useQuery({
-        queryKey: locationsKeys.all,
-        queryFn: locationsService.getAll,
+        queryKey: locationsKeys.list(includeInactive),
+        queryFn: () => locationsService.getAll(includeInactive),
         staleTime: 10 * 60 * 1000, // 10 minutos - datos considerados frescos
         gcTime: 10 * 60 * 1000, // 10 minutos - mantener en caché
     });
@@ -28,6 +28,20 @@ export const useLocations = () => {
         },
     });
 
+    const activateMutation = useMutation({
+        mutationFn: locationsService.activate,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: locationsKeys.all });
+        },
+    });
+
+    const deactivateMutation = useMutation({
+        mutationFn: locationsService.deactivate,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: locationsKeys.all });
+        },
+    });
+
     /*   const deleteMutation = useMutation({
           mutationFn: locationsService.delete,
           onSuccess: () => {
@@ -41,6 +55,8 @@ export const useLocations = () => {
         error,
         createLocation: createMutation.mutate,
         updateLocation: updateMutation.mutate,
+        activateLocation: activateMutation.mutate,
+        deactivateLocation: deactivateMutation.mutate,
 /*         deleteLocation: deleteMutation.mutate,
  */    };
 };

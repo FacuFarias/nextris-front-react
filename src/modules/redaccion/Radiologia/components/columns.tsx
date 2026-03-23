@@ -21,7 +21,7 @@ export const getPatientNameColumn = (
     filterable: true,
     render: (value: string, informe: Informes) => (
         <div className="flex items-center gap-2">
-            {informe.blocked_by && informe.blocked_by_name && (
+            {informe.blocked_by && (
                 <Tooltip>
                     <TooltipTrigger asChild>
                         {isAdmin ? (
@@ -42,7 +42,7 @@ export const getPatientNameColumn = (
                         )}
                     </TooltipTrigger>
                     <TooltipContent>
-                        <p>Bloqueado por: <strong>{informe.blocked_by_name}</strong></p>
+                        <p>Bloqueado por: <strong>{informe.blocked_by_name || 'otro usuario'}</strong></p>
                         {isAdmin && <p className="text-xs opacity-75 mt-0.5">Click para desbloquear</p>}
                     </TooltipContent>
                 </Tooltip>

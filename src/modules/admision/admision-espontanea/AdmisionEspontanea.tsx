@@ -35,7 +35,7 @@ export const AdmisionEspontanea = () => {
     const debouncedSearch = useDebounce(searchTerm, 500);
     const { mutate: fetchPacientesDireccion, data: pacientesData, isPending } = usePacienteDireccion();
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(8);
+    const [pageSize, setPageSize] = useState(20);
     const tabsListRef = useRef<HTMLDivElement>(null)
     const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
     const [indicator, setIndicator] = useState({ left: 0, width: 0 })
@@ -118,10 +118,10 @@ export const AdmisionEspontanea = () => {
 
     return (
         <MainLayout>
-            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10 flex flex-col flex-1 min-h-0 overflow-hidden">
                 {/* Header con Tabs integrados */}
-                <div className="mb-6">
-                    <div className="flex items-center gap-3 mb-4">
+                <div className="flex flex-col flex-1 min-h-0">
+                    <div className="flex items-center gap-3 mb-4 admission-soft-enter">
                         <div className="bg-brand-purple p-2.5 rounded-lg">
                             <Calendar className="w-6 h-6 text-white" />
                         </div>
@@ -129,7 +129,7 @@ export const AdmisionEspontanea = () => {
                     </div>
 
                     {/* Tabs modernos */}
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col flex-1 min-h-0">
                         <div className="relative shrink-0">
                             <TabsList
                                 ref={tabsListRef}
@@ -175,30 +175,26 @@ export const AdmisionEspontanea = () => {
                         </div>
 
                         {/* Tab Content - Paciente */}
-                        <TabsContent value="paciente" className="mt-6 space-y-4">
+                        <TabsContent value="paciente" className="mt-6 space-y-4 admission-soft-enter admission-soft-enter-delay-1 flex flex-col flex-1 min-h-0 overflow-hidden">
                             {/* Selector de Dirección */}
-                            <DireccionSelector
-                                selectedDireccion={selectedDireccion}
-                                onDireccionChange={handleDireccionChange}
-                                isPending={isPending}
-                                isRow={true}
-                            />
+                            <div className="admission-soft-enter admission-soft-enter-delay-1">
+                                <DireccionSelector
+                                    selectedDireccion={selectedDireccion}
+                                    onDireccionChange={handleDireccionChange}
+                                    isPending={isPending}
+                                    isRow={true}
+                                />
+                            </div>
 
-                            {/* Barra de búsqueda */}
+                            {/* Barra superior: búsqueda + acciones */}
                             {selectedDireccion && (
-                                <div className="w-full">
+                                <div className="w-full flex flex-col lg:flex-row items-stretch lg:items-center gap-3 admission-soft-enter admission-soft-enter-delay-2">
                                     <InputSearch
                                         searchTerm={searchTerm}
                                         setSearchTerm={setSearchTerm}
                                         placeholder="Buscar por paciente, medico, médico y equipo..."
                                     />
-                                </div>
-                            )}
-
-                            {/* Tabla de pacientes */}
-                            <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 p-4">
-                                <div className="w-full flex justify-end">
-                                    <div className="flex gap-2">
+                                    <div className="flex justify-end gap-2 lg:shrink-0">
                                         {selectedPatient && (
                                             <PrimaryButton onClick={() => setActiveTab("examen")}>
                                                 <FileCheck className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
@@ -211,7 +207,10 @@ export const AdmisionEspontanea = () => {
                                         </PrimaryButton>
                                     </div>
                                 </div>
+                            )}
 
+                            {/* Tabla de pacientes */}
+                            <div className="admission-soft-enter admission-soft-enter-delay-3 flex-1 min-h-0 overflow-hidden">
                                 {isPending ? (
                                     <div className='flex justify-center items-center h-40'>
                                         <Loader2 className="h-8 w-8 animate-spin text-brand-purple" />
@@ -237,6 +236,10 @@ export const AdmisionEspontanea = () => {
                                             total: Array.isArray(pacientesData?.data) ? pacientesData.data.length : 0,
                                         }}
                                         onPaginationChange={handlePaginationChange}
+                                        stickyPagination
+                                        compactSpacing
+                                        preserveTableHeight
+                                        maxHeight="calc(100% - 8%)"
                                         emptyMessage="Seleccione una dirección para ver los pacientes asociados."
                                     />
                                 )}

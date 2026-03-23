@@ -19,11 +19,12 @@ import type { CreateTemplateRequest, UpdateTemplateRequest } from '../types/info
 export const useTemplates = (
     studyTypeId?: string,
     modalityId?: string,
-    bodypartId?: string
+    bodypartId?: string,
+    reportType?: string
 ) => {
     return useQuery({
-        queryKey: ['templates', studyTypeId, modalityId, bodypartId],
-        queryFn: () => getTemplates(studyTypeId, modalityId, bodypartId),
+        queryKey: ['templates', studyTypeId, modalityId, bodypartId, reportType],
+        queryFn: () => getTemplates(studyTypeId, modalityId, bodypartId, reportType),
         staleTime: 5 * 60 * 1000, // 5 minutos
     });
 };

@@ -4,18 +4,30 @@ import { useState } from "react";
 import { getLocationActions, locationColumns } from "./components/columns";
 import { PrimaryButton } from "@/components";
 import { LocationModal } from "./components/LocationModal";
-import type { LocationFormData } from "./types/locations.types";
+import type { Location, LocationFormData } from "./types/locations.types";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+
+const isInactiveLocation = (status?: string): boolean =>
+    String(status || "").trim().toLowerCase() === "inactive";
 
 export const Locations = () => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(8);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedLocation, setSelectedLocation] = useState<any>(null);
+    const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+    const [includeInactive, setIncludeInactive] = useState(false);
 
-    const { locations, isLoading, createLocation, updateLocation } = useLocations();
+    const {
+        locations,
+        isLoading,
+        createLocation,
+        updateLocation,
+        activateLocation,
+        deactivateLocation,
+    } = useLocations(includeInactive);
 
-    const handleOpenModal = (location?: any) => {
+    const handleOpenModal = (location?: Location) => {
         setSelectedLocation(location || null);
         setIsModalOpen(true);
     };
@@ -42,7 +54,8 @@ export const Locations = () => {
             );
         } else {
             // Crear
-            createLocation(data, {
+            const { logo, logo_path, ...createPayload } = data;
+            createLocation(createPayload, {
                 onSuccess: () => {
                     toast.success("Location creada exitosamente");
                     handleCloseModal();
@@ -52,6 +65,32 @@ export const Locations = () => {
                 },
             });
         }
+    };
+
+    const handleActivate = (location: Location) => {
+        activateLocation(location.guid, {
+            onSuccess: () => {
+                toast.success("Location activada exitosamente");
+            },
+            onError: () => {
+                toast.error("Error al activar la location");
+            },
+        });
+    };
+
+    const handleDeactivate = (location: Location) => {
+        if (!confirm(`¿Desea desactivar la location ${location.name}?`)) {
+            return;
+        }
+
+        deactivateLocation(location.guid, {
+            onSuccess: () => {
+                toast.success("Location desactivada exitosamente");
+            },
+            onError: () => {
+                toast.error("Error al desactivar la location");
+            },
+        });
     };
 
     const handlePaginationChange = (newPage: number, newPageSize: number) => {
@@ -66,9 +105,18 @@ export const Locations = () => {
                     <h2 className="text-2xl font-bold">UBICACIONES</h2>
                     <p className="text-muted-foreground">Gestión de ubicaciones</p>
                 </div>
-                <PrimaryButton onClick={() => handleOpenModal()}>
-                    Nueva Location
-                </PrimaryButton>
+                <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Checkbox
+                            checked={includeInactive}
+                            onCheckedChange={(checked) => setIncludeInactive(Boolean(checked))}
+                        />
+                        Ver inactivas
+                    </label>
+                    <PrimaryButton onClick={() => handleOpenModal()}>
+                        Nueva Location
+                    </PrimaryButton>
+                </div>
             </div>
 
             {isLoading ? (
@@ -80,7 +128,11 @@ export const Locations = () => {
                     data={locations?.data || []}
                     columns={locationColumns}
                     showIndex
-                    actions={getLocationActions((location) => handleOpenModal(location))}
+                    actions={getLocationActions(
+                        (location) => handleOpenModal(location),
+                        (location) => handleActivate(location),
+                        (location) => handleDeactivate(location)
+                    )}
                     pagination={{
                         page,
                         pageSize,
@@ -98,16 +150,18 @@ export const Locations = () => {
                 onSubmit={handleSubmit}
                 initialData={selectedLocation ? {
                     name: selectedLocation.name,
+                    code: selectedLocation.code,
                     facility_id: selectedLocation.facility_id,
-                    status: selectedLocation.status,
+                    status: isInactiveLocation(selectedLocation.status) ? "Inactive" : "Active",
                     address: selectedLocation.address,
                     city: selectedLocation.city,
                     state: selectedLocation.state,
                     zip_code: selectedLocation.zip_code,
                     country: selectedLocation.country,
                     phone: selectedLocation.phone,
-                    email: selectedLocation.email,
+                    email: selectedLocation.email || selectedLocation.mail,
                     timezone: selectedLocation.timezone,
+                    logo_path: selectedLocation.logo_path,
                 } : undefined}
                 isLoading={false}
             />

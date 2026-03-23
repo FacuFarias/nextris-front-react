@@ -14,6 +14,15 @@ export const TemplateDetailModal = ({ template, isOpen, onClose }: TemplateDetai
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`${template.study_type_description}`} description={template.title}>
             <div className="space-y-6 mt-4">
+                <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Tipo de informe</h3>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                        <p className="text-gray-700 whitespace-pre-wrap">
+                            {template.report_type === 'inteligente' ? 'Inteligente' : 'Simple'}
+                        </p>
+                    </div>
+                </div>
+
                 {/* Técnica */}
                 {template.technique && (
                     <div>

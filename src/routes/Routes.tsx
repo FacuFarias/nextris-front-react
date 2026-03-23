@@ -73,7 +73,7 @@ const router = createBrowserRouter([
     {
         path: "/cita/nueva-cita",
         element: (
-            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]}>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]} requiredModule="appointments">
                 <NuevaCita />
             </ProtectedRoute>
         ),
@@ -81,7 +81,7 @@ const router = createBrowserRouter([
     {
         path: "/cita/editar-cita",
         element: (
-            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]}>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]} requiredModule="appointments">
                 <EditarCita />
             </ProtectedRoute>
         ),
@@ -89,7 +89,7 @@ const router = createBrowserRouter([
     {
         path: "/cita/editar-cita/:id",
         element: (
-            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]}>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Administrativo"]} requiredModule="appointments">
                 <EditarFecha />
             </ProtectedRoute>
         ),
@@ -104,6 +104,7 @@ const router = createBrowserRouter([
             <ProtectedRoute
                 allowedRoles={["Sysadmin", "Administrativo"]}
                 requiredPermissions={["tabs.admissions.view", "admissions.view", "admissions.admit_appointments"]}
+                requiredModule="appointments"
             >
                 <AdmisionCita />
             </ProtectedRoute>
@@ -209,7 +210,7 @@ const router = createBrowserRouter([
     {
         path: "/reportes-estructurados/lista-parser",
         element: (
-            <ProtectedRoute allowedRoles={["Sysadmin"]}>
+            <ProtectedRoute allowedRoles={["Sysadmin"]} requiredModule="structured_reports">
                 <ReportesEstructurados />
             </ProtectedRoute>
         ),
@@ -217,7 +218,7 @@ const router = createBrowserRouter([
     {
         path: "/reportes-estructurados/mapeo-variables",
         element: (
-            <ProtectedRoute allowedRoles={["Sysadmin"]}>
+            <ProtectedRoute allowedRoles={["Sysadmin"]} requiredModule="structured_reports">
                 <ReportesEstructurados />
             </ProtectedRoute>
         ),
@@ -225,7 +226,7 @@ const router = createBrowserRouter([
     {
         path: "/reportes-estructurados/conceptos-criterios",
         element: (
-            <ProtectedRoute allowedRoles={["Sysadmin"]}>
+            <ProtectedRoute allowedRoles={["Sysadmin"]} requiredModule="structured_reports">
                 <ReportesEstructurados />
             </ProtectedRoute>
         ),
@@ -233,7 +234,7 @@ const router = createBrowserRouter([
     {
         path: "/reportes-estructurados/plantillas-inteligentes",
         element: (
-            <ProtectedRoute allowedRoles={["Sysadmin"]}>
+            <ProtectedRoute allowedRoles={["Sysadmin"]} requiredModule="structured_reports">
                 <ReportesEstructurados />
             </ProtectedRoute>
         ),
@@ -268,7 +269,7 @@ const router = createBrowserRouter([
     {
         path: "/estudios",
         element: (
-            <ProtectedRoute allowedRoles={["patient"]}>
+            <ProtectedRoute allowedRoles={["patient"]} requiredModule="patient_portal">
                 <Estudios />
             </ProtectedRoute>
         ),
@@ -276,7 +277,7 @@ const router = createBrowserRouter([
     {
         path: "/mis-datos",
         element: (
-            <ProtectedRoute allowedRoles={["patient"]}>
+            <ProtectedRoute allowedRoles={["patient"]} requiredModule="patient_portal">
                 <MisDatos />
             </ProtectedRoute>
         ),
@@ -285,7 +286,7 @@ const router = createBrowserRouter([
     {
         path: "/nexi",
         element: (
-            <ProtectedRoute allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo"]}>
+            <ProtectedRoute allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo"]} requiredModule="nexi">
                 <Nexi />
             </ProtectedRoute>
         ),

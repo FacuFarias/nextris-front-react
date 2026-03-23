@@ -25,7 +25,8 @@ export const LocationModal = ({
             onClose={onClose}
             title={isEditing ? "Editar Location" : "Nueva Location"}
             description={isEditing ? "Modifique los datos de la ubicación" : "Complete los datos de la nueva ubicación"}
-            size="lg"
+            size="xxl"
+            className="sm:max-w-4xl"
         >
             <LocationForm
                 onSubmit={onSubmit}

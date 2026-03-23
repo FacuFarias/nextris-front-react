@@ -187,7 +187,13 @@ export const UserForm = ({
                     ? userPermissionsResponse.data.custom_permissions
                     : [];
 
-                setSelectedPermissionCodes(new Set(customCodes));
+                const validCodes = new Set(catalogData.map((permission) => permission.code));
+                const normalizedCustomCodes = customCodes.map((code) =>
+                    code === "tabs.preferences.view" ? "tabs.gestion.view" : code
+                );
+                const filteredCodes = normalizedCustomCodes.filter((code) => validCodes.has(code));
+
+                setSelectedPermissionCodes(new Set(filteredCodes));
             } catch {
                 if (!isCancelled) {
                     setPermissionCatalog([]);

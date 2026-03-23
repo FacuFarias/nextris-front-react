@@ -11,6 +11,7 @@ interface DireccionSelectorProps {
     onDireccionChange: (direccionId: string) => void;
     isPending?: boolean;
     isRow?: boolean;
+    includeAllOption?: boolean;
 }
 
 type Location = { guid: string; name: string; [key: string]: any };
@@ -24,6 +25,7 @@ export const DireccionSelector = ({
     onDireccionChange,
     isPending = false,
     isRow = false,
+    includeAllOption = false,
 }: DireccionSelectorProps) => {
     const { data: locationsData, isLoading } = useLocationsInstitutional();
 
@@ -44,12 +46,12 @@ export const DireccionSelector = ({
 
     if (!isRow) {
         return (
-            <div className="bg-card dark:bg-[#1a1b24]/80 rounded-lg border border-purple-100 dark:border-[rgba(255,255,255,0.07)] p-4">
+            <div className="bg-card dark:bg-[#1a1b24]/80 rounded-lg border border-blue-100 dark:border-blue-500/20 p-4">
                 <div className="flex items-center gap-2 mb-4">
-                    <div className="bg-brand-purple dark:bg-gradient-to-br dark:from-purple-600 dark:to-purple-900 p-2 rounded-lg dark:shadow-[0_0_12px_rgba(139,92,246,0.4)]">
+                    <div className="bg-blue-600 dark:bg-gradient-to-br dark:from-blue-500 dark:to-blue-800 p-2 rounded-lg dark:shadow-[0_0_12px_rgba(59,130,246,0.45)]">
                         <MapPin className="w-4 h-4 text-white" />
                     </div>
-                    <h3 className="text-brand-purple dark:text-purple-400 font-semibold text-base">Seleccione una Ubicación</h3>
+                    <h3 className="text-blue-700 dark:text-blue-300 font-semibold text-base">Seleccione una Ubicación</h3>
                 </div>
                 <TablaDynamic<Location>
                     data={locations}
@@ -65,13 +67,13 @@ export const DireccionSelector = ({
     }
 
     return (
-        <div className="bg-brand-purple rounded-lg p-4 shadow-lg flex items-center gap-10">
+        <div className="bg-card dark:bg-[#141a2a]/90 rounded-lg p-4 shadow-lg border border-blue-200/60 dark:border-blue-500/30 flex items-center gap-10">
             <div className="flex items-center gap-3">
-                <div className="bg-white/20 p-2 rounded-lg">
-                    <MapPin className="w-4 h-4 text-white" />
+                <div className="bg-blue-100/80 dark:bg-blue-500/20 p-2 rounded-lg">
+                    <MapPin className="w-4 h-4 text-blue-700 dark:text-blue-300" />
                 </div>
                 <div>
-                    <h3 className="text-white font-bold text-lg">Seleccione una Ubicación</h3>
+                    <h3 className="text-blue-700 dark:text-blue-300 font-bold text-lg">Seleccione una Ubicación</h3>
                 </div>
             </div>
             <div className="relative flex-1">
@@ -80,10 +82,15 @@ export const DireccionSelector = ({
                     value={selectedDireccion}
                     disabled={isPending}
                 >
-                    <SelectTrigger className="w-full bg-white border-2 border-white hover:border-purple-200 focus:border-white focus:ring-2 focus:ring-white/50 text-base font-medium py-5 cursor-pointer shadow-md pr-20">
+                    <SelectTrigger className="w-full bg-white dark:bg-[#0f1628] border-2 border-blue-200 dark:border-blue-500/40 hover:border-blue-300 dark:hover:border-blue-400 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:focus:ring-blue-500/30 text-base font-medium py-5 cursor-pointer shadow-md pr-20">
                         <SelectValue placeholder={isPending ? "Cargando direcciones..." : "Seleccione una dirección para comenzar"} />
                     </SelectTrigger>
                     <SelectContent>
+                        {includeAllOption && (
+                            <SelectItem value="all" className="text-sm py-2 font-semibold">
+                                Todas las ubicaciones
+                            </SelectItem>
+                        )}
                         {locations.map((location) => (
                             <SelectItem key={location.guid} value={location.guid} className="text-sm py-2">
                                 {location.name}

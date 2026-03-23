@@ -85,10 +85,21 @@ export const VincularImagenTab = () => {
     };
     const handleSubmitVinculacion = () => {
         if (selectedEstudio && selectedOrden) {
-            const data = {
-                upload_guid: selectedEstudio.guid,
+            const data: {
+                examination_guid: string;
+                upload_guid?: string;
+                pacs_study_pk?: number;
+                study_instance_uid?: string;
+            } = {
                 examination_guid: selectedOrden.guid,
             };
+
+            if (selectedEstudio.source === 'pacs' && typeof selectedEstudio.pacs_study_pk === 'number') {
+                data.pacs_study_pk = selectedEstudio.pacs_study_pk;
+                data.study_instance_uid = selectedEstudio.study_instance_uid;
+            } else {
+                data.upload_guid = selectedEstudio.guid;
+            }
 
             vincularEstudio(data, {
                 onSuccess: () => {
@@ -125,6 +136,7 @@ export const VincularImagenTab = () => {
                     selectedDireccion={selectedDireccion}
                     onDireccionChange={handleDireccionChange}
                     isRow={true}
+                    includeAllOption={true}
                 />
             </div>
 
@@ -164,9 +176,9 @@ export const VincularImagenTab = () => {
                             </div>
 
                             {/* Tabla */}
-                            <div className="flex-1 flex flex-col bg-white dark:bg-[#2a2e32]">
+                            <div className="flex-1 flex flex-col bg-transparent">
                                 {/* Cabecera tabla */}
-                                <div className="grid grid-cols-3 px-4 py-2.5 bg-gray-50 dark:bg-[#23272b] border-b border-gray-200 dark:border-gray-700">
+                                <div className="grid grid-cols-3 px-4 py-2.5 bg-transparent border-b border-gray-200/60 dark:border-gray-700/60">
                                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Paciente</span>
                                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Mod</span>
                                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Fecha</span>
@@ -195,17 +207,19 @@ export const VincularImagenTab = () => {
                                                     className={`grid grid-cols-3 px-4 py-3 cursor-pointer transition-all border-b border-gray-100 dark:border-gray-700/60 group
                                                         ${isSelected
                                                             ? 'bg-brand-purple/10 dark:bg-purple-900/30 border-l-2 border-l-brand-purple'
-                                                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'
+                                                            : 'hover:bg-white/5 dark:hover:bg-white/5'
                                                         }`}
                                                 >
                                                     <div className="flex items-center gap-2">
                                                         {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-brand-purple flex-shrink-0" />}
                                                         <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{estudio.patient_name}</span>
                                                     </div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="inline-block text-xs font-semibold bg-purple-100 dark:bg-purple-900/40 text-brand-purple dark:text-purple-300 px-2 py-0.5 rounded-md">
-                                                            {estudio.modality}
-                                                        </span>
+                                                    <div className="flex items-center gap-1 flex-wrap">
+                                                        {(estudio.modality ?? 'PACS').split(',').map((mod: string) => (
+                                                            <span key={mod} className="inline-block text-xs font-semibold bg-purple-100 dark:bg-purple-900/40 text-brand-purple dark:text-purple-300 px-2 py-0.5 rounded-md">
+                                                                {mod.trim()}
+                                                            </span>
+                                                        ))}
                                                         {(estudio.instance_count ?? 0) > 1 && (
                                                             <span className="inline-block text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-md">
                                                                 {estudio.instance_count}i
@@ -221,7 +235,7 @@ export const VincularImagenTab = () => {
 
                                 {/* Paginación */}
                                 {totalPaginasEstudios > 1 && (
-                                    <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-[#23272b] border-t border-gray-200 dark:border-gray-700">
+                                    <div className="flex items-center justify-between px-4 py-2.5 bg-transparent border-t border-gray-200/60 dark:border-gray-700/60">
                                         <span className="text-xs text-gray-500 dark:text-gray-400">
                                             {((estudiosPagina - 1) * estudiosPerPage) + 1}–{Math.min(estudiosPagina * estudiosPerPage, totalEstudios)} de {totalEstudios}
                                         </span>
@@ -291,9 +305,9 @@ export const VincularImagenTab = () => {
                             </div>
 
                             {/* Tabla */}
-                            <div className="flex-1 flex flex-col bg-white dark:bg-[#2a2e32]">
+                            <div className="flex-1 flex flex-col bg-transparent">
                                 {/* Cabecera tabla */}
-                                <div className="grid grid-cols-4 px-4 py-2.5 bg-gray-50 dark:bg-[#23272b] border-b border-gray-200 dark:border-gray-700">
+                                <div className="grid grid-cols-4 px-4 py-2.5 bg-transparent border-b border-gray-200/60 dark:border-gray-700/60">
                                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Paciente</span>
                                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide col-span-1">Estudio</span>
                                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">ACC</span>
@@ -323,7 +337,7 @@ export const VincularImagenTab = () => {
                                                     className={`grid grid-cols-4 px-4 py-3 cursor-pointer transition-all border-b border-gray-100 dark:border-gray-700/60 group
                                                         ${isSelected
                                                             ? 'bg-cyan-50 dark:bg-cyan-900/20 border-l-2 border-l-cyan-500'
-                                                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'
+                                                            : 'hover:bg-white/5 dark:hover:bg-white/5'
                                                         }`}
                                                 >
                                                     <div className="flex items-center gap-2">
@@ -341,7 +355,7 @@ export const VincularImagenTab = () => {
 
                                 {/* Paginación */}
                                 {totalPaginasOrdenes > 1 && (
-                                    <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-[#23272b] border-t border-gray-200 dark:border-gray-700">
+                                    <div className="flex items-center justify-between px-4 py-2.5 bg-transparent border-t border-gray-200/60 dark:border-gray-700/60">
                                         <span className="text-xs text-gray-500 dark:text-gray-400">
                                             {((ordenesPagina - 1) * ordenesPerPage) + 1}–{Math.min(ordenesPagina * ordenesPerPage, totalOrdenes)} de {totalOrdenes}
                                         </span>
@@ -364,7 +378,7 @@ export const VincularImagenTab = () => {
                     <div className={`rounded-xl border-2 transition-all duration-300 overflow-hidden
                         ${bothSelected
                             ? 'border-brand-purple bg-brand-purple/5 dark:bg-brand-purple/10 shadow-md'
-                            : 'border-dashed border-gray-200 dark:border-gray-600 bg-gray-50/50 dark:bg-[#23272b]/50'
+                            : 'border-dashed border-gray-200 dark:border-gray-600 bg-transparent'
                         }`}
                     >
                         {bothSelected ? (

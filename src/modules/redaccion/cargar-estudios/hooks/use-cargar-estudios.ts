@@ -1,7 +1,7 @@
 
-import type { EstudiosNoVinculados, SearchExams } from '../types/cargar-estudios.types';
+import type { EstudiosNoVinculados, LinkedStudiesResponse, SearchExams, UnlinkStudyPayload } from '../types/cargar-estudios.types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getSearchExams, getUnlinkedStudies, postVinculacion, uploadFiles } from '../services/cargar-estudios.service';
+import { getLinkedStudies, getSearchExams, getUnlinkedStudies, postDesvinculacion, postVinculacion, uploadFiles } from '../services/cargar-estudios.service';
 import { cargarEstudiosKeys } from '../constants/query-keys';
 import { toast } from 'sonner';
 
@@ -58,8 +58,8 @@ export const useSearchExams = ({ location_id }: { location_id: string }) => {
 export const useVincularEstudio = () => {
     const queryClient = useQueryClient();
     const mutation = useMutation({
-        mutationFn: async ({ upload_guid, examination_guid }: { upload_guid: string, examination_guid: string }) => {
-            const response = await postVinculacion({ upload_guid, examination_guid });
+        mutationFn: async ({ upload_guid, examination_guid, pacs_study_pk, study_instance_uid }: { upload_guid?: string, examination_guid: string, pacs_study_pk?: number, study_instance_uid?: string }) => {
+            const response = await postVinculacion({ upload_guid, examination_guid, pacs_study_pk, study_instance_uid });
             return response;
         },
         onSuccess: () => {
@@ -68,6 +68,43 @@ export const useVincularEstudio = () => {
         },
         onError: (error) => {
             console.error('Error al vincular estudio:', error);
+        },
+    });
+    return mutation;
+}
+
+export const useEstudiosVinculados = ({ location_id }: { location_id: string }) => {
+    const { data, isLoading, error, refetch } = useQuery<LinkedStudiesResponse>({
+        queryKey: cargarEstudiosKeys.listLinkedStudies(location_id),
+        queryFn: () => getLinkedStudies({ location_id }),
+        enabled: !!location_id,
+        refetchInterval: 120000,
+        refetchIntervalInBackground: false,
+    });
+
+    return {
+        estudiosVinculadosData: data,
+        isLoading,
+        error,
+        refetchEstudiosVinculados: refetch,
+    }
+}
+
+export const useDesvincularEstudio = () => {
+    const queryClient = useQueryClient();
+    const mutation = useMutation({
+        mutationFn: async (payload: UnlinkStudyPayload) => {
+            const response = await postDesvinculacion(payload);
+            return response;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [...cargarEstudiosKeys.all, "list-linked-studies"] });
+            queryClient.invalidateQueries({ queryKey: [...cargarEstudiosKeys.all, "list-no-vinculados"] });
+            queryClient.invalidateQueries({ queryKey: [...cargarEstudiosKeys.all, "search-examinations"] });
+            toast.success("Estudio desvinculado exitosamente")
+        },
+        onError: (error) => {
+            console.error('Error al desvincular estudio:', error);
         },
     });
     return mutation;

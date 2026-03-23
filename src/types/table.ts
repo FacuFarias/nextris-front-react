@@ -70,4 +70,5 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     tableClassName?: string;
     preserveTableHeight?: boolean;
     stickyPagination?: boolean;
+    compactSpacing?: boolean;
 }

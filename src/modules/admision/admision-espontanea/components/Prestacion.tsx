@@ -57,7 +57,7 @@ export const Prestacion = ({
     return (
         <div className="space-y-6 pb-4">
             {/* Sección de acciones o formulario adicional */}
-            <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm p-6">
+            <div className="bg-transparent rounded-lg border border-purple-200/60 dark:border-purple-500/30 shadow-sm p-6">
                 <div className="w-full flex items-center justify-between mb-6">
                     <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">Información Adicional</h3>
 
@@ -70,7 +70,7 @@ export const Prestacion = ({
                 <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                         <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-200">
+                            <label className="block text-sm font-medium text-blue-700 mb-2 dark:text-blue-300">
                                 Médico Solicitante
                             </label>
                             <Select
@@ -78,7 +78,7 @@ export const Prestacion = ({
                                 value={selectedMedicoSolicitante}
                                 required={true}
                             >
-                                <SelectTrigger className="w-full border-purple-300 focus:border-purple-500 focus:ring-purple-500">
+                                <SelectTrigger className="w-full bg-white dark:bg-[#0f1628] border-2 border-blue-200 dark:border-blue-500/40 hover:border-blue-300 dark:hover:border-blue-400 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:focus:ring-blue-500/30">
                                     <SelectValue placeholder="Seleccione un médico" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -92,14 +92,14 @@ export const Prestacion = ({
                         </div>
 
                         <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-200">
+                            <label className="block text-sm font-medium text-blue-700 mb-2 dark:text-blue-300">
                                 Médico Referente (Radiólogo)
                             </label>
                             <Select
                                 onValueChange={setSelectedMedicoReferente}
                                 value={selectedMedicoReferente}
                             >
-                                <SelectTrigger className="w-full border-purple-300 focus:border-purple-500 focus:ring-purple-500">
+                                <SelectTrigger className="w-full bg-white dark:bg-[#0f1628] border-2 border-blue-200 dark:border-blue-500/40 hover:border-blue-300 dark:hover:border-blue-400 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:focus:ring-blue-500/30">
                                     <SelectValue placeholder="Seleccione un radiólogo" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -113,14 +113,14 @@ export const Prestacion = ({
                         </div>
 
                         <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-200">
+                            <label className="block text-sm font-medium text-blue-700 mb-2 dark:text-blue-300">
                                 Obras Sociales Solicitante
                             </label>
                             <Select
                                 onValueChange={setSelectedObrasSociales}
                                 value={selectedObrasSociales}
                             >
-                                <SelectTrigger className="w-full border-purple-300 focus:border-purple-500 focus:ring-purple-500">
+                                <SelectTrigger className="w-full bg-white dark:bg-[#0f1628] border-2 border-blue-200 dark:border-blue-500/40 hover:border-blue-300 dark:hover:border-blue-400 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:focus:ring-blue-500/30">
                                     <SelectValue placeholder="Seleccione una obra social" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -134,14 +134,14 @@ export const Prestacion = ({
                         </div>
 
                         <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-200">
+                            <label className="block text-sm font-medium text-blue-700 mb-2 dark:text-blue-300">
                                 Prioridad
                             </label>
                             <Select
                                 onValueChange={setSelectedPrioridad}
                                 value={selectedPrioridad}
                             >
-                                <SelectTrigger className="w-full border-purple-300 focus:border-purple-500 focus:ring-purple-500">
+                                <SelectTrigger className="w-full bg-white dark:bg-[#0f1628] border-2 border-blue-200 dark:border-blue-500/40 hover:border-blue-300 dark:hover:border-blue-400 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:focus:ring-blue-500/30">
                                     <SelectValue placeholder="Seleccione la prioridad" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -155,7 +155,7 @@ export const Prestacion = ({
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2 pb-2">
                     {/* Card Paciente */}
-                    <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm">
+                    <div className="bg-transparent rounded-lg border border-purple-200/60 dark:border-purple-500/30 shadow-sm">
                         <div className="bg-brand-purple p-4 flex items-center gap-2 rounded-t-lg">
                             <User className="w-5 h-5 text-white" />
                             <h3 className="font-semibold text-white uppercase text-sm tracking-wider">Paciente</h3>
@@ -183,7 +183,7 @@ export const Prestacion = ({
                     </div>
 
                     {/* Card Estudio */}
-                    <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm">
+                    <div className="bg-transparent rounded-lg border border-purple-200/60 dark:border-purple-500/30 shadow-sm">
                         <div className="bg-brand-purple p-4 flex items-center gap-2 rounded-t-lg">
                             <ClipboardList className="w-5 h-5 text-white" />
                             <h3 className="font-semibold text-white uppercase text-sm tracking-wider">Estudio</h3>
@@ -213,7 +213,7 @@ export const Prestacion = ({
                     </div>
 
                     {/* Card Equipo */}
-                    <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 shadow-sm">
+                    <div className="bg-transparent rounded-lg border border-purple-200/60 dark:border-purple-500/30 shadow-sm">
                         <div className="bg-brand-purple p-4 flex items-center gap-2 rounded-t-lg">
                             <Monitor className="w-5 h-5 text-white" />
                             <h3 className="font-semibold text-white uppercase text-sm tracking-wider">Equipo</h3>

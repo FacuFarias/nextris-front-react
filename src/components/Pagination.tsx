@@ -47,6 +47,7 @@ export function TablePagination({
     additionalControls,
 }: TablePaginationProps) {
     const { page, pageSize, total } = pagination;
+    const effectivePerPage = perPageValue ?? pageSize;
 
     const totalPages = Math.ceil(total / pageSize);
 
@@ -54,6 +55,14 @@ export function TablePagination({
         if (newPage >= 1 && newPage <= totalPages) {
             onPaginationChange(newPage, pageSize);
         }
+    };
+
+    const handlePerPageChange = (value: number) => {
+        if (onPerPageChange) {
+            onPerPageChange(value);
+            return;
+        }
+        onPaginationChange(1, value);
     };
 
     const getVisiblePages = () => {
@@ -90,80 +99,76 @@ export function TablePagination({
         <div className="flex items-center justify-between px-2 py-1">
             {/* Selector de filas por página y columnas */}
             <div className="flex items-center gap-4">
-                {onPerPageChange && perPageValue && (
-                    <>
-                        <div className="flex items-center gap-2">
-                            <Label htmlFor="per-page" className="text-sm font-medium text-foreground">
-                                Filas:
-                            </Label>
-                            <Select
-                                value={perPageValue.toString()}
-                                onValueChange={(value) => onPerPageChange(Number(value))}
-                            >
-                                <SelectTrigger className="w-20">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {perPageOptions.map((option) => (
-                                        <SelectItem key={option} value={option.toString()}>
-                                            {option}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                <div className="flex items-center gap-2">
+                    <Label htmlFor="per-page" className="text-sm font-medium text-foreground">
+                        Filas:
+                    </Label>
+                    <Select
+                        value={effectivePerPage.toString()}
+                        onValueChange={(value) => handlePerPageChange(Number(value))}
+                    >
+                        <SelectTrigger className="w-20">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {perPageOptions.map((option) => (
+                                <SelectItem key={option} value={option.toString()}>
+                                    {option}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
 
-                        {/* Selector de columnas visibles - Multi-select */}
-                        {columns && visibleColumns && onToggleColumn && (
-                            <div className="flex items-center gap-2">
-                                <Label className="text-sm font-medium text-foreground">
-                                    Columnas:
-                                </Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-[220px] justify-between">
-                                            <span className="truncate">
-                                                {visibleColumns.length === columns.length
-                                                    ? 'Seleccione columnas'
-                                                    : `${visibleColumns.length} de ${columns.length} columnas`}
-                                            </span>
-                                            <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[220px] p-0" align="start">
-                                        <div className="max-h-[300px] overflow-y-auto p-3">
-                                            <div className="space-y-2">
-                                                {columns.map((column) => (
-                                                    <div
-                                                        key={column.key}
-                                                        className="flex items-center space-x-2 hover:bg-accent p-1 rounded cursor-pointer"
-                                                        onClick={() => onToggleColumn(column.key)}
-                                                    >
-                                                        <Checkbox
-                                                            id={`column-${column.key}`}
-                                                            checked={visibleColumns.includes(column.key)}
-                                                            onCheckedChange={() => onToggleColumn(column.key)}
-                                                            className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
-                                                        />
-                                                        <Label
-                                                            htmlFor={`column-${column.key}`}
-                                                            className="text-sm font-normal cursor-pointer flex-1"
-                                                        >
-                                                            {column.label}
-                                                        </Label>
-                                                    </div>
-                                                ))}
+                {/* Selector de columnas visibles - Multi-select */}
+                {columns && visibleColumns && onToggleColumn && (
+                    <div className="flex items-center gap-2">
+                        <Label className="text-sm font-medium text-foreground">
+                            Columnas:
+                        </Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-[220px] justify-between">
+                                    <span className="truncate">
+                                        {visibleColumns.length === columns.length
+                                            ? 'Todas las columnas'
+                                            : `${visibleColumns.length} de ${columns.length} columnas`}
+                                    </span>
+                                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[220px] p-0" align="start">
+                                <div className="max-h-[300px] overflow-y-auto p-3">
+                                    <div className="space-y-2">
+                                        {columns.map((column) => (
+                                            <div
+                                                key={column.key}
+                                                className="flex items-center space-x-2 hover:bg-accent p-1 rounded cursor-pointer"
+                                                onClick={() => onToggleColumn(column.key)}
+                                            >
+                                                <Checkbox
+                                                    id={`column-${column.key}`}
+                                                    checked={visibleColumns.includes(column.key)}
+                                                    onCheckedChange={() => onToggleColumn(column.key)}
+                                                    className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
+                                                />
+                                                <Label
+                                                    htmlFor={`column-${column.key}`}
+                                                    className="text-sm font-normal cursor-pointer flex-1"
+                                                >
+                                                    {column.label}
+                                                </Label>
                                             </div>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                        )}
-
-                        {/* Controles adicionales */}
-                        {additionalControls}
-                    </>
+                                        ))}
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
                 )}
+
+                {/* Controles adicionales */}
+                {additionalControls}
             </div>
 
             {/* Paginación - siempre a la derecha */}

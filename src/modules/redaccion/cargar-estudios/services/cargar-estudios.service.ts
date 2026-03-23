@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { EstudiosNoVinculados, SearchExams } from "../types/cargar-estudios.types";
+import type { EstudiosNoVinculados, LinkedStudiesResponse, SearchExams, UnlinkStudyPayload } from "../types/cargar-estudios.types";
 import { api } from "@/lib/api";
 
 // Crear instancia de axios SIN autenticación para estas rutas específicas
@@ -41,9 +41,41 @@ export const getSearchExams = async ({ location_id, patient_name, patient_id, ac
     }
 }
 
-export const postVinculacion = async ({ upload_guid, examination_guid }: { upload_guid: string, examination_guid: string }) => {
+export const postVinculacion = async ({ upload_guid, examination_guid, pacs_study_pk, study_instance_uid }: { upload_guid?: string, examination_guid: string, pacs_study_pk?: number, study_instance_uid?: string }) => {
     try {
-        const response = await api.post("dicom/link-study", { upload_guid, examination_guid });
+        const payload: Record<string, string | number> = { examination_guid };
+
+        if (upload_guid) {
+            payload.upload_guid = upload_guid;
+        }
+
+        if (typeof pacs_study_pk === 'number') {
+            payload.pacs_study_pk = pacs_study_pk;
+        }
+
+        if (study_instance_uid) {
+            payload.study_instance_uid = study_instance_uid;
+        }
+
+        const response = await api.post("dicom/link-study", payload);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const getLinkedStudies = async ({ location_id }: { location_id: string }) => {
+    try {
+        const response = await api.get<LinkedStudiesResponse>("/dicom/linked-studies", { params: { location_id } });
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const postDesvinculacion = async (payload: UnlinkStudyPayload) => {
+    try {
+        const response = await api.post("/dicom/unlink-study", payload);
         return response.data;
     } catch (error) {
         throw error;

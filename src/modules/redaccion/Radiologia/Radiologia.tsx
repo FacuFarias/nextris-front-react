@@ -300,9 +300,9 @@ export const Radiologia = () => {
 
     const handleRedactarInforme = async (informe: Informes) => {
         // Verificar si el informe está bloqueado por otro usuario
-        if (informe.blocked_by && informe.blocked_by_name) {
-
-            toast.error(`Este informe está siendo editado por ${informe.blocked_by_name}`);
+        if (informe.blocked_by) {
+            const blockerLabel = informe.blocked_by_name || 'otro usuario';
+            toast.error(`Este informe está siendo editado por ${blockerLabel}`);
             return;
         }
 

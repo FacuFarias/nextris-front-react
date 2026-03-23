@@ -31,14 +31,16 @@ import logo from "@/assets/logo/logo5.png";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useUserModules } from "@/hooks/use-user-modules";
 
 interface MenuItem {
     icon: React.ElementType;
     label: string;
     path?: string;
-    subItems?: { icon: React.ElementType; label: string; path: string; allowedRoles?: string[]; requiredPermissions?: string[] }[];
+    subItems?: { icon: React.ElementType; label: string; path: string; allowedRoles?: string[]; requiredPermissions?: string[]; requiredModule?: string }[];
     allowedRoles?: string[];
     requiredPermissions?: string[];
+    requiredModule?: string;
 }
 
 interface SidebarProps {
@@ -62,16 +64,19 @@ const menuItems: MenuItem[] = [
     {
         icon: Calendar, label: "Citas",
         allowedRoles: ["Sysadmin", "Administrativo"],
+        requiredModule: "appointments",
         subItems: [
             {
                 icon: Calendar,
                 label: "Agendar Cita",
                 path: "/cita/nueva-cita",
+                requiredModule: "appointments",
             },
             {
                 icon: Calendar,
                 label: "Editar Citas",
                 path: "/cita/editar-cita",
+                requiredModule: "appointments",
             },
         ]
     },
@@ -85,6 +90,7 @@ const menuItems: MenuItem[] = [
                 label: "Adm por cita",
                 path: "/nueva-admision",
                 requiredPermissions: ["admissions.admit_appointments"],
+                requiredModule: "appointments",
             },
             {
                 icon: CalendarPlus,
@@ -96,6 +102,7 @@ const menuItems: MenuItem[] = [
                 icon: CalendarPlus,
                 label: "Historico de visitas",
                 path: "/admision/historico-visitas",
+                requiredModule: "appointments",
             }
         ]
     },
@@ -156,26 +163,31 @@ const menuItems: MenuItem[] = [
         icon: FileCode2,
         label: "Reportes estructurados",
         allowedRoles: ["Sysadmin"],
+        requiredModule: "structured_reports",
         subItems: [
             {
                 icon: FileCode2,
                 label: "Lista de parser",
                 path: "/reportes-estructurados/lista-parser",
+                requiredModule: "structured_reports",
             },
             {
                 icon: ListTree,
                 label: "Mapeo de variables",
                 path: "/reportes-estructurados/mapeo-variables",
+                requiredModule: "structured_reports",
             },
             {
                 icon: Scale,
                 label: "Conceptos y criterios",
                 path: "/reportes-estructurados/conceptos-criterios",
+                requiredModule: "structured_reports",
             },
             {
                 icon: Files,
                 label: "Plantillas inteligentes",
                 path: "/reportes-estructurados/plantillas-inteligentes",
+                requiredModule: "structured_reports",
             },
         ],
     },
@@ -184,24 +196,28 @@ const menuItems: MenuItem[] = [
         label: "Nexi",
         path: "/nexi",
         allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo"],
+        requiredModule: "nexi",
     },
     {
         icon: BookPlus,
         label: "Mis Estudios",
         path: "/estudios",
-        allowedRoles: ["patient"]
+        allowedRoles: ["patient"],
+        requiredModule: "patient_portal",
     },
     {
         icon: User,
         label: "Mis datos",
         path: "/mis-datos",
-        allowedRoles: ["patient"]
+        allowedRoles: ["patient"],
+        requiredModule: "patient_portal",
     },
 ];
 
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
     const { authData, logout } = useAuth();
+    const { moduleCodesSet, isLoading: isModulesLoading, hasError: hasModulesError } = useUserModules(Boolean(authData));
     const { theme, setTheme, actualTheme } = useTheme();
 
     const cycleTheme = () => {
@@ -229,31 +245,45 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         const hasRoleConstraint = Array.isArray(allowedRoles) && allowedRoles.length > 0;
         const hasPermissionConstraint = Array.isArray(requiredPermissions) && requiredPermissions.length > 0;
 
-        if (!hasRoleConstraint && !hasPermissionConstraint) {
+        const roleAccess = hasRoleConstraint ? allowedRoles!.includes(userRole) : true;
+        const permissionAccess = hasPermissionConstraint
+            ? (userPermissions.includes("*") || requiredPermissions!.some((permission) => userPermissions.includes(permission)))
+            : true;
+
+        return roleAccess && permissionAccess;
+    };
+
+    const hasModuleAccess = (requiredModule?: string) => {
+        if (!requiredModule) {
             return true;
         }
 
-        const roleAccess = hasRoleConstraint ? allowedRoles!.includes(userRole) : false;
-        const permissionAccess = hasPermissionConstraint
-            ? (userPermissions.includes("*") || requiredPermissions!.some((permission) => userPermissions.includes(permission)))
-            : false;
+        // Si no se pudo cargar el scope de módulos, se deniega por seguridad.
+        if (isModulesLoading || hasModulesError) {
+            return false;
+        }
 
-        return roleAccess || permissionAccess;
+        return moduleCodesSet.has(requiredModule);
     };
 
     const filteredMenuItems = useMemo(() =>
         menuItems.map(item => {
             if (!hasAccess(item.allowedRoles, item.requiredPermissions)) return null;
+            if (!hasModuleAccess(item.requiredModule)) return null;
 
             if (item.subItems) {
-                const filteredSubItems = item.subItems.filter(subItem => hasAccess(subItem.allowedRoles, subItem.requiredPermissions));
+                const filteredSubItems = item.subItems.filter(subItem => {
+                    if (!hasAccess(subItem.allowedRoles, subItem.requiredPermissions)) return false;
+                    if (!hasModuleAccess(subItem.requiredModule)) return false;
+                    return true;
+                });
                 if (filteredSubItems.length === 0) return null;
                 return { ...item, subItems: filteredSubItems };
             }
 
             return item;
         }).filter(Boolean) as MenuItem[]
-        , [userRole, userPermissions]);
+        , [userRole, userPermissions, isModulesLoading, hasModulesError, moduleCodesSet]);
 
     // Inicializar ya con los items que corresponden a la ruta actual abiertos
     const [expandedItems, setExpandedItems] = useState<string[]>(() =>

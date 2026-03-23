@@ -1,3 +1,5 @@
+export type ReportType = 'simple' | 'inteligente';
+
 export interface Template {
     guid: string;
     title: string;
@@ -11,6 +13,10 @@ export interface Template {
     bodypart_id: string;
     modality_description: string;
     modality_id: string;
+    report_type: ReportType;
+    location_ids?: string[];
+    structured_variables?: string;
+    criteria?: string;
 }
 
 export interface TemplateListResponse {
@@ -30,6 +36,10 @@ export interface CreateTemplateRequest {
     technique?: string;
     impression?: string;
     conclusion?: string;
+    report_type?: ReportType;
+    location_ids?: string[];
+    structured_variables?: string;
+    criteria?: string;
     is_default?: boolean;
 }
 
@@ -40,6 +50,10 @@ export interface UpdateTemplateRequest {
     technique?: string;
     impression?: string;
     conclusion?: string;
+    report_type?: ReportType;
+    location_ids?: string[];
+    structured_variables?: string;
+    criteria?: string;
 }
 
 

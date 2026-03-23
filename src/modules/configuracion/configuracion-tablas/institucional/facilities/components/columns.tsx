@@ -25,6 +25,12 @@ const facilityColumns: TableColumn<Facility>[] = [
         className: "font-medium",
     },
     {
+        key: "patientdomain_name",
+        label: "DOMINIO PACIENTES",
+        className: "font-medium",
+        render: (value) => value || "-",
+    },
+    {
         key: "status",
         label: "ESTADO",
         className: "font-medium",

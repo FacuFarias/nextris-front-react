@@ -1,6 +1,9 @@
 export interface Facility {
     guid: string;
     description: string;
+    id_patientdomain?: string;
+    patientdomain_id?: string;
+    patientdomain_name?: string;
     created_at: string;
     updated_at: string;
     name: string;
@@ -43,6 +46,7 @@ export interface FacilityResponse {
 
 export interface FacilityFormData {
     description: string;
+    id_patientdomain?: string;
 
     // SMTP Config
     smtp_server?: string;

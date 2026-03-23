@@ -32,6 +32,7 @@ interface RichTextEditorProps {
     onEditorReady?: (editor: any) => void;
     readOnly?: boolean;
     showToolbar?: boolean;
+    variableChipTone?: 'default' | 'warning';
 }
 
 const VariableChip = Node.create({
@@ -60,6 +61,13 @@ const VariableChip = Node.create({
                     'data-variable-name': attributes.variableName,
                 }),
             },
+            displayText: {
+                default: '',
+                parseHTML: (element) => element.getAttribute('data-display-text') || '',
+                renderHTML: (attributes) => ({
+                    'data-display-text': attributes.displayText,
+                }),
+            },
         };
     },
 
@@ -73,14 +81,66 @@ const VariableChip = Node.create({
 
     renderHTML({ HTMLAttributes }) {
         const variableName = String(HTMLAttributes.variableName || HTMLAttributes['data-variable-name'] || '');
+        const displayText = String(HTMLAttributes.displayText || HTMLAttributes['data-display-text'] || '');
         return [
             'span',
             {
                 'data-variable-chip': 'true',
                 'data-variable-name': variableName,
+                'data-display-text': displayText,
                 contenteditable: 'false',
             },
-            `{${variableName}}`,
+            displayText || `{${variableName}}`,
+        ];
+    },
+});
+
+const CriterionChip = Node.create({
+    name: 'criterionChip',
+    group: 'inline',
+    inline: true,
+    atom: true,
+    selectable: true,
+
+    addAttributes() {
+        return {
+            criterionName: {
+                default: '',
+                parseHTML: (element) => element.getAttribute('data-criterion-name') || (element.textContent || '').trim(),
+                renderHTML: (attributes) => ({
+                    'data-criterion-name': attributes.criterionName,
+                }),
+            },
+            displayText: {
+                default: '',
+                parseHTML: (element) => element.getAttribute('data-display-text') || '',
+                renderHTML: (attributes) => ({
+                    'data-display-text': attributes.displayText,
+                }),
+            },
+        };
+    },
+
+    parseHTML() {
+        return [
+            {
+                tag: 'span[data-criterion-chip="true"]',
+            },
+        ];
+    },
+
+    renderHTML({ HTMLAttributes }) {
+        const criterionName = String(HTMLAttributes.criterionName || HTMLAttributes['data-criterion-name'] || '');
+        const displayText = String(HTMLAttributes.displayText || HTMLAttributes['data-display-text'] || '');
+        return [
+            'span',
+            {
+                'data-criterion-chip': 'true',
+                'data-criterion-name': criterionName,
+                'data-display-text': displayText,
+                contenteditable: 'false',
+            },
+            displayText || criterionName,
         ];
     },
 });
@@ -96,14 +156,20 @@ export const RichTextEditor = ({
     onDrop,
     onEditorReady,
     readOnly = false,
-    showToolbar = true
+    showToolbar = true,
+    variableChipTone = 'default'
 }: RichTextEditorProps) => {
+    const variableChipClasses = variableChipTone === 'warning'
+        ? '[&_code]:inline-block [&_code]:bg-red-100 dark:[&_code]:bg-red-900/40 [&_code]:text-red-800 dark:[&_code]:text-red-200 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:font-semibold [&_code]:border [&_code]:border-red-200 dark:[&_code]:border-red-700 [&_code]:not-italic [&_[data-variable-chip="true"]]:inline-block [&_[data-variable-chip="true"]]:bg-red-100 dark:[&_[data-variable-chip="true"]]:bg-red-900/40 [&_[data-variable-chip="true"]]:text-red-800 dark:[&_[data-variable-chip="true"]]:text-red-200 [&_[data-variable-chip="true"]]:px-1.5 [&_[data-variable-chip="true"]]:py-0.5 [&_[data-variable-chip="true"]]:rounded-md [&_[data-variable-chip="true"]]:font-semibold [&_[data-variable-chip="true"]]:border [&_[data-variable-chip="true"]]:border-red-200 dark:[&_[data-variable-chip="true"]]:border-red-700 [&_[data-variable-chip="true"]]:select-none [&_[data-criterion-chip="true"]]:inline-block [&_[data-criterion-chip="true"]]:bg-orange-100 dark:[&_[data-criterion-chip="true"]]:bg-orange-900/40 [&_[data-criterion-chip="true"]]:text-orange-800 dark:[&_[data-criterion-chip="true"]]:text-orange-200 [&_[data-criterion-chip="true"]]:px-1.5 [&_[data-criterion-chip="true"]]:py-0.5 [&_[data-criterion-chip="true"]]:rounded-md [&_[data-criterion-chip="true"]]:font-semibold [&_[data-criterion-chip="true"]]:border [&_[data-criterion-chip="true"]]:border-orange-200 dark:[&_[data-criterion-chip="true"]]:border-orange-700 [&_[data-criterion-chip="true"]]:select-none'
+        : '[&_code]:inline-block [&_code]:bg-purple-100 dark:[&_code]:bg-purple-900/40 [&_code]:text-purple-800 dark:[&_code]:text-purple-200 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:font-semibold [&_code]:border [&_code]:border-purple-200 dark:[&_code]:border-purple-700 [&_code]:not-italic [&_[data-variable-chip="true"]]:inline-block [&_[data-variable-chip="true"]]:bg-purple-100 dark:[&_[data-variable-chip="true"]]:bg-purple-900/40 [&_[data-variable-chip="true"]]:text-purple-800 dark:[&_[data-variable-chip="true"]]:text-purple-200 [&_[data-variable-chip="true"]]:px-1.5 [&_[data-variable-chip="true"]]:py-0.5 [&_[data-variable-chip="true"]]:rounded-md [&_[data-variable-chip="true"]]:font-semibold [&_[data-variable-chip="true"]]:border [&_[data-variable-chip="true"]]:border-purple-200 dark:[&_[data-variable-chip="true"]]:border-purple-700 [&_[data-variable-chip="true"]]:select-none [&_[data-criterion-chip="true"]]:inline-block [&_[data-criterion-chip="true"]]:bg-orange-100 dark:[&_[data-criterion-chip="true"]]:bg-orange-900/40 [&_[data-criterion-chip="true"]]:text-orange-800 dark:[&_[data-criterion-chip="true"]]:text-orange-200 [&_[data-criterion-chip="true"]]:px-1.5 [&_[data-criterion-chip="true"]]:py-0.5 [&_[data-criterion-chip="true"]]:rounded-md [&_[data-criterion-chip="true"]]:font-semibold [&_[data-criterion-chip="true"]]:border [&_[data-criterion-chip="true"]]:border-orange-200 dark:[&_[data-criterion-chip="true"]]:border-orange-700 [&_[data-criterion-chip="true"]]:select-none';
+
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
                 underline: false,
             }),
             VariableChip,
+            CriterionChip,
             Underline,
             TextAlign.configure({
                 types: ['heading', 'paragraph'],
@@ -119,7 +185,7 @@ export const RichTextEditor = ({
         },
         editorProps: {
             attributes: {
-                class: 'prose max-w-none focus:outline-none min-h-[120px] p-2 dark:prose-invert dark:text-gray-200 prose-code:before:content-[""] prose-code:after:content-[""] [&_code]:inline-block [&_code]:bg-purple-100 dark:[&_code]:bg-purple-900/40 [&_code]:text-purple-800 dark:[&_code]:text-purple-200 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:font-semibold [&_code]:border [&_code]:border-purple-200 dark:[&_code]:border-purple-700 [&_code]:not-italic [&_[data-variable-chip="true"]]:inline-block [&_[data-variable-chip="true"]]:bg-purple-100 dark:[&_[data-variable-chip="true"]]:bg-purple-900/40 [&_[data-variable-chip="true"]]:text-purple-800 dark:[&_[data-variable-chip="true"]]:text-purple-200 [&_[data-variable-chip="true"]]:px-1.5 [&_[data-variable-chip="true"]]:py-0.5 [&_[data-variable-chip="true"]]:rounded-md [&_[data-variable-chip="true"]]:font-semibold [&_[data-variable-chip="true"]]:border [&_[data-variable-chip="true"]]:border-purple-200 dark:[&_[data-variable-chip="true"]]:border-purple-700 [&_[data-variable-chip="true"]]:select-none',
+                class: `prose max-w-none focus:outline-none min-h-[120px] p-2 dark:prose-invert dark:text-gray-200 prose-code:before:content-[""] prose-code:after:content-[""] ${variableChipClasses}`,
             },
         },
     });

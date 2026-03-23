@@ -51,6 +51,34 @@ export const GestionUsuarios = () => {
         setSelectedUser(null);
     };
 
+    const getApiErrorMessage = (error: any, fallback: string) => {
+        const backendMessage = error?.response?.data?.message;
+        const backendError = error?.response?.data?.error;
+        const status = error?.response?.status;
+
+        if (backendMessage && backendError && backendError !== backendMessage) {
+            return `${backendMessage}. ${backendError}`;
+        }
+
+        if (backendMessage) {
+            return backendMessage;
+        }
+
+        if (status === 400) {
+            return `${fallback}. Verifique campos obligatorios o datos duplicados (usuario/email).`;
+        }
+
+        if (status === 404) {
+            return `${fallback}. No se encontró un recurso requerido (por ejemplo, rol).`;
+        }
+
+        if (status && status >= 500) {
+            return `${fallback}. Ocurrió un error interno del servidor.`;
+        }
+
+        return fallback;
+    };
+
     const handleSubmit = (data: UserFormData, locationIds?: string[], medicalData?: UserMedicalSubmitData, permissionCodes?: string[]) => {
         if (selectedUser) {
             // Actualizar
@@ -132,10 +160,21 @@ export const GestionUsuarios = () => {
             createUser(data, {
                 onSuccess: (response: any) => {
                     const createdUserId = response?.data?.user_id;
+                    const creationMessage = response?.message || "Usuario creado exitosamente";
+                    const credentialsEmailSent = response?.data?.credentials_email_sent !== false;
+
+                    const notifyCreateOutcome = () => {
+                        if (credentialsEmailSent) {
+                            toast.success(creationMessage);
+                            return;
+                        }
+
+                        toast.error(creationMessage);
+                    };
 
                     const savePermissionsIfNeeded = () => {
                         if (!(createdUserId && permissionCodes)) {
-                            toast.success("Usuario creado exitosamente");
+                            notifyCreateOutcome();
                             handleCloseModal();
                             return;
                         }
@@ -143,7 +182,7 @@ export const GestionUsuarios = () => {
                         userService
                             .setUserPermissions(createdUserId, permissionCodes)
                             .then(() => {
-                                toast.success("Usuario creado exitosamente");
+                                notifyCreateOutcome();
                                 handleCloseModal();
                             })
                             .catch((error: any) => {
@@ -197,8 +236,8 @@ export const GestionUsuarios = () => {
 
                     saveMedicalIfNeeded();
                 },
-                onError: () => {
-                    toast.error("Error al crear el usuario");
+                onError: (error: any) => {
+                    toast.error(getApiErrorMessage(error, "Error al crear el usuario"));
                 },
             });
         }
