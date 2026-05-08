@@ -9,7 +9,11 @@ interface LoginResponse {
     refresh_token: string;
     user: {
         email: string;
+        email_verification_required?: boolean;
+        email_verified?: boolean;
+        facility_id?: string | null;
         id: string;
+        location_id?: string | null;
         name: string;
         requires_password_change: boolean;
         role_id: string;

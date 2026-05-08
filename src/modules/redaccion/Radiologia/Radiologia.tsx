@@ -1,7 +1,7 @@
 import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
 import { InputSearch } from "@/components/InputSearch"
 import { MainLayout } from "@/layouts/layout"
-import { HandHelping, RefreshCcw, Loader2 } from "lucide-react"
+import { HandHelping, RefreshCcw, Loader2, AlertTriangle } from "lucide-react"
 import { useMemo, useState, useEffect, useRef, useCallback } from "react"
 import { useInformes, useBlockExam, useUnblockExam, useUpdateFlags, useUpdateTagIds, useAllTags, useUpdateGeneralNotes } from "./hooks/use-informes"
 import { useCrossWindowSync } from "./redactar-informe/hooks/use-cross-windows"
@@ -23,7 +23,10 @@ import { useModalidades } from "@/modules/configuracion/configuracion-tablas/exa
 import { useGrupoEstudio } from "@/modules/configuracion/configuracion-tablas/examenes/grupos-estudio"
 import { useFilterPresets } from "./hooks/use-filter-presets"
 import { useAuth } from "@/context/AuthContext"
+import { useFacility } from "@/context/FacilityContext"
 import { getDicomViewerUrl } from "@/services/dicomViewer"
+import { api } from "@/lib/api"
+import { useQuery } from "@tanstack/react-query"
 import fondoImage from "@/assets/redaccion.jpg"
 import backDarkImage from "@/assets/back-dark.jpg";
 
@@ -32,7 +35,25 @@ export const Radiologia = () => {
     useCrossWindowSync();
 
     const { authData } = useAuth();
+    const { selectedFacilityId } = useFacility();
     const isAdmin = authData?.user?.name === "Administrador";
+
+    const { data: facilityPlanData } = useQuery({
+        queryKey: ["facility-plan", selectedFacilityId, "radiologia"],
+        queryFn: async () => {
+            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
+            return response.data?.data || null;
+        },
+        enabled: Boolean(authData && selectedFacilityId),
+        staleTime: 60 * 1000,
+    });
+
+    const readMonthlyLimit: number | null = facilityPlanData?.plan?.max_read_monthly ?? null;
+    const readCount: number = facilityPlanData?.usage_monthly?.read_count ?? 0;
+    const isReadLimitReached =
+        typeof readMonthlyLimit === "number"
+        && readMonthlyLimit >= 0
+        && readCount >= readMonthlyLimit;
 
     // Ref para guardar las ventanas del visor de imágenes (windowId -> Window)
     const viewerWindowsRef = useRef<Map<string, Window>>(new Map());
@@ -72,7 +93,7 @@ export const Radiologia = () => {
     const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useUpdateTagIds();
     const { allTags } = useAllTags();
     const { mutate: updateGeneralNotes, isPending: isUpdatingNotes } = useUpdateGeneralNotes();
-    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, show_only_with_notes: soloConNotas, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField, sort_column: sortColumn, sort_direction: sortDirection });
+    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, show_only_with_notes: soloConNotas, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField, sort_column: sortColumn, sort_direction: sortDirection, facility_id: selectedFacilityId });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
@@ -299,6 +320,11 @@ export const Radiologia = () => {
     };
 
     const handleRedactarInforme = async (informe: Informes) => {
+        if (isReadLimitReached) {
+            toast.error(`Límite mensual de redacción alcanzado (${readCount}/${readMonthlyLimit}).`);
+            return;
+        }
+
         // Verificar si el informe está bloqueado por otro usuario
         if (informe.blocked_by) {
             const blockerLabel = informe.blocked_by_name || 'otro usuario';
@@ -502,6 +528,15 @@ export const Radiologia = () => {
                     </div>
                     <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400">Redacción de reportes</h1>
                 </div>
+
+                {isReadLimitReached && (
+                    <div className="mb-3 rounded-lg border border-red-500/70 bg-red-500/15 px-4 py-3 text-sm text-red-200 flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                        <div>
+                            <strong className="font-semibold">Límite alcanzado:</strong> ya no tienes disponibilidad para redactar más estudios este mes ({readCount}/{readMonthlyLimit}).
+                        </div>
+                    </div>
+                )}
 
                 {/* Pestañas de presets de filtros */}
                 <FilterPresetTabs
@@ -755,7 +790,7 @@ export const Radiologia = () => {
                     showIndex
                     loading={isLoadingInformes}
                     pagination={pagination}
-                    actions={getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf, getGeneralNotesAction(handleUpdateGeneralNotes, isUpdatingNotes))}
+                    actions={getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf, getGeneralNotesAction(handleUpdateGeneralNotes, isUpdatingNotes), isReadLimitReached)}
                     onPaginationChange={(newPage) => {
                         setPage(newPage);
                     }}

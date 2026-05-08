@@ -207,11 +207,13 @@ export const getInformesActions = (
     onViewImagenes: (informe: Informes) => void,
     onViewPdf: (informe: Informes) => void,
     generalNotesAction?: TableAction<Informes>,
+    redactDisabled: boolean = false,
 ): TableAction<Informes>[] => [
         {
             label: "Redactar Informe",
             icon: <ClipboardPlus className="h-4 w-4 text-blue-900" />,
             onClick: (informe: Informes) => onViewInforme(informe),
+            disabled: () => redactDisabled,
         },
         {
             label: "Ver Imágenes",

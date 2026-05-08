@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RichTextEditor } from "@/components/RichTextEditor";
-import { Save, ChevronDown, ChevronUp, ArrowLeft, Loader2, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Save, ChevronDown, ChevronUp, ArrowLeft, Loader2, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, PanelRightClose, PanelRightOpen, Lock } from "lucide-react";
 import { useCreateTemplate, useUpdateTemplate, useTemplate } from "../hooks/use-templates";
 import { usePlaceholderNavigation } from "../hooks/use-placeholder-navigation";
 import { toast } from "sonner";
@@ -16,26 +16,19 @@ import { Autocomplete, type AutocompleteOption } from "@/components/autocomplete
 import { parserFacilityRelService } from "@/services/parser-facility-rel.service";
 import { criteriaService, type ParserCriterionVariable, type StructuredCriterion } from "@/services/criteria.service";
 import type { ReportType } from "../types/informe-pred.types";
-
-const VARIABLE_PLACEHOLDER_REGEX = /\{[^{}]+\}|\[\[[^\]]+\]\]/g;
+import { useAuth } from "@/context/AuthContext";
 
 const stripVariablePlaceholdersFromHtml = (html: string): string => {
     if (!html) return html;
 
+    // Solo elimina chips de variables/criterios (elementos interactivos de tipo inteligente),
+    // pero conserva texto plano como [[ ]] escrito manualmente.
     return html
         .replace(/<span[^>]*data-variable-chip=["']true["'][^>]*>.*?<\/span>/gis, '')
-    .replace(/<span[^>]*data-criterion-chip=["']true["'][^>]*>.*?<\/span>/gis, '')
-        .replace(VARIABLE_PLACEHOLDER_REGEX, '')
+        .replace(/<span[^>]*data-criterion-chip=["']true["'][^>]*>.*?<\/span>/gis, '')
         .replace(/\s{2,}/g, ' ')
         .replace(/>\s+</g, '><')
         .trim();
-};
-
-const hasVariablePlaceholder = (value: string): boolean => {
-    if (!value) return false;
-
-    const regex = new RegExp(VARIABLE_PLACEHOLDER_REGEX.source, 'g');
-    return /data-variable-chip=["']true["']/i.test(value) || /data-criterion-chip=["']true["']/i.test(value) || regex.test(value);
 };
 
 interface StudyTypeVariableItem {
@@ -50,6 +43,11 @@ export const CrearInforme = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>(); // Obtener el ID de la URL
     const isEditMode = !!id; // Determinar si estamos en modo edición
+
+    const { authData } = useAuth();
+    const isSysadmin = ['sysadmin', 'admin', 'administrador'].includes(
+        (authData?.user?.role_name || '').toLowerCase()
+    );
 
     // Cargar datos de la plantilla si estamos en modo edición
     const { data: templateData, isLoading: isLoadingTemplate } = useTemplate(id || '');
@@ -349,10 +347,18 @@ export const CrearInforme = () => {
         }
 
         try {
-            const sanitizedTechnique = reportType === 'simple' ? stripVariablePlaceholdersFromHtml(technique) : technique;
-            const sanitizedFindings = reportType === 'simple' ? stripVariablePlaceholdersFromHtml(findings) : findings;
-            const sanitizedImpression = reportType === 'simple' ? stripVariablePlaceholdersFromHtml(impression) : impression;
-            const sanitizedConclusion = reportType === 'simple' ? stripVariablePlaceholdersFromHtml(conclusion) : conclusion;
+            // Leer el contenido directamente desde los editores TipTap para evitar
+            // problemas de sincronización entre el estado React y el contenido del editor
+            // (p.ej. cuando el usuario inserta [[ ]] y guarda sin volver a enfocar el editor).
+            const rawTechnique  = (editorsRef.current['technique']  as any)?.getHTML?.() ?? technique;
+            const rawFindings   = (editorsRef.current['findings']   as any)?.getHTML?.() ?? findings;
+            const rawImpression = (editorsRef.current['impression'] as any)?.getHTML?.() ?? impression;
+            const rawConclusion = (editorsRef.current['conclusion'] as any)?.getHTML?.() ?? conclusion;
+
+            const sanitizedTechnique = reportType === 'simple' ? stripVariablePlaceholdersFromHtml(rawTechnique) : rawTechnique;
+            const sanitizedFindings = reportType === 'simple' ? stripVariablePlaceholdersFromHtml(rawFindings) : rawFindings;
+            const sanitizedImpression = reportType === 'simple' ? stripVariablePlaceholdersFromHtml(rawImpression) : rawImpression;
+            const sanitizedConclusion = reportType === 'simple' ? stripVariablePlaceholdersFromHtml(rawConclusion) : rawConclusion;
 
             const templatePayload = {
                 title: title.trim(),
@@ -457,17 +463,7 @@ export const CrearInforme = () => {
 
     const showStructuredTabs = reportType !== 'simple';
 
-    const hasPendingSimpleCleanup = useMemo(() => {
-        if (reportType !== 'simple') {
-            return false;
-        }
 
-        const hasVariablesInEditors = [technique, findings, impression, conclusion].some((field) =>
-            hasVariablePlaceholder(field || '')
-        );
-
-        return hasVariablesInEditors || Boolean(structuredVariables.trim()) || Boolean(criteria.trim());
-    }, [reportType, technique, findings, impression, conclusion, structuredVariables, criteria]);
 
     useEffect(() => {
         if (!showStructuredTabs && rightMetaTab !== 'info') {
@@ -515,6 +511,18 @@ export const CrearInforme = () => {
                         </div>
 
                         <div className="flex items-center gap-3">
+                            <Button
+                                variant="outline"
+                                className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1e2430] font-mono"
+                                disabled={!activeEditor}
+                                title="Insertar [[ ]] en el cursor (placeholder de informe)"
+                                onClick={() => {
+                                    if (!activeEditor) return;
+                                    activeEditor.chain().focus().insertContent('[[ ]]').run();
+                                }}
+                            >
+                                [[ ]]
+                            </Button>
                             <Button
                                 variant="outline"
                                 className="bg-brand-purple border-brand-purple text-white hover:bg-brand-purple/90 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -581,7 +589,7 @@ export const CrearInforme = () => {
                                         onDragLeave={handleEditorDragLeave}
                                         onDrop={(e) => handleVariableDropInEditor(e, 'technique')}
                                         showToolbar={false}
-                                        variableChipTone={hasPendingSimpleCleanup ? 'warning' : 'default'}
+                                        variableChipTone='default'
                                     />
                                 </div>
                             </div>
@@ -609,7 +617,7 @@ export const CrearInforme = () => {
                                         onDragLeave={handleEditorDragLeave}
                                         onDrop={(e) => handleVariableDropInEditor(e, 'findings')}
                                         showToolbar={false}
-                                        variableChipTone={hasPendingSimpleCleanup ? 'warning' : 'default'}
+                                        variableChipTone='default'
                                     />
                                 </div>
                             </div>
@@ -637,7 +645,7 @@ export const CrearInforme = () => {
                                         onDragLeave={handleEditorDragLeave}
                                         onDrop={(e) => handleVariableDropInEditor(e, 'impression')}
                                         showToolbar={false}
-                                        variableChipTone={hasPendingSimpleCleanup ? 'warning' : 'default'}
+                                        variableChipTone='default'
                                     />
                                 </div>
                             </div>
@@ -665,7 +673,7 @@ export const CrearInforme = () => {
                                         onDragLeave={handleEditorDragLeave}
                                         onDrop={(e) => handleVariableDropInEditor(e, 'conclusion')}
                                         showToolbar={false}
-                                        variableChipTone={hasPendingSimpleCleanup ? 'warning' : 'default'}
+                                        variableChipTone='default'
                                     />
                                 </div>
                             </div>
@@ -759,14 +767,21 @@ export const CrearInforme = () => {
                                                 <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                                                     Tipo de informe:
                                                 </label>
-                                                <Autocomplete
-                                                    options={reportTypeOptions}
-                                                    value={reportType}
-                                                    onValueChange={(value) => setReportType((value || 'simple') as ReportType)}
-                                                    placeholder="Seleccionar tipo de informe"
-                                                    emptyMessage="No se encontraron tipos de informe."
-                                                    searchPlaceholder="Buscar tipo de informe..."
-                                                />
+                                                {isSysadmin ? (
+                                                    <Autocomplete
+                                                        options={reportTypeOptions}
+                                                        value={reportType}
+                                                        onValueChange={(value) => setReportType((value || 'simple') as ReportType)}
+                                                        placeholder="Seleccionar tipo de informe"
+                                                        emptyMessage="No se encontraron tipos de informe."
+                                                        searchPlaceholder="Buscar tipo de informe..."
+                                                    />
+                                                ) : (
+                                                    <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-[#1e2430] text-gray-500 dark:text-gray-400 text-sm cursor-not-allowed select-none">
+                                                        <Lock className="h-3.5 w-3.5 shrink-0" />
+                                                        <span>Simple</span>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {reportType === 'inteligente' && (
@@ -815,13 +830,7 @@ export const CrearInforme = () => {
                                                 </div>
                                             )}
 
-                                            {hasPendingSimpleCleanup && (
-                                                <div className="rounded-md border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20 p-2">
-                                                    <p className="text-xs text-red-700 dark:text-red-300 font-medium">
-                                                        Esta plantilla es Simple: las variables y criterios existentes se eliminaran al guardar.
-                                                    </p>
-                                                </div>
-                                            )}
+
 
                                             <div className="flex items-center space-x-2">
                                                 <Checkbox

@@ -5,7 +5,9 @@ import {
     createTemplate,
     updateTemplate,
     deleteTemplate,
-    selectTemplate
+    selectTemplate,
+    setUserDefaultTemplate,
+    unsetUserDefaultTemplate,
 } from '../services/informe-pred.service';
 import type { CreateTemplateRequest, UpdateTemplateRequest } from '../types/informe-pred.types';
 
@@ -99,5 +101,31 @@ export const useDeleteTemplate = () => {
 export const useSelectTemplate = () => {
     return useMutation({
         mutationFn: (templateId: string) => selectTemplate(templateId),
+    });
+};
+
+/**
+ * Hook para marcar una plantilla propia como default personal del usuario
+ */
+export const useSetUserDefault = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (templateId: string) => setUserDefaultTemplate(templateId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['templates'] });
+        },
+    });
+};
+
+/**
+ * Hook para desmarcar el default personal del usuario
+ */
+export const useUnsetUserDefault = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (templateId: string) => unsetUserDefaultTemplate(templateId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['templates'] });
+        },
     });
 };

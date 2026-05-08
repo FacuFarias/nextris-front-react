@@ -3,6 +3,7 @@ import { z } from "zod";
 export const facilityFormSchema = z.object({
     description: z.string().min(1, "La descripción es requerida"),
     id_patientdomain: z.string().optional(),
+    plan_code: z.enum(["free", "standard", "pro", "enterprise"]).optional(),
 
     // SMTP Config
     smtp_server: z.string().optional(),

@@ -23,9 +23,23 @@ export const uploadFiles = async (files: File, location_id: string) => {
 }
 
 
-export const getUnlinkedStudies = async ({ location_id }: { location_id: string }) => {
+export const getUnlinkedStudies = async ({
+    location_id,
+    include_linked,
+    include_pacs,
+}: {
+    location_id: string,
+    include_linked?: boolean,
+    include_pacs?: boolean,
+}) => {
     try {
-        const response = await apiNoAuth.get<EstudiosNoVinculados>("/manual/unlinked-studies", { params: { location_id } });
+        const response = await apiNoAuth.get<EstudiosNoVinculados>("/manual/unlinked-studies", {
+            params: {
+                location_id,
+                include_linked: include_linked ? 1 : 0,
+                include_pacs: include_pacs === false ? 0 : 1,
+            }
+        });
         return response.data;
     } catch (error) {
         throw error;

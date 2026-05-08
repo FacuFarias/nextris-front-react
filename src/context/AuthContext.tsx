@@ -1,12 +1,18 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
+import posthog from "posthog-js";
 
 interface User {
     email: string;
+    email_verification_required?: boolean;
+    email_verified?: boolean;
+    facility_id?: string | null;
     id: string;
+    location_id?: string | null;
     name: string;
     permissions?: string[];
     requires_password_change: boolean;
     role_id: string;
+    role_name?: string;
     surname: string;
     user_type: string;
     username: string;
@@ -51,12 +57,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAuthData(data);
         // Guardar en localStorage
         localStorage.setItem("authData", JSON.stringify(data));
+        // Identify user in PostHog
+        try {
+            posthog.identify(data.user.id, {
+                username: data.user.username,
+                name: `${data.user.name} ${data.user.surname}`.trim(),
+                email: data.user.email,
+                role_id: data.user.role_id,
+                user_type: data.user.user_type,
+                facility_id: data.user.facility_id ?? null,
+            });
+            posthog.capture("user_login", { user_type: data.user.user_type });
+        } catch {
+            // silent — analytics must never break auth
+        }
     };
 
     const logout = () => {
+        // Capture before clearing state
+        try {
+            posthog.capture("user_logout");
+            posthog.reset();
+        } catch {
+            // silent
+        }
         setAuthData(null);
         // Limpiar localStorage
         localStorage.removeItem("authData");
+        localStorage.removeItem("activeFacilityId");
     };
 
     const updateUser = (user: User) => {

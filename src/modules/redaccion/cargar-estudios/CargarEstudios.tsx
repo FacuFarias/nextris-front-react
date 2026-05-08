@@ -8,6 +8,10 @@ import { Progress } from "@/components/ui/progress"
 import { useCargarEstudios, useEstudiosNoVinculados } from "./hooks/use-cargar-estudios"
 import { Badge } from "@/components/ui/badge"
 import { DesvincularImagenTab, VincularImagenTab } from "./components"
+import { api } from "@/lib/api"
+import { useQuery } from "@tanstack/react-query"
+import { useFacility } from "@/context/FacilityContext"
+import { toast } from "sonner"
 
 export const CargarEstudios = () => {
     const [files, setFiles] = useState<File[]>([])
@@ -18,7 +22,29 @@ export const CargarEstudios = () => {
     const [uploadProgress, setUploadProgress] = useState(0)
     const [uploadedCount, setUploadedCount] = useState(0)
     const [totalFiles, setTotalFiles] = useState(0)
-    const { estudiosNoVinculadosData, isLoading, error, refetchEstudiosNoVinculados } = useEstudiosNoVinculados({ location_id: selectedDireccion });
+    const { selectedFacilityId } = useFacility();
+
+    const { data: facilityPlanData } = useQuery({
+        queryKey: ["facility-plan", selectedFacilityId, "cargar-estudios"],
+        queryFn: async () => {
+            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
+            return response.data?.data || null;
+        },
+        enabled: Boolean(selectedFacilityId),
+        staleTime: 60 * 1000,
+    });
+
+    const receiveMonthlyLimit: number | null = facilityPlanData?.plan?.max_receive_monthly ?? null;
+    const receivedCount: number = facilityPlanData?.usage_monthly?.received_count ?? 0;
+    const isReceiveLimitReached =
+        typeof receiveMonthlyLimit === "number"
+        && receiveMonthlyLimit >= 0
+        && receivedCount >= receiveMonthlyLimit;
+    const { estudiosNoVinculadosData, isLoading, error, refetchEstudiosNoVinculados } = useEstudiosNoVinculados({
+        location_id: selectedDireccion,
+        include_linked: true,
+        include_pacs: false,
+    });
     const cargarEstudiosMutation = useCargarEstudios();
 
     // Estados para animación de tabs
@@ -59,6 +85,9 @@ export const CargarEstudios = () => {
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault()
+        if (isReceiveLimitReached || isUploading) {
+            return
+        }
         setIsDragging(true)
     }
 
@@ -70,11 +99,17 @@ export const CargarEstudios = () => {
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault()
         setIsDragging(false)
+        if (isReceiveLimitReached) {
+            return
+        }
         const droppedFiles = Array.from(e.dataTransfer.files)
         setFiles(droppedFiles)
     }
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (isReceiveLimitReached) {
+            return
+        }
         if (e.target.files) {
             const selectedFiles = Array.from(e.target.files)
             setFiles(selectedFiles)
@@ -101,6 +136,11 @@ export const CargarEstudios = () => {
     // Sube todos los archivos uno por uno
     const uploadFiles = async (filesToUpload: File[]) => {
         if (filesToUpload.length === 0) return
+        if (isReceiveLimitReached) {
+            toast.error(`Límite mensual alcanzado (${receivedCount}/${receiveMonthlyLimit}). No puedes subir más estudios DICOM este mes.`)
+            setFiles([])
+            return
+        }
 
         setIsUploading(true)
         setUploadedCount(0)
@@ -132,6 +172,9 @@ export const CargarEstudios = () => {
     }, [files])
 
     const handleButtonClick = () => {
+        if (isReceiveLimitReached) {
+            return
+        }
         fileInputRef.current?.click()
     }
 
@@ -199,6 +242,11 @@ export const CargarEstudios = () => {
                                 onDireccionChange={handleDireccionChange}
                                 isRow={true}
                             />
+                            {selectedDireccion && isReceiveLimitReached && (
+                                <div className="mt-3 rounded-lg border border-red-500/70 bg-red-500/15 px-4 py-3 text-sm text-red-200">
+                                    <strong className="font-semibold">Límite alcanzado:</strong> ya se llegó al máximo mensual de carga DICOM para esta institución ({receivedCount}/{receiveMonthlyLimit}).
+                                </div>
+                            )}
                             {
                                 selectedDireccion && (
                                     <>
@@ -206,7 +254,9 @@ export const CargarEstudios = () => {
                                             onDragOver={handleDragOver}
                                             onDragLeave={handleDragLeave}
                                             onDrop={handleDrop}
-                                            className={`border-2 border-dashed rounded-lg p-12 transition-all mt-3 ${isDragging
+                                            className={`border-2 border-dashed rounded-lg p-12 transition-all mt-3 ${isReceiveLimitReached
+                                                ? 'border-red-500/60 bg-red-500/5 opacity-70 cursor-not-allowed'
+                                                : isDragging
                                                 ? 'border-brand-purple bg-transparent'
                                                 : 'border-gray-300 bg-transparent'
                                                 }`}
@@ -230,7 +280,7 @@ export const CargarEstudios = () => {
                                                 {/* Botón de selección */}
                                                 <Button
                                                     onClick={handleButtonClick}
-                                                    disabled={isUploading}
+                                                    disabled={isUploading || isReceiveLimitReached}
                                                     className="bg-brand-purple hover:bg-brand-purple/90 text-white px-6 py-3 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     {isUploading ? (
@@ -238,7 +288,7 @@ export const CargarEstudios = () => {
                                                     ) : (
                                                         <FolderOpen className="w-5 h-5" />
                                                     )}
-                                                    {isUploading ? 'SUBIENDO...' : 'SELECCIONAR ARCHIVOS DICOM'}
+                                                    {isUploading ? 'SUBIENDO...' : isReceiveLimitReached ? 'LÍMITE ALCANZADO' : 'SELECCIONAR ARCHIVOS DICOM'}
                                                 </Button>
 
                                                 {/* Input oculto */}
@@ -248,6 +298,7 @@ export const CargarEstudios = () => {
                                                     multiple
                                                     accept=".dcm,.dicom,.dic"
                                                     onChange={handleFileSelect}
+                                                    disabled={isReceiveLimitReached}
                                                     className="hidden"
                                                 />
 
@@ -352,10 +403,24 @@ export const CargarEstudios = () => {
                                                                             <Badge variant="outline" className="text-xs">
                                                                                 {estudio.modality}
                                                                             </Badge>
+                                                                            {estudio.islinked ? (
+                                                                                <Badge className="text-xs bg-green-600 text-white hover:bg-green-600">
+                                                                                    Cargado y vinculado
+                                                                                </Badge>
+                                                                            ) : (
+                                                                                <Badge variant="outline" className="text-xs border-amber-400 text-amber-500">
+                                                                                    Cargado sin vincular
+                                                                                </Badge>
+                                                                            )}
                                                                             <div className="flex items-center gap-1">
                                                                                 <span>{estudio.study_instance_uid}</span>
                                                                             </div>
                                                                         </div>
+                                                                        {estudio.islinked && (
+                                                                            <div className="mt-2 text-xs text-green-500 dark:text-green-400">
+                                                                                Vinculado a orden: {estudio.linked_order_accession || estudio.linked_examination_guid || 'N/D'}
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             </div>

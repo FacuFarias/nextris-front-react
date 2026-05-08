@@ -17,11 +17,20 @@ import {
     Clock,
     Sparkles,
     FileCode,
+    Gauge,
+    Layers,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useFacility } from "@/context/FacilityContext";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useUserModules } from "@/hooks/use-user-modules";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import agendaModuleImage from "@/assets/modules-images/agenda.png";
+import nexiModuleImage from "@/assets/modules-images/nexi.png";
+import portalModuleImage from "@/assets/modules-images/portal.png";
+import structuredReportsModuleImage from "@/assets/modules-images/reportes-estructurados.png";
 
 interface MenuItem {
     id: string;
@@ -49,6 +58,36 @@ interface ExtraModulePromo {
     path: string;
     requiredModule: string;
     allowedRoles?: string[];
+    requiredPermissions?: string[];
+}
+
+interface DashboardPlanUsageSummary {
+    plan_code: string | null;
+    plan_name: string | null;
+    performed_studies: number;
+    remaining_studies: number | null;
+    limit_studies: number | null;
+    received_studies: number;
+    received_remaining: number | null;
+    received_limit: number | null;
+    distributed_studies: number;
+    distributed_remaining: number | null;
+    distributed_limit: number | null;
+}
+
+interface FacilityPlanData {
+    plan: {
+        plan_code: string | null;
+        plan_name: string | null;
+        max_read_monthly: number | null;
+        max_receive_monthly: number | null;
+        max_distribute_monthly: number | null;
+    } | null;
+    usage_monthly: {
+        read_count: number;
+        received_count: number;
+        distributed_count: number;
+    } | null;
 }
 
 const menuSections: MenuSection[] = [
@@ -63,7 +102,8 @@ const menuSections: MenuSection[] = [
                 icon: <Users className="w-5 h-5" />,
                 path: "/buscar-pacientes",
                 allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo"],
-            },
+                    requiredPermissions: ["tabs.patients.view", "patients.view"],
+                },
             {
                 id: "unificacion",
                 title: "Unificación de Paciente",
@@ -71,6 +111,7 @@ const menuSections: MenuSection[] = [
                 icon: <UserCheck className="w-5 h-5" />,
                 path: "/administracion/unificacion-paciente",
                 allowedRoles: ["Sysadmin"],
+                    requiredPermissions: ["tabs.gestion.view"],
             },
         ],
     },
@@ -86,6 +127,7 @@ const menuSections: MenuSection[] = [
                 path: "/cita/nueva-cita",
                 icon: <Calendar className="w-5 h-5" />,
                 allowedRoles: ["Sysadmin", "Administrativo"],
+                requiredPermissions: ["tabs.appointments.view", "appointments.create"],
                 requiredModule: "appointments",
             },
             {
@@ -95,7 +137,8 @@ const menuSections: MenuSection[] = [
                 icon: <CalendarCheck className="w-5 h-5" />,
                 path: "/cita/editar-cita",
                 allowedRoles: ["Sysadmin", "Administrativo"],
-                requiredModule: "appointments",
+                    requiredPermissions: ["tabs.appointments.view", "appointments.view"],
+                    requiredModule: "appointments",
             },
             {
                 id: "adm-cita",
@@ -113,7 +156,7 @@ const menuSections: MenuSection[] = [
                 path: "/admision-espontanea",
                 description: "Registra ingresos sin cita previa",
                 icon: <UserCog className="w-5 h-5" />,
-                allowedRoles: ["Sysadmin", "Administrativo"],
+                allowedRoles: ["Sysadmin", "Administrativo", "Medico"],
                 requiredPermissions: ["tabs.admissions.view", "admissions.view", "admissions.create_spontaneous"],
             },
         ],
@@ -129,6 +172,7 @@ const menuSections: MenuSection[] = [
                 path: "/administracion/reasignacion-examenes",
                 icon: <ClipboardList className="w-5 h-5" />,
                 allowedRoles: ["Sysadmin"],
+                requiredPermissions: ["tabs.gestion.view"],
             },
             {
                 id: "ejecucion",
@@ -137,6 +181,7 @@ const menuSections: MenuSection[] = [
                 icon: <MousePointer className="w-5 h-5" />,
                 path: "/ejecucion",
                 allowedRoles: ["Sysadmin", "Tecnico"],
+                requiredPermissions: ["tabs.execution.view", "execution.view_pending"],
             },
             {
                 id: "redaccion",
@@ -145,6 +190,7 @@ const menuSections: MenuSection[] = [
                 description: "Redacta e interpreta informes",
                 icon: <FileText className="w-5 h-5" />,
                 allowedRoles: ["Sysadmin", "Medico"],
+                requiredPermissions: ["tabs.reports.view", "reports.view_writing"],
             },
             {
                 id: "inf-predef",
@@ -153,6 +199,7 @@ const menuSections: MenuSection[] = [
                 icon: <FileEdit className="w-5 h-5" />,
                 path: "/estudios/informes-predefinidos",
                 allowedRoles: ["Sysadmin", "Medico"],
+                requiredPermissions: ["tabs.reports.view", "reports.view_reports"],
             },
             {
                 id: "car-estudios",
@@ -161,6 +208,7 @@ const menuSections: MenuSection[] = [
                 icon: <FileEdit className="w-5 h-5" />,
                 path: "/estudios/cargar-estudios",
                 allowedRoles: ["Sysadmin", "Medico"],
+                requiredPermissions: ["tabs.reports.view", "reports.view_writing"],
             },
             {
                 id: "distribucion",
@@ -168,7 +216,8 @@ const menuSections: MenuSection[] = [
                 description: "Envía resultados y reportes",
                 path: "/distribucion",
                 icon: <Send className="w-5 h-5" />,
-                allowedRoles: ["Sysadmin", "Administrativo"],
+                allowedRoles: ["Sysadmin", "Administrativo", "Medico"],
+                requiredPermissions: ["tabs.distribution.view", "distribution.view"],
             },
         ],
     },
@@ -183,6 +232,7 @@ const menuSections: MenuSection[] = [
                 icon: <Wrench className="w-5 h-5" />,
                 path: "/configuraciones/tablas",
                 allowedRoles: ["Sysadmin"],
+                requiredPermissions: ["tabs.config.view", "users.manage"],
             },
             {
                 id: "preferencias",
@@ -238,6 +288,7 @@ const extraModulePromos: ExtraModulePromo[] = [
         path: "/nexi",
         requiredModule: "nexi",
         allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo"],
+        requiredPermissions: ["tabs.nexi.view"],
     },
     {
         id: "promo-structured-reports",
@@ -247,6 +298,7 @@ const extraModulePromos: ExtraModulePromo[] = [
         path: "/reportes-estructurados/lista-parser",
         requiredModule: "structured_reports",
         allowedRoles: ["Sysadmin"],
+        requiredPermissions: ["tabs.structured_reports.view"],
     },
     {
         id: "promo-appointments",
@@ -256,6 +308,7 @@ const extraModulePromos: ExtraModulePromo[] = [
         path: "/cita/nueva-cita",
         requiredModule: "appointments",
         allowedRoles: ["Sysadmin", "Administrativo"],
+        requiredPermissions: ["tabs.appointments.view", "appointments.create"],
     },
     {
         id: "promo-patient-portal",
@@ -268,15 +321,43 @@ const extraModulePromos: ExtraModulePromo[] = [
     },
 ];
 
+const extraModuleImageByCode: Record<string, string> = {
+    patient_portal: portalModuleImage,
+    appointments: agendaModuleImage,
+    nexi: nexiModuleImage,
+    structured_reports: structuredReportsModuleImage,
+};
+
 export const Inicio = () => {
 
     const { authData, logout } = useAuth();
+    const { selectedFacilityId } = useFacility();
     const { moduleCodesSet, isLoading: isModulesLoading, hasError: hasModulesError } = useUserModules(Boolean(authData));
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedPromo] = useState<ExtraModulePromo>(
         () => extraModulePromos[Math.floor(Math.random() * extraModulePromos.length)]
     );
+
+    const { data: dashboardSummary } = useQuery({
+        queryKey: ["dashboard-plan-usage-summary"],
+        queryFn: async () => {
+            const response = await api.get('/config/dashboard/plan-usage-summary');
+            return (response.data?.data || null) as DashboardPlanUsageSummary | null;
+        },
+        enabled: Boolean(authData),
+        staleTime: 60 * 1000,
+    });
+
+    const { data: facilityPlanData } = useQuery({
+        queryKey: ["facility-plan", selectedFacilityId, "inicio"],
+        queryFn: async () => {
+            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
+            return (response.data?.data || null) as FacilityPlanData | null;
+        },
+        enabled: Boolean(authData && selectedFacilityId),
+        staleTime: 60 * 1000,
+    });
 
     // Actualizar la hora cada segundo
     useEffect(() => {
@@ -319,14 +400,23 @@ export const Inicio = () => {
         const userPermissions = Array.isArray((authData?.user as any)?.permissions)
             ? ((authData?.user as any)?.permissions as string[])
             : [];
+        const isStaffUser = role !== "patient";
 
         const hasRoleConstraint = Array.isArray(allowedRoles) && allowedRoles.length > 0;
         const hasPermissionConstraint = Array.isArray(requiredPermissions) && requiredPermissions.length > 0;
 
         const roleAccess = hasRoleConstraint ? Boolean(role && allowedRoles!.includes(role)) : true;
-        const permissionAccess = hasPermissionConstraint
-            ? (userPermissions.includes("*") || requiredPermissions!.some((permission) => userPermissions.includes(permission)))
-            : true;
+        const permissionAccess = isStaffUser
+            ? (
+                hasPermissionConstraint
+                    ? (userPermissions.includes("*") || requiredPermissions!.some((permission) => userPermissions.includes(permission)))
+                    : false
+            )
+            : (
+                hasPermissionConstraint
+                    ? (userPermissions.includes("*") || requiredPermissions!.some((permission) => userPermissions.includes(permission)))
+                    : true
+            );
 
         return roleAccess && permissionAccess;
     };
@@ -339,7 +429,7 @@ export const Inicio = () => {
 
     const canOpenSelectedPromo = Boolean(
         selectedPromo &&
-        hasAccess(selectedPromo.allowedRoles) &&
+        hasAccess(selectedPromo.allowedRoles, selectedPromo.requiredPermissions) &&
         hasModuleAccess(selectedPromo.requiredModule)
     );
 
@@ -359,6 +449,28 @@ export const Inicio = () => {
         acc.push(i === 0 ? 0 : acc[i - 1] + filteredSections[i - 1].items.length);
         return acc;
     }, []);
+
+    const formatUsedLimit = (used: number | null | undefined, limit: number | null | undefined) => {
+        const safeUsed = Number.isFinite(Number(used)) ? Number(used) : 0;
+        const limitText = limit == null ? "Ilimitado" : String(limit);
+        return `${safeUsed}/${limitText}`;
+    };
+
+    const selectedPlanCode = String(facilityPlanData?.plan?.plan_code || dashboardSummary?.plan_code || "").toLowerCase();
+    const selectedPlanName = facilityPlanData?.plan?.plan_name || dashboardSummary?.plan_name || "-";
+
+    const performedStudies = facilityPlanData?.usage_monthly?.read_count ?? dashboardSummary?.performed_studies ?? 0;
+    const receivedStudies = facilityPlanData?.usage_monthly?.received_count ?? dashboardSummary?.received_studies ?? 0;
+    const distributedStudies = facilityPlanData?.usage_monthly?.distributed_count ?? dashboardSummary?.distributed_studies ?? 0;
+
+    const readMonthlyLimit = facilityPlanData?.plan?.max_read_monthly ?? dashboardSummary?.limit_studies;
+    const receiveMonthlyLimit = facilityPlanData?.plan?.max_receive_monthly ?? dashboardSummary?.received_limit;
+    const distributeMonthlyLimit = facilityPlanData?.plan?.max_distribute_monthly ?? dashboardSummary?.distributed_limit;
+
+    const receivedRemaining = receiveMonthlyLimit == null ? null : Math.max(receiveMonthlyLimit - receivedStudies, 0);
+    const distributedRemaining = distributeMonthlyLimit == null ? null : Math.max(distributeMonthlyLimit - distributedStudies, 0);
+
+    const dailyReadLimit = selectedPlanCode === "free" ? 5 : selectedPlanCode === "pro" ? 10 : 5;
 
     return (
         <MainLayout>
@@ -381,107 +493,197 @@ export const Inicio = () => {
                         </div>
                     </div>
 
-                    <div className="module-grid grid grid-cols-1 lg:grid-cols-2 gap-3">
-                        {filteredSections.map((section, sectionIndex) => (
-                            <section
-                                key={section.id}
-                                className="module-panel rounded-xl border border-border p-3"
-                            >
-                                <h2 className="section-title-dark text-xs font-semibold text-brand-purple dark:text-purple-400 mb-2 uppercase tracking-widest">
-                                    Módulo: {section.title}
-                                </h2>
+                    <div className="grid grid-cols-1 lg:grid-cols-[80%_20%] gap-3 lg:min-h-[calc(100vh-220px)] lg:items-stretch">
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2">
+                                <div className="rounded-lg border border-border p-3 bg-background/40">
+                                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                                        <Layers className="w-4 h-4" />
+                                        Plan Actual
+                                    </div>
+                                    <div className="mt-1 text-lg font-bold text-foreground">
+                                        {selectedPlanName}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Código: {(selectedPlanCode || "-").toUpperCase()}
+                                    </div>
+                                </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {section.items.map((item, itemIndex) => {
-                                        const globalIdx = sectionOffsets[sectionIndex] + itemIndex;
-                                        const animDelay = `${globalIdx * 55}ms`;
-                                        const cardClasses =
-                                            "menu-card animate-fade-in-up group cursor-pointer rounded-lg border border-border p-2.5 flex items-center gap-2 min-h-[68px] hover:bg-accent/50 dark:hover:bg-transparent transition-all duration-300";
+                                <div className="rounded-lg border border-purple-300/60 dark:border-purple-500/30 p-3 bg-[linear-gradient(145deg,rgba(196,181,253,0.45),rgba(255,255,255,0.92))] dark:bg-[linear-gradient(145deg,rgba(124,58,237,0.18),rgba(12,14,24,0.92))] shadow-[0_8px_20px_rgba(139,92,246,0.16)] dark:shadow-[0_8px_26px_rgba(88,28,135,0.26)]">
+                                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-purple-700 dark:text-purple-200/80">
+                                        <Gauge className="w-4 h-4 text-purple-700 dark:text-purple-300" />
+                                        Redacción (Mes)
+                                    </div>
+                                    <div className="mt-1 text-2xl font-extrabold text-purple-900 dark:text-white tracking-tight">
+                                        {formatUsedLimit(performedStudies, readMonthlyLimit)}
+                                    </div>
+                                    <div className="text-xs text-purple-700/80 dark:text-purple-200/75">
+                                        Estudios redactados en el mes
+                                    </div>
+                                </div>
 
-                                        const iconNode = (
-                                            <>
-                                                <div className="menu-card-icon bg-purple-100 rounded-md p-2 shrink-0 transition-all duration-300">
-                                                    <div className="text-brand-purple dark:text-purple-400 group-hover:scale-110 transition-transform duration-300">
-                                                        {item.icon}
+                                <div className="rounded-lg border border-violet-300/60 dark:border-violet-500/30 p-3 bg-[linear-gradient(145deg,rgba(221,214,254,0.45),rgba(255,255,255,0.92))] dark:bg-[linear-gradient(145deg,rgba(139,92,246,0.16),rgba(12,14,24,0.92))] shadow-[0_8px_20px_rgba(109,40,217,0.14)] dark:shadow-[0_8px_24px_rgba(76,29,149,0.24)]">
+                                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-violet-700 dark:text-violet-200/80">
+                                        <ClipboardList className="w-4 h-4 text-violet-700 dark:text-violet-300" />
+                                        Redaccion Diaria
+                                    </div>
+                                    <div className="mt-1 text-2xl font-extrabold text-violet-900 dark:text-white tracking-tight">
+                                        0/{dailyReadLimit}
+                                    </div>
+                                    <div className="text-xs text-violet-700/80 dark:text-violet-200/75">
+                                        Límite diario de redacción
+                                    </div>
+                                </div>
+
+                                <div className="rounded-lg border border-indigo-300/60 dark:border-indigo-500/30 p-3 bg-[linear-gradient(145deg,rgba(191,219,254,0.45),rgba(255,255,255,0.92))] dark:bg-[linear-gradient(145deg,rgba(59,130,246,0.18),rgba(12,14,24,0.92))] shadow-[0_8px_20px_rgba(37,99,235,0.14)] dark:shadow-[0_8px_24px_rgba(30,64,175,0.24)]">
+                                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-indigo-700 dark:text-indigo-200/80">
+                                        <FileText className="w-4 h-4 text-indigo-700 dark:text-indigo-300" />
+                                        Carga DICOM (Mes)
+                                    </div>
+                                    <div className="mt-1 text-2xl font-extrabold text-indigo-900 dark:text-white tracking-tight">
+                                        {formatUsedLimit(receivedStudies, receiveMonthlyLimit)}
+                                    </div>
+                                    <div className="text-xs text-indigo-700/80 dark:text-indigo-200/75">
+                                        Restantes: {receivedRemaining == null ? "Ilimitado" : receivedRemaining}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-lg border border-fuchsia-300/60 dark:border-fuchsia-500/30 p-3 bg-[linear-gradient(145deg,rgba(245,208,254,0.45),rgba(255,255,255,0.92))] dark:bg-[linear-gradient(145deg,rgba(217,70,239,0.16),rgba(12,14,24,0.92))] shadow-[0_8px_20px_rgba(192,38,211,0.14)] dark:shadow-[0_8px_24px_rgba(162,28,175,0.24)]">
+                                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-200/80">
+                                        <Send className="w-4 h-4 text-fuchsia-700 dark:text-fuchsia-300" />
+                                        Distribución (Mes)
+                                    </div>
+                                    <div className="mt-1 text-2xl font-extrabold text-fuchsia-900 dark:text-white tracking-tight">
+                                        {formatUsedLimit(distributedStudies, distributeMonthlyLimit)}
+                                    </div>
+                                    <div className="text-xs text-fuchsia-700/80 dark:text-fuchsia-200/75">
+                                        Restantes: {distributedRemaining == null ? "Ilimitado" : distributedRemaining}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="module-grid grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            {filteredSections.map((section, sectionIndex) => (
+                                <section
+                                    key={section.id}
+                                    className="module-panel rounded-xl border border-border p-3"
+                                >
+                                    <h2 className="section-title-dark text-xs font-semibold text-brand-purple dark:text-purple-400 mb-2 uppercase tracking-widest">
+                                        Módulo: {section.title}
+                                    </h2>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {section.items.map((item, itemIndex) => {
+                                            const globalIdx = sectionOffsets[sectionIndex] + itemIndex;
+                                            const animDelay = `${globalIdx * 55}ms`;
+                                            const cardClasses =
+                                                "menu-card animate-fade-in-up group cursor-pointer rounded-lg border border-border p-2.5 flex items-center gap-2 min-h-[68px] hover:bg-accent/50 dark:hover:bg-transparent transition-all duration-300";
+
+                                            const iconNode = (
+                                                <>
+                                                    <div className="menu-card-icon bg-purple-100 rounded-md p-2 shrink-0 transition-all duration-300">
+                                                        <div className="text-brand-purple dark:text-purple-400 group-hover:scale-110 transition-transform duration-300">
+                                                            {item.icon}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <h3 className="text-sm font-semibold text-foreground leading-tight truncate">
-                                                        {item.title}
-                                                    </h3>
-                                                    <p className="text-xs text-muted-foreground leading-tight mt-0.5 truncate">
-                                                        {item.description}
-                                                    </p>
-                                                </div>
-                                            </>
-                                        );
+                                                    <div className="min-w-0">
+                                                        <h3 className="text-sm font-semibold text-foreground leading-tight truncate">
+                                                            {item.title}
+                                                        </h3>
+                                                        <p className="text-xs text-muted-foreground leading-tight mt-0.5 truncate">
+                                                            {item.description}
+                                                        </p>
+                                                    </div>
+                                                </>
+                                            );
 
-                                        if (item.path) {
+                                            if (item.path) {
+                                                return (
+                                                    <Link
+                                                        key={item.id}
+                                                        to={item.path}
+                                                        onClick={() => handleItemClick(item)}
+                                                        className={cardClasses}
+                                                        style={{ animationDelay: animDelay }}
+                                                    >
+                                                        {iconNode}
+                                                    </Link>
+                                                );
+                                            }
+
                                             return (
-                                                <Link
+                                                <div
                                                     key={item.id}
-                                                    to={item.path}
                                                     onClick={() => handleItemClick(item)}
                                                     className={cardClasses}
                                                     style={{ animationDelay: animDelay }}
                                                 >
                                                     {iconNode}
-                                                </Link>
+                                                </div>
                                             );
-                                        }
-
-                                        return (
-                                            <div
-                                                key={item.id}
-                                                onClick={() => handleItemClick(item)}
-                                                className={cardClasses}
-                                                style={{ animationDelay: animDelay }}
-                                            >
-                                                {iconNode}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </section>
-                        ))}
-                    </div>
+                                        })}
+                                    </div>
+                                </section>
+                            ))}
+                            </div>
+                        </div>
 
                         {selectedPromo && (
-                            <section className="extra-module-banner rounded-xl border border-border p-3 lg:col-span-2">
-                            <div className="flex items-center justify-between gap-3 flex-wrap">
-                                <div className="flex items-start gap-3">
-                                    <div className="extra-module-icon rounded-md p-2 shrink-0">
-                                        <div className="text-brand-purple dark:text-purple-300">{selectedPromo.icon}</div>
+                            <section className="extra-module-banner relative overflow-hidden rounded-xl border border-border p-3 h-fit lg:h-full">
+                                <div
+                                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-70 dark:opacity-42"
+                                    style={{
+                                        backgroundImage: `url(${extraModuleImageByCode[selectedPromo.requiredModule] || portalModuleImage})`,
+                                    }}
+                                />
+                                <div className="absolute inset-0 bg-transparent dark:bg-[linear-gradient(160deg,rgba(13,16,30,0.60)_0%,rgba(11,12,20,0.72)_100%)]" />
+
+                                <div className="relative z-10 flex flex-col gap-3 lg:h-full">
+                                    <div className="flex items-start gap-3">
+                                        <div className="extra-module-icon rounded-md p-2 shrink-0">
+                                            <div className="text-brand-purple dark:text-purple-300">{selectedPromo.icon}</div>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs uppercase tracking-[0.14em] text-purple-950/80 dark:text-muted-foreground font-semibold">
+                                                Módulo Extra
+                                            </p>
+                                            <h3 className="text-lg leading-tight font-bold text-purple-950 dark:text-foreground mt-0.5">{selectedPromo.title}</h3>
+                                            <p className="text-sm leading-relaxed text-purple-950/85 dark:text-muted-foreground mt-1">{selectedPromo.description}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground font-semibold">
-                                            Módulo Extra
-                                        </p>
-                                        <h3 className="text-sm font-semibold text-foreground">{selectedPromo.title}</h3>
-                                        <p className="text-xs text-muted-foreground mt-0.5">{selectedPromo.description}</p>
+
+                                    <div className="lg:mt-auto">
+                                        {canOpenSelectedPromo ? (
+                                            <Link
+                                                to={selectedPromo.path}
+                                                className="rounded-md border border-purple-400/50 bg-gradient-to-r from-purple-700/55 to-violet-700/55 px-3 py-2 text-sm font-bold text-purple-100 hover:from-purple-600/65 hover:to-violet-600/65 hover:text-white shadow-[0_6px_20px_rgba(124,58,237,0.35)] transition-all text-center block"
+                                            >
+                                                Ir al módulo
+                                            </Link>
+                                        ) : (
+                                            <a
+                                                href="https://nextris.cloud"
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="rounded-md border border-purple-400/50 bg-gradient-to-r from-purple-700/55 to-violet-700/55 px-3 py-2 text-sm font-bold text-purple-100 hover:from-purple-600/65 hover:to-violet-600/65 hover:text-white shadow-[0_6px_20px_rgba(124,58,237,0.35)] transition-all text-center block"
+                                            >
+                                                Leer más
+                                            </a>
+                                        )}
+
+                                        <a
+                                            href="https://nextris.cloud"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="mt-2 rounded-md border border-purple-300/40 bg-black/20 px-3 py-2 text-sm font-semibold text-purple-100 hover:bg-purple-900/25 hover:border-purple-300/60 transition-all text-center block"
+                                        >
+                                            Solicitar activación
+                                        </a>
                                     </div>
                                 </div>
-
-                                {canOpenSelectedPromo ? (
-                                    <Link
-                                        to={selectedPromo.path}
-                                        className="rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-brand-purple dark:text-purple-300 hover:bg-accent/60 transition-colors"
-                                    >
-                                        Ir al módulo
-                                    </Link>
-                                ) : (
-                                    <a
-                                        href="https://nextris.cloud"
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-brand-purple dark:text-purple-300 hover:bg-accent/60 transition-colors"
-                                    >
-                                        Leer más
-                                    </a>
-                                )}
-                            </div>
                             </section>
                         )}
+                    </div>
                 </div>
             </div>
         </MainLayout>

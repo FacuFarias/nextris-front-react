@@ -51,6 +51,8 @@ export function TablaDynamic<T extends Record<string, any>>({
     sortColumn: controlledSortColumn,
     sortDirection: controlledSortDirection,
     onSortChange,
+    serverSideFiltering = false,
+    onColumnFiltersChange,
     tableClassName,
     preserveTableHeight = false,
     stickyPagination = false,
@@ -133,16 +135,18 @@ export function TablaDynamic<T extends Record<string, any>>({
 
     // Aplicar filtros por columna (client-side sobre datos visibles)
     const hasActiveFilters = Object.values(columnFilters).some(v => v.trim() !== "");
-    const filteredData = hasActiveFilters
-        ? sortedData.filter(row =>
-            Object.entries(columnFilters).every(([key, filterValue]) => {
-                if (!filterValue.trim()) return true;
-                const cellValue = getNestedValue(row, key);
-                if (cellValue === null || cellValue === undefined) return false;
-                return String(cellValue).toLowerCase().includes(filterValue.trim().toLowerCase());
-            })
-        )
-        : sortedData;
+    const filteredData = serverSideFiltering
+        ? sortedData
+        : hasActiveFilters
+            ? sortedData.filter(row =>
+                Object.entries(columnFilters).every(([key, filterValue]) => {
+                    if (!filterValue.trim()) return true;
+                    const cellValue = getNestedValue(row, key);
+                    if (cellValue === null || cellValue === undefined) return false;
+                    return String(cellValue).toLowerCase().includes(filterValue.trim().toLowerCase());
+                })
+            )
+            : sortedData;
 
     // Aplicar paginación local SOLO si serverSide es explícitamente false
     // Por defecto (serverSide undefined o true), se asume que el backend ya envió los datos paginados
@@ -239,6 +243,8 @@ export function TablaDynamic<T extends Record<string, any>>({
         });
     };
 
+    const indexColumnWidth = 56;
+
     // Each button is w-8 (32px) + gap-1 (4px between buttons), plus 4px base.
     // Keep a minimum width so the header label "Acciones" is fully visible.
     const actionsColumnWidth = actions.length > 0 ? Math.max(actions.length * 36 + 4, 92) : 92;
@@ -295,7 +301,7 @@ export function TablaDynamic<T extends Record<string, any>>({
             <div
                 ref={tableFrameRef}
                 className={cn(
-                    "rounded-md border dark:border-[rgba(255,255,255,0.07)] relative flex-1 overflow-hidden dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+                    "rounded-xl border border-border/70 dark:border-[rgba(139,92,246,0.28)] relative flex-1 overflow-hidden backdrop-blur-sm bg-card/90 dark:bg-[linear-gradient(180deg,rgba(18,12,38,0.96),rgba(11,8,24,0.96))] shadow-[0_14px_34px_rgba(6,8,20,0.16)] dark:shadow-[0_18px_45px_rgba(6,4,16,0.65),inset_0_1px_0_rgba(255,255,255,0.05)]",
                     (tableBackgroundImage || tableBackgroundImageDark) && "bg-white/82 dark:bg-background/78"
                 )}
                 style={maxHeight ? { maxHeight } : {}}
@@ -340,10 +346,18 @@ export function TablaDynamic<T extends Record<string, any>>({
                     />
                 )}
                 {/* Contenedor interno: aquí ocurre el scroll, encima del fondo fijo */}
-                <div className="relative z-2 h-full overflow-y-auto overflow-x-auto table-scrollbar-purple">
-                <Table className={cn("w-full", tableClassName)}>
-                    <TableHeader ref={tableHeaderRef} className="bg-brand-purple dark:bg-gradient-to-r dark:from-[#3b1066] dark:to-[#2d0d52] sticky top-0 z-3 dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
-                        <TableRow className="bg-brand-purple dark:bg-transparent hover:bg-brand-purple dark:hover:bg-transparent border-b-0">
+                <div className="relative z-2 h-full overflow-y-auto overflow-x-hidden table-scrollbar-purple">
+                <Table className={cn("w-full table-fixed", tableClassName)}>
+                    <TableHeader ref={tableHeaderRef} className="sticky top-0 z-3 bg-[linear-gradient(90deg,#6a1bb0,#4a148c)] dark:bg-[linear-gradient(90deg,#4a157a,#2d0d52)] border-b border-white/10 shadow-[0_6px_18px_rgba(32,12,62,0.35)]">
+                        <TableRow className="bg-transparent hover:bg-transparent border-b-0">
+                            {showIndex && (
+                                <TableHead
+                                    style={{ width: `${indexColumnWidth}px`, minWidth: `${indexColumnWidth}px`, maxWidth: `${indexColumnWidth}px` }}
+                                    className="text-white/95 py-2 px-2 text-xs text-center"
+                                >
+                                    #
+                                </TableHead>
+                            )}
                             {renderColumns.map((column, index) => {
                                 const colKey = column.key as string;
                                 const filterActive = !!columnFilters[colKey]?.trim();
@@ -354,7 +368,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                     <TableHead
                                         key={index}
                                         className={cn(
-                                            "text-white py-0 px-2 text-xs group/header overflow-hidden",
+                                            "text-white/95 py-0 px-2 text-xs group/header overflow-hidden tracking-[0.015em]",
                                             column.headerClassName,
                                             isSortable && !isEditing &&
                                             "cursor-pointer select-none",
@@ -362,9 +376,9 @@ export function TablaDynamic<T extends Record<string, any>>({
                                         )}
                                         onClick={() => !isEditing && isSortable && handleSort(column)}
                                     >
-                                        <div className="flex items-center">
+                                        <div className="flex items-center min-w-0 gap-1">
                                             {isEditing ? (
-                                                <div className="flex items-center gap-1 flex-1" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center gap-1 flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
                                                     <input
                                                         ref={filterInputRef}
                                                         type="text"
@@ -372,10 +386,12 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                         value={columnFilters[colKey] || ""}
                                                         autoFocus
                                                         onChange={(e) => {
-                                                            setColumnFilters(prev => ({
-                                                                ...prev,
-                                                                [colKey]: e.target.value
-                                                            }));
+                                                            const nextFilters = {
+                                                                ...columnFilters,
+                                                                [colKey]: e.target.value,
+                                                            };
+                                                            setColumnFilters(nextFilters);
+                                                            onColumnFiltersChange?.(nextFilters);
                                                         }}
                                                         onKeyDown={(e) => {
                                                             if (e.key === "Enter" || e.key === "Escape") {
@@ -383,7 +399,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                             }
                                                         }}
                                                         onBlur={() => setOpenFilterColumn(null)}
-                                                        className="w-full text-xs bg-background/30 dark:bg-foreground/10 text-foreground dark:text-white placeholder-muted-foreground dark:placeholder-white/50 border border-border dark:border-white/30 rounded px-2 py-0.5 outline-none focus:bg-background/40 dark:focus:bg-foreground/20"
+                                                        className="w-full text-xs bg-white/25 dark:bg-white/10 text-foreground dark:text-white placeholder-muted-foreground dark:placeholder-white/60 border border-white/30 dark:border-white/25 rounded px-2 py-0.5 outline-none focus:bg-white/35 dark:focus:bg-white/20"
                                                     />
                                                 </div>
                                             ) : (
@@ -394,19 +410,18 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    setColumnFilters(prev => {
-                                                                        const next = { ...prev };
-                                                                        delete next[colKey];
-                                                                        return next;
-                                                                    });
+                                                                    const next = { ...columnFilters };
+                                                                    delete next[colKey];
+                                                                    setColumnFilters(next);
+                                                                    onColumnFiltersChange?.(next);
                                                                 }}
-                                                                className="p-0.5 rounded hover:bg-background/20 dark:hover:bg-white/20 shrink-0"
+                                                                className="p-0.5 rounded hover:bg-white/20 dark:hover:bg-white/20 shrink-0"
                                                             >
                                                                 <X className="h-3 w-3 text-yellow-300" />
                                                             </button>
                                                         </div>
                                                     ) : (
-                                                        <span>{column.label}</span>
+                                                        <span className="truncate min-w-0 text-xs">{column.label}</span>
                                                     )}
                                                     {isFilterable && (
                                                         <button
@@ -415,7 +430,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                                 setOpenFilterColumn(colKey);
                                                             }}
                                                             className={cn(
-                                                                "ml-1 p-0.5 rounded hover:bg-background/20 dark:hover:bg-white/20 transition-all shrink-0",
+                                                                "ml-1 p-0.5 rounded hover:bg-white/20 dark:hover:bg-white/20 transition-all shrink-0",
                                                                 filterActive
                                                                     ? "opacity-100"
                                                                     : "opacity-0 group-hover/header:opacity-100"
@@ -441,7 +456,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                             {actions.length > 0 && (
                                 <TableHead
                                     style={{ width: `${actionsColumnWidth}px`, minWidth: `${actionsColumnWidth}px` }}
-                                    className="text-white py-2 px-3 text-sm"
+                                    className="text-white/95 py-2 px-2 text-sm text-right"
                                 >
                                     Acciones
                                 </TableHead>
@@ -466,7 +481,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                             </TableRow>
                         ) : paginatedData.length === 0 ? (
                             <>
-                                <TableRow className="bg-card dark:bg-[#1a1b24]/45">
+                                <TableRow className="bg-card/70 dark:bg-[#17122b]/72">
                                     <TableCell
                                         colSpan={
                                             renderColumns.length +
@@ -480,7 +495,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 </TableRow>
                                 {preserveTableHeight && pagination && fillerRowsWhenEmpty > 0 &&
                                     Array.from({ length: fillerRowsWhenEmpty }).map((_, index) => (
-                                        <TableRow key={`empty-row-when-no-data-${index}`} data-row-kind="measure" className="bg-card dark:bg-transparent">
+                                        <TableRow key={`empty-row-when-no-data-${index}`} data-row-kind="measure" className="bg-card/70 dark:bg-transparent">
                                             <TableCell
                                                 colSpan={
                                                     renderColumns.length +
@@ -506,10 +521,10 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                 "transition-colors duration-150",
                                                 hasBgImage
                                                     ? "bg-transparent"
-                                                    : "bg-card dark:bg-[#1a1b24]/45",
+                                                    : "bg-card/65 odd:bg-card/75 dark:bg-[#140f27]/58 dark:odd:bg-[#1a1331]/65",
                                                 (onRowClick || onRowDoubleClick) && hasBgImage && "cursor-pointer hover:bg-white/30 dark:hover:bg-purple-900/25",
-                                                (onRowClick || onRowDoubleClick) && !hasBgImage && "cursor-pointer hover:bg-muted/50 dark:hover:bg-purple-900/25",
-                                                isSelected && "bg-purple-100 dark:bg-purple-900/40 hover:bg-purple-100/80 dark:hover:bg-purple-900/50 border-l-4 border-l-brand-purple dark:border-l-purple-400 dark:shadow-[inset_4px_0_8px_rgba(139,92,246,0.15)]",
+                                                (onRowClick || onRowDoubleClick) && !hasBgImage && "cursor-pointer hover:bg-purple-100/40 dark:hover:bg-[#2a1848]/75",
+                                                isSelected && "bg-purple-100/85 dark:bg-[#3a2060]/78 hover:bg-purple-100/90 dark:hover:bg-[#472676]/85 border-l-4 border-l-brand-purple dark:border-l-purple-300 dark:shadow-[inset_4px_0_12px_rgba(168,85,247,0.28)]",
                                                 "animate-in fade-in duration-300 ease-out"
                                             )}
                                             style={{
@@ -519,11 +534,19 @@ export function TablaDynamic<T extends Record<string, any>>({
                                             onClick={() => onRowClick?.(row, getRowIndex(index))}
                                             onDoubleClick={() => onRowDoubleClick?.(row, getRowIndex(index))}
                                         >
+                                            {showIndex && (
+                                                <TableCell
+                                                    style={{ width: `${indexColumnWidth}px`, minWidth: `${indexColumnWidth}px`, maxWidth: `${indexColumnWidth}px` }}
+                                                    className="py-2 px-2 text-xs text-center text-muted-foreground"
+                                                >
+                                                    {getRowIndex(index) + 1}
+                                                </TableCell>
+                                            )}
                                             {renderColumns.map((column, colIndex) => (
                                                 <TableCell
                                                     key={colIndex}
                                                     className={cn(
-                                                        "py-2 px-3 text-xs overflow-hidden whitespace-nowrap",
+                                                        "py-2 px-3 text-xs overflow-hidden whitespace-nowrap text-ellipsis",
                                                         column.className,
                                                         column.hideOnMobile && "hidden md:table-cell"
                                                     )}
@@ -532,9 +555,12 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                 </TableCell>
                                             ))}
                                             {actions.length > 0 && (
-                                                <TableCell className="p-0">
+                                                <TableCell
+                                                    style={{ width: `${actionsColumnWidth}px`, minWidth: `${actionsColumnWidth}px`, maxWidth: `${actionsColumnWidth}px` }}
+                                                    className="py-1 px-2"
+                                                >
                                                     <TooltipProvider>
-                                                        <div className="flex items-center gap-1">
+                                                        <div className="flex items-center justify-end gap-1 w-full overflow-hidden">
                                                             {visibleActions(row).map((action, actionIndex) => (
                                                                 action.component ? (
                                                                     <div key={actionIndex} onClick={(e) => e.stopPropagation()}>
@@ -547,7 +573,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                                                 variant="ghost"
                                                                                 size="icon"
                                                                                 className={cn(
-                                                                                    "h-8 w-8 hover:bg-brand-purple/10 dark:hover:bg-purple-800/30 cursor-pointer",
+                                                                                    "h-8 w-8 hover:bg-brand-purple/15 dark:hover:bg-purple-800/45 cursor-pointer",
                                                                                     action.variant === "destructive" && "hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400"
                                                                                 )}
                                                                                 onClick={(e) => {
@@ -574,7 +600,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 })}
                                 {preserveTableHeight && pagination && fillerRowsWithData > 0 &&
                                     Array.from({ length: fillerRowsWithData }).map((_, index) => (
-                                        <TableRow key={`empty-row-${index}`} data-row-kind="measure" className={hasBgImage ? "bg-transparent" : "bg-card dark:bg-transparent"}>
+                                        <TableRow key={`empty-row-${index}`} data-row-kind="measure" className={hasBgImage ? "bg-transparent" : "bg-card/65 dark:bg-transparent"}>
                                             <TableCell
                                                 colSpan={
                                                     renderColumns.length +

@@ -12,6 +12,13 @@ export const useFacilities = () => {
         gcTime: 10 * 60 * 1000, // 10 minutos - mantener en caché
     });
 
+    const { data: plans } = useQuery({
+        queryKey: [...facilitiesKeys.all, 'plans'],
+        queryFn: facilitiesService.getPlans,
+        staleTime: 10 * 60 * 1000,
+        gcTime: 10 * 60 * 1000,
+    });
+
     const createMutation = useMutation({
         mutationFn: facilitiesService.create,
         onSuccess: () => {
@@ -25,6 +32,19 @@ export const useFacilities = () => {
             queryClient.invalidateQueries({ queryKey: facilitiesKeys.all });
         },
     });
+    const activateMutation = useMutation({
+        mutationFn: facilitiesService.activate,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: facilitiesKeys.all });
+        },
+    });
+    const deactivateMutation = useMutation({
+        mutationFn: facilitiesService.deactivate,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: facilitiesKeys.all });
+            queryClient.invalidateQueries({ queryKey: ['locations'] });
+        },
+    });
     /*  
  
      const deleteMutation = useMutation({
@@ -35,10 +55,13 @@ export const useFacilities = () => {
      }); */
     return {
         facilities,
+        plans,
         isLoading,
         error,
         createFacility: createMutation.mutate,
         updateFacility: updateMutation.mutate,
+        activateFacility: activateMutation.mutate,
+        deactivateFacility: deactivateMutation.mutate,
 /*         deleteFacility: deleteMutation.mutate,
  */    };
 };

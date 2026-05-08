@@ -1,7 +1,7 @@
 import { DynamicBreadcrumb, InputSearch } from "@/components"
 import TablaDynamic from "@/components/TableDynamic";
 import { MainLayout } from "@/layouts/layout"
-import { Navigation } from "lucide-react"
+import { AlertTriangle, Navigation } from "lucide-react"
 import { useState } from "react";
 import { useDistribucion } from "./hooks/useDistribucion";
 import { distribucionColumns } from "./components/columns";
@@ -13,6 +13,9 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { distribucionService } from "./services/distribucion.service";
+import { useFacility } from "@/context/FacilityContext";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import fondoImage from "@/assets/mail.jpg";
 import backDarkImage from "@/assets/dark-calendar.jpg";
 
@@ -26,6 +29,24 @@ export const Distribucion = () => {
     const [isUpdateEmailModalOpen, setIsUpdateEmailModalOpen] = useState(false);
     const [isSendReportModalOpen, setIsSendReportModalOpen] = useState(false);
     const [selectedExamen, setSelectedExamen] = useState<Examen | null>(null);
+    const { selectedFacilityId } = useFacility();
+
+    const { data: facilityPlanData } = useQuery({
+        queryKey: ["facility-plan", selectedFacilityId, "distribucion"],
+        queryFn: async () => {
+            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
+            return response.data?.data || null;
+        },
+        enabled: Boolean(selectedFacilityId),
+        staleTime: 60 * 1000,
+    });
+
+    const distributeMonthlyLimit: number | null = facilityPlanData?.plan?.max_distribute_monthly ?? null;
+    const distributedCount: number = facilityPlanData?.usage_monthly?.distributed_count ?? 0;
+    const isDistributeLimitReached =
+        typeof distributeMonthlyLimit === "number"
+        && distributeMonthlyLimit >= 0
+        && distributedCount >= distributeMonthlyLimit;
 
     const {
         examenes,
@@ -34,7 +55,7 @@ export const Distribucion = () => {
         isSendingReport,
         updateEmailAsync,
         isUpdatingEmail
-    } = useDistribucion(allReported, page, pageSize);
+    } = useDistribucion(allReported, page, pageSize, selectedFacilityId);
 
     const pagination = {
         page: examenes?.data?.page || page,
@@ -52,6 +73,10 @@ export const Distribucion = () => {
     };
 
     const handleOpenSendReportModal = (examen: Examen) => {
+        if (isDistributeLimitReached) {
+            toast.error(`Límite mensual de distribución alcanzado (${distributedCount}/${distributeMonthlyLimit}).`);
+            return;
+        }
         setSelectedExamen(examen);
         setIsSendReportModalOpen(true);
     };
@@ -80,6 +105,10 @@ export const Distribucion = () => {
 
     const handleSendReport = async (email: string) => {
         if (!selectedExamen) return;
+        if (isDistributeLimitReached) {
+            toast.error(`Límite mensual de distribución alcanzado (${distributedCount}/${distributeMonthlyLimit}).`);
+            return;
+        }
 
         try {
             await sendReportAsync({
@@ -88,8 +117,9 @@ export const Distribucion = () => {
             });
             toast.success("Informe enviado correctamente");
             handleCloseModals();
-        } catch (error) {
-            toast.error("Error al enviar el informe");
+        } catch (error: any) {
+            const backendMessage = error?.response?.data?.message;
+            toast.error(backendMessage || "Error al enviar el informe");
             console.error(error);
         }
     };
@@ -123,7 +153,8 @@ export const Distribucion = () => {
         handleOpenUpdateEmailModal,
         handleOpenSendReportModal,
         handleViewReport,
-        handleOpenDicomViewer
+        handleOpenDicomViewer,
+        isDistributeLimitReached,
     );
 
 
@@ -141,6 +172,15 @@ export const Distribucion = () => {
                     </div>
                     <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400">Distribución de informes</h1>
                 </div>
+
+                {isDistributeLimitReached && (
+                    <div className="mb-3 rounded-lg border border-red-500/70 bg-red-500/15 px-4 py-3 text-sm text-red-200 flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                        <div>
+                            <strong className="font-semibold">Límite alcanzado:</strong> ya no tienes disponibilidad para distribuir más estudios este mes ({distributedCount}/{distributeMonthlyLimit}).
+                        </div>
+                    </div>
+                )}
 
                 {/* Barra de búsqueda y filtros */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">

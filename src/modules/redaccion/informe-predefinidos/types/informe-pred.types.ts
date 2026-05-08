@@ -17,6 +17,11 @@ export interface Template {
     location_ids?: string[];
     structured_variables?: string;
     criteria?: string;
+    owner_id: string;
+    can_edit: boolean;
+    can_delete: boolean;
+    is_user_default?: boolean;
+    is_system_default?: boolean;
 }
 
 export interface TemplateListResponse {

@@ -16,12 +16,14 @@ import { useVerifyCredentials } from "./hooks/use-verify-credentials";
 import { useSignReport } from "./hooks/use-sing-report";
 import { useQuitarFirma } from "./hooks/use-quitar-firma";
 import { useNextExam } from "./hooks/use-next-exam";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { informesKeys } from "../constants/query-keys";
 import { CloseTabModal, NextExamModal, SignModal, TemplateModal } from "../components/modals";
 import { clearWindowStorage, notifyGuidChange, notifyViewerUpdate } from "./hooks/use-cross-windows";
 import { FlagsCell } from "../components/FlagsCell";
 import { TagsCell } from "../components/TagsCell";
+import { useFacility } from "@/context/FacilityContext";
+import { api } from "@/lib/api";
 
 const normalizeVariableKey = (value: string | null | undefined): string =>
     String(value || "")
@@ -97,12 +99,37 @@ export const RedactarInforme = () => {
     const { mutateAsync: getNextExam } = useNextExam();
     const { mutateAsync: unblockExam } = useUnblockExam();
     const { mutateAsync: blockExam } = useBlockExam();
+    const { selectedFacilityId } = useFacility();
+
+    const { data: facilityPlanData } = useQuery({
+        queryKey: ["facility-plan", selectedFacilityId, "redactar-informe", informeGuid],
+        queryFn: async () => {
+            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
+            return response.data?.data || null;
+        },
+        enabled: Boolean(selectedFacilityId && informeGuid),
+        staleTime: 60 * 1000,
+    });
 
     const queryClient = useQueryClient();
     const [isNextExamModalOpen, setIsNextExamModalOpen] = useState(false);
     const [nextExamData, setNextExamData] = useState<any>(null);
     const [isCloseTabModalOpen, setIsCloseTabModalOpen] = useState(false);
     const navigate = useNavigate();
+
+    const readMonthlyLimit: number | null = facilityPlanData?.plan?.max_read_monthly ?? null;
+    const readCount: number = facilityPlanData?.usage_monthly?.read_count ?? 0;
+    const isReadLimitReached =
+        typeof readMonthlyLimit === "number"
+        && readMonthlyLimit >= 0
+        && readCount >= readMonthlyLimit;
+
+    useEffect(() => {
+        if (!informeGuid) return;
+        if (!isReadLimitReached) return;
+        toast.error(`Límite mensual de redacción alcanzado (${readCount}/${readMonthlyLimit}). No puedes abrir el redactor.`);
+        navigate('/estudios/redaccion');
+    }, [informeGuid, isReadLimitReached, navigate, readCount, readMonthlyLimit]);
 
     // Ref para mantener el informeGuid actual actualizado en el listener
     const currentInformeGuidRef = useRef(informeGuid);
@@ -877,6 +904,11 @@ export const RedactarInforme = () => {
 
                 if (studyGroupId && studyGroupId !== 'undefined') {
                     payload.study_group_id = studyGroupId;
+                }
+
+                const preferredFacilityId = String((reportData as any)?.facility_id || selectedFacilityId || '').trim();
+                if (preferredFacilityId) {
+                    payload.facility_id = preferredFacilityId;
                 }
 
                 // 3. Firmar reporte

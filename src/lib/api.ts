@@ -3,6 +3,23 @@ import axios from 'axios';
 // Configuración base de la API
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
+// ── Session ID (shared with AnalyticsContext) ───────────────────────────────
+const SESSION_KEY = 'nextris_session_id';
+function getSessionId(): string {
+    try {
+        const stored = sessionStorage.getItem(SESSION_KEY);
+        if (stored) return stored;
+        const id =
+            typeof crypto !== 'undefined' && crypto.randomUUID
+                ? crypto.randomUUID()
+                : Math.random().toString(36).slice(2);
+        sessionStorage.setItem(SESSION_KEY, id);
+        return id;
+    } catch {
+        return '';
+    }
+}
+
 // Variable para controlar si ya se está refrescando el token
 let isRefreshing = false;
 let failedQueue: any[] = [];
@@ -54,6 +71,12 @@ api.interceptors.request.use(
             console.log('[API] Request con token:', config.method?.toUpperCase(), config.url);
         } else {
             console.warn('[API] Request SIN token:', config.method?.toUpperCase(), config.url);
+        }
+
+        // Forward session ID to backend analytics middleware
+        const sid = getSessionId();
+        if (sid) {
+            config.headers['X-Session-ID'] = sid;
         }
 
         // Si es FormData, eliminar el Content-Type para que axios lo configure automáticamente

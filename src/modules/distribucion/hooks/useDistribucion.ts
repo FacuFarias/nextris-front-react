@@ -3,13 +3,13 @@ import { distribucionService } from '../services/distribucion.service';
 import { DistribucionKeys } from '../constants/query-keys';
 import type { SendReportPayload, UpdateEmailPayload } from '../types/distribucion.types';
 
-export const useDistribucion = (allReported: boolean = false, page: number = 1, perPage: number = 50) => {
+export const useDistribucion = (allReported: boolean = false, page: number = 1, perPage: number = 50, facilityId: string = "") => {
     const queryClient = useQueryClient();
 
     // Query para obtener exámenes
     const { data: examenes, isLoading, isFetching, error, refetch } = useQuery({
-        queryKey: [DistribucionKeys.all, allReported, page, perPage],
-        queryFn: () => distribucionService.getExamenes(allReported, page, perPage),
+        queryKey: [DistribucionKeys.all, allReported, page, perPage, facilityId],
+        queryFn: () => distribucionService.getExamenes(allReported, page, perPage, facilityId),
         gcTime: 5 * 60 * 1000, // 5 minutos
         staleTime: 1 * 60 * 1000, // 1 minuto (datos frescos)
     });

@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { Plus, Search, Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
-import { useTemplates, useDeleteTemplate } from "../hooks/use-templates";
+import { useTemplates, useDeleteTemplate, useSetUserDefault, useUnsetUserDefault } from "../hooks/use-templates";
 import { TemplateCard } from "./TemplateCard";
 import { TemplateDetailModal } from "./TemplateDetailModal";
 import type { Template } from "../types/informe-pred.types";
@@ -33,6 +34,7 @@ export const TemplateList = ({
     const [studyTypeFilter, setStudyTypeFilter] = useState<string>("");
     const [reportTypeFilter, setReportTypeFilter] = useState<string>("");
     const [searchTerm, setSearchTerm] = useState("");
+    const [onlyMine, setOnlyMine] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const navigate = useNavigate();
@@ -52,14 +54,17 @@ export const TemplateList = ({
     );
     /* const { data: estudios } = useEstudiosPorModalidad(); */
     const deleteMutation = useDeleteTemplate();
+    const setUserDefaultMutation = useSetUserDefault();
+    const unsetUserDefaultMutation = useUnsetUserDefault();
     // Filtrar plantillas por búsqueda local
     const filteredTemplates = data?.data?.filter((template) => {
         const searchLower = searchTerm.toLowerCase();
-        return (
+        const matchesSearch =
             template.title.toLowerCase().includes(searchLower) ||
             template.study_type_description?.toLowerCase().includes(searchLower) ||
-            template.findings.toLowerCase().includes(searchLower)
-        );
+            template.findings.toLowerCase().includes(searchLower);
+        const matchesMine = !onlyMine || template.owner_id !== 'nextris';
+        return matchesSearch && matchesMine;
     }) || [];
 
     // Calcular paginación
@@ -128,13 +133,14 @@ export const TemplateList = ({
     };
 
     // Verificar si hay filtros activos
-    const hasActiveFilters = searchTerm || studyTypeFilter || modalityId || bodypartId || reportTypeFilter;
+    const hasActiveFilters = searchTerm || studyTypeFilter || modalityId || bodypartId || reportTypeFilter || onlyMine;
 
     // Limpiar todos los filtros
     const handleClearFilters = () => {
         setSearchTerm("");
         setStudyTypeFilter("");
         setReportTypeFilter("");
+        setOnlyMine(false);
         if (onModalityClick) onModalityClick("");
         if (onBodypartClick) onBodypartClick("");
         setCurrentPage(1);
@@ -149,17 +155,31 @@ export const TemplateList = ({
 
 
     const handleEdit = (template: Template) => {
+        if (!template.can_edit) return;
         // Navegar a la página de edición con el ID de la plantilla
         navigate(`/estudios/editar-informe/${template.guid}`);
     };
 
     const handleDelete = async (template: Template) => {
+        if (!template.can_delete) return;
         if (window.confirm(`¿Estás seguro de eliminar la plantilla "${template.title}"?`)) {
             try {
                 await deleteMutation.mutateAsync(template.guid);
             } catch (error) {
                 console.error("Error al eliminar plantilla:", error);
             }
+        }
+    };
+
+    const handleToggleUserDefault = async (template: Template) => {
+        try {
+            if (template.is_user_default) {
+                await unsetUserDefaultMutation.mutateAsync(template.guid);
+            } else {
+                await setUserDefaultMutation.mutateAsync(template.guid);
+            }
+        } catch (error) {
+            console.error("Error al cambiar default personal:", error);
         }
     };
 
@@ -236,6 +256,21 @@ export const TemplateList = ({
                 </PrimaryButton>
             </div>
 
+            {/* Checkbox Mis plantillas */}
+            <div className="flex items-center gap-2">
+                <Checkbox
+                    id="only-mine"
+                    checked={onlyMine}
+                    onCheckedChange={(checked) => { setOnlyMine(checked === true); setCurrentPage(1); }}
+                />
+                <label
+                    htmlFor="only-mine"
+                    className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                >
+                    Mis plantillas
+                </label>
+            </div>
+
             {/* Botón para limpiar filtros */}
             {hasActiveFilters && (
                 <div className="flex justify-end">
@@ -294,6 +329,7 @@ export const TemplateList = ({
                                 onView={handleView}
                                 onEdit={handleEdit}
                                 onDelete={handleDelete}
+                                onToggleUserDefault={handleToggleUserDefault}
                                 onModalityClick={onModalityClick}
                                 onBodypartClick={onBodypartClick}
                                 isModalityActive={modalityId === template.modality_id}

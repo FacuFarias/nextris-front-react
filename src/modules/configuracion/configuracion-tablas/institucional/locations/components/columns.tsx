@@ -1,6 +1,6 @@
 import type { TableAction, TableColumn } from "@/types/table";
 import type { Location } from "../types/locations.types";
-import { Edit, UserCheck, UserX } from "lucide-react";
+import { Check, Edit, X } from "lucide-react";
 
 const isInactiveLocation = (location: Location): boolean =>
     String(location.status || "").trim().toLowerCase() === "inactive";
@@ -62,13 +62,13 @@ export const getLocationActions = (
         },
         {
             label: "activar",
-            icon: <UserCheck className="h-4 w-4 text-green-700" />,
+            icon: <Check className="h-4 w-4 text-green-700" />,
             onClick: onActivate,
             hidden: (row) => !isInactiveLocation(row),
         },
         {
             label: "desactivar",
-            icon: <UserX className="h-4 w-4 text-red-700" />,
+            icon: <X className="h-4 w-4 text-red-700" />,
             onClick: onDeactivate,
             hidden: (row) => isInactiveLocation(row),
         },

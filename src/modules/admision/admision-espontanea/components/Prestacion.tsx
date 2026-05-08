@@ -41,12 +41,14 @@ export const Prestacion = ({
     });
 
     const handleSubmit = () => {
+        const isUnassignedEquipment = selectedEquipo?.guid === "UNASSIGNED" || Boolean(selectedEquipo?.isUnassigned);
         mutationCrearOrden.mutate({
             patient_id: selectedPatient?.guid,
             location_id: selectedDireccion,
             exam: {
                 study_type_id: selectedEstudio?.guid,
-                equipment_id: selectedEquipo?.guid,
+                equipment_id: isUnassignedEquipment ? undefined : selectedEquipo?.guid,
+                unassigned_equipment: isUnassignedEquipment,
                 physician_id: selectedMedicoSolicitante || undefined,
                 referring_physician_id: selectedMedicoReferente || undefined,
                 insurance_id: selectedObrasSociales || undefined,

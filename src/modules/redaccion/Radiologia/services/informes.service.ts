@@ -1,9 +1,9 @@
 import { api } from "@/lib/api"
 
-export const getInformes = async ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, show_only_with_notes = false, modality_id = "", bodypart_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc" }) => {
+export const getInformes = async ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, show_only_with_notes = false, modality_id = "", bodypart_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc", facility_id = "" }) => {
 
     try {
-        const response = await api.get(`/examinations/for-reporting?page=${page}&per_page=${per_page}&search=${search}&show_reported=${show_reported}&show_ready=${show_ready}&show_no_image=${show_no_image}&show_only_with_notes=${show_only_with_notes}&modality_id=${modality_id}&body_part_id=${bodypart_id}&study_group_id=${study_group_id}&flag_filter=${flag_filter}&date_range=${date_range}&date_field=${date_field}&sort_column=${sort_column}&sort_direction=${sort_direction}`);
+        const response = await api.get(`/examinations/for-reporting?page=${page}&per_page=${per_page}&search=${search}&show_reported=${show_reported}&show_ready=${show_ready}&show_no_image=${show_no_image}&show_only_with_notes=${show_only_with_notes}&modality_id=${modality_id}&body_part_id=${bodypart_id}&study_group_id=${study_group_id}&flag_filter=${flag_filter}&date_range=${date_range}&date_field=${date_field}&sort_column=${sort_column}&sort_direction=${sort_direction}&facility_id=${facility_id}`);
         return response.data;
     } catch (error) {
         throw error;
@@ -12,7 +12,7 @@ export const getInformes = async ({ page = 1, per_page = 8, search = "", show_re
 
 export const getInformeDetalle = async (guid: string | undefined) => {
     try {
-        const response = await api.get(`/examinations/${guid}/report?debug_sr=1`);
+        const response = await api.get(`/examinations/${guid}/report`);
         return response.data;
     } catch (error) {
         throw error;

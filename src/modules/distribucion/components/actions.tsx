@@ -6,7 +6,8 @@ export const getDistribucionActions = (
     onUpdateEmail: (examen: Examen) => void,
     onSendReport: (examen: Examen) => void,
     onViewReport: (examen: Examen) => void,
-    onOpenDicomViewer: (examen: Examen) => void
+    onOpenDicomViewer: (examen: Examen) => void,
+    sendDisabled: boolean = false,
 ): TableAction<Examen>[] => [
         {
             label: "Ver Informe",
@@ -28,6 +29,6 @@ export const getDistribucionActions = (
             label: "Enviar Informe",
             icon: <Send className="h-4 w-4 text-green-600" />,
             onClick: onSendReport,
-            disabled: (examen) => examen.estado === "E", // Deshabilitar si ya fue enviado
+            disabled: () => sendDisabled,
         },
     ];

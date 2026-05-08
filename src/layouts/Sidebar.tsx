@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
     Users,
     Calendar,
@@ -25,13 +25,16 @@ import {
     Scale,
     Files,
     Sparkles,
+    Image,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useFacility } from "@/context/FacilityContext";
 import { useUserModules } from "@/hooks/use-user-modules";
+import { useLocationsInstitutional } from "@/hooks/use-locations";
 
 interface MenuItem {
     icon: React.ElementType;
@@ -54,35 +57,52 @@ const menuItems: MenuItem[] = [
         label: "Inicio",
         path: "/inicio",
         allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo"],
+        requiredPermissions: [
+            "tabs.patients.view",
+            "tabs.appointments.view",
+            "tabs.admissions.view",
+            "tabs.execution.view",
+            "tabs.reports.view",
+            "tabs.distribution.view",
+            "tabs.config.view",
+            "tabs.gestion.view",
+            "tabs.structured_reports.view",
+            "tabs.nexi.view",
+            "tabs.images.view",
+        ],
     },
     {
         icon: Users,
         label: "Pacientes",
         path: "/buscar-pacientes",
         allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo"],
+        requiredPermissions: ["tabs.patients.view", "patients.view"],
     },
     {
         icon: Calendar, label: "Citas",
         allowedRoles: ["Sysadmin", "Administrativo"],
+        requiredPermissions: ["tabs.appointments.view", "appointments.view", "appointments.create"],
         requiredModule: "appointments",
         subItems: [
             {
                 icon: Calendar,
                 label: "Agendar Cita",
                 path: "/cita/nueva-cita",
+                requiredPermissions: ["tabs.appointments.view", "appointments.create"],
                 requiredModule: "appointments",
             },
             {
                 icon: Calendar,
                 label: "Editar Citas",
                 path: "/cita/editar-cita",
+                requiredPermissions: ["tabs.appointments.view", "appointments.view"],
                 requiredModule: "appointments",
             },
         ]
     },
     {
         icon: CalendarPlus, label: "Admision",
-        allowedRoles: ["Sysadmin", "Administrativo"],
+        allowedRoles: ["Sysadmin", "Administrativo", "Medico"],
         requiredPermissions: ["tabs.admissions.view", "admissions.view"],
         subItems: [
             {
@@ -96,6 +116,7 @@ const menuItems: MenuItem[] = [
                 icon: CalendarPlus,
                 label: "Adm espontánea",
                 path: "/admision-espontanea",
+                allowedRoles: ["Sysadmin", "Administrativo", "Medico"],
                 requiredPermissions: ["admissions.create_spontaneous"],
             },
             {
@@ -106,50 +127,77 @@ const menuItems: MenuItem[] = [
             }
         ]
     },
-    { icon: HandHelping, label: "Ejecucion", path: "/ejecucion", allowedRoles: ["Sysadmin", "Tecnico"] },
+    {
+        icon: HandHelping,
+        label: "Ejecucion",
+        path: "/ejecucion",
+        allowedRoles: ["Sysadmin", "Tecnico"],
+        requiredPermissions: ["tabs.execution.view", "execution.view_pending"],
+    },
+    {
+        icon: Image,
+        label: "Imágenes",
+        path: "/estudios/imagenes",
+        allowedRoles: ["Sysadmin", "Medico", "Tecnico"],
+        requiredPermissions: ["tabs.images.view", "images.view"],
+    },
     {
         icon: NotebookText, label: "Estudios", subItems: [
             {
                 icon: NotebookText,
                 label: "Redaccion",
                 path: "/estudios/redaccion",
+                requiredPermissions: ["tabs.reports.view", "reports.view_writing"],
             },
             {
                 icon: NotebookText,
                 label: "Inf.Predef",
                 path: "/estudios/informes-predefinidos",
+                requiredPermissions: ["tabs.reports.view", "reports.view_reports"],
             },
             {
                 icon: UploadCloud,
                 label: "Cargar Estudios",
                 path: "/estudios/cargar-estudios",
+                requiredPermissions: ["tabs.reports.view", "reports.view_writing"],
             }
         ],
         allowedRoles: ["Sysadmin", "Medico"],
+        requiredPermissions: ["tabs.reports.view", "reports.view_writing", "reports.view_reports"],
     },
-    { icon: Navigation, label: "Distribucion", path: "/distribucion", allowedRoles: ["Sysadmin", "Administrativo"], },
+    {
+        icon: Navigation,
+        label: "Distribucion",
+        path: "/distribucion",
+        allowedRoles: ["Sysadmin", "Administrativo", "Medico"],
+        requiredPermissions: ["tabs.distribution.view", "distribution.view"],
+    },
     {
         icon: Briefcase,
         label: "Gestión",
         path: "/administracion",
+        requiredPermissions: ["tabs.gestion.view"],
         subItems: [
             {
                 icon: UserCog,
                 label: "Unificación de Paciente",
                 path: "/administracion/unificacion-paciente",
-                allowedRoles: ["Sysadmin"]
+                allowedRoles: ["Sysadmin"],
+                requiredPermissions: ["tabs.gestion.view"],
             },
             {
                 icon: ClipboardList,
                 label: "Reasignación de Exámenes",
                 path: "/administracion/reasignacion-examenes",
-                allowedRoles: ["Sysadmin"]
+                allowedRoles: ["Sysadmin"],
+                requiredPermissions: ["tabs.gestion.view"],
             },
             {
                 icon: Users,
                 label: "Demográficos",
                 path: "/administracion/demograficos",
-                allowedRoles: ["Sysadmin"]
+                allowedRoles: ["Sysadmin"],
+                requiredPermissions: ["tabs.gestion.view"],
             },
         ]
     },
@@ -158,35 +206,41 @@ const menuItems: MenuItem[] = [
         label: "Configuraciones",
         path: "/configuraciones/tablas",
         allowedRoles: ["Sysadmin"],
+        requiredPermissions: ["tabs.config.view", "users.manage"],
     },
     {
         icon: FileCode2,
         label: "Reportes estructurados",
         allowedRoles: ["Sysadmin"],
+        requiredPermissions: ["tabs.structured_reports.view"],
         requiredModule: "structured_reports",
         subItems: [
             {
                 icon: FileCode2,
                 label: "Lista de parser",
                 path: "/reportes-estructurados/lista-parser",
+                requiredPermissions: ["tabs.structured_reports.view"],
                 requiredModule: "structured_reports",
             },
             {
                 icon: ListTree,
                 label: "Mapeo de variables",
                 path: "/reportes-estructurados/mapeo-variables",
+                requiredPermissions: ["tabs.structured_reports.view"],
                 requiredModule: "structured_reports",
             },
             {
                 icon: Scale,
                 label: "Conceptos y criterios",
                 path: "/reportes-estructurados/conceptos-criterios",
+                requiredPermissions: ["tabs.structured_reports.view"],
                 requiredModule: "structured_reports",
             },
             {
                 icon: Files,
                 label: "Plantillas inteligentes",
                 path: "/reportes-estructurados/plantillas-inteligentes",
+                requiredPermissions: ["tabs.structured_reports.view"],
                 requiredModule: "structured_reports",
             },
         ],
@@ -196,6 +250,7 @@ const menuItems: MenuItem[] = [
         label: "Nexi",
         path: "/nexi",
         allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo"],
+        requiredPermissions: ["tabs.nexi.view"],
         requiredModule: "nexi",
     },
     {
@@ -219,6 +274,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const { authData, logout } = useAuth();
     const { moduleCodesSet, isLoading: isModulesLoading, hasError: hasModulesError } = useUserModules(Boolean(authData));
     const { theme, setTheme, actualTheme } = useTheme();
+    const { selectedFacilityId, setSelectedFacilityId } = useFacility();
+    const { data: institutionalLocations } = useLocationsInstitutional();
 
     const cycleTheme = () => {
         if (theme === 'light') setTheme('dark');
@@ -236,6 +293,34 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const navigate = useNavigate();
     const location = useLocation();
 
+    const availableFacilities = useMemo(() => {
+        const locations = Array.isArray(institutionalLocations?.data) ? institutionalLocations.data : [];
+        const map = new Map<string, { id: string; name: string; code: string }>();
+
+        for (const loc of locations) {
+            const facilityId = String(loc?.facility_id || "").trim();
+            if (!facilityId || map.has(facilityId)) continue;
+            map.set(facilityId, {
+                id: facilityId,
+                name: String(loc?.facility_name || loc?.name || facilityId),
+                code: String(loc?.facility_code || "").trim(),
+            });
+        }
+
+        return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+    }, [institutionalLocations]);
+
+    useEffect(() => {
+        if (availableFacilities.length === 0) {
+            return;
+        }
+
+        const stillValid = availableFacilities.some((f) => f.id === selectedFacilityId);
+        if (!selectedFacilityId || !stillValid) {
+            setSelectedFacilityId(availableFacilities[0].id);
+        }
+    }, [availableFacilities, selectedFacilityId, setSelectedFacilityId]);
+
     const userRole = authData?.user?.user_type || "";
     const userPermissions = Array.isArray((authData?.user as any)?.permissions)
         ? ((authData?.user as any)?.permissions as string[])
@@ -244,11 +329,20 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const hasAccess = (allowedRoles?: string[], requiredPermissions?: string[]) => {
         const hasRoleConstraint = Array.isArray(allowedRoles) && allowedRoles.length > 0;
         const hasPermissionConstraint = Array.isArray(requiredPermissions) && requiredPermissions.length > 0;
+        const isStaffUser = userRole !== "patient";
 
         const roleAccess = hasRoleConstraint ? allowedRoles!.includes(userRole) : true;
-        const permissionAccess = hasPermissionConstraint
-            ? (userPermissions.includes("*") || requiredPermissions!.some((permission) => userPermissions.includes(permission)))
-            : true;
+        const permissionAccess = isStaffUser
+            ? (
+                hasPermissionConstraint
+                    ? (userPermissions.includes("*") || requiredPermissions!.some((permission) => userPermissions.includes(permission)))
+                    : false
+            )
+            : (
+                hasPermissionConstraint
+                    ? (userPermissions.includes("*") || requiredPermissions!.some((permission) => userPermissions.includes(permission)))
+                    : true
+            );
 
         return roleAccess && permissionAccess;
     };
@@ -416,6 +510,24 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
                     {/* User Section */}
                     <div className="p-2 border-t border-purple-800/30">
+                        {availableFacilities.length > 0 && (
+                            <div className="mb-2 w-full max-w-full overflow-hidden">
+                                <p className="text-[10px] uppercase tracking-wider text-purple-300 mb-1 px-1">Institución activa</p>
+                                <select
+                                    value={selectedFacilityId}
+                                    onChange={(event) => setSelectedFacilityId(event.target.value)}
+                                    className="w-full max-w-full h-8 rounded-md border border-purple-700/50 bg-purple-900/40 px-2 text-xs text-white outline-none focus:border-purple-500"
+                                    title="Institución activa"
+                                >
+                                    {availableFacilities.map((facility) => (
+                                        <option key={facility.id} value={facility.id} className="text-xs text-white bg-[#2D1B4E]">
+                                            {facility.name}{facility.code ? ` (${facility.code})` : ""}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
                         <div className="flex items-center gap-2 p-2 rounded-lg bg-purple-800/30">
                             <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
                                 <span className="text-white font-semibold text-xs">{authData?.user.username.charAt(0).toUpperCase()}{authData?.user.username.charAt(1).toUpperCase()}</span>

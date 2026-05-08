@@ -10,6 +10,7 @@ interface SignReportParams {
     modality_id?: string | null;
     body_part_id?: string | null;
     study_group_id?: string | null;
+    facility_id?: string | null;
 }
 
 export const useSignReport = () => {

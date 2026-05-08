@@ -6,12 +6,12 @@ import { informesKeys } from "../constants/query-keys";
 import { toast } from "sonner";
 import { notifyInformeChange, useCrossWindowSync } from "../redactar-informe/hooks/use-cross-windows";
 
-export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, show_only_with_notes = false, bodypart_id = "", modality_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc" }) => {
+export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, show_only_with_notes = false, bodypart_id = "", modality_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc", facility_id = "" }) => {
     useCrossWindowSync();
 
     const { data, isLoading, isFetching, error, refetch } = useQuery<ApiPaginatedResponse<Informes>>({
-        queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction, show_only_with_notes),
-        queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready, show_no_image, show_only_with_notes, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction }),
+        queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction, show_only_with_notes, facility_id),
+        queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready, show_no_image, show_only_with_notes, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction, facility_id }),
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
     });
@@ -324,6 +324,7 @@ export const usePatientHistory = (patientId: string | undefined) => {
         queryKey: ['patient-history', patientId],
         queryFn: () => getPatientHistory(patientId!),
         enabled: !!patientId,
+        staleTime: 5 * 60 * 1000, // 5 minutos — historial no cambia durante la sesión
     });
     return { historyData: data, isLoading };
 }

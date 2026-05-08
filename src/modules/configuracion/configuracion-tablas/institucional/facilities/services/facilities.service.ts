@@ -1,5 +1,12 @@
 import { api } from '@/lib/api';
-import type { Facility, FacilityFormData, FacilityResponse } from '../types/facilities.types';
+import type {
+    Facility,
+    FacilityFormData,
+    FacilityPlan,
+    FacilityPlanChangeLog,
+    FacilityResponse,
+    FacilityUsageMonthly,
+} from '../types/facilities.types';
 
 const mapFacilityFormToApiPayload = (
     facilityData: Partial<FacilityFormData>,
@@ -13,6 +20,7 @@ const mapFacilityFormToApiPayload = (
         ...(options?.includeCodeFallback && description ? { code: description.toUpperCase().slice(0, 20) } : {}),
 
         id_patientdomain: facilityData.id_patientdomain || undefined,
+        plan_code: facilityData.plan_code,
 
         // SMTP
         smtp_server: facilityData.smtp_server,
@@ -56,6 +64,30 @@ export const facilitiesService = {
     update: async (id: string, facilityData: Partial<FacilityFormData>): Promise<Facility> => {
         const payload = mapFacilityFormToApiPayload(facilityData);
         const { data } = await api.put(`/config/facilities/${id}`, payload);
+        return data;
+    },
+    activate: async (id: string): Promise<Facility> => {
+        const { data } = await api.put(`/config/facilities/${id}`, { status: 'Active' });
+        return data;
+    },
+    deactivate: async (id: string): Promise<Facility> => {
+        const { data } = await api.put(`/config/facilities/${id}`, { status: 'Inactive' });
+        return data;
+    },
+    getPlans: async (): Promise<{ success: boolean; data: FacilityPlan[] }> => {
+        const { data } = await api.get('/config/plans');
+        return data;
+    },
+    getUsageMonthly: async (facilityId: string, months = 6): Promise<{ success: boolean; data: FacilityUsageMonthly[] }> => {
+        const { data } = await api.get(`/config/facilities/${facilityId}/usage-monthly`, {
+            params: { months },
+        });
+        return data;
+    },
+    getPlanChangeLogs: async (facilityId: string, limit = 20): Promise<{ success: boolean; data: FacilityPlanChangeLog[] }> => {
+        const { data } = await api.get(`/config/facilities/${facilityId}/plan-change-logs`, {
+            params: { limit },
+        });
         return data;
     },
     /*    getById: async (id: string): Promise<Facility> => {

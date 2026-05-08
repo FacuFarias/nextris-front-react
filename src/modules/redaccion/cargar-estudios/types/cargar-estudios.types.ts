@@ -18,6 +18,10 @@ interface EstudioNoVinculado {
     instance_count?: number;
     source?: 'manual' | 'pacs';
     pacs_study_pk?: number | null;
+    islinked?: boolean;
+    linked_date?: string | null;
+    linked_examination_guid?: string | null;
+    linked_order_accession?: string | null;
 }
 export interface EstudiosNoVinculados {
     success: boolean;

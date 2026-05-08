@@ -1,6 +1,6 @@
 import { Modal } from "@/components";
 import { FacilityForm } from "./FacilityForm";
-import type { FacilityFormData } from "../types/facilities.types";
+import type { FacilityFormData, FacilityPlan, FacilityPlanChangeLog, FacilityUsageMonthly } from "../types/facilities.types";
 
 interface FacilityModalProps {
     isOpen: boolean;
@@ -8,6 +8,9 @@ interface FacilityModalProps {
     onSubmit: (data: FacilityFormData) => void;
     initialData?: Partial<FacilityFormData>;
     isLoading?: boolean;
+    plans?: FacilityPlan[];
+    usageHistory?: FacilityUsageMonthly[];
+    planChangeLogs?: FacilityPlanChangeLog[];
 }
 
 export const FacilityModal = ({
@@ -16,6 +19,9 @@ export const FacilityModal = ({
     onSubmit,
     initialData,
     isLoading = false,
+    plans = [],
+    usageHistory = [],
+    planChangeLogs = [],
 }: FacilityModalProps) => {
     const isEditing = !!initialData;
 
@@ -32,6 +38,9 @@ export const FacilityModal = ({
                 onCancel={onClose}
                 initialData={initialData}
                 isLoading={isLoading}
+                plans={plans}
+                usageHistory={usageHistory}
+                planChangeLogs={planChangeLogs}
             />
         </Modal>
     );

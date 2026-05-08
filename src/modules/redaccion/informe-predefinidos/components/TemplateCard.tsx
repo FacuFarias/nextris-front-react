@@ -5,10 +5,11 @@ import {
     Eye,
     Edit,
     Trash2,
-    FileCheck,
     FileText,
     Microscope,
-    ClipboardList
+    ClipboardList,
+    Lock,
+    Star,
 } from "lucide-react";
 import type { Template } from "../types/informe-pred.types";
 import { stripHtmlTags } from "@/lib/utils";
@@ -19,6 +20,7 @@ interface TemplateCardProps {
     onView: (template: Template) => void;
     onEdit: (template: Template) => void;
     onDelete: (template: Template) => void;
+    onToggleUserDefault?: (template: Template) => void;
     onModalityClick?: (modalityId: string) => void;
     onBodypartClick?: (bodypartId: string) => void;
     isModalityActive?: boolean;
@@ -31,6 +33,7 @@ export const TemplateCard = ({
     onView,
     onEdit,
     onDelete,
+    onToggleUserDefault,
     onModalityClick,
     onBodypartClick,
     isModalityActive,
@@ -65,6 +68,39 @@ export const TemplateCard = ({
                             >
                                 {template.report_type === 'inteligente' ? 'Inteligente' : 'Simple'}
                             </Badge>
+
+                            {template.owner_id === 'nextris' && (
+                                <Badge
+                                    variant="outline"
+                                    className="bg-gray-100 text-gray-500 border-gray-300 text-xs py-0 px-1.5 h-5 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600"
+                                    title="Plantilla del sistema. Solo lectura."
+                                >
+                                    <Lock className="h-2.5 w-2.5 mr-0.5" />
+                                    Sistema
+                                </Badge>
+                            )}
+
+                            {template.is_system_default && (
+                                <Badge
+                                    variant="outline"
+                                    className="bg-amber-50 text-amber-600 border-amber-300 text-xs py-0 px-1.5 h-5 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700"
+                                    title="Plantilla predeterminada del sistema para este tipo de estudio"
+                                >
+                                    <Star className="h-2.5 w-2.5 mr-0.5 fill-amber-500" />
+                                    Por defecto
+                                </Badge>
+                            )}
+
+                            {template.is_user_default && (
+                                <Badge
+                                    variant="outline"
+                                    className="bg-purple-50 text-purple-600 border-purple-300 text-xs py-0 px-1.5 h-5 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700"
+                                    title="Tu plantilla predeterminada personal para este tipo de estudio"
+                                >
+                                    <Star className="h-2.5 w-2.5 mr-0.5 fill-purple-500" />
+                                    Mi defecto
+                                </Badge>
+                            )}
 
                             {template.study_type_description && (
                                 <Badge
@@ -133,7 +169,7 @@ export const TemplateCard = ({
                     {template.impression && (
                         <div className="bg-blue-50/50 dark:bg-[#2a2a2a] rounded-lg p-2">
                             <div className="flex items-center gap-1.5 mb-0.5">
-                                <FileCheck className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                <FileText className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                                 <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Impresión</span>
                             </div>
                             <p className="text-xs text-gray-700 line-clamp-2 dark:text-gray-400">
@@ -144,46 +180,58 @@ export const TemplateCard = ({
                 </div>
 
                 {/* Acciones */}
-                <div className="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-gray-100 dark:border-gray-700">
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onView(template)}
-                        className="hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors h-7 text-xs px-2 dark:hover:bg-blue-600 dark:hover:text-blue-100 dark:hover:border-blue-500"
+                        className={`hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors h-7 text-xs px-2 dark:hover:bg-blue-600 dark:hover:text-blue-100 dark:hover:border-blue-500 ${!template.can_edit && !template.can_delete ? 'col-span-2' : ''}`}
                     >
                         <Eye className="h-3 w-3 mr-1" />
                         Ver
                     </Button>
 
-                    {/*  <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onSelect(template)}
-                        className="hover:bg-green-50 hover:text-green-700 hover:border-green-300 transition-colors"
-                    >
-                        <FileCheck className="h-4 w-4 mr-1.5" />
-                        Seleccionar
-                    </Button> */}
+                    {template.can_edit && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onEdit(template)}
+                            className="hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300 transition-colors h-7 text-xs px-2 dark:hover:bg-purple-600 dark:hover:text-purple-100 dark:hover:border-purple-500"
+                        >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Editar
+                        </Button>
+                    )}
 
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEdit(template)}
-                        className="hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300 transition-colors h-7 text-xs px-2 dark:hover:bg-purple-600 dark:hover:text-purple-100 dark:hover:border-purple-500"
-                    >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Editar
-                    </Button>
+                    {template.can_delete && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onDelete(template)}
+                            className={`hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors h-7 text-xs px-2 dark:hover:bg-red-600 dark:hover:text-red-100 dark:hover:border-red-500 ${template.can_edit ? '' : 'col-span-1'}`}
+                        >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Eliminar
+                        </Button>
+                    )}
 
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onDelete(template)}
-                        className="hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors h-7 text-xs px-2 dark:hover:bg-red-600 dark:hover:text-red-100 dark:hover:border-red-500"
-                    >
-                        <Trash2 className="h-3 w-3 mr-1" />
-                        Eliminar
-                    </Button>
+                    {/* Botón de default personal: visible solo en plantillas propias del usuario */}
+                    {template.can_edit && template.owner_id !== 'nextris' && onToggleUserDefault && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            title={template.is_user_default ? 'Quitar como mi plantilla por defecto' : 'Establecer como mi plantilla por defecto'}
+                            onClick={(e) => { e.stopPropagation(); onToggleUserDefault(template); }}
+                            className={`col-span-2 h-7 text-xs px-2 transition-colors ${
+                                template.is_user_default
+                                    ? 'bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700'
+                                    : 'hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300 dark:hover:bg-purple-900/20 dark:hover:text-purple-300'
+                            }`}
+                        >
+                            <Star className={`h-3 w-3 mr-1 ${template.is_user_default ? 'fill-purple-500' : ''}`} />
+                            {template.is_user_default ? 'Mi plantilla por defecto' : 'Poner como mi defecto'}
+                        </Button>
+                    )}
                 </div>
             </CardContent>
         </Card>

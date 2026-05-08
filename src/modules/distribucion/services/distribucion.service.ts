@@ -13,13 +13,15 @@ export const distribucionService = {
     getExamenes: async (
         allReported: boolean = false,
         page: number = 1,
-        perPage: number = 50
+        perPage: number = 50,
+        facilityId: string = ""
     ): Promise<ApiPaginatedResponse<Examen>> => {
         const response = await api.get('/examinations/distribution', {
             params: {
                 all_reported: allReported,
                 page,
-                per_page: perPage
+                per_page: perPage,
+                facility_id: facilityId,
             }
         });
         return response.data;

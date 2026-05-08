@@ -13,6 +13,12 @@ export const locationFormSchema = z.object({
     phone: z.string().optional(),
     email: z.string().email("Email inválido").optional().or(z.literal("")),
     timezone: z.string().optional(),
+    // Transmisión DICOM
+    gateway_aet: z.string().max(64).optional(),
+    gateway_ip: z.string().max(45).optional(),
+    transmission_type: z.enum(["Manual", "Automatic"]).optional(),
+    retention_days: z.number().int().min(1).optional(),
+    require_execution_before_reporting: z.boolean().optional(),
 });
 
 export type LocationFormValues = z.infer<typeof locationFormSchema>;

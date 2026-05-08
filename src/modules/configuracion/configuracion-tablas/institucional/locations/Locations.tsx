@@ -54,7 +54,9 @@ export const Locations = () => {
             );
         } else {
             // Crear
-            const { logo, logo_path, ...createPayload } = data;
+            const createPayload: LocationFormData = { ...data };
+            delete createPayload.logo;
+            delete createPayload.logo_path;
             createLocation(createPayload, {
                 onSuccess: () => {
                     toast.success("Location creada exitosamente");
@@ -72,8 +74,8 @@ export const Locations = () => {
             onSuccess: () => {
                 toast.success("Location activada exitosamente");
             },
-            onError: () => {
-                toast.error("Error al activar la location");
+            onError: (error: any) => {
+                toast.error(error?.response?.data?.message || "Error al activar la location");
             },
         });
     };
@@ -87,8 +89,8 @@ export const Locations = () => {
             onSuccess: () => {
                 toast.success("Location desactivada exitosamente");
             },
-            onError: () => {
-                toast.error("Error al desactivar la location");
+            onError: (error: any) => {
+                toast.error(error?.response?.data?.message || "Error al desactivar la location");
             },
         });
     };
@@ -162,6 +164,11 @@ export const Locations = () => {
                     email: selectedLocation.email || selectedLocation.mail,
                     timezone: selectedLocation.timezone,
                     logo_path: selectedLocation.logo_path,
+                    gateway_aet: selectedLocation.gateway_aet,
+                    gateway_ip: selectedLocation.gateway_ip,
+                    transmission_type: selectedLocation.transmission_type,
+                    retention_days: selectedLocation.retention_days,
+                    require_execution_before_reporting: selectedLocation.require_execution_before_reporting,
                 } : undefined}
                 isLoading={false}
             />

@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { FirstLoginPasswordModal } from "@/modules/auth/change-password/FirstLoginPasswordModal";
+import { EmailVerificationModal } from "@/modules/auth/email-verification/EmailVerificationModal";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useUserModules } from "@/hooks/use-user-modules";
@@ -10,9 +11,10 @@ interface ProtectedRouteProps {
     allowedRoles?: string[]; // Si está vacío, todos los usuarios autenticados pueden acceder
     requiredPermissions?: string[];
     requiredModule?: string;
+    allowWithoutPermissions?: boolean;
 }
 
-export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions, requiredModule }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions, requiredModule, allowWithoutPermissions = false }: ProtectedRouteProps) => {
     const { isAuthenticated, isLoading, authData } = useAuth();
     const { moduleCodesSet, isLoading: isModulesLoading, hasError: hasModulesError } = useUserModules(isAuthenticated);
     const hasShownErrorRef = useRef(false);
@@ -24,11 +26,12 @@ export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions, re
 
     const hasRoleConstraint = Array.isArray(allowedRoles) && allowedRoles.length > 0;
     const hasPermissionConstraint = Array.isArray(requiredPermissions) && requiredPermissions.length > 0;
+    const isStaffUser = userRole !== 'patient';
 
     const hasRoleAccess = hasRoleConstraint ? Boolean(userRole && allowedRoles?.includes(userRole)) : true;
     const hasPermissionAccess = hasPermissionConstraint
         ? (userPermissions.includes("*") || requiredPermissions!.some((permission) => userPermissions.includes(permission)))
-        : true;
+        : (isStaffUser ? allowWithoutPermissions : true);
 
     const hasAccess = hasRoleAccess && hasPermissionAccess;
 
@@ -66,6 +69,11 @@ export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions, re
     }
 
     const requiresPasswordChange = !!authData?.user?.requires_password_change;
+    const requiresEmailVerification = !!authData?.user?.email_verification_required;
+
+    if (requiresEmailVerification) {
+        return <EmailVerificationModal />;
+    }
 
     return (
         <>

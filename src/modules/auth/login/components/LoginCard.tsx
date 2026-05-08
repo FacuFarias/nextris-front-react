@@ -10,6 +10,7 @@ import { User, Lock, Shield, Activity, Clipboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoginTypeSelector } from "./LoginTypeSelector";
 import { UseLogin } from "../hooks/use-login";
+import { Link } from "react-router-dom";
 
 interface LoginCardProps {
     isPatient: boolean;
@@ -193,6 +194,19 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
                             </>
                         )}
                     </Button>
+
+                    {!isPatient && (
+                        <Link to="/registro-gratuito" className="block">
+                            <Button
+                                type="button"
+                                size="lg"
+                                variant="outline"
+                                className="w-full"
+                            >
+                                Crear Usuario Gratuito
+                            </Button>
+                        </Link>
+                    )}
                 </form>
             </Form>
 

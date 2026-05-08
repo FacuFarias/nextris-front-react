@@ -12,6 +12,86 @@ import { Loader2, MapPin, Search } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { userService } from "../services/users.service";
 
+const ROLE_PERMISSION_SUGGESTIONS: Record<string, string[]> = {
+    sysadmin: [
+        "tabs.patients.view",
+        "patients.view",
+        "patients.manage",
+        "tabs.appointments.view",
+        "appointments.view",
+        "appointments.create",
+        "tabs.admissions.view",
+        "admissions.view",
+        "admissions.admit_appointments",
+        "admissions.create_spontaneous",
+        "tabs.execution.view",
+        "execution.view_pending",
+        "execution.execute",
+        "tabs.reports.view",
+        "reports.view_writing",
+        "reports.view_reports",
+        "reports.sign",
+        "reports.unsign",
+        "tabs.images.view",
+        "images.view",
+        "images.share_link",
+        "tabs.distribution.view",
+        "distribution.view",
+        "distribution.perform",
+        "distribution.send_report",
+        "distribution.send_report_whatsapp",
+        "distribution.update_email",
+        "tabs.config.view",
+        "users.manage",
+        "users.permissions.manage",
+        "tabs.gestion.view",
+        "tabs.structured_reports.view",
+        "tabs.nexi.view",
+    ],
+    tecnico: [
+        "tabs.patients.view",
+        "patients.view",
+        "tabs.execution.view",
+        "execution.view_pending",
+        "execution.execute",
+        "tabs.images.view",
+        "images.view",
+    ],
+    medico: [
+        "tabs.patients.view",
+        "patients.view",
+        "tabs.reports.view",
+        "reports.view_writing",
+        "reports.view_reports",
+        "reports.sign",
+        "tabs.images.view",
+        "images.view",
+        "images.share_link",
+        "tabs.distribution.view",
+        "distribution.view",
+    ],
+    administrativo: [
+        "tabs.patients.view",
+        "patients.view",
+        "tabs.appointments.view",
+        "appointments.view",
+        "appointments.create",
+        "tabs.admissions.view",
+        "admissions.view",
+        "admissions.admit_appointments",
+        "admissions.create_spontaneous",
+        "tabs.distribution.view",
+        "distribution.view",
+        "distribution.perform",
+    ],
+};
+
+const normalizeRoleName = (value?: string) => (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
 interface UserFormProps {
     onSubmit: (data: UserFormData, locationIds?: string[], medicalData?: UserMedicalSubmitData, permissionCodes?: string[]) => void;
     onCancel: () => void;
@@ -224,6 +304,24 @@ export const UserForm = ({
     }, [permissionsByModule]);
 
     useEffect(() => {
+        if (isEditing) {
+            return;
+        }
+
+        if (!formData.role_id || permissionCatalog.length === 0 || selectedPermissionCodes.size > 0) {
+            return;
+        }
+
+        const role = roles?.data?.find((item) => item.guid === formData.role_id);
+        const normalizedRole = normalizeRoleName(role?.description);
+        const suggestedCodes = ROLE_PERMISSION_SUGGESTIONS[normalizedRole] || [];
+        const validCodes = new Set(permissionCatalog.map((permission) => permission.code));
+        const filteredSuggestedCodes = suggestedCodes.filter((code) => validCodes.has(code));
+
+        setSelectedPermissionCodes(new Set(filteredSuggestedCodes));
+    }, [formData.role_id, isEditing, permissionCatalog, roles?.data, selectedPermissionCodes.size]);
+
+    useEffect(() => {
         if (fetchedMedicalData?.data) {
             setMedicalFormData((prev) => {
                 const nextMatricula = fetchedMedicalData.data.matricula_nacional || "";
@@ -261,8 +359,21 @@ export const UserForm = ({
         onSubmit(dataToSubmit, Array.from(selectedLocationIds), medicalData, Array.from(selectedPermissionCodes));
     };
 
+    const getSuggestedPermissionsForRole = (roleId: string) => {
+        const role = roles?.data?.find((item) => item.guid === roleId);
+        const normalizedRole = normalizeRoleName(role?.description);
+        const suggestedCodes = ROLE_PERMISSION_SUGGESTIONS[normalizedRole] || [];
+        const validCodes = new Set(permissionCatalog.map((permission) => permission.code));
+        return suggestedCodes.filter((code) => validCodes.has(code));
+    };
+
     const handleChange = (field: keyof UserFormData, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+
+        if (field === "role_id") {
+            const suggestedPermissions = getSuggestedPermissionsForRole(String(value));
+            setSelectedPermissionCodes(new Set(suggestedPermissions));
+        }
     };
 
     const handleLocationCheckedChange = (locationId: string, checked: boolean) => {

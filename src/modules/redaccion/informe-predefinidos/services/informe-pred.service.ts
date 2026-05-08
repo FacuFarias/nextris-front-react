@@ -111,3 +111,19 @@ export const selectTemplate = async (templateId: string): Promise<TemplateRespon
         throw error;
     }
 };
+
+/**
+ * Establece una plantilla propia como default personal del usuario (para su tipo de estudio)
+ */
+export const setUserDefaultTemplate = async (templateId: string): Promise<{ success: boolean }> => {
+    const response = await api.post(`/templates/${templateId}/set-user-default`);
+    return response.data;
+};
+
+/**
+ * Quita la plantilla como default personal del usuario
+ */
+export const unsetUserDefaultTemplate = async (templateId: string): Promise<{ success: boolean }> => {
+    const response = await api.delete(`/templates/${templateId}/set-user-default`);
+    return response.data;
+};

@@ -4,29 +4,66 @@ import { useState } from "react";
 import { facilityColumns, getFacilityActions } from "./components/columns";
 import { PrimaryButton } from "@/components";
 import { FacilityModal } from "./components/FacilityModal";
+import { FacilityPlanModal } from "./components/FacilityPlanModal";
 import type { FacilityFormData } from "./types/facilities.types";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { facilitiesService } from "./services/facilities.service";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Facilities = () => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(8);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
     const [selectedFacility, setSelectedFacility] = useState<any>(null);
+    const [includeInactive, setIncludeInactive] = useState(false);
 
-    const { facilities, isLoading, createFacility, updateFacility } = useFacilities();
+    const { facilities, plans, isLoading, createFacility, updateFacility, activateFacility, deactivateFacility } = useFacilities();
+
+    const selectedFacilityId = selectedFacility?.guid as string | undefined;
+    const visibleFacilities = (facilities?.data || []).filter((facility) => {
+        if (includeInactive) {
+            return true;
+        }
+
+        return String(facility.status || "").trim().toLowerCase() !== "inactive";
+    });
+
+    const { data: usageHistoryResponse } = useQuery({
+        queryKey: ["facility-usage-history", selectedFacilityId],
+        queryFn: () => facilitiesService.getUsageMonthly(selectedFacilityId as string, 12),
+        enabled: Boolean(selectedFacilityId && isEditModalOpen),
+    });
+
+    const { data: planChangeLogsResponse } = useQuery({
+        queryKey: ["facility-plan-change-logs", selectedFacilityId],
+        queryFn: () => facilitiesService.getPlanChangeLogs(selectedFacilityId as string, 30),
+        enabled: Boolean(selectedFacilityId && isEditModalOpen),
+    });
 
     const handlePaginationChange = (newPage: number, newPageSize: number) => {
         setPage(newPage);
         setPageSize(newPageSize);
     };
 
-    const handleOpenModal = (facility?: any) => {
+    const handleOpenEditModal = (facility?: any) => {
         setSelectedFacility(facility || null);
-        setIsModalOpen(true);
+        setIsEditModalOpen(true);
     };
 
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
+    const handleCloseEditModal = () => {
+        setIsEditModalOpen(false);
+        setSelectedFacility(null);
+    };
+
+    const handleOpenPlanModal = (facility: any) => {
+        setSelectedFacility(facility);
+        setIsPlanModalOpen(true);
+    };
+
+    const handleClosePlanModal = () => {
+        setIsPlanModalOpen(false);
         setSelectedFacility(null);
     };
 
@@ -40,7 +77,7 @@ export const Facilities = () => {
                 {
                     onSuccess: () => {
                         toast.success("Facility actualizada exitosamente");
-                        handleCloseModal();
+                        handleCloseEditModal();
                     },
                     onError: () => {
                         toast.error("Error al actualizar la facility");
@@ -52,7 +89,7 @@ export const Facilities = () => {
             createFacility(data as any, {
                 onSuccess: () => {
                     toast.success("Facility creada exitosamente");
-                    handleCloseModal();
+                    handleCloseEditModal();
                 },
                 onError: () => {
                     toast.error("Error al crear la facility");
@@ -60,7 +97,52 @@ export const Facilities = () => {
             });
         }
 
-        handleCloseModal();
+        handleCloseEditModal();
+    };
+
+    const handlePlanSubmit = (planCode: string) => {
+        if (!selectedFacility?.guid) {
+            return;
+        }
+
+        updateFacility(
+            { id: selectedFacility.guid, data: { plan_code: planCode } as any },
+            {
+                onSuccess: () => {
+                    toast.success("Plan actualizado exitosamente");
+                    handleClosePlanModal();
+                },
+                onError: () => {
+                    toast.error("Error al actualizar el plan");
+                },
+            }
+        );
+    };
+
+    const handleActivateFacility = (facility: any) => {
+        activateFacility(facility.guid, {
+            onSuccess: () => {
+                toast.success("Institución activada exitosamente");
+            },
+            onError: (error: any) => {
+                toast.error(error?.response?.data?.message || "Error al activar la institución");
+            },
+        });
+    };
+
+    const handleDeactivateFacility = (facility: any) => {
+        if (!confirm(`¿Desea desactivar la institución ${facility.name}? También se desactivarán sus ubicaciones.`)) {
+            return;
+        }
+
+        deactivateFacility(facility.guid, {
+            onSuccess: () => {
+                toast.success("Institución desactivada exitosamente. Sus ubicaciones fueron desactivadas.");
+            },
+            onError: (error: any) => {
+                toast.error(error?.response?.data?.message || "Error al desactivar la institución");
+            },
+        });
     };
 
     return (
@@ -70,9 +152,18 @@ export const Facilities = () => {
                     <h2 className="text-2xl font-bold">INSTITUCIONES</h2>
                     <p className="text-muted-foreground">Gestión de instalaciones médicas</p>
                 </div>
-                <PrimaryButton onClick={() => handleOpenModal()}>
-                    Nueva Institución
-                </PrimaryButton>
+                <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Checkbox
+                            checked={includeInactive}
+                            onCheckedChange={(checked) => setIncludeInactive(Boolean(checked))}
+                        />
+                        Ver inactivas
+                    </label>
+                    <PrimaryButton onClick={() => handleOpenEditModal()}>
+                        Nueva Institución
+                    </PrimaryButton>
+                </div>
             </div>
 
             {isLoading ? (
@@ -81,17 +172,28 @@ export const Facilities = () => {
                 </div>
             ) : (
                 <TablaDynamic
-                    data={facilities?.data || []}
+                    data={visibleFacilities}
                     columns={facilityColumns}
                     showIndex
-                    actions={getFacilityActions((facility) => {
-                        handleOpenModal(facility);
-                    })}
+                    actions={getFacilityActions(
+                        (facility) => {
+                            handleOpenEditModal(facility);
+                        },
+                        (facility) => {
+                            handleOpenPlanModal(facility);
+                        },
+                        (facility) => {
+                            handleActivateFacility(facility);
+                        },
+                        (facility) => {
+                            handleDeactivateFacility(facility);
+                        }
+                    )}
                     pagination={{
                         page,
                         pageSize,
                         serverSide: false,
-                        total: facilities?.data.length || 0,
+                        total: visibleFacilities.length,
                     }}
                     onPaginationChange={handlePaginationChange}
                 />
@@ -99,12 +201,13 @@ export const Facilities = () => {
 
             {/* Modal de Crear/Editar */}
             <FacilityModal
-                isOpen={isModalOpen}
-                onClose={handleCloseModal}
+                isOpen={isEditModalOpen}
+                onClose={handleCloseEditModal}
                 onSubmit={handleSubmit}
                 initialData={selectedFacility ? {
                     description: selectedFacility.description || selectedFacility.name || "",
                     id_patientdomain: selectedFacility.id_patientdomain || selectedFacility.patientdomain_id || "",
+                    plan_code: selectedFacility.plan?.code?.toLowerCase() || "free",
                     // SMTP Config
                     smtp_server: selectedFacility.smtp_config?.smtp_server,
                     smtp_port: selectedFacility.smtp_config?.smtp_port,
@@ -129,6 +232,19 @@ export const Facilities = () => {
                     whatsapp_webhook_verify_token: selectedFacility.whatsapp_config?.whatsapp_webhook_verify_token ?? selectedFacility.whatsapp_config?.webhook_verify_token,
                     whatsapp_is_active: selectedFacility.whatsapp_config?.whatsapp_is_active ?? selectedFacility.whatsapp_config?.is_active,
                 } : undefined}
+                plans={plans?.data || []}
+                usageHistory={usageHistoryResponse?.data || []}
+                planChangeLogs={planChangeLogsResponse?.data || []}
+                isLoading={false}
+            />
+
+            <FacilityPlanModal
+                isOpen={isPlanModalOpen}
+                onClose={handleClosePlanModal}
+                onSubmit={handlePlanSubmit}
+                facilityName={selectedFacility?.name || selectedFacility?.description}
+                initialPlanCode={selectedFacility?.plan?.code}
+                plans={plans?.data || []}
                 isLoading={false}
             />
         </div>

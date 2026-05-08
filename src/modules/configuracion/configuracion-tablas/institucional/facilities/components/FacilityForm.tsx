@@ -17,17 +17,21 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { PrimaryButton, SecondaryButton } from "@/components";
-import { facilityFormSchema, type FacilityFormValues } from "../schemas/facility.schema";
+import { facilityFormSchema } from "../schemas/facility.schema";
 import type { FacilityFormData } from "../types/facilities.types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Database, MessageSquare } from "lucide-react";
 import { useDominioPacientes } from "../../dominio-pacientes/hooks/use-dominio-pacientes";
+import type { FacilityPlan, FacilityPlanChangeLog, FacilityUsageMonthly } from "../types/facilities.types";
 
 interface FacilityFormProps {
     onSubmit: (data: FacilityFormData) => void;
     onCancel: () => void;
     initialData?: Partial<FacilityFormData>;
     isLoading?: boolean;
+    plans?: FacilityPlan[];
+    usageHistory?: FacilityUsageMonthly[];
+    planChangeLogs?: FacilityPlanChangeLog[];
 }
 
 export const FacilityForm = ({
@@ -35,14 +39,18 @@ export const FacilityForm = ({
     onCancel,
     initialData,
     isLoading = false,
+    plans = [],
+    usageHistory = [],
+    planChangeLogs = [],
 }: FacilityFormProps) => {
     const { dominioPacientes, isLoading: isLoadingDomains } = useDominioPacientes();
 
-    const form = useForm<FacilityFormValues>({
+    const form = useForm<any>({
         resolver: zodResolver(facilityFormSchema),
         defaultValues: {
             description: initialData?.description || "",
             id_patientdomain: initialData?.id_patientdomain || "",
+            plan_code: initialData?.plan_code || "free",
 
             // SMTP
             smtp_server: initialData?.smtp_server || "",
@@ -130,6 +138,93 @@ export const FacilityForm = ({
                         </FormItem>
                     )}
                 />
+
+                <FormField
+                    control={form.control}
+                    name="plan_code"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Plan</FormLabel>
+                            <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value || "free"}
+                                disabled={isLoading}
+                            >
+                                <FormControl className="w-full">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccione un plan" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {plans.length > 0 ? (
+                                        plans.map((plan) => (
+                                            <SelectItem key={plan.guid} value={plan.code.toLowerCase()}>
+                                                {plan.name}
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <>
+                                            <SelectItem value="free">Free</SelectItem>
+                                            <SelectItem value="standard">Standard</SelectItem>
+                                            <SelectItem value="pro">Pro</SelectItem>
+                                            <SelectItem value="enterprise">Enterprise</SelectItem>
+                                        </>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                {usageHistory.length > 0 && (
+                    <div className="rounded-md border p-3">
+                        <h3 className="text-sm font-semibold mb-2">Histórico mensual de uso</h3>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                                <thead>
+                                    <tr className="text-left border-b">
+                                        <th className="py-1 pr-2">Mes</th>
+                                        <th className="py-1 pr-2">Recibidos</th>
+                                        <th className="py-1 pr-2">Leídos</th>
+                                        <th className="py-1 pr-2">Distribuidos</th>
+                                        <th className="py-1 pr-2">Usuarios</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {usageHistory.map((item) => (
+                                        <tr key={`${item.usage_year}-${item.usage_month}`} className="border-b last:border-b-0">
+                                            <td className="py-1 pr-2">{`${item.usage_year}-${String(item.usage_month).padStart(2, "0")}`}</td>
+                                            <td className="py-1 pr-2">{item.received_count}</td>
+                                            <td className="py-1 pr-2">{item.read_count}</td>
+                                            <td className="py-1 pr-2">{item.distributed_count}</td>
+                                            <td className="py-1 pr-2">{item.users_count_snapshot}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {planChangeLogs.length > 0 && (
+                    <div className="rounded-md border p-3">
+                        <h3 className="text-sm font-semibold mb-2">Auditoría de cambios de plan</h3>
+                        <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                            {planChangeLogs.map((log) => (
+                                <div key={log.guid} className="text-xs border rounded px-2 py-1">
+                                    <div className="font-medium">
+                                        {(log.previous_plan_code || "sin plan").toUpperCase()} -&gt; {(log.new_plan_code || "sin plan").toUpperCase()} ({log.action})
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                        {log.changed_at ? new Date(log.changed_at).toLocaleString("es-AR") : "-"}
+                                        {log.reason ? ` | ${log.reason}` : ""}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Tabs para las configuraciones */}
                 <Tabs defaultValue="smtp" className="w-full">

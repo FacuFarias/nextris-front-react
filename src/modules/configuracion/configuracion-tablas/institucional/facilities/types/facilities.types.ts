@@ -10,6 +10,7 @@ export interface Facility {
     code: string;
     email: string;
     contact_person: string;
+    status: 'Active' | 'Inactive' | string;
     smtp_config: {
         smtp_server: string;
         smtp_port: number;
@@ -36,6 +37,19 @@ export interface Facility {
         whatsapp_webhook_verify_token: string;
         whatsapp_is_active: boolean;
     };
+    plan?: {
+        code?: string;
+        name?: string;
+        max_receive_monthly?: number | null;
+        max_distribute_monthly?: number | null;
+        max_users?: number | null;
+    };
+    usage_monthly?: {
+        received_count: number;
+        read_count: number;
+        distributed_count: number;
+        users_count_snapshot: number;
+    };
 }
 
 
@@ -47,6 +61,7 @@ export interface FacilityResponse {
 export interface FacilityFormData {
     description: string;
     id_patientdomain?: string;
+    plan_code?: string;
 
     // SMTP Config
     smtp_server?: string;
@@ -73,4 +88,38 @@ export interface FacilityFormData {
     whatsapp_business_account_id?: string;
     whatsapp_webhook_verify_token?: string;
     whatsapp_is_active?: boolean;
+}
+
+export interface FacilityPlan {
+    guid: string;
+    code: string;
+    name: string;
+    description?: string;
+    max_receive_monthly: number | null;
+    max_distribute_monthly: number | null;
+    max_users: number | null;
+    is_active: boolean;
+}
+
+export interface FacilityUsageMonthly {
+    usage_year: number;
+    usage_month: number;
+    received_count: number;
+    read_count: number;
+    distributed_count: number;
+    users_count_snapshot: number;
+    updated_at?: string | null;
+}
+
+export interface FacilityPlanChangeLog {
+    guid: string;
+    previous_plan_id?: string | null;
+    new_plan_id: string;
+    previous_plan_code?: string | null;
+    new_plan_code?: string | null;
+    action: 'activated' | 'upgraded' | 'downgraded' | 'changed';
+    changed_by_user_id?: string | null;
+    reason?: string | null;
+    request_ip?: string | null;
+    changed_at?: string | null;
 }

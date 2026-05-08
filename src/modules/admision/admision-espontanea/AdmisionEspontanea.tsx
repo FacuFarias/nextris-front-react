@@ -12,8 +12,11 @@ import { AgregarPacienteRapido } from "./components/AgregarPacienteRapido"
 //hooks
 import { usePacienteDireccion } from "./hooks/use-paciente-direccion"
 import { useDebounce } from "@uidotdev/usehooks"
+import { useQuery } from "@tanstack/react-query"
 //layout
 import { MainLayout } from "@/layouts/layout"
+import { api } from "@/lib/api"
+import { useFacility } from "@/context/FacilityContext"
 //icons and react
 import { Calendar, User, ClipboardList, FileCheck, UserPlus, Loader2 } from "lucide-react"
 import { useState, useEffect, useCallback, useRef } from "react"
@@ -43,6 +46,19 @@ export const AdmisionEspontanea = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     //hook para crear paciente
     const pacienteRapido = usePacienteRapido();
+    const { selectedFacilityId } = useFacility();
+
+    const { data: selectedFacilityPlan } = useQuery({
+        queryKey: ["facility-plan", selectedFacilityId, "admision-espontanea"],
+        queryFn: async () => {
+            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
+            return response.data?.data?.plan || null;
+        },
+        enabled: Boolean(selectedFacilityId),
+        staleTime: 60 * 1000,
+    });
+
+    const isFreePlan = String(selectedFacilityPlan?.plan_code || "").toLowerCase() === "free";
 
     const updateIndicator = useCallback(() => {
         const activeEl = tabRefs.current.get(activeTab)
@@ -75,15 +91,24 @@ export const AdmisionEspontanea = () => {
     };
 
     const handleCreatePatient = (data: CreatePatientFormFast) => {
+        if (!selectedDireccion) {
+            return;
+        }
+
         pacienteRapido.mutate({
             nombre: data.nombre,
             apellido: data.apellido,
             sexo: data.sexo,
             dni: data.dni,
             fecha_nac: data.fecha_nac,
+            location_id: selectedDireccion,
         }, {
             onSuccess: () => {
                 setIsModalOpen(false);
+                fetchPacientesDireccion({
+                    uuid: selectedDireccion,
+                    searchTerm: debouncedSearch,
+                });
             }
         })
     };
@@ -115,6 +140,20 @@ export const AdmisionEspontanea = () => {
         window.addEventListener("resize", updateIndicator)
         return () => window.removeEventListener("resize", updateIndicator)
     }, [updateIndicator])
+
+    useEffect(() => {
+        if (isFreePlan && activeTab === "prestacion") {
+            setActiveTab("examen");
+        }
+    }, [isFreePlan, activeTab]);
+
+    useEffect(() => {
+        setSelectedDireccion("");
+        setSelectedPatient(null);
+        setSelectedEstudio(null);
+        setSelectedExam(null);
+        setActiveTab("paciente");
+    }, [selectedFacilityId]);
 
     return (
         <MainLayout>
@@ -156,17 +195,19 @@ export const AdmisionEspontanea = () => {
                                     <ClipboardList className="w-4 h-4" />
                                     <span>2. Examen</span>
                                 </TabsTrigger>
-                                <TabsTrigger
-                                    value="prestacion"
-                                    disabled={!selectedExam}
-                                    ref={(el) => {
-                                        if (el) tabRefs.current.set("prestacion", el)
-                                    }}
-                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                    <FileCheck className="w-4 h-4" />
-                                    <span>3. Prestación</span>
-                                </TabsTrigger>
+                                {!isFreePlan ? (
+                                    <TabsTrigger
+                                        value="prestacion"
+                                        disabled={!selectedExam}
+                                        ref={(el) => {
+                                            if (el) tabRefs.current.set("prestacion", el)
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <FileCheck className="w-4 h-4" />
+                                        <span>3. Prestación</span>
+                                    </TabsTrigger>
+                                ) : null}
                             </TabsList>
                             <div
                                 className="absolute bottom-0 h-0.5 bg-brand-purple transition-all duration-300 ease-in-out"
@@ -181,6 +222,7 @@ export const AdmisionEspontanea = () => {
                                 <DireccionSelector
                                     selectedDireccion={selectedDireccion}
                                     onDireccionChange={handleDireccionChange}
+                                    facilityId={selectedFacilityId}
                                     isPending={isPending}
                                     isRow={true}
                                 />
@@ -251,24 +293,30 @@ export const AdmisionEspontanea = () => {
                             <Examen
                                 selectedPatient={selectedPatient}
                                 selectedDireccion={selectedDireccion}
+                                isFreePlan={isFreePlan}
+                                onOrderCreated={handleResetForm}
                                 onEquipoSelected={(equipo, estudio) => {
                                     setSelectedExam(equipo);
                                     setSelectedEstudio(estudio);
-                                    setActiveTab("prestacion");
+                                    if (!isFreePlan) {
+                                        setActiveTab("prestacion");
+                                    }
                                 }}
                             />
                         </TabsContent>
 
                         {/* Tab Content - Prestación */}
-                        <TabsContent value="prestacion" className="mt-6">
-                            <Prestacion
-                                selectedPatient={selectedPatient}
-                                selectedEstudio={selectedEstudio}
-                                selectedEquipo={selectedExam}
-                                selectedDireccion={selectedDireccion}
-                                onResetForm={handleResetForm}
-                            />
-                        </TabsContent>
+                        {!isFreePlan ? (
+                            <TabsContent value="prestacion" className="mt-6">
+                                <Prestacion
+                                    selectedPatient={selectedPatient}
+                                    selectedEstudio={selectedEstudio}
+                                    selectedEquipo={selectedExam}
+                                    selectedDireccion={selectedDireccion}
+                                    onResetForm={handleResetForm}
+                                />
+                            </TabsContent>
+                        ) : null}
                     </Tabs>
                 </div>
 

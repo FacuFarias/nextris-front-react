@@ -16,6 +16,7 @@ export const postSignReport = async (
         modality_id?: string | null;
         body_part_id?: string | null;
         study_group_id?: string | null;
+        facility_id?: string | null;
     }
 ) => {
     const response = await api.post(`/reports/${informeGuid}/sign`, payload);
@@ -26,6 +27,7 @@ export const postNextExam = async (payload: {
     modality_id?: string | null;
     body_part_id?: string | null;
     study_group_id?: string | null;
+    facility_id?: string | null;
 }) => {
     const response = await api.post('/reports/next-exam', payload);
     return response.data;

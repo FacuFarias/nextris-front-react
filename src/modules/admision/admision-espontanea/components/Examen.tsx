@@ -7,15 +7,22 @@ import TablaDynamic from "@/components/TableDynamic"
 import type { TableColumn } from "@/types/table"
 import fondoImage from "@/assets/fondo1.png"
 import backDarkImage from "@/assets/back-dark.jpg";
+import { PrimaryButton } from "@/components/PrimaryButton";
+import { useCrearOrdenParaPaciente } from "../hooks/use-paciente-direccion";
 
 interface ExamenProps {
     selectedPatient: Patient | null;
     selectedDireccion: string;
+    isFreePlan?: boolean;
+    onOrderCreated?: () => void;
     onEquipoSelected?: (equipo: any, estudio: any) => void;
 }
 
 export const Examen = ({
+    selectedPatient,
     selectedDireccion,
+    isFreePlan = false,
+    onOrderCreated,
     onEquipoSelected,
 }: ExamenProps) => {
     const [selectedTipoExamen, setSelectedTipoExamen] = useState<string>("");
@@ -24,6 +31,9 @@ export const Examen = ({
     const [selectedEquipo, setSelectedEquipo] = useState<any>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
+    const mutationCrearOrden = useCrearOrdenParaPaciente(() => {
+        onOrderCreated?.();
+    });
     const { data: tiposExamenData, isLoading: isLoadingTiposExamen } = useModalidades();
     const { data: partesDelCuerpoData, isLoading: isLoadingPartesCuerpo } = usePartesDelCuerpo();
     const { data: estudiosData, isLoading: isLoadingEstudios } = useEstudiosPorModalidad();
@@ -128,14 +138,35 @@ export const Examen = ({
     const onTipoExamenChange = (value: string) => {
         setSelectedTipoExamen(value);
         setSelectedEstudio(null);
+        setSelectedEquipo(null);
         setCurrentPage(1);
     }
 
     const onParteCuerpoChange = (value: string) => {
         setSelectedParteCuerpo(value);
         setSelectedEstudio(null);
+        setSelectedEquipo(null);
         setCurrentPage(1);
     }
+
+    const handleCreateOrderFree = () => {
+        if (!selectedPatient?.guid || !selectedDireccion || !selectedEstudio?.guid || !selectedEquipo) {
+            return;
+        }
+
+        const isUnassignedEquipment = selectedEquipo?.guid === "UNASSIGNED" || Boolean(selectedEquipo?.isUnassigned);
+
+        mutationCrearOrden.mutate({
+            patient_id: selectedPatient.guid,
+            location_id: selectedDireccion,
+            exam: {
+                study_type_id: selectedEstudio.guid,
+                equipment_id: isUnassignedEquipment ? undefined : selectedEquipo?.guid,
+                unassigned_equipment: isUnassignedEquipment,
+                severity: "normal",
+            }
+        });
+    };
 
     const pagination = {
         page: currentPage,
@@ -228,6 +259,7 @@ export const Examen = ({
                             }
                             onRowClick={(row) => {
                                 setSelectedEstudio(row);
+                                setSelectedEquipo(null);
                             }}
                             selectedRow={selectedEstudio}
                             rowIdKey="guid"
@@ -313,9 +345,38 @@ export const Examen = ({
                                     <p className="text-sm">Seleccione un estudio para ver equipos disponibles</p>
                                 </div>
                             ) : filteredEquipos.length === 0 ? (
-                                <div className="bg-red-50 rounded-lg p-3 border border-red-200 dark:bg-red-900/20 dark:border-red-800">
-                                    <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-1 dark:text-red-400">No hay equipos disponibles</p>
-                                    <p className="text-sm text-red-700">No se encontraron equipos para la modalidad {selectedEstudio.modality}</p>
+                                <div className="space-y-3">
+                                    <div
+                                        onClick={() => {
+                                            const unassignedEquipment = {
+                                                guid: "UNASSIGNED",
+                                                description: "Sin asignar a equipo",
+                                                modality: selectedEstudio.modality,
+                                                isUnassigned: true,
+                                            };
+                                            setSelectedEquipo(unassignedEquipment);
+                                            onEquipoSelected?.(unassignedEquipment, selectedEstudio);
+                                        }}
+                                        className={`group relative rounded-lg p-3 border cursor-pointer transition-all duration-200 ${selectedEquipo?.guid === "UNASSIGNED"
+                                            ? 'bg-brand-purple text-white border-brand-purple border-l-4 dark:bg-purple-900 dark:border-purple-400'
+                                            : 'bg-purple-50 border-purple-100 hover:bg-purple-100 hover:border-purple-200 dark:bg-purple-900/50 dark:border-purple-800/50 dark:hover:bg-purple-800/50 dark:hover:border-purple-700'
+                                            }`}
+                                    >
+                                        {selectedEquipo?.guid !== "UNASSIGNED" && (
+                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-white/95 text-brand-purple border border-brand-purple/20 px-2 py-1 text-[11px] font-semibold shadow-sm">
+                                                    <MousePointerClick className="w-3 h-3" />
+                                                    Seleccionar
+                                                </span>
+                                            </div>
+                                        )}
+                                        <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${selectedEquipo?.guid === "UNASSIGNED" ? 'text-purple-100 dark:text-purple-200' : 'text-gray-600 dark:text-gray-400'
+                                            }`}>Equipo</p>
+                                        <p className={`text-sm font-medium ${selectedEquipo?.guid === "UNASSIGNED" ? 'text-white dark:text-white' : 'text-gray-800 dark:text-gray-200'
+                                            }`}>Sin asignar a equipo</p>
+                                        <p className={`text-xs mt-1 ${selectedEquipo?.guid === "UNASSIGNED" ? 'text-purple-100/90 dark:text-purple-200/90' : 'text-gray-600 dark:text-gray-400'
+                                            }`}>No se creará orden para la worklist de ningun equipo.</p>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="space-y-2">
@@ -350,6 +411,23 @@ export const Examen = ({
                                     })}
                                 </div>
                             )}
+
+                            {isFreePlan ? (
+                                <div className="mt-4 border-t border-purple-200/40 dark:border-purple-700/40 pt-4">
+                                    <PrimaryButton
+                                        onClick={handleCreateOrderFree}
+                                        disabled={
+                                            !selectedPatient?.guid ||
+                                            !selectedDireccion ||
+                                            !selectedEstudio?.guid ||
+                                            !selectedEquipo ||
+                                            mutationCrearOrden.isPending
+                                        }
+                                    >
+                                        {mutationCrearOrden.isPending ? "Creando..." : "Crear orden"}
+                                    </PrimaryButton>
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 </div>

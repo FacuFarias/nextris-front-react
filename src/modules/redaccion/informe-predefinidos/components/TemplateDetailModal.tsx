@@ -12,12 +12,12 @@ interface TemplateDetailModalProps {
 export const TemplateDetailModal = ({ template, isOpen, onClose }: TemplateDetailModalProps) => {
     if (!template) return null;
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`${template.study_type_description}`} description={template.title}>
-            <div className="space-y-6 mt-4">
+        <Modal isOpen={isOpen} onClose={onClose} title={`${template.study_type_description}`} description={template.title} size="xxl" className="sm:max-w-3xl">
+            <div className="space-y-4 mt-4 max-h-[65vh] overflow-y-auto pr-1">
                 <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Tipo de informe</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                        <p className="text-gray-700 whitespace-pre-wrap">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Tipo de informe</h3>
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                             {template.report_type === 'inteligente' ? 'Inteligente' : 'Simple'}
                         </p>
                     </div>
@@ -26,9 +26,9 @@ export const TemplateDetailModal = ({ template, isOpen, onClose }: TemplateDetai
                 {/* Técnica */}
                 {template.technique && (
                     <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">Técnica</h3>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <p className="text-gray-700 whitespace-pre-wrap">{stripHtmlTags(template.technique)}</p>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Técnica</h3>
+                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{stripHtmlTags(template.technique)}</p>
                         </div>
                     </div>
                 )}
@@ -36,9 +36,9 @@ export const TemplateDetailModal = ({ template, isOpen, onClose }: TemplateDetai
                 {/* Hallazgos */}
                 {template.findings && (
                     <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">Hallazgos</h3>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <p className="text-gray-700 whitespace-pre-wrap">{stripHtmlTags(template.findings)}</p>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Hallazgos</h3>
+                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{stripHtmlTags(template.findings)}</p>
                         </div>
                     </div>
                 )}
@@ -46,9 +46,9 @@ export const TemplateDetailModal = ({ template, isOpen, onClose }: TemplateDetai
                 {/* Impresión */}
                 {template.impression && (
                     <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">Impresión</h3>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <p className="text-gray-700 whitespace-pre-wrap">{stripHtmlTags(template.impression)}</p>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Impresión</h3>
+                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{stripHtmlTags(template.impression)}</p>
                         </div>
                     </div>
                 )}
@@ -56,9 +56,9 @@ export const TemplateDetailModal = ({ template, isOpen, onClose }: TemplateDetai
                 {/* Conclusión */}
                 {template.conclusion && (
                     <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">Conclusión</h3>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <p className="text-gray-700 whitespace-pre-wrap">{stripHtmlTags(template.conclusion)}</p>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Conclusión</h3>
+                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{stripHtmlTags(template.conclusion)}</p>
                         </div>
                     </div>
                 )}

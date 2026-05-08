@@ -18,6 +18,12 @@ export interface Location {
     logo_path?: string;
     created_at: string;
     updated_at: string;
+    // Transmisión DICOM
+    gateway_aet?: string;
+    gateway_ip?: string;
+    transmission_type?: 'Manual' | 'Automatic';
+    retention_days?: number;
+    require_execution_before_reporting?: boolean;
 }
 
 
@@ -42,4 +48,10 @@ export interface LocationFormData {
     timezone?: string;
     logo?: File;
     logo_path?: string;
+    // Transmisión DICOM
+    gateway_aet?: string;
+    gateway_ip?: string;
+    transmission_type?: 'Manual' | 'Automatic';
+    retention_days?: number;
+    require_execution_before_reporting?: boolean;
 }

@@ -6,6 +6,15 @@ import tailwindcss from "@tailwindcss/vite"
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    // Keep previous hashed assets so cached clients do not break during rolling deploys.
+    emptyOutDir: false,
+  },
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    allowedHosts: ['nextris.cloud'],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

@@ -67,6 +67,8 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     sortColumn?: string; // Columna de ordenamiento controlada externamente
     sortDirection?: "asc" | "desc"; // Dirección de ordenamiento controlada externamente
     onSortChange?: (column: string, direction: "asc" | "desc") => void; // Callback para cambios de sort
+    serverSideFiltering?: boolean;
+    onColumnFiltersChange?: (filters: Record<string, string>) => void;
     tableClassName?: string;
     preserveTableHeight?: boolean;
     stickyPagination?: boolean;

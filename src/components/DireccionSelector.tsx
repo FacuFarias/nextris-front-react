@@ -12,6 +12,7 @@ interface DireccionSelectorProps {
     isPending?: boolean;
     isRow?: boolean;
     includeAllOption?: boolean;
+    facilityId?: string;
 }
 
 type Location = { guid: string; name: string; [key: string]: any };
@@ -26,22 +27,33 @@ export const DireccionSelector = ({
     isPending = false,
     isRow = false,
     includeAllOption = false,
+    facilityId,
 }: DireccionSelectorProps) => {
     const { data: locationsData, isLoading } = useLocationsInstitutional();
 
+    const allLocations: Location[] = locationsData?.data ?? [];
+    const locations: Location[] = facilityId
+        ? allLocations.filter((location) => String(location?.facility_id || "") === facilityId)
+        : allLocations;
+
     // Seleccionar automáticamente si solo hay una ubicación
     useEffect(() => {
-        if (locationsData?.data?.length === 1 && !selectedDireccion) {
-            onDireccionChange(locationsData.data[0].guid);
+        if (locations.length === 1 && selectedDireccion !== locations[0].guid) {
+            onDireccionChange(locations[0].guid);
+            return;
         }
-    }, [locationsData, selectedDireccion, onDireccionChange]);
+
+        // Si cambia la institución y la ubicación actual ya no pertenece al filtro, limpiar.
+        if (selectedDireccion && locations.length > 0 && !locations.some((location) => location.guid === selectedDireccion)) {
+            onDireccionChange("");
+        }
+    }, [locations, selectedDireccion, onDireccionChange]);
 
     const handleClear = (e: React.MouseEvent) => {
         e.stopPropagation();
         onDireccionChange("");
     };
 
-    const locations: Location[] = locationsData?.data ?? [];
     const selectedLocation = locations.find((l) => l.guid === selectedDireccion) ?? null;
 
     if (!isRow) {

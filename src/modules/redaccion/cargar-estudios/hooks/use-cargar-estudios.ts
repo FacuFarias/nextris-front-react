@@ -22,11 +22,19 @@ export const useCargarEstudios = () => {
     return mutation;
 }
 
-export const useEstudiosNoVinculados = ({ location_id }: { location_id: string }) => {
+export const useEstudiosNoVinculados = ({
+    location_id,
+    include_linked = false,
+    include_pacs = true,
+}: {
+    location_id: string,
+    include_linked?: boolean,
+    include_pacs?: boolean,
+}) => {
 
     const { data, isLoading, error, refetch } = useQuery<EstudiosNoVinculados>({
-        queryKey: cargarEstudiosKeys.listNoVinculados(location_id),
-        queryFn: () => getUnlinkedStudies({ location_id }),
+        queryKey: cargarEstudiosKeys.listNoVinculados(location_id, include_linked, include_pacs),
+        queryFn: () => getUnlinkedStudies({ location_id, include_linked, include_pacs }),
         enabled: !!location_id,
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
