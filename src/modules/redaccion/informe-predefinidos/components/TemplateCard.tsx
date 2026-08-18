@@ -2,22 +2,33 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Eye,
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
     Edit,
     Trash2,
     FileText,
     Microscope,
-    ClipboardList,
     Lock,
     Star,
 } from "lucide-react";
 import type { Template } from "../types/informe-pred.types";
 import { stripHtmlTags } from "@/lib/utils";
+import DOMPurify from "dompurify";
+import "./TemplateCard.css";
+
+const RichTemplateContent = ({ content }: { content: string }) => (
+    <div
+        className="whitespace-pre-wrap break-words text-sm leading-relaxed [&_br]:block [&_li]:ml-5 [&_ol]:list-decimal [&_p:not(:last-child)]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_u]:underline"
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
+    />
+);
 
 interface TemplateCardProps {
     template: Template;
     index?: number;
-    onView: (template: Template) => void;
     onEdit: (template: Template) => void;
     onDelete: (template: Template) => void;
     onToggleUserDefault?: (template: Template) => void;
@@ -30,7 +41,6 @@ interface TemplateCardProps {
 export const TemplateCard = ({
     template,
     index = 0,
-    onView,
     onEdit,
     onDelete,
     onToggleUserDefault,
@@ -40,28 +50,48 @@ export const TemplateCard = ({
     isBodypartActive
 }: TemplateCardProps) => {
     return (
-        <Card
-            className="group hover:shadow-lg transition-all border-gray-200 hover:border-brand-purple/50 animate-in fade-in slide-in-from-bottom-3 zoom-in-95 duration-500 ease-out dark:bg-[#2a2e32]"
-            style={{
-                animationDelay: `${index * 80}ms`,
-                animationFillMode: 'both'
-            }}
-        >
-            <CardHeader className="pb-2 pt-3 px-3">
+        <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+                <Card
+                    tabIndex={0}
+                    title={template.can_edit ? "Doble clic para editar" : undefined}
+                    onDoubleClick={(event) => {
+                        const target = event.target as HTMLElement;
+                        if (!template.can_edit || target.closest('button, [data-card-control]')) return;
+                        onEdit(template);
+                    }}
+                    className={`template-card group h-full gap-0 border-gray-200 py-0 hover:border-brand-purple/50 hover:shadow-lg animate-in fade-in slide-in-from-bottom-3 zoom-in-95 duration-500 ease-out ${template.can_edit ? 'cursor-pointer' : ''}`}
+                    style={{
+                        animationDelay: `${index * 80}ms`,
+                        animationFillMode: 'both'
+                    }}
+                >
+            <CardHeader className="template-card__header px-3 py-3">
                 <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-1">
-                            <div className="bg-brand-purple/10 p-1.5 rounded-lg">
+                        <div className="flex items-start gap-2 mb-1.5">
+                            <div className="template-card__icon flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-purple/10">
                                 <FileText className="h-4 w-4 text-brand-purple dark:text-purple-400" />
                             </div>
-                            <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 group-hover:text-brand-purple transition-colors dark:text-gray-200 group-hover:dark:text-purple-400">
+                            <h3 className="template-card__title line-clamp-2 text-[15px] font-semibold leading-snug text-gray-900 transition-colors group-hover:text-brand-purple dark:text-gray-200">
                                 {template.title}
                             </h3>
                         </div>
-                        <div className="flex flex-wrap items-center gap-1.5">
+                        {template.study_type_code && (
+                            <p
+                                className="template-card__code mb-2 truncate font-mono text-[11px] font-medium text-purple-600 dark:text-purple-400"
+                                title={`Código del tipo de estudio: ${template.study_type_code}`}
+                            >
+                                Código: {template.study_type_code}
+                            </p>
+                        )}
+                        <div className="template-card__badges flex flex-wrap items-center gap-1.5">
                             <Badge
                                 variant="outline"
-                                className={`text-xs py-0 px-1.5 h-5 ${template.report_type === 'inteligente'
+                                className={`template-card__badge template-card__badge--report ${template.report_type === 'inteligente'
+                                        ? 'template-card__badge--intelligent'
+                                        : 'template-card__badge--simple'
+                                    } text-xs py-0 px-1.5 h-5 ${template.report_type === 'inteligente'
                                         ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900 dark:text-amber-200 dark:border-amber-700'
                                         : 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600'
                                     }`}
@@ -72,7 +102,7 @@ export const TemplateCard = ({
                             {template.owner_id === 'nextris' && (
                                 <Badge
                                     variant="outline"
-                                    className="bg-gray-100 text-gray-500 border-gray-300 text-xs py-0 px-1.5 h-5 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600"
+                                    className="template-card__badge template-card__badge--system bg-gray-100 text-gray-500 border-gray-300 text-xs py-0 px-1.5 h-5 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600"
                                     title="Plantilla del sistema. Solo lectura."
                                 >
                                     <Lock className="h-2.5 w-2.5 mr-0.5" />
@@ -83,7 +113,7 @@ export const TemplateCard = ({
                             {template.is_system_default && (
                                 <Badge
                                     variant="outline"
-                                    className="bg-amber-50 text-amber-600 border-amber-300 text-xs py-0 px-1.5 h-5 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700"
+                                    className="template-card__badge template-card__badge--system-default bg-amber-50 text-amber-600 border-amber-300 text-xs py-0 px-1.5 h-5 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700"
                                     title="Plantilla predeterminada del sistema para este tipo de estudio"
                                 >
                                     <Star className="h-2.5 w-2.5 mr-0.5 fill-amber-500" />
@@ -94,7 +124,7 @@ export const TemplateCard = ({
                             {template.is_user_default && (
                                 <Badge
                                     variant="outline"
-                                    className="bg-purple-50 text-purple-600 border-purple-300 text-xs py-0 px-1.5 h-5 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700"
+                                    className="template-card__badge template-card__badge--user-default bg-purple-50 text-purple-600 border-purple-300 text-xs py-0 px-1.5 h-5 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700"
                                     title="Tu plantilla predeterminada personal para este tipo de estudio"
                                 >
                                     <Star className="h-2.5 w-2.5 mr-0.5 fill-purple-500" />
@@ -105,7 +135,7 @@ export const TemplateCard = ({
                             {template.study_type_description && (
                                 <Badge
                                     variant="outline"
-                                    className="bg-purple-50 text-purple-700 border-purple-200 text-xs py-0 px-1.5 h-5 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-700"
+                                    className="template-card__badge template-card__badge--study bg-purple-50 text-purple-700 border-purple-200 text-xs py-0 px-1.5 h-5 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-700"
                                 >
                                     <Microscope className="h-2.5 w-2.5 mr-0.5" />
                                     {template.study_type_description}
@@ -114,8 +144,9 @@ export const TemplateCard = ({
 
                             <Badge
                                 variant="outline"
-                                className={`transition-all cursor-pointer hover:shadow-md text-xs py-0 px-1.5 h-5 ${isModalityActive
-                                    ? 'bg-green-600 text-white border-green-600 ring-2 ring-green-300 dark:bg-green-700 dark:border-green-700'
+                                data-card-control
+                                className={`template-card__badge template-card__badge--modality transition-all cursor-pointer text-xs py-0 px-1.5 h-5 ${isModalityActive
+                                    ? 'template-card__badge--active bg-green-600 text-white border-green-600 ring-2 ring-green-300 dark:bg-green-700 dark:border-green-700'
                                     : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
                                     }`}
                                 onClick={(e) => {
@@ -131,8 +162,9 @@ export const TemplateCard = ({
 
                             <Badge
                                 variant="outline"
-                                className={`transition-all cursor-pointer hover:shadow-md text-xs py-0 px-1.5 h-5 ${isBodypartActive
-                                    ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-300 dark:bg-blue-700 dark:border-blue-700'
+                                data-card-control
+                                className={`template-card__badge template-card__badge--bodypart transition-all cursor-pointer text-xs py-0 px-1.5 h-5 ${isBodypartActive
+                                    ? 'template-card__badge--active bg-blue-600 text-white border-blue-600 ring-2 ring-blue-300 dark:bg-blue-700 dark:border-blue-700'
                                     : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
                                     }`}
                                 onClick={(e) => {
@@ -151,52 +183,16 @@ export const TemplateCard = ({
                 </div>
             </CardHeader>
 
-            <CardContent className="space-y-2 p-3">
-                {/* Preview de contenido */}
-                <div className="space-y-1.5">
-                    {template.findings && (
-                        <div className="bg-gray-50 dark:bg-[#2a2a2a] rounded-lg p-2">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                                <ClipboardList className="h-3 w-3 text-gray-500" />
-                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Hallazgos</span>
-                            </div>
-                            <p className="text-xs text-gray-700 line-clamp-2 dark:text-gray-400">
-                                {stripHtmlTags(template.findings)}
-                            </p>
-                        </div>
-                    )}
-
-                    {template.impression && (
-                        <div className="bg-blue-50/50 dark:bg-[#2a2a2a] rounded-lg p-2">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                                <FileText className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Impresión</span>
-                            </div>
-                            <p className="text-xs text-gray-700 line-clamp-2 dark:text-gray-400">
-                                {stripHtmlTags(template.impression)}
-                            </p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Acciones */}
-                <div className="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-gray-100 dark:border-gray-700">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onView(template)}
-                        className={`hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors h-7 text-xs px-2 dark:hover:bg-blue-600 dark:hover:text-blue-100 dark:hover:border-blue-500 ${!template.can_edit && !template.can_delete ? 'col-span-2' : ''}`}
-                    >
-                        <Eye className="h-3 w-3 mr-1" />
-                        Ver
-                    </Button>
-
+            {(template.can_edit || template.can_delete) && (
+                <CardContent className="template-card__footer mt-auto px-3 pb-3 pt-2">
+                    {/* Acciones */}
+                    <div className="template-card__actions grid grid-cols-2 gap-1.5 border-t border-gray-100 pt-2 dark:border-gray-700">
                     {template.can_edit && (
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => onEdit(template)}
-                            className="hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300 transition-colors h-7 text-xs px-2 dark:hover:bg-purple-600 dark:hover:text-purple-100 dark:hover:border-purple-500"
+                            className={`template-card__action template-card__action--edit hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300 transition-colors h-7 text-xs px-2 ${template.can_delete ? '' : 'col-span-2'}`}
                         >
                             <Edit className="h-3 w-3 mr-1" />
                             Editar
@@ -208,7 +204,7 @@ export const TemplateCard = ({
                             variant="outline"
                             size="sm"
                             onClick={() => onDelete(template)}
-                            className={`hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors h-7 text-xs px-2 dark:hover:bg-red-600 dark:hover:text-red-100 dark:hover:border-red-500 ${template.can_edit ? '' : 'col-span-1'}`}
+                            className={`template-card__action template-card__action--delete hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors h-7 text-xs px-2 ${template.can_edit ? '' : 'col-span-2'}`}
                         >
                             <Trash2 className="h-3 w-3 mr-1" />
                             Eliminar
@@ -222,18 +218,100 @@ export const TemplateCard = ({
                             size="sm"
                             title={template.is_user_default ? 'Quitar como mi plantilla por defecto' : 'Establecer como mi plantilla por defecto'}
                             onClick={(e) => { e.stopPropagation(); onToggleUserDefault(template); }}
-                            className={`col-span-2 h-7 text-xs px-2 transition-colors ${
+                            className={`template-card__action template-card__action--default col-span-2 h-7 text-xs px-2 transition-colors ${
                                 template.is_user_default
-                                    ? 'bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700'
-                                    : 'hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300 dark:hover:bg-purple-900/20 dark:hover:text-purple-300'
+                                    ? 'template-card__action--default-active bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100'
+                                    : 'hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300'
                             }`}
                         >
                             <Star className={`h-3 w-3 mr-1 ${template.is_user_default ? 'fill-purple-500' : ''}`} />
                             {template.is_user_default ? 'Mi plantilla por defecto' : 'Poner como mi defecto'}
                         </Button>
                     )}
+                    </div>
+                </CardContent>
+            )}
+                </Card>
+            </TooltipTrigger>
+            <TooltipContent
+                side="top"
+                sideOffset={10}
+                className="table-scrollbar-purple z-[100] w-[min(34rem,calc(100vw-2rem))] max-h-[24rem] overflow-y-auto rounded-xl border border-purple-400 bg-white p-4 pr-3 text-gray-900 shadow-[0_16px_40px_rgba(88,28,135,0.28)] dark:border-purple-500 dark:bg-[#202328] dark:text-gray-100"
+            >
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2 border-b border-gray-200 pb-2 dark:border-gray-700">
+                        <FileText className="h-4 w-4 shrink-0 text-brand-purple dark:text-purple-400" />
+                        <div className="min-w-0">
+                            <p className="font-semibold leading-snug">{template.title}</p>
+                            <p className="mt-0.5 text-xs font-normal text-gray-500 dark:text-gray-400">
+                                {[
+                                    template.study_type_description,
+                                    template.modality_description,
+                                    template.bodypart_description,
+                                    template.report_type === 'inteligente' ? 'Informe inteligente' : 'Informe simple',
+                                ].filter(Boolean).join(' · ')}
+                            </p>
+                        </div>
+                    </div>
+                    {template.technique && (
+                        <section>
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-purple-600 dark:text-purple-400">
+                                Técnica
+                            </p>
+                            <RichTemplateContent content={template.technique} />
+                        </section>
+                    )}
+                    {template.findings && (
+                        <section>
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                Hallazgos
+                            </p>
+                            <RichTemplateContent content={template.findings} />
+                        </section>
+                    )}
+                    {template.impression && (
+                        <section>
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                                Impresión
+                            </p>
+                            <RichTemplateContent content={template.impression} />
+                        </section>
+                    )}
+                    {template.conclusion && (
+                        <section>
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                                Conclusión
+                            </p>
+                            <RichTemplateContent content={template.conclusion} />
+                        </section>
+                    )}
+                    {template.structured_variables && (
+                        <section>
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                                Variables estructuradas
+                            </p>
+                            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                                {stripHtmlTags(template.structured_variables)}
+                            </p>
+                        </section>
+                    )}
+                    {template.criteria && (
+                        <section>
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-orange-600 dark:text-orange-400">
+                                Criterios
+                            </p>
+                            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                                {stripHtmlTags(template.criteria)}
+                            </p>
+                        </section>
+                    )}
+                    {!template.technique && !template.findings && !template.impression && !template.conclusion && !template.structured_variables && !template.criteria && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Esta plantilla no tiene contenido para mostrar.
+                        </p>
+                    )}
                 </div>
-            </CardContent>
-        </Card>
+            </TooltipContent>
+        </Tooltip>
     );
 };

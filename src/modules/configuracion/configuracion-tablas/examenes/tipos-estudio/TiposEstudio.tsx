@@ -8,17 +8,43 @@ import { toast } from "sonner";
 import { useModalidades } from "../modalidades/hooks/useModalidades";
 import { useBodyParts } from "../partes-cuerpo/hooks/useBodyParts";
 import { useGrupoEstudio } from "../grupos-estudio";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const TiposEstudio = () => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(8);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedTipoEstudio, setSelectedTipoEstudio] = useState<TipoEstudio | null>(null);
+    const [filterModality, setFilterModality] = useState<string>("all");
+    const [filterBodypart, setFilterBodypart] = useState<string>("all");
+
+    const handleFilterModality = (value: string) => {
+        setFilterModality(value);
+        setPage(1);
+    };
+
+    const handleFilterBodypart = (value: string) => {
+        setFilterBodypart(value);
+        setPage(1);
+    };
 
     const { tiposEstudio, isLoading, createTipoEstudio, updateTipoEstudio } = useTiposEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
     const { gruposEstudio } = useGrupoEstudio();
+
+    const allTiposEstudio = Array.isArray(tiposEstudio?.data) ? tiposEstudio.data : [];
+
+    const filteredTiposEstudio = useMemo(() => {
+        return allTiposEstudio.filter((item) => {
+            if (filterModality !== "all" && item.modality !== filterModality) return false;
+            if (filterBodypart !== "all" && item.bodypart !== filterBodypart) return false;
+            return true;
+        });
+    }, [allTiposEstudio, filterModality, filterBodypart]);
+
+    const modalitiesList = Array.isArray(modalidades?.data) ? modalidades.data : [];
+    const bodyPartsList = Array.isArray(bodyParts?.data) ? bodyParts.data : [];
     const handlePaginationChange = (newPage: number, newPageSize: number) => {
         setPage(newPage);
         setPageSize(newPageSize);
@@ -115,7 +141,7 @@ export const TiposEstudio = () => {
                 </div>
             ) : (
                 <TablaDynamic
-                    data={Array.isArray(tiposEstudio?.data) ? tiposEstudio.data : []}
+                    data={filteredTiposEstudio}
                     columns={tipoEstudioColumns}
                     showIndex
                     actions={tipoEstudioActions}
@@ -123,9 +149,39 @@ export const TiposEstudio = () => {
                         page,
                         pageSize,
                         serverSide: false,
-                        total: Array.isArray(tiposEstudio?.data) ? tiposEstudio.data.length : 0,
+                        total: filteredTiposEstudio.length,
                     }}
                     onPaginationChange={handlePaginationChange}
+                    additionalControls={
+                        <div className="flex items-center gap-2">
+                            <Select value={filterModality} onValueChange={handleFilterModality}>
+                                <SelectTrigger className="h-8 w-[160px] text-xs">
+                                    <SelectValue placeholder="Modalidad" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas</SelectItem>
+                                    {modalitiesList.map((m: any) => (
+                                        <SelectItem key={m.guid} value={m.externalcode || m.description}>
+                                            {m.externalcode || m.description}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={filterBodypart} onValueChange={handleFilterBodypart}>
+                                <SelectTrigger className="h-8 w-[180px] text-xs">
+                                    <SelectValue placeholder="Parte del cuerpo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas</SelectItem>
+                                    {bodyPartsList.map((b: any) => (
+                                        <SelectItem key={b.guid} value={b.description}>
+                                            {b.description}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    }
                 />
             )}
 

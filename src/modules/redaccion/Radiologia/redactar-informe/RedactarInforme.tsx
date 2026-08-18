@@ -3,7 +3,7 @@ import { useAllTags, useInformeDetalle, useUpdateFlags, useUpdateReport, useUpda
 import { putRedactarInforme } from "../services/informes.service";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronRight, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, User, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, FileMinus, FileX, Image as ImageIcon, Save, Signature, User, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces, Search } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -22,8 +22,9 @@ import { CloseTabModal, NextExamModal, SignModal, TemplateModal } from "../compo
 import { clearWindowStorage, notifyGuidChange, notifyViewerUpdate } from "./hooks/use-cross-windows";
 import { FlagsCell } from "../components/FlagsCell";
 import { TagsCell } from "../components/TagsCell";
-import { useFacility } from "@/context/FacilityContext";
+import { useAppConfig } from "@/context/AppConfigContext";
 import { api } from "@/lib/api";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const normalizeVariableKey = (value: string | null | undefined): string =>
     String(value || "")
@@ -32,7 +33,21 @@ const normalizeVariableKey = (value: string | null | undefined): string =>
         .replace(/[^a-z0-9]+/g, "_")
         .replace(/^_+|_+$/g, "");
 
+const parseBooleanParam = (value: string | null, fallback: boolean): boolean => {
+    if (value === null) return fallback;
+    return ['true', '1', 'on', 'yes'].includes(value.trim().toLowerCase());
+};
+
+type PatientStudySummary = {
+    guid: string;
+    estudio?: string | null;
+    modalidad?: string | null;
+    fecha?: string | null;
+    pdf_path?: string | null;
+};
+
 export const RedactarInforme = () => {
+    const isMobile = useIsMobile();
     const { informeGuid, studyInstanceUID } = useParams();
     const [searchParams] = useSearchParams();
 
@@ -42,8 +57,20 @@ export const RedactarInforme = () => {
     const studyGroupId = searchParams.get('study_group_id');
     const windowId = searchParams.get('windowId');
     const siguientePaso = searchParams.get('siguiente_paso');
+    const shouldOpenNextExam = ['true', '1', 'on', 'yes'].includes(
+        String(siguientePaso || '').trim().toLowerCase()
+    );
     const flagsParam = searchParams.get('flags');
     const tagIdsParam = searchParams.get('tag_ids');
+    const nextExamFilters = {
+        show_ready: parseBooleanParam(searchParams.get('show_ready'), true),
+        show_reported: parseBooleanParam(searchParams.get('show_reported'), false),
+        assigned_to_me: parseBooleanParam(searchParams.get('assigned_to_me'), false),
+        show_no_image: parseBooleanParam(searchParams.get('show_no_image'), false),
+        show_without_order: parseBooleanParam(searchParams.get('show_without_order'), false),
+        sort_column: searchParams.get('sort_column') || '',
+        sort_direction: searchParams.get('sort_direction') === 'desc' ? 'desc' as const : 'asc' as const,
+    };
 
     const initialFlagsFromParams = flagsParam
         ? flagsParam.split(',').map((value) => value.trim()).filter(Boolean)
@@ -76,6 +103,17 @@ export const RedactarInforme = () => {
     const [isSigning, setIsSigning] = useState(false);
     const [isSigned, setIsSigned] = useState(false);
 
+    const { data: institutionalInfo, refetch: refetchInstitutionalInfo } = useQuery({
+        queryKey: ['institutional-info'],
+        queryFn: async () => {
+            const response = await api.get('/institutional/info');
+            return response.data?.data;
+        },
+        staleTime: 0,
+    });
+
+    const requirePasswordForSigning = institutionalInfo?.require_signature_password ?? true;
+
     // Estados para el modal de plantillas
     const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -99,15 +137,15 @@ export const RedactarInforme = () => {
     const { mutateAsync: getNextExam } = useNextExam();
     const { mutateAsync: unblockExam } = useUnblockExam();
     const { mutateAsync: blockExam } = useBlockExam();
-    const { selectedFacilityId } = useFacility();
+    const { config } = useAppConfig();
 
     const { data: facilityPlanData } = useQuery({
-        queryKey: ["facility-plan", selectedFacilityId, "redactar-informe", informeGuid],
+        queryKey: ["facility-plan", config?.id?.toString() || "1", "redactar-informe", informeGuid],
         queryFn: async () => {
-            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
+            const response = await api.get(`/config/facilities/${config?.id?.toString() || "1"}/plan`);
             return response.data?.data || null;
         },
-        enabled: Boolean(selectedFacilityId && informeGuid),
+        enabled: Boolean(informeGuid),
         staleTime: 60 * 1000,
     });
 
@@ -249,13 +287,18 @@ export const RedactarInforme = () => {
 
     const patientId = informeDetalle?.data?.patient_id;
     const { historyData } = usePatientHistory(patientId);
-    const patientStudies = historyData?.data || [];
+    const patientStudies = (historyData?.data || []) as PatientStudySummary[];
 
     const [historyPdfUrl, setHistoryPdfUrl] = useState<string | null>(null);
 
     const handleOpenHistoryPdf = (pdfPath: string) => {
         const baseURL = import.meta.env.VITE_API_URL || '/api';
-        setHistoryPdfUrl(`${baseURL}/pdfs/${pdfPath}`);
+        const filename = String(pdfPath || '').split('/').pop();
+        if (!filename) {
+            toast.error('Este estudio todavía no tiene un PDF generado');
+            return;
+        }
+        setHistoryPdfUrl(`${baseURL}/pdfs/${encodeURIComponent(filename)}`);
     };
 
     const examId = informeDetalle?.data?.exam_id || informeGuid || '';
@@ -825,8 +868,13 @@ export const RedactarInforme = () => {
             toast.error('No se encontró el ID del examen');
             return;
         }
+        if (!informeDetalle?.data?.pdf_path) {
+            toast.error('Este informe todavía no tiene un PDF generado');
+            return;
+        }
+        const baseURL = import.meta.env.VITE_API_URL || '/api';
         window.open(
-            `http://148.230.72.8:5001/api/pdfs/${informeDetalle?.data?.pdf_path}`,
+            `${baseURL}/pdfs/by-exam/${encodeURIComponent(informeGuid)}`,
             '_blank',
         );
     };
@@ -850,17 +898,47 @@ export const RedactarInforme = () => {
         updateReportMutation.mutate(dataToSave);
     };
 
+    const hasReportContent = (value: string) => {
+        const document = new DOMParser().parseFromString(value || '', 'text/html');
+        const text = (document.body.textContent || '').replace(/\u200B/g, '').trim();
+
+        // Las imágenes y los chips también son contenido válido del editor.
+        return Boolean(text || document.body.querySelector('img, [data-variable-chip="true"], [data-criterion-chip="true"]'));
+    };
+
+    const validateReportBeforeSigning = () => {
+        const fields = [formData.techniques, formData.findings, formData.impressions, formData.conclusions];
+        const requiredFields = [formData.techniques, formData.findings, formData.impressions];
+        const emptyBracketPattern = /\[\s*\[\s*\]\s*\]/;
+
+        if (fields.some((field) => emptyBracketPattern.test(field))) {
+            toast.error('No se puede firmar un informe con campos vacíos o brackets vacíos [[]]');
+            return false;
+        }
+
+        if (requiredFields.some((field) => !hasReportContent(field))) {
+            toast.error('No se puede firmar un informe con campos vacíos');
+            return false;
+        }
+
+        return true;
+    };
+
     const handleVerifyCredentials = async () => {
         if (!password.trim()) {
             toast.error('Por favor ingrese su contraseña');
             return;
         }
 
+        if (!isSigned && !validateReportBeforeSigning()) {
+            return;
+        }
+
         setIsSigning(true);
 
         try {
-            // 1. Verificar credenciales
-            await verifyCredentials({ password });
+            // 1. Verificar credenciales (pasa exam_id para verificar si requiere password)
+            await verifyCredentials({ password, examId: informeGuid || undefined });
 
             // Si el informe ya está firmado, quitar la firma
             if (isSigned) {
@@ -906,7 +984,7 @@ export const RedactarInforme = () => {
                     payload.study_group_id = studyGroupId;
                 }
 
-                const preferredFacilityId = String((reportData as any)?.facility_id || selectedFacilityId || '').trim();
+                const preferredFacilityId = String((reportData as any)?.facility_id || config?.id?.toString() || "1" || '').trim();
                 if (preferredFacilityId) {
                     payload.facility_id = preferredFacilityId;
                 }
@@ -918,7 +996,11 @@ export const RedactarInforme = () => {
                 });
 
                 // 4. Obtener siguiente examen
-                const nextExam = await getNextExam(payload);
+                const nextExam = await getNextExam({
+                    ...payload,
+                    current_exam_id: informeGuid || '',
+                    ...nextExamFilters,
+                });
 
                 // 5. Actualizar estados locales
                 setIsSigned(true);
@@ -935,21 +1017,127 @@ export const RedactarInforme = () => {
                     queryKey: informesKeys.lists()
                 });
 
-                // 8. Si hay siguiente examen Y siguientePaso está activado, mostrar modal
-                if (nextExam?.data && siguientePaso === 'true') {
-                    setNextExamData(nextExam.data);
-                    setIsNextExamModalOpen(true);
+                // 8. Si hay siguiente examen Y siguientePaso está activado, abrirlo automáticamente.
+                if (nextExam?.data && shouldOpenNextExam) {
+                    toast.info('Abriendo siguiente estudio...');
+                    await handleOpenNextExam(nextExam.data);
                 } else {
-                    // 9. Si NO hay siguiente examen O siguientePaso es false, mostrar modal de cerrar pestaña
-                    setIsCloseTabModalOpen(true);
+                    // Cerrar inmediatamente
+                    toast.success('Informe firmado exitosamente');
+                    if (windowId) {
+                        clearWindowStorage(windowId);
+                    }
+                    setTimeout(() => window.close(), 300);
                 }
             }
         } catch (error) {
             console.error('Error en el proceso de firma:', error);
+            const requestError = error as any;
+            toast.error(
+                requestError?.response?.data?.message ||
+                'No se pudo verificar la contraseña o firmar el informe.'
+            );
         } finally {
             setIsSigning(false);
         }
     };
+
+    const handleSignWithoutPassword = async () => {
+        if (!informeGuid) {
+            toast.error('No se encontró el ID del informe');
+            return;
+        }
+
+        if (!validateReportBeforeSigning()) {
+            return;
+        }
+
+        setIsSigning(true);
+
+        try {
+            // 1. Guardar siempre el contenido actual antes de firmar.
+            await putRedactarInforme(informeGuid, {
+                techniques: formData.techniques,
+                findings: formData.findings,
+                impressions: formData.impressions,
+                conclusions: formData.conclusions,
+                mark_as_reported: false,
+            });
+
+            // 2. Preparar payload para firmar
+            const payload: Record<string, string> = {};
+
+            if (modalityId && modalityId !== 'undefined') {
+                payload.modality_id = modalityId;
+            }
+
+            if (bodypartId && bodypartId !== 'undefined') {
+                payload.body_part_id = bodypartId;
+            }
+
+            if (studyGroupId && studyGroupId !== 'undefined') {
+                payload.study_group_id = studyGroupId;
+            }
+
+            const preferredFacilityId = String((reportData as any)?.facility_id || config?.id?.toString() || "1" || '').trim();
+            if (preferredFacilityId) {
+                payload.facility_id = preferredFacilityId;
+            }
+
+            // 3. Firmar reporte
+            await signReport({
+                informeGuid: informeGuid,
+                ...payload
+            });
+
+            // 4. Obtener siguiente examen
+            const nextExam = await getNextExam({
+                ...payload,
+                current_exam_id: informeGuid,
+                ...nextExamFilters,
+            });
+
+            // 5. Actualizar estados locales
+            setIsSigned(true);
+
+            // 6. Desbloquear el informe después de firmar
+            await unblockExam(informeGuid);
+
+            // 7. Invalidar cache
+            queryClient.invalidateQueries({
+                queryKey: informesKeys.lists()
+            });
+
+            // 8. Si hay siguiente examen Y siguientePaso está activado, abrir siguiente examen directamente
+            if (nextExam?.data && shouldOpenNextExam) {
+                toast.info('Abriendo siguiente estudio...');
+                await handleOpenNextExam(nextExam.data);
+            } else if (!nextExam?.data) {
+                toast.info('No hay siguiente estudio disponible');
+                if (windowId) {
+                    clearWindowStorage(windowId);
+                }
+                setTimeout(() => window.close(), 300);
+            } else {
+                // Cerrar inmediatamente
+                toast.success('Informe firmado exitosamente');
+                if (windowId) {
+                    clearWindowStorage(windowId);
+                }
+                setTimeout(() => window.close(), 300);
+            }
+        } catch (error) {
+            console.error('Error al firmar:', error);
+            const requestError = error as any;
+            toast.error(
+                requestError?.response?.data?.message ||
+                'No se pudo firmar el informe.'
+            );
+        } finally {
+            setIsSigning(false);
+        }
+    };
+
     const handleCloseTab = () => {
         unblockExam(informeGuid || '').finally(() => {
             // Limpiar localStorage antes de cerrar
@@ -967,27 +1155,32 @@ export const RedactarInforme = () => {
     const handleStayOnPage = () => {
         setIsCloseTabModalOpen(false);
     };
-    const handleOpenNextExam = async () => {
-        if (nextExamData) {
-            try {
+    const handleOpenNextExam = async (examData?: typeof nextExamData) => {
+        const dataToUse = examData || nextExamData;
+        if (!dataToUse) {
+            toast.error('No se recibió información del siguiente estudio');
+            return;
+        }
+
+        try {
                 // 1. PRIMERO: Actualizar localStorage localmente
                 if (windowId) {
-                    localStorage.setItem(windowId, nextExamData.guid);
+                    localStorage.setItem(windowId, dataToUse.guid);
                 }
                 // 2. SEGUNDO: Notificar a todas las ventanas (incluyendo la padre)
                 if (windowId) {
-                    notifyGuidChange(windowId, nextExamData.guid);
+                    notifyGuidChange(windowId, dataToUse.guid);
                 }
 
                 // 3. TERCERO: Bloquear el nuevo examen
-                await blockExam(nextExamData.guid);
+                await blockExam(dataToUse.guid);
 
                 // 4. CUARTO: Esperar un poco para que el servidor procese
                 await new Promise(resolve => setTimeout(resolve, 300));
 
                 // 5. QUINTO: Notificar actualización del visor con el nuevo study_instance_uid
-                if (windowId && nextExamData.study_instance_uid) {
-                    notifyViewerUpdate(windowId, nextExamData.study_instance_uid, nextExamData.guid);
+                if (windowId && dataToUse.study_instance_uid) {
+                    notifyViewerUpdate(windowId, dataToUse.study_instance_uid, dataToUse.guid);
                 }
 
                 // 6. SEXTO: Construir la URL
@@ -997,23 +1190,31 @@ export const RedactarInforme = () => {
                 if (studyGroupId) params.set('study_group_id', studyGroupId);
                 if (windowId) params.set('windowId', windowId);
                 if (siguientePaso) params.set('siguiente_paso', siguientePaso);
-                if (Array.isArray(nextExamData.flags) && nextExamData.flags.length > 0) {
-                    params.set('flags', nextExamData.flags.join(','));
+                if (Array.isArray(dataToUse.flags) && dataToUse.flags.length > 0) {
+                    params.set('flags', dataToUse.flags.join(','));
                 }
-                if (Array.isArray(nextExamData.tag_ids) && nextExamData.tag_ids.length > 0) {
-                    params.set('tag_ids', nextExamData.tag_ids.join(','));
+                if (Array.isArray(dataToUse.tag_ids) && dataToUse.tag_ids.length > 0) {
+                    params.set('tag_ids', dataToUse.tag_ids.join(','));
                 }
 
-                const newUrl = `/estudios/redaccion/redactar-informe/${nextExamData.guid}/${nextExamData.study_instance_uid}?${params.toString()}`;
+                const studyPath = dataToUse.study_instance_uid
+                    ? `/${encodeURIComponent(dataToUse.study_instance_uid)}`
+                    : '';
+                const newUrl = `/estudios/redaccion/redactar-informe/${encodeURIComponent(dataToUse.guid)}${studyPath}?${params.toString()}`;
 
 
-                // 7. SÉPTIMO: Navegar
-                navigate(newUrl);
+                // 7. SÉPTIMO: Recargar la ventana con el nuevo examen.
+                // Esto garantiza que se reinicien los datos del redactor abierto en una ventana secundaria.
+                window.location.assign(newUrl);
 
                 setIsNextExamModalOpen(false);
-            } catch (error) {
-                toast.error('Error al abrir el siguiente examen');
-            }
+        } catch (error) {
+            console.error('Error al abrir el siguiente examen:', error);
+            const requestError = error as any;
+            toast.error(
+                requestError?.response?.data?.message ||
+                'Error al abrir el siguiente examen'
+            );
         }
     };
 
@@ -1390,26 +1591,26 @@ export const RedactarInforme = () => {
     const patientIdentifier = reportData.patientid || reportData.patientit || reportData.patient?.patientit || reportData.patient?.patientid || '-';
     const nationalCodeLabel = reportData.national_code || reportData.nationalcode || reportData.nationalCode || reportData.patient?.national_code || reportData.patient?.nationalcode || '-';
     const sexLabel = reportData.sex === 'M' ? 'Masculino' : reportData.sex === 'F' ? 'Femenino' : (reportData.sex || '-');
-    const studyLabel = reportData.study_description || reportData.study_type_description || reportData.study_name || 'ANGIOTOMOGRAFÍA PELVIANA O VASOS ILÍACOS';
-    const modalityLabel = reportData.modality || reportData.modality_name || 'CT';
+    const studyLabel = reportData.study_description || reportData.study_type_description || reportData.study_name || '-';
+    const modalityLabel = reportData.modality || reportData.modality_name || reportData.modality_description || '-';
     const accessionLabel = reportData.accession_number || reportData.localacc || reportData.admission_number || '-';
     const dateLabel = reportData.exam_date || reportData.date || reportData.study_date || '13/12/2025';
     const statLabel = reportData.stat || reportData.priority || 'A';
     return (
         <LayoutSinSidebar disableDefaultBackground>
-            <div className="h-[calc(100vh-24px)] bg-gray-50 dark:bg-[#0f1218] rounded-xl p-2 dark:text-gray-100 flex flex-col overflow-hidden">
+            <div className="flex h-[calc(100dvh-5rem)] flex-col overflow-hidden rounded-xl bg-gray-50 p-2 dark:bg-[#0f1218] dark:text-gray-100 lg:h-[calc(100dvh-24px)]">
                 {/* Header con botones de acción */}
-                <div className="flex justify-between items-center mb-3 shrink-0">
-                    <div className="relative bg-white dark:bg-[#151922] rounded-lg p-3 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 w-full">
-                        <div className="flex items-center gap-3">
+                <div className="mb-3 flex shrink-0 items-center justify-between">
+                    <div className="relative flex w-full flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-[#151922] md:flex-row md:items-center md:justify-between">
+                        <div className="flex min-w-0 items-start gap-3 md:items-center">
                             <div className="bg-gray-100 dark:bg-[#1e2430] rounded-full p-2.5">
                                 <User className="w-6 h-6 text-gray-600 dark:text-gray-300" />
                             </div>
-                            <div className="flex-1">
-                                <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-1">
+                            <div className="min-w-0 flex-1">
+                                <h1 className="mb-1 break-words text-base font-semibold text-gray-800 dark:text-gray-100 sm:text-lg md:text-xl">
                                     {patientName} - {patientIdentifier} - {sexLabel} - {nationalCodeLabel}
                                 </h1>
-                                <p className="text-sm text-gray-600 dark:text-gray-300">
+                                <p className="break-words text-xs text-gray-600 dark:text-gray-300 md:text-sm">
                                     {studyLabel} - {modalityLabel} - {accessionLabel} - {dateLabel} - {statLabel}
                                 </p>
                                 <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -1417,20 +1618,20 @@ export const RedactarInforme = () => {
                                         examId={examId}
                                         currentFlags={examFlags}
                                         onUpdate={handleUpdateExamFlags}
-                                        isUpdating={isUpdatingFlags || isSigned || !examId}
+                                        isUpdating={isUpdatingFlags || isSigned || isMobile || !examId}
                                     />
                                     <TagsCell
                                         examId={examId}
                                         currentTagIds={examTagIds}
                                         availableTags={allTags}
                                         onUpdate={handleUpdateExamTags}
-                                        isUpdating={isUpdatingTagIds || isSigned || !examId}
+                                        isUpdating={isUpdatingTagIds || isSigned || isMobile || !examId}
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="hidden gap-2 md:flex">
                             <PrimaryButton onClick={handleOpenPdf}>
                                 <FileMinus />
                                 PDF
@@ -1440,11 +1641,19 @@ export const RedactarInforme = () => {
                                 INFORMES PREDEFINIDOS
                             </PrimaryButton>
                             <PrimaryButton
-                                onClick={() => setIsSignModalOpen(true)}
+                                onClick={() => {
+                                    void refetchInstitutionalInfo();
+                                    if (!requirePasswordForSigning && !isSigned && !isSigning) {
+                                        void handleSignWithoutPassword();
+                                    } else if (!isSigned && !isSigning) {
+                                        setIsSignModalOpen(true);
+                                    }
+                                }}
+                                disabled={isSigning}
 
                             >
                                 <Signature />
-                                {isSigned ? 'QUITAR FIRMA' : 'FIRMAR'}
+                                {isSigning ? 'FIRMANDO...' : (isSigned ? 'QUITAR FIRMA' : 'FIRMAR')}
                             </PrimaryButton>
                             <PrimaryButton
                                 onClick={handleGuardarInforme}
@@ -1461,8 +1670,22 @@ export const RedactarInforme = () => {
                             </PrimaryButton>
 
                         </div>
+                        <div className="grid grid-cols-2 gap-2 md:hidden">
+                            <PrimaryButton onClick={handleOpenPdf}>
+                                <FileMinus className="h-4 w-4" />
+                                PDF
+                            </PrimaryButton>
+                            <PrimaryButton onClick={handleCloseWindow}>
+                                <X className="h-4 w-4" />
+                                CERRAR
+                            </PrimaryButton>
+                        </div>
                     </div>
 
+                </div>
+
+                <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 md:hidden">
+                    Modo consulta móvil. Para editar, guardar o firmar este informe utiliza una tablet o una computadora.
                 </div>
 
                 {/* Layout de tres columnas con sidebars colapsables */}
@@ -1472,7 +1695,7 @@ export const RedactarInforme = () => {
                         <div className="flex-1 space-y-2.5 p-2.5 transition-all ease-in-out min-w-0 bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-y-auto h-full table-scrollbar-purple">
 
                             {/* Toolbar única global */}
-                            <div className="sticky top-0 z-20 bg-gray-50 dark:bg-[#0f1218] rounded-md border border-gray-200 dark:border-gray-700 p-1.5 flex items-center gap-0.5 flex-wrap">
+                            <div className="sticky top-0 z-20 hidden flex-wrap items-center gap-0.5 rounded-md border border-gray-200 bg-gray-50 p-1.5 dark:border-gray-700 dark:bg-[#0f1218] md:flex">
                                 <button onClick={() => activeEditor?.chain().focus().toggleBold().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('bold') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Negrita" disabled={!activeEditor || isSigned}><Bold className="w-4 h-4 dark:text-gray-200" /></button>
                                 <button onClick={() => activeEditor?.chain().focus().toggleItalic().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('italic') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Cursiva" disabled={!activeEditor || isSigned}><Italic className="w-4 h-4 dark:text-gray-200" /></button>
                                 <button onClick={() => activeEditor?.chain().focus().toggleUnderline().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('underline') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Subrayado" disabled={!activeEditor || isSigned}><UnderlineIcon className="w-4 h-4 dark:text-gray-200" /></button>
@@ -1502,7 +1725,7 @@ export const RedactarInforme = () => {
                                         <textarea
                                             className="w-full h-20 p-3 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-[#1e2430] text-gray-800 dark:text-gray-200 resize-y focus:outline-none focus:ring-2 focus:ring-brand-purple/40"
                                             placeholder="Historia clínica..."
-                                            disabled={isSigned}
+                                            disabled={isSigned || isMobile}
                                             value={formData.history}
                                             onChange={(e) => setFormData(prev => ({ ...prev, history: e.target.value }))}
                                         />
@@ -1530,7 +1753,8 @@ export const RedactarInforme = () => {
                                             onDragLeave={handleDragLeave}
                                             onDrop={(e) => handleDrop(e, 'techniques', editorsRef.current.techniques)}
                                             onEditorReady={(editor) => handleEditorReady(editor, 'techniques')}
-                                            readOnly={isSigned}
+                                            readOnly={isSigned || isMobile}
+                                            readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
                                             showToolbar={false}
                                             className="resize-y overflow-auto"
                                         />
@@ -1558,7 +1782,8 @@ export const RedactarInforme = () => {
                                             onDragLeave={handleDragLeave}
                                             onDrop={(e) => handleDrop(e, 'findings', editorsRef.current.findings)}
                                             onEditorReady={(editor) => handleEditorReady(editor, 'findings')}
-                                            readOnly={isSigned}
+                                            readOnly={isSigned || isMobile}
+                                            readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
                                             showToolbar={false}
                                             className="resize-y overflow-auto"
                                         />
@@ -1586,7 +1811,8 @@ export const RedactarInforme = () => {
                                             onDragLeave={handleDragLeave}
                                             onDrop={(e) => handleDrop(e, 'impressions', editorsRef.current.impressions)}
                                             onEditorReady={(editor) => handleEditorReady(editor, 'impressions')}
-                                            readOnly={isSigned}
+                                            readOnly={isSigned || isMobile}
+                                            readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
                                             showToolbar={false}
                                             className="resize-y overflow-auto"
                                         />
@@ -1614,17 +1840,79 @@ export const RedactarInforme = () => {
                                             onDragLeave={handleDragLeave}
                                             onDrop={(e) => handleDrop(e, 'conclusions', editorsRef.current.conclusions)}
                                             onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')}
-                                            readOnly={isSigned}
+                                            readOnly={isSigned || isMobile}
+                                            readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
                                             showToolbar={false}
                                             className="resize-y overflow-auto"
                                         />
                                     </div>
                                 </div>
                             </div>
+                            <details className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-[#1e2430] md:hidden">
+                                <summary className="min-h-11 cursor-pointer font-semibold text-gray-800 dark:text-gray-100">
+                                    Información auxiliar
+                                </summary>
+                                <div className="mt-2 space-y-3 text-sm">
+                                    <details className="rounded-md border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-[#151922]">
+                                        <summary className="flex min-h-11 cursor-pointer items-center justify-between font-medium">
+                                            <span>Estudios previos</span>
+                                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-[#28303d]">{patientStudies.length}</span>
+                                        </summary>
+                                        <div className="mt-2 space-y-2">
+                                            {patientStudies.length === 0 ? (
+                                                <p className="py-2 text-center text-xs text-muted-foreground">Sin estudios previos</p>
+                                            ) : patientStudies.map((study) => (
+                                                <div key={study.guid} className="flex min-w-0 items-center justify-between gap-2 rounded-md border border-gray-200 px-3 py-2 dark:border-gray-700">
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="break-words text-xs font-medium">{study.estudio}</p>
+                                                        <p className="text-xs text-muted-foreground">{study.modalidad} · {study.fecha}</p>
+                                                    </div>
+                                                    {study.pdf_path && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenHistoryPdf(study.pdf_path || '')}
+                                                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-brand-purple hover:bg-brand-purple/10"
+                                                            aria-label={`Ver informe previo de ${study.estudio}`}
+                                                        >
+                                                            <FileIcon className="h-5 w-5" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </details>
+                                    <details className="rounded-md border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-[#151922]">
+                                        <summary className="flex min-h-11 cursor-pointer items-center justify-between font-medium">
+                                            <span>Imágenes adjuntas</span>
+                                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-[#28303d]">{images.length}</span>
+                                        </summary>
+                                        {images.length === 0 ? (
+                                            <p className="py-2 text-center text-xs text-muted-foreground">Sin imágenes adjuntas</p>
+                                        ) : (
+                                            <div className="mt-2 grid grid-cols-2 gap-2">
+                                                {images.map((image) => (
+                                                    <figure key={image.id} className="min-w-0 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
+                                                        <img
+                                                            src={image.url}
+                                                            alt={image.name}
+                                                            className="h-auto w-full object-cover"
+                                                            onError={(event) => {
+                                                                const fallbackUrl = getImageUrlByFilename(image.name);
+                                                                if (event.currentTarget.src !== fallbackUrl) event.currentTarget.src = fallbackUrl;
+                                                            }}
+                                                        />
+                                                        <figcaption className="break-words p-1.5 text-center text-[11px] text-muted-foreground">{image.name}</figcaption>
+                                                    </figure>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </details>
+                                </div>
+                            </details>
                         </div>
 
                         {/* Botón toggle derecho con animación */}
-                        <div className="self-stretch">
+                        <div className="hidden self-stretch md:block">
                             {rightSidebarOpen ? (
                                 <button
                                     onClick={() => setRightSidebarOpen(false)}
@@ -1646,7 +1934,7 @@ export const RedactarInforme = () => {
 
                         {/* Columna derecha - Imágenes */}
                         <div
-                            className={`relative shrink-0 h-full origin-right overflow-hidden ${isResizingRightSidebar ? '' : 'transition-opacity duration-200 ease-out'} ${rightSidebarOpen ? 'opacity-100' : 'opacity-0'}`}
+                            className={`relative hidden shrink-0 h-full origin-right overflow-hidden md:block ${isResizingRightSidebar ? '' : 'transition-opacity duration-200 ease-out'} ${rightSidebarOpen ? 'opacity-100' : 'opacity-0'}`}
                             style={{ width: rightSidebarOpen ? `${rightSidebarWidth}px` : '0px' }}
                         >
                             {rightSidebarOpen && (
@@ -1714,20 +2002,30 @@ export const RedactarInforme = () => {
                                                 <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-4">Sin estudios previos</p>
                                             ) : (
                                                 <div className="space-y-2">
-                                                    {patientStudies.map((study: any) => (
+                                                    {patientStudies.map((study) => (
                                                         <div key={study.guid} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e2430] px-3 py-2">
                                                             <div className="flex-1 min-w-0">
                                                                 <p className="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{study.estudio}</p>
                                                                 <p className="text-xs text-gray-500 dark:text-gray-400">{study.modalidad} · {study.fecha}</p>
                                                             </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleOpenHistoryPdf(study.pdf_path)}
-                                                                className="shrink-0 p-1 rounded hover:bg-brand-purple/10 dark:hover:bg-purple-800/30"
-                                                                title="Ver PDF"
-                                                            >
-                                                                <FileIcon className="w-4 h-4 text-brand-purple dark:text-purple-400" />
-                                                            </button>
+                                                            {study.pdf_path ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenHistoryPdf(study.pdf_path || '')}
+                                                                    className="shrink-0 p-1 rounded hover:bg-brand-purple/10 dark:hover:bg-purple-800/30"
+                                                                    title="Ver reporte PDF"
+                                                                >
+                                                                    <FileIcon className="w-4 h-4 text-brand-purple dark:text-purple-400" />
+                                                                </button>
+                                                            ) : (
+                                                                <span
+                                                                    className="shrink-0 p-1"
+                                                                    title="Estudio sin reporte"
+                                                                    aria-label="Estudio sin reporte"
+                                                                >
+                                                                    <FileX className="w-4 h-4 text-red-500 dark:text-red-400" />
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -1998,6 +2296,7 @@ export const RedactarInforme = () => {
                 setPassword={setPassword}
                 isSigning={isSigning}
                 onVerifyCredentials={handleVerifyCredentials}
+                requirePassword={requirePasswordForSigning}
             />
 
             {/* Modal de Selección de Plantilla */}

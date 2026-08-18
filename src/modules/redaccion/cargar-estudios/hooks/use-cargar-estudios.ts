@@ -8,8 +8,8 @@ import { toast } from 'sonner';
 export const useCargarEstudios = () => {
     const queryClient = useQueryClient();
     const mutation = useMutation({
-        mutationFn: async ({ file, location_id }: { file: File, location_id: string }) => {
-            const response = await uploadFiles(file, location_id);
+        mutationFn: async ({ file }: { file: File }) => {
+            const response = await uploadFiles(file);
             return response;
         },
         onSuccess: () => {
@@ -23,19 +23,16 @@ export const useCargarEstudios = () => {
 }
 
 export const useEstudiosNoVinculados = ({
-    location_id,
     include_linked = false,
     include_pacs = true,
 }: {
-    location_id: string,
     include_linked?: boolean,
     include_pacs?: boolean,
-}) => {
+} = {}) => {
 
     const { data, isLoading, error, refetch } = useQuery<EstudiosNoVinculados>({
-        queryKey: cargarEstudiosKeys.listNoVinculados(location_id, include_linked, include_pacs),
-        queryFn: () => getUnlinkedStudies({ location_id, include_linked, include_pacs }),
-        enabled: !!location_id,
+        queryKey: cargarEstudiosKeys.listNoVinculados(include_linked, include_pacs),
+        queryFn: () => getUnlinkedStudies({ include_linked, include_pacs }),
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
     });
@@ -47,11 +44,10 @@ export const useEstudiosNoVinculados = ({
     }
 }
 
-export const useSearchExams = ({ location_id }: { location_id: string }) => {
+export const useSearchExams = () => {
     const { data, isLoading, error, refetch } = useQuery<SearchExams>({
-        queryKey: cargarEstudiosKeys.searchExams(location_id),
-        queryFn: () => getSearchExams({ location_id }),
-        enabled: !!location_id,
+        queryKey: cargarEstudiosKeys.searchExams(),
+        queryFn: () => getSearchExams({}),
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
     });
@@ -81,11 +77,10 @@ export const useVincularEstudio = () => {
     return mutation;
 }
 
-export const useEstudiosVinculados = ({ location_id }: { location_id: string }) => {
+export const useEstudiosVinculados = () => {
     const { data, isLoading, error, refetch } = useQuery<LinkedStudiesResponse>({
-        queryKey: cargarEstudiosKeys.listLinkedStudies(location_id),
-        queryFn: () => getLinkedStudies({ location_id }),
-        enabled: !!location_id,
+        queryKey: cargarEstudiosKeys.listLinkedStudies(),
+        queryFn: () => getLinkedStudies(),
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
     });

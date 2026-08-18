@@ -7,13 +7,10 @@ export const useVerifyCredentials = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ password }: { password: string }) => postVerifyCredentials({ password }),
+        mutationFn: ({ password, examId }: { password: string; examId?: string }) => postVerifyCredentials({ password, examId }),
         onSuccess: (response) => {
-            toast.success(response.message || 'Reporte firmado exitosamente');
+            toast.success(response.message || 'Credenciales verificadas');
             queryClient.invalidateQueries({ queryKey: informesKeys.all });
-        },
-        onError: (error: any) => {
-            toast.error(error.response?.data?.message || 'Error al guardar el reporte');
         }
     });
 }

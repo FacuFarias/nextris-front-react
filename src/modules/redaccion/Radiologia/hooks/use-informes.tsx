@@ -1,17 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type InformeDetalle, type Informes } from "../types/informes.types";
 import type { ApiPaginatedResponse } from "@/types/global.type";
-import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, updateExaminationFlags, updateExaminationTagIds, getAllTags, updateGeneralNotes, getPatientHistory, type UpdateReportPayload } from "../services/informes.service";
+import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, updateExaminationFlags, updateExaminationTagIds, getAllTags, updateGeneralNotes, getPatientHistory, assignExam, assignExamBatch, addTagsToExamsBatch, addFlagsToExamsBatch, type UpdateReportPayload } from "../services/informes.service";
 import { informesKeys } from "../constants/query-keys";
 import { toast } from "sonner";
 import { notifyInformeChange, useCrossWindowSync } from "../redactar-informe/hooks/use-cross-windows";
 
-export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, show_only_with_notes = false, bodypart_id = "", modality_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc", facility_id = "" }) => {
+export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, assigned_to_me = false, show_no_image = false, show_without_order = false, show_only_with_notes = false, bodypart_id = "", modality_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc", facility_id = "" }) => {
     useCrossWindowSync();
 
     const { data, isLoading, isFetching, error, refetch } = useQuery<ApiPaginatedResponse<Informes>>({
-        queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction, show_only_with_notes, facility_id),
-        queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready, show_no_image, show_only_with_notes, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction, facility_id }),
+        queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready, assigned_to_me, show_no_image, show_without_order, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction, show_only_with_notes, facility_id),
+        queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready, assigned_to_me, show_no_image, show_without_order, show_only_with_notes, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction, facility_id }),
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
     });
@@ -328,3 +328,63 @@ export const usePatientHistory = (patientId: string | undefined) => {
     });
     return { historyData: data, isLoading };
 }
+
+export const useAssignExam = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examId, userId }: { examId: string; userId: string }) => assignExam(examId, userId),
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
+            toast.success(response.message || 'Estudio asignado correctamente');
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Error al asignar el estudio');
+        }
+    });
+}
+
+export const useAssignExamBatch = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examIds, userId }: { examIds: string[]; userId: string }) => assignExamBatch(examIds, userId),
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
+            toast.success(response.message);
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || error.message || 'Error al asignar los estudios');
+        }
+    });
+};
+
+export const useAddTagsBatch = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examIds, tagIds }: { examIds: string[]; tagIds: string[] }) => addTagsToExamsBatch(examIds, tagIds),
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
+            toast.success(response.message);
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || error.message || 'Error al agregar tags');
+        }
+    });
+};
+
+export const useAddFlagsBatch = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examIds, flags }: { examIds: string[]; flags: string[] }) => addFlagsToExamsBatch(examIds, flags),
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
+            toast.success(response.message);
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || error.message || 'Error al agregar banderas');
+        }
+    });
+};

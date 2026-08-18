@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query"
 //layout
 import { MainLayout } from "@/layouts/layout"
 import { api } from "@/lib/api"
-import { useFacility } from "@/context/FacilityContext"
+import { useAppConfig } from "@/context/AppConfigContext"
 //icons and react
 import { Calendar, User, ClipboardList, FileCheck, UserPlus, Loader2 } from "lucide-react"
 import { useState, useEffect, useCallback, useRef } from "react"
@@ -46,15 +46,15 @@ export const AdmisionEspontanea = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     //hook para crear paciente
     const pacienteRapido = usePacienteRapido();
-    const { selectedFacilityId } = useFacility();
+    const { config } = useAppConfig();
 
     const { data: selectedFacilityPlan } = useQuery({
-        queryKey: ["facility-plan", selectedFacilityId, "admision-espontanea"],
+        queryKey: ["facility-plan", config?.id?.toString() || "1", "admision-espontanea"],
         queryFn: async () => {
-            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
+            const response = await api.get(`/config/facilities/${config?.id?.toString() || "1"}/plan`);
             return response.data?.data?.plan || null;
         },
-        enabled: Boolean(selectedFacilityId),
+        enabled: Boolean(config?.id?.toString() || "1"),
         staleTime: 60 * 1000,
     });
 
@@ -153,7 +153,7 @@ export const AdmisionEspontanea = () => {
         setSelectedEstudio(null);
         setSelectedExam(null);
         setActiveTab("paciente");
-    }, [selectedFacilityId]);
+    }, [config?.id?.toString() || "1"]);
 
     return (
         <MainLayout>
@@ -172,14 +172,14 @@ export const AdmisionEspontanea = () => {
                         <div className="relative shrink-0">
                             <TabsList
                                 ref={tabsListRef}
-                                className="bg-transparent border-b border-gray-200 dark:border-gray-700 rounded-none h-auto p-0 justify-start gap-0 w-full"
+                                className="w-full justify-start gap-0 overflow-x-auto overscroll-x-contain rounded-none border-b border-gray-200 bg-transparent p-0 dark:border-gray-700 [&>[data-slot=tabs-trigger]]:flex-none"
                             >
                                 <TabsTrigger
                                     value="paciente"
                                     ref={(el) => {
                                         if (el) tabRefs.current.set("paciente", el)
                                     }}
-                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-transparent data-[state=active]:text-brand-purple dark:data-[state=active]:text-purple-400 data-[state=active]:bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent shadow-none"
+                                        className="flex shrink-0 items-center gap-2 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 text-sm font-medium text-gray-500 shadow-none hover:text-gray-700 data-[state=active]:border-transparent data-[state=active]:bg-transparent data-[state=active]:text-brand-purple dark:text-gray-400 dark:hover:text-gray-200 dark:data-[state=active]:text-purple-400"
                                 >
                                     <User className="w-4 h-4" />
                                     <span>1. Paciente : {selectedPatient?.name} {selectedPatient?.surname}</span>
@@ -222,7 +222,7 @@ export const AdmisionEspontanea = () => {
                                 <DireccionSelector
                                     selectedDireccion={selectedDireccion}
                                     onDireccionChange={handleDireccionChange}
-                                    facilityId={selectedFacilityId}
+                                    facilityId={config?.id?.toString() || "1"}
                                     isPending={isPending}
                                     isRow={true}
                                 />
@@ -280,6 +280,7 @@ export const AdmisionEspontanea = () => {
                                         onPaginationChange={handlePaginationChange}
                                         stickyPagination
                                         compactSpacing
+                                        mobileMode="cards"
                                         preserveTableHeight
                                         maxHeight="calc(100% - 8%)"
                                         emptyMessage="Seleccione una dirección para ver los pacientes asociados."

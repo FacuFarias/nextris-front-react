@@ -1,13 +1,45 @@
 import type { TableAction, TableColumn } from "@/types/table";
 import type { Informes } from "../types/informes.types";
 import { fechaYhora } from "@/lib/fechaYhora";
-import { ClipboardPlus, FileText, Image, Lock, LockOpen } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { CalendarDays, ClipboardPlus, FileText, Hash, Image, KeyRound, Lock, LockOpen, CircleCheck, Clock, CheckCircle2, UserCheck } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { FlagsCell } from "./FlagsCell";
 import { TagsCell } from "./TagsCell";
 import { GeneralNotesCell } from "./GeneralNotesCell";
 import type { Tag } from "@/modules/configuracion/configuracion-tablas/institucional/tags";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+export const getSelectionColumn = (
+    selectedIds: Set<string>,
+    onToggle: (id: string) => void,
+    onToggleAll: () => void,
+    totalCount: number,
+): TableColumn<Informes> => ({
+    key: "_selection",
+    label: "",
+    headerClassName: "w-10",
+    sortable: false,
+    filterable: false,
+    headerRender: () => (
+        <Checkbox
+            checked={totalCount > 0 && selectedIds.size === totalCount}
+            ref={(el) => {
+                if (el) {
+                    el.indeterminate = selectedIds.size > 0 && selectedIds.size < totalCount;
+                }
+            }}
+            onCheckedChange={onToggleAll}
+            onClick={(e) => e.stopPropagation()}
+        />
+    ),
+    render: (_value: unknown, informe: Informes) => (
+        <Checkbox
+            checked={selectedIds.has(informe.guid)}
+            onCheckedChange={() => onToggle(informe.guid)}
+            onClick={(e) => e.stopPropagation()}
+        />
+    ),
+});
 
 // Columna de paciente: generada dinámicamente para incluir el handler de desbloqueo admin
 export const getPatientNameColumn = (
@@ -19,6 +51,7 @@ export const getPatientNameColumn = (
     className: "font-medium",
     sortable: true,
     filterable: true,
+    mobile: { role: "title", order: 1 },
     render: (value: string, informe: Informes) => (
         <div className="flex items-center gap-2">
             {informe.blocked_by && (
@@ -61,6 +94,7 @@ const informeColumns: TableColumn<Informes>[] = [
         headerClassName: "w-[88px]",
         sortable: true,
         filterable: true,
+        mobile: { label: "DNI", order: 4, icon: <Hash className="h-3.5 w-3.5" /> },
     },
     {
         key: "study_type",
@@ -68,6 +102,7 @@ const informeColumns: TableColumn<Informes>[] = [
         className: "font-medium",
         headerClassName: "max-w-[250px]",
         hideOnMobile: true,
+        mobile: { label: "Examen", order: 2, icon: <FileText className="h-3.5 w-3.5" /> },
         sortable: true,
         filterable: true,
         render: (value: string, _informe: Informes) => {
@@ -82,6 +117,7 @@ const informeColumns: TableColumn<Informes>[] = [
         className: "font-medium",
         headerClassName: "w-[68px]",
         hideOnMobile: true,
+        mobile: { label: "Estado", order: 3, icon: <CircleCheck className="h-3.5 w-3.5" /> },
         sortable: true,
         filterable: true,
     },
@@ -92,38 +128,42 @@ const informeColumns: TableColumn<Informes>[] = [
         headerClassName: "w-[80px]",
         sortable: true,
         filterable: true,
+        mobile: { role: "hidden" },
     },
     {
         key: "accession_number",
         label: "ACC. Nº",
         className: "font-medium",
-        headerClassName: "w-[80px]",
+        headerClassName: "w-[100px] min-w-[100px]",
         sortable: true,
         filterable: true,
+        mobile: { label: "Acceso", order: 5, icon: <KeyRound className="h-3.5 w-3.5" /> },
     },
     {
         key: "created_on",
         label: "FECHA Y HORA DE ADMISION",
         className: "font-medium",
+        headerClassName: "w-[130px]",
         sortable: true,
         filterable: true,
+        mobile: { label: "Admisión", order: 6, icon: <CalendarDays className="h-3.5 w-3.5" /> },
         render: (value: string) => {
             return fechaYhora(value);
         }
     },
     {
         key: "is_reported",
-        label: "REPORTADO",
-        className: "font-medium",
-        headerClassName: "w-[92px]",
-        sortable: true,
-        filterable: true,
+        label: "",
+        headerClassName: "w-10",
+        sortable: false,
+        filterable: false,
+        mobile: { label: "Estado", order: 7 },
         render: (value) => (
             <div className="flex justify-center">
                 {value ? (
-                    <Badge className="" variant="success">FINALIZADO</Badge>
+                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
                 ) : (
-                    <Badge className="bg-yellow-500 hover:bg-yellow-600">PENDIENTE</Badge>
+                    <Clock className="h-5 w-5 text-yellow-500" />
                 )}
             </div>
         ),
@@ -133,7 +173,8 @@ const informeColumns: TableColumn<Informes>[] = [
         label: "FECHA REPORTE",
         className: "font-medium",
         sortable: true,
-        filterable: false,
+        filterable: true,
+        mobile: { role: "hidden" },
         render: (value: string | null) => {
             if (!value) return <span className="text-gray-400 text-xs">—</span>;
             return fechaYhora(value);
@@ -152,6 +193,7 @@ export const getFlagsColumn = (
     headerClassName: "w-[85px]",
     sortable: false,
     filterable: false,
+    mobile: { role: "hidden" },
     render: (_value: string[], informe: Informes) => (
         <FlagsCell
             examId={informe.guid}
@@ -174,6 +216,7 @@ export const getTagsColumn = (
     headerClassName: "w-[100px]",
     sortable: false,
     filterable: false,
+    mobile: { role: "hidden" },
     render: (_value: string[], informe: Informes) => (
         <TagsCell
             examId={informe.guid}
@@ -208,12 +251,14 @@ export const getInformesActions = (
     onViewPdf: (informe: Informes) => void,
     generalNotesAction?: TableAction<Informes>,
     redactDisabled: boolean = false,
+    onAssign?: (informe: Informes) => void,
 ): TableAction<Informes>[] => [
         {
             label: "Redactar Informe",
             icon: <ClipboardPlus className="h-4 w-4 text-blue-900" />,
             onClick: (informe: Informes) => onViewInforme(informe),
             disabled: () => redactDisabled,
+            mobilePrimary: true,
         },
         {
             label: "Ver Imágenes",
@@ -227,6 +272,11 @@ export const getInformesActions = (
             onClick: onViewPdf,
             hidden: (informe) => !(informe.pdf_path), // Solo mostrar si is_image es true
         },
+        ...(onAssign ? [{
+            label: "Asignar",
+            icon: <UserCheck className="h-4 w-4 text-purple-900" />,
+            onClick: onAssign,
+        }] : []),
         ...(generalNotesAction ? [generalNotesAction] : []),
     ];
 

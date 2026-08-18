@@ -1,7 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { FirstLoginPasswordModal } from "@/modules/auth/change-password/FirstLoginPasswordModal";
-import { EmailVerificationModal } from "@/modules/auth/email-verification/EmailVerificationModal";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useUserModules } from "@/hooks/use-user-modules";
@@ -69,11 +68,6 @@ export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions, re
     }
 
     const requiresPasswordChange = !!authData?.user?.requires_password_change;
-    const requiresEmailVerification = !!authData?.user?.email_verification_required;
-
-    if (requiresEmailVerification) {
-        return <EmailVerificationModal />;
-    }
 
     return (
         <>

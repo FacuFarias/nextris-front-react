@@ -5,7 +5,6 @@ import { useAnalytics } from "@/context/AnalyticsContext";
 
 // Rutas de autenticación — cargadas de forma eager (necesarias en el arranque)
 import { Login } from "@/modules/auth/login/Login";
-import { FreeSignup } from "@/modules/auth/free-signup/FreeSignup";
 import { ChangePassword } from "@/modules/auth/change-password/ChangePassword";
 
 // ── Page-view tracker ─────────────────────────────────────────────────────────
@@ -47,10 +46,11 @@ const MisDatos = lazy(() => import("@/modules/mis-datos/MisDatos").then(m => ({ 
 const CrearInforme = lazy(() => import("@/modules/redaccion/informe-predefinidos/crear-informe/CrearInforme").then(m => ({ default: m.CrearInforme })));
 const UnificacionPaciente = lazy(() => import("@/modules/administracion/unificacion-paciente/UnificacionPaciente").then(m => ({ default: m.UnificacionPaciente })));
 const ReasignacionExamenes = lazy(() => import("@/modules/administracion/reasignacion-examenes/ReasignacionExamenes").then(m => ({ default: m.ReasignacionExamenes })));
-const Demograficos = lazy(() => import("@/modules/administracion/demograficos/Demograficos").then(m => ({ default: m.Demograficos })));
 const CargarEstudios = lazy(() => import("@/modules/redaccion/cargar-estudios/CargarEstudios").then(m => ({ default: m.CargarEstudios })));
-const ReportesEstructurados = lazy(() => import("@/modules/reportes-estructurados/ReportesEstructurados").then(m => ({ default: m.ReportesEstructurados })));
-const Nexi = lazy(() => import("@/modules/nexi/Nexi").then(m => ({ default: m.Nexi })));
+// structured_reports — deshabilitado temporalmente
+// const ReportesEstructurados = lazy(() => import("@/modules/reportes-estructurados/ReportesEstructurados").then(m => ({ default: m.ReportesEstructurados })));
+// nexi — deshabilitado temporalmente
+// const Nexi = lazy(() => import("@/modules/nexi/Nexi").then(m => ({ default: m.Nexi })));
 
 const PageLoader = () => (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -73,11 +73,11 @@ const router = createBrowserRouter([
         element: <Login />,
     },
     {
-        path: "/registro-gratuito",
-        element: <FreeSignup />,
+        path: "/pacientes",
+        element: <Login initialIsPatient={true} />,
     },
     {
-        path: "/pacientes",
+        path: "/login/pacientes",
         element: <Login initialIsPatient={true} />,
     },
     {
@@ -101,7 +101,7 @@ const router = createBrowserRouter([
         path: "/buscar-pacientes",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo"]}
+                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo", "Administrador"]}
                 requiredPermissions={["tabs.patients.view", "patients.view"]}
             >
                 <BuscarPaciente />
@@ -112,7 +112,7 @@ const router = createBrowserRouter([
         path: "/buscar-pacientes/historial-paciente",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo"]}
+                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo", "Administrador"]}
                 requiredPermissions={["tabs.patients.view", "patients.view"]}
             >
                 <HistorialPaciente />
@@ -125,7 +125,7 @@ const router = createBrowserRouter([
         path: "/cita/nueva-cita",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Administrativo"]}
+                allowedRoles={["Sysadmin", "Administrativo", "Administrador"]}
                 requiredPermissions={["tabs.appointments.view", "appointments.create"]}
                 requiredModule="appointments"
             >
@@ -137,7 +137,7 @@ const router = createBrowserRouter([
         path: "/cita/editar-cita",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Administrativo"]}
+                allowedRoles={["Sysadmin", "Administrativo", "Administrador"]}
                 requiredPermissions={["tabs.appointments.view", "appointments.view"]}
                 requiredModule="appointments"
             >
@@ -149,7 +149,7 @@ const router = createBrowserRouter([
         path: "/cita/editar-cita/:id",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Administrativo"]}
+                allowedRoles={["Sysadmin", "Administrativo", "Administrador"]}
                 requiredPermissions={["tabs.appointments.view", "appointments.view"]}
                 requiredModule="appointments"
             >
@@ -165,7 +165,7 @@ const router = createBrowserRouter([
         path: "/nueva-admision",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Administrativo"]}
+                allowedRoles={["Sysadmin", "Administrativo", "Administrador"]}
                 requiredPermissions={["tabs.admissions.view", "admissions.view", "admissions.admit_appointments"]}
                 requiredModule="appointments"
             >
@@ -177,7 +177,7 @@ const router = createBrowserRouter([
         path: "/admision-espontanea",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Administrativo", "Medico"]}
+                allowedRoles={["Sysadmin", "Administrativo", "Administrador", "Medico"]}
                 requiredPermissions={["tabs.admissions.view", "admissions.view", "admissions.create_spontaneous"]}
             >
                 <AdmisionEspontanea />
@@ -189,7 +189,7 @@ const router = createBrowserRouter([
         path: "/ejecucion",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Tecnico"]}
+                allowedRoles={["Sysadmin", "Tecnico", "Administrador"]}
                 requiredPermissions={["tabs.execution.view", "execution.view_pending"]}
             >
                 <Ejecucion />
@@ -200,7 +200,7 @@ const router = createBrowserRouter([
         path: "/ejecucion/detalle/:guid",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Tecnico"]}
+                allowedRoles={["Sysadmin", "Tecnico", "Administrador"]}
                 requiredPermissions={["tabs.execution.view", "execution.view_pending"]}
             >
                 <DetalleEjecucion />
@@ -212,7 +212,7 @@ const router = createBrowserRouter([
         path: "/estudios/redaccion",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico"]}
+                allowedRoles={["Sysadmin", "Medico", "Administrador", "Administrativo"]}
                 requiredPermissions={["tabs.reports.view", "reports.view_writing"]}
             >
                 <Radiologia />
@@ -220,10 +220,10 @@ const router = createBrowserRouter([
         ),
     },
     {
-        path: "/estudios/redaccion/redactar-informe/:informeGuid/:studyInstanceUID",
+        path: "/estudios/redaccion/redactar-informe/:informeGuid/:studyInstanceUID?",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico"]}
+                allowedRoles={["Sysadmin", "Medico", "Administrador"]}
                 requiredPermissions={["tabs.reports.view", "reports.view_writing"]}
             >
                 <RedactarInforme />
@@ -234,7 +234,7 @@ const router = createBrowserRouter([
         path: "/estudios/informes-predefinidos",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico"]}
+                allowedRoles={["Sysadmin", "Medico", "Administrador"]}
                 requiredPermissions={["tabs.reports.view", "reports.view_reports"]}
             >
                 <InformePredefinidos />
@@ -245,7 +245,7 @@ const router = createBrowserRouter([
         path: "/estudios/crear-informe",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico"]}
+                allowedRoles={["Sysadmin", "Medico", "Administrador"]}
                 requiredPermissions={["tabs.reports.view", "reports.view_reports"]}
             >
                 <CrearInforme />
@@ -256,7 +256,7 @@ const router = createBrowserRouter([
         path: "/estudios/editar-informe/:id",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico"]}
+                allowedRoles={["Sysadmin", "Medico", "Administrador"]}
                 requiredPermissions={["tabs.reports.view", "reports.view_reports"]}
             >
                 <CrearInforme />
@@ -267,7 +267,7 @@ const router = createBrowserRouter([
         path: "/estudios/cargar-estudios",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico"]}
+                allowedRoles={["Sysadmin", "Medico", "Administrador"]}
                 requiredPermissions={["tabs.reports.view", "reports.view_writing"]}
             >
                 <CargarEstudios />
@@ -278,7 +278,7 @@ const router = createBrowserRouter([
         path: "/estudios/imagenes",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico", "Tecnico"]}
+                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrador"]}
                 requiredPermissions={["tabs.images.view", "images.view"]}
             >
                 <Imagenes />
@@ -291,7 +291,7 @@ const router = createBrowserRouter([
         path: "/distribucion",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Administrativo", "Medico"]}
+                allowedRoles={["Sysadmin", "Administrativo", "Administrador", "Medico"]}
                 requiredPermissions={["tabs.distribution.view", "distribution.view"]}
             >
                 <Distribucion />
@@ -311,61 +311,13 @@ const router = createBrowserRouter([
             </ProtectedRoute>
         ),
     },
-    {
-        path: "/reportes-estructurados/lista-parser",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
-                requiredPermissions={["tabs.structured_reports.view"]}
-                requiredModule="structured_reports"
-            >
-                <ReportesEstructurados />
-            </ProtectedRoute>
-        ),
-    },
-    {
-        path: "/reportes-estructurados/mapeo-variables",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
-                requiredPermissions={["tabs.structured_reports.view"]}
-                requiredModule="structured_reports"
-            >
-                <ReportesEstructurados />
-            </ProtectedRoute>
-        ),
-    },
-    {
-        path: "/reportes-estructurados/conceptos-criterios",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
-                requiredPermissions={["tabs.structured_reports.view"]}
-                requiredModule="structured_reports"
-            >
-                <ReportesEstructurados />
-            </ProtectedRoute>
-        ),
-    },
-    {
-        path: "/reportes-estructurados/plantillas-inteligentes",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
-                requiredPermissions={["tabs.structured_reports.view"]}
-                requiredModule="structured_reports"
-            >
-                <ReportesEstructurados />
-            </ProtectedRoute>
-        ),
-    },
     {/*Administracion*/ },
 
     {
         path: "/administracion/unificacion-paciente",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
+                allowedRoles={["Sysadmin", "Administrador"]}
                 requiredPermissions={["tabs.gestion.view"]}
             >
                 <UnificacionPaciente />
@@ -376,24 +328,25 @@ const router = createBrowserRouter([
         path: "/administracion/reasignacion-examenes",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
+                allowedRoles={["Sysadmin", "Administrador"]}
                 requiredPermissions={["tabs.gestion.view"]}
             >
                 <ReasignacionExamenes />
             </ProtectedRoute>
         ),
     },
-    {
-        path: "/administracion/demograficos",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
-                requiredPermissions={["tabs.gestion.view"]}
-            >
-                <Demograficos />
-            </ProtectedRoute>
-        ),
-    },
+    // DEPRECATED: Demográficos
+    // {
+    //     path: "/administracion/demograficos",
+    //     element: (
+    //         <ProtectedRoute
+    //             allowedRoles={["Sysadmin", "Administrador"]}
+    //             requiredPermissions={["tabs.gestion.view"]}
+    //         >
+    //             <Demograficos />
+    //         </ProtectedRoute>
+    //     ),
+    // },
     {/*Mis estudios pacientes*/ },
     {
         path: "/estudios",
@@ -411,19 +364,7 @@ const router = createBrowserRouter([
             </ProtectedRoute>
         ),
     },
-    {/*Nexi IA*/},
-    {
-        path: "/nexi",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo"]}
-                requiredPermissions={["tabs.nexi.view"]}
-                requiredModule="nexi"
-            >
-                <Nexi />
-            </ProtectedRoute>
-        ),
-    }
+    {/*Nexi IA — deshabilitado temporalmente*/}
         ], // end children of RootLayout
     },   // end root route
 ]);

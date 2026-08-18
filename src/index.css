@@ -121,6 +121,22 @@
 
   body {
     @apply bg-background text-foreground;
+    min-width: 320px;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  #root {
+    min-height: 100dvh;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
   }
 
   /* Deshabilitar transiciones durante cambio de tema */
@@ -397,6 +413,105 @@
     radial-gradient(ellipse at 8% 0%, rgba(109, 40, 217, 0.13) 0%, transparent 55%),
     radial-gradient(ellipse at 92% 100%, rgba(76, 29, 149, 0.08) 0%, transparent 45%),
     linear-gradient(160deg, #1a1730 0%, #131221 40%, #0d0e16 100%);
+}
+
+/* Panel superior de filtros de Redaccion: variante dark localizada */
+.dark .report-filters-panel {
+  --report-filter-accent: #a855f7;
+  --report-filter-heading: #a78bfa;
+  --report-filter-text: #eeeaf4;
+  --report-filter-text-muted: #b9b1c7;
+  --report-filter-control-bg: rgba(12, 10, 22, 0.55);
+  --report-filter-control-border: rgba(148, 123, 170, 0.28);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--brand-purple) 42%, var(--card)) 0%,
+    color-mix(in srgb, var(--background) 88%, var(--brand-purple)) 100%
+  );
+  border-color: rgba(168, 85, 247, 0.16);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+}
+
+.dark .report-filters-panel__heading {
+  color: var(--report-filter-heading);
+  letter-spacing: 0.055em;
+}
+
+.dark .report-filters-panel__divider {
+  background-color: rgba(168, 85, 247, 0.12);
+}
+
+.dark .report-filters-panel [data-slot="input"],
+.dark .report-filters-panel [role="combobox"],
+.dark .report-filters-panel [data-slot="select-trigger"] {
+  background-color: var(--report-filter-control-bg);
+  border-color: var(--report-filter-control-border);
+  color: var(--report-filter-text);
+  box-shadow: none;
+}
+
+.dark .report-filters-panel [data-slot="input"]::placeholder,
+.dark .report-filters-panel [data-slot="select-trigger"][data-placeholder],
+.dark .report-filters-panel__autocomplete [role="combobox"] {
+  color: var(--report-filter-text-muted);
+}
+
+.dark .report-filters-panel__autocomplete [role="combobox"] > span,
+.dark .report-filters-panel [data-slot="select-value"] {
+  color: var(--report-filter-text);
+}
+
+.dark .report-filters-panel [data-slot="input"]:hover,
+.dark .report-filters-panel [role="combobox"]:hover,
+.dark .report-filters-panel [data-slot="select-trigger"]:hover {
+  background-color: rgba(12, 10, 22, 0.65);
+  border-color: rgba(168, 139, 200, 0.42);
+}
+
+.dark .report-filters-panel [data-slot="input"]:focus-visible,
+.dark .report-filters-panel [role="combobox"]:focus-visible,
+.dark .report-filters-panel [data-slot="select-trigger"]:focus-visible {
+  border-color: var(--report-filter-accent);
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.12);
+  outline: none;
+}
+
+.dark .report-filters-panel label {
+  color: var(--report-filter-text-muted);
+}
+
+.dark .report-filters-panel [data-slot="checkbox"] {
+  background-color: rgba(12, 10, 22, 0.45);
+  border-color: rgba(167, 139, 250, 0.28);
+}
+
+.dark .report-filters-panel [data-slot="checkbox"][data-state="checked"] {
+  background-color: var(--report-filter-accent);
+  border-color: var(--report-filter-accent);
+  color: white;
+}
+
+.dark .report-filters-panel [data-slot="checkbox"]:focus-visible,
+.dark .report-filters-panel__flag:focus-visible {
+  border-color: var(--report-filter-accent);
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.12);
+}
+
+.dark .report-filters-panel__flag--active {
+  background-color: rgba(168, 85, 247, 0.14);
+  --tw-ring-color: rgba(167, 139, 250, 0.30);
+}
+
+.dark .report-filters-panel__flag-label {
+  color: rgba(185, 177, 199, 0.78);
+}
+
+.dark .report-filters-panel__clear-flags {
+  color: rgba(185, 177, 199, 0.68);
+}
+
+.dark .report-filters-panel__clear-flags:hover {
+  color: var(--report-filter-text);
 }
 
 /* TipTap Editor Styles */

@@ -4,6 +4,7 @@ export interface FilterPresetFilters {
     ver_finalizados: boolean;
     asignados_a_mi: boolean;
     ver_sin_imagenes: boolean;
+    ver_sin_orden?: boolean;
     study_group_id: string;
     modality_id: string;
     bodypart_id: string;

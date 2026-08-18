@@ -10,8 +10,10 @@ export interface PacsStudy {
   study_time: string | null
   location_id: string | null
   patient_name: string
+  patient_id: string | null
   accession_no: string | null
   is_linked: boolean
+  has_studytype: boolean
   modality: string | null
   sending_aet: string | null
   num_series: number
@@ -54,11 +56,9 @@ export const useStudiesByLocation = ({
   sortDirection = "desc",
 }: UseStudiesByLocationParams) => {
   const { data, isLoading, error, refetch } = useQuery<StudiesByLocationResponse>({
-    queryKey: ["studies-by-location", locationId, page, perPage, search, sortColumn, sortDirection, columnFilters, dateRange, dateField],
+    queryKey: ["studies-by-location", locationId || "all", page, perPage, search, sortColumn, sortDirection, columnFilters, dateRange, dateField],
     queryFn: async () => {
-      if (!locationId) {
-        return { success: true, data: { data: [], total: 0, page, per_page: perPage } }
-      }
+      const effectiveLocationId = locationId || "all"
 
       const params = new URLSearchParams()
       params.set("page", String(page))
@@ -72,11 +72,12 @@ export const useStudiesByLocation = ({
       if (columnFilters.study_desc?.trim()) params.set("filter_study_desc", columnFilters.study_desc.trim())
       if (columnFilters.accession_no?.trim()) params.set("filter_accession_no", columnFilters.accession_no.trim())
       if (columnFilters.modality?.trim()) params.set("filter_modality", columnFilters.modality.trim())
+      if (columnFilters.patient_id?.trim()) params.set("filter_patient_id", columnFilters.patient_id.trim())
 
       const authDataRaw = localStorage.getItem("authData")
       const token = authDataRaw ? JSON.parse(authDataRaw).access_token : null
       const response = await fetch(
-        `/api/dicom/studies-by-location/${locationId}?${params}`,
+        `/api/dicom/studies-by-location/${effectiveLocationId}?${params}`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         }
@@ -88,7 +89,7 @@ export const useStudiesByLocation = ({
       
       return response.json()
     },
-    enabled: Boolean(locationId),
+    enabled: true,
   })
 
   return {

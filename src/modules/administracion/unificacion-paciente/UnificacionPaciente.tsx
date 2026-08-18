@@ -1,9 +1,7 @@
-import { DireccionSelector } from "@/components";
 import TablaDynamic from "@/components/TableDynamic";
 import { MainLayout } from "@/layouts/layout";
-import { usePacienteDireccion } from "@/modules/admision/admision-espontanea/hooks/use-paciente-direccion";
+import { useBuscarPaciente } from "@/modules/pacientes/buscar-paciente/hooks/use-buscar-paciente";
 import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPaciente";
-import { useDebounce } from "@uidotdev/usehooks";
 import { Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { TableColumn } from "@/types/table";
@@ -12,30 +10,23 @@ import { unificacionColumns } from "./components/columns";
 import { ModalUnificacion } from "./components/ModalUnificacion";
 import { toast } from "sonner";
 import { useUnificacionPaciente } from "./hooks/useUnificacionPaciente";
+import { InputSearch } from "@/components";
+import { useDebounce } from "@uidotdev/usehooks";
 
 export const UnificacionPaciente = () => {
-    const [searchTerm] = useState("");
-    const [selectedDireccion, setSelectedDireccion] = useState<string>("");
     const [selectedPatients, setSelectedPatients] = useState<Patient[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const debouncedSearch = useDebounce(searchTerm, 500);
-    const { mutate: fetchPacientesDireccion, data: pacientesData, isPending } = usePacienteDireccion();
-    const mutateUnificacion = useUnificacionPaciente();
+    const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(8);
+    const [perPage, setPerPage] = useState(10);
+    const useDebounceSearch = useDebounce(searchTerm, 300);
 
-    const handleDireccionChange = (direccionId: string) => {
-        setSelectedDireccion(direccionId);
-        setSelectedPatients([]); // Limpiar selección al cambiar dirección
-        fetchPacientesDireccion(
-            { uuid: direccionId, searchTerm: debouncedSearch },
-        );
-    };
-
-    const handlePaginationChange = (newPage: number, newPageSize: number) => {
-        setPage(newPage);
-        setPageSize(newPageSize);
-    };
+    const { patientsData, isLoading, refetchPatients } = useBuscarPaciente({
+        page,
+        per_page: perPage,
+        search: useDebounceSearch,
+    });
+    const mutateUnificacion = useUnificacionPaciente();
     // Manejar selección de pacientes
     const handleCheckboxChange = (patient: Patient, checked: boolean) => {
         if (checked) {
@@ -66,7 +57,8 @@ export const UnificacionPaciente = () => {
         {
             key: "checkbox",
             label: "",
-            className: "w-[50px]",
+            headerClassName: "w-[32px]",
+            className: "py-1 px-0.5",
             render: (_value, row) => {
                 const isChecked = selectedPatients.some(p => p.guid === row.guid);
                 const isDisabled = !isChecked && selectedPatients.length >= 2;
@@ -99,13 +91,7 @@ export const UnificacionPaciente = () => {
                     toast.success("Pacientes unificados exitosamente");
                     handleClearSelection(); // Cerrar modal y limpiar selección
 
-                    // Recargar la lista de pacientes
-                    if (selectedDireccion) {
-                        fetchPacientesDireccion({
-                            uuid: selectedDireccion,
-                            searchTerm: debouncedSearch
-                        });
-                    }
+                    refetchPatients();
                 },
                 onError: (error: any) => {
                     toast.error(error?.message || "Error al unificar pacientes");
@@ -117,79 +103,63 @@ export const UnificacionPaciente = () => {
     };
     return (
         <MainLayout>
-            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10">
-                {/* Header con Tabs integrados */}
-                <div className="mb-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="bg-brand-purple p-2.5 rounded-lg">
-                            <Calendar className="w-6 h-6 text-white" />
-                        </div>
-                        <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400">Unificación de Paciente</h1>
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm border border-border dark:border-[rgba(255,255,255,0.06)] dark:shadow-[0_8px_48px_rgba(0,0,0,0.5),0_0_0_1px_rgba(139,92,246,0.08)] z-10 h-full flex flex-col overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="bg-brand-purple dark:bg-gradient-to-br dark:from-purple-600 dark:to-purple-900 p-2 rounded-lg dark:shadow-[0_0_16px_rgba(139,92,246,0.5),0_2px_8px_rgba(0,0,0,0.4)]">
+                        <Calendar className="w-6 h-6 text-white" />
                     </div>
-                    {/* Selector de Dirección */}
-                    <DireccionSelector
-                        selectedDireccion={selectedDireccion}
-                        onDireccionChange={handleDireccionChange}
-                        isPending={isPending}
-                        isRow={true}
-                    />
-
-                    {/* Barra de búsqueda */}
-                    {/*  {selectedDireccion && (
-                        <div className="w-full">
-                            <InputSearch
-                                searchTerm={searchTerm}
-                                setSearchTerm={setSearchTerm}
-                                placeholder="Buscar por paciente, médico y equipo..."
-                            />
-                        </div>
-                    )} */}
-
-                    {/* Tabla de pacientes */}
-                    <div className="bg-white dark:bg-[#2a2e32]  rounded-lg border border-purple-100 dark:border-gray-700 p-4 mt-3">
-                        <div className="w-full flex justify-between items-center">
-                            <h2 className="text-lg font-semibold text-gray-700 dark:text-foreground mb-4">
-                                Seleccione pacientes a unificar
-                                {selectedPatients.length > 0 && (
-                                    <span className="ml-2 text-sm text-brand-purple dark:text-purple-400">
-                                        ({selectedPatients.length}/2 seleccionados)
-                                    </span>
-                                )}
-                            </h2>
-
-                            {selectedPatients.length > 0 && (
-                                <button
-                                    onClick={handleClearSelection}
-                                    className="text-sm text-red-600 hover:text-red-700 mb-4"
-                                >
-                                    Limpiar selección
-                                </button>
-                            )}
-                        </div>
-
-                        {isPending ? (
-                            <div className='flex justify-center items-center h-40'>
-                                <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
-                            </div>
-                        ) : (
-                            <TablaDynamic<Patient>
-                                data={selectedDireccion ? (pacientesData?.data || []) : []}
-                                columns={columnsWithCheckbox}
-                                showIndex
-                                rowIdKey="guid"
-                                onPaginationChange={handlePaginationChange}
-
-                                pagination={{
-                                    page,
-                                    pageSize,
-                                    serverSide: false,
-                                    total: Array.isArray(pacientesData?.data) ? pacientesData.data.length : 0,
-                                }}
-                                emptyMessage="Seleccione una dirección para ver los pacientes asociados."
-                            />
-                        )}
-                    </div>
+                    <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400 dark:drop-shadow-[0_0_8px_rgba(167,139,250,0.3)]">Unificación de Paciente</h1>
                 </div>
+
+                {/* Barra de búsqueda */}
+                <div className="flex items-center gap-3 mb-4">
+                    <InputSearch
+                        searchTerm={searchTerm}
+                        setSearchTerm={(value) => {
+                            setSearchTerm(value);
+                            setPage(1);
+                        }}
+                        placeholder="Seleccione pacientes a unificar"
+                    />
+                    {selectedPatients.length > 0 && (
+                        <>
+                            <span className="text-sm text-brand-purple dark:text-purple-400 whitespace-nowrap">
+                                ({selectedPatients.length}/2)
+                            </span>
+                            <button
+                                onClick={handleClearSelection}
+                                className="text-sm text-red-600 hover:text-red-700 whitespace-nowrap"
+                            >
+                                Limpiar selección
+                            </button>
+                        </>
+                    )}
+                </div>
+
+                <TablaDynamic<Patient>
+                    data={patientsData?.data?.data || []}
+                    columns={columnsWithCheckbox}
+                    showIndex
+                    rowIdKey="guid"
+                    loading={isLoading}
+                    pagination={{
+                        page: patientsData?.data?.page || 1,
+                        pageSize: patientsData?.data?.per_page || 10,
+                        total: patientsData?.data?.total || 0,
+                    }}
+                    onPaginationChange={(newPage) => {
+                        setPage(newPage);
+                    }}
+                    perPageValue={perPage}
+                    onPerPageChange={(value) => {
+                        setPerPage(value);
+                        setPage(1);
+                    }}
+                    perPageOptions={[10, 20, 50, 100]}
+                    serverSideFiltering={true}
+                    emptyMessage="No se encontraron pacientes."
+                />
 
                 {/* Modal de Unificación */}
                 <ModalUnificacion

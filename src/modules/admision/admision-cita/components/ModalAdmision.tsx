@@ -48,7 +48,7 @@ export const ModalAdmision = ({ isOpen, onClose, admisionData, onConfirm }: Moda
                     {/* Información del Paciente */}
                     <div className="bg-gray-50 dark:bg-[#2a2e32] rounded-lg p-4 space-y-3">
                         <h3 className="text-sm font-semibold text-gray-800 mb-2 dark:text-gray-200">Información del Paciente</h3>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <div>
                                 <p className="text-xs text-gray-600 dark:text-gray-200">Nombre</p>
                                 <p className="text-sm font-medium text-gray-900 dark:text-gray-200">{admisionData.fullname}</p>

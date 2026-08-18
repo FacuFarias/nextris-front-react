@@ -1,6 +1,6 @@
 import { AlertTriangle, Link2Off, Loader2, RefreshCw, Search, Unlink2 } from "lucide-react"
 import { useMemo, useState } from "react"
-import { DireccionSelector, PrimaryButton, SecondaryButton } from "@/components"
+import { PrimaryButton, SecondaryButton } from "@/components"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -20,15 +20,12 @@ const formatDate = (value?: string | null) => {
 }
 
 export const DesvincularImagenTab = () => {
-    const [selectedDireccion, setSelectedDireccion] = useState<string>("")
     const [selectedLink, setSelectedLink] = useState<LinkedStudyData | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
     const [reason, setReason] = useState("Desvinculacion manual desde pestaña")
 
-    const { estudiosVinculadosData, isLoading, refetchEstudiosVinculados } = useEstudiosVinculados({
-        location_id: selectedDireccion,
-    })
+    const { estudiosVinculadosData, isLoading, refetchEstudiosVinculados } = useEstudiosVinculados()
     const { mutate: desvincularEstudio, isPending } = useDesvincularEstudio()
 
     const linkedData = estudiosVinculadosData?.data?.data || []
@@ -46,11 +43,6 @@ export const DesvincularImagenTab = () => {
             )
         })
     }, [linkedData, searchTerm])
-
-    const handleDireccionChange = (direccionId: string) => {
-        setSelectedDireccion(direccionId)
-        setSelectedLink(null)
-    }
 
     const handleDesvincular = () => {
         if (!selectedLink) return
@@ -74,17 +66,7 @@ export const DesvincularImagenTab = () => {
 
     return (
         <>
-            <div className="mb-5">
-                <DireccionSelector
-                    selectedDireccion={selectedDireccion}
-                    onDireccionChange={handleDireccionChange}
-                    isRow={true}
-                    includeAllOption={true}
-                />
-            </div>
-
-            {selectedDireccion && (
-                <div className="rounded-xl overflow-hidden border border-amber-200 dark:border-amber-900 shadow-sm">
+            <div className="overflow-x-auto overflow-y-hidden rounded-xl border border-amber-200 shadow-sm dark:border-amber-900">
                     <div className="bg-gradient-to-r from-amber-600 to-orange-500 px-5 py-4 text-white">
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3">
@@ -121,7 +103,7 @@ export const DesvincularImagenTab = () => {
                         </div>
                     </div>
 
-                    <div className="bg-transparent">
+                    <div className="min-w-[680px] bg-transparent">
                         <div className="grid grid-cols-6 px-4 py-2.5 bg-transparent border-b border-gray-200/60 dark:border-gray-700/60">
                             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Paciente</span>
                             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">DNI</span>
@@ -192,7 +174,6 @@ export const DesvincularImagenTab = () => {
                         </Button>
                     </div>
                 </div>
-            )}
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="max-w-xl dark:bg-[#2a2e32] dark:border-gray-700">

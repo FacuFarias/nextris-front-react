@@ -3,34 +3,32 @@ import { UploadCloud, FolderOpen, FileText, Sparkles, Rocket, CheckCircle, Loade
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { useState, useRef, useEffect, useCallback } from "react"
-import { DireccionSelector } from "@/components"
 import { Progress } from "@/components/ui/progress"
 import { useCargarEstudios, useEstudiosNoVinculados } from "./hooks/use-cargar-estudios"
 import { Badge } from "@/components/ui/badge"
 import { DesvincularImagenTab, VincularImagenTab } from "./components"
 import { api } from "@/lib/api"
 import { useQuery } from "@tanstack/react-query"
-import { useFacility } from "@/context/FacilityContext"
+import { useAppConfig } from "@/context/AppConfigContext"
 import { toast } from "sonner"
 
 export const CargarEstudios = () => {
     const [files, setFiles] = useState<File[]>([])
     const [isDragging, setIsDragging] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const [selectedDireccion, setSelectedDireccion] = useState<string>("");
     const [isUploading, setIsUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
     const [uploadedCount, setUploadedCount] = useState(0)
     const [totalFiles, setTotalFiles] = useState(0)
-    const { selectedFacilityId } = useFacility();
+    const { config } = useAppConfig();
 
     const { data: facilityPlanData } = useQuery({
-        queryKey: ["facility-plan", selectedFacilityId, "cargar-estudios"],
+        queryKey: ["facility-plan", config?.id?.toString() || "1", "cargar-estudios"],
         queryFn: async () => {
-            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
+            const response = await api.get(`/config/facilities/${config?.id?.toString() || "1"}/plan`);
             return response.data?.data || null;
         },
-        enabled: Boolean(selectedFacilityId),
+        enabled: Boolean(config?.id?.toString() || "1"),
         staleTime: 60 * 1000,
     });
 
@@ -41,7 +39,6 @@ export const CargarEstudios = () => {
         && receiveMonthlyLimit >= 0
         && receivedCount >= receiveMonthlyLimit;
     const { estudiosNoVinculadosData, isLoading, error, refetchEstudiosNoVinculados } = useEstudiosNoVinculados({
-        location_id: selectedDireccion,
         include_linked: true,
         include_pacs: false,
     });
@@ -52,13 +49,6 @@ export const CargarEstudios = () => {
     const tabsListRef = useRef<HTMLDivElement>(null)
     const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
     const [indicator, setIndicator] = useState({ left: 0, width: 0 })
-
-    const handleDireccionChange = (direccionId: string) => {
-        setSelectedDireccion(direccionId);
-        /*  fetchPacientesDireccion(
-             { uuid: direccionId, searchTerm: debouncedSearch },
-         ); */
-    };
 
     // Replica el estilo de tabs de Admision Espontanea (linea inferior animada).
     const updatePill = useCallback(() => {
@@ -120,7 +110,7 @@ export const CargarEstudios = () => {
     const uploadFile = async (file: File): Promise<boolean> => {
         return new Promise((resolve, reject) => {
             cargarEstudiosMutation.mutate(
-                { file, location_id: selectedDireccion },
+                { file },
                 {
                     onSuccess: () => {
                         resolve(true);
@@ -189,7 +179,7 @@ export const CargarEstudios = () => {
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col flex-1 min-h-0">
                         <TabsList
                             ref={tabsListRef}
-                            className="relative bg-transparent border-b border-gray-200 dark:border-gray-700 rounded-none h-auto p-0 justify-start gap-0 w-full"
+                            className="relative w-full justify-start gap-0 overflow-x-auto overscroll-x-contain rounded-none border-b border-gray-200 bg-transparent p-0 dark:border-gray-700 [&>[data-slot=tabs-trigger]]:flex-none"
                         >
                             <TabsTrigger
                                 value="cargar-dicom"
@@ -237,19 +227,12 @@ export const CargarEstudios = () => {
                                 </div>
                                 <p className="text-gray-600 text-sm dark:text-gray-200">Arrastra archivos DICOM aquí o haz clic para seleccionar</p>
                             </div>
-                            <DireccionSelector
-                                selectedDireccion={selectedDireccion}
-                                onDireccionChange={handleDireccionChange}
-                                isRow={true}
-                            />
-                            {selectedDireccion && isReceiveLimitReached && (
+                            {isReceiveLimitReached && (
                                 <div className="mt-3 rounded-lg border border-red-500/70 bg-red-500/15 px-4 py-3 text-sm text-red-200">
                                     <strong className="font-semibold">Límite alcanzado:</strong> ya se llegó al máximo mensual de carga DICOM para esta institución ({receivedCount}/{receiveMonthlyLimit}).
                                 </div>
                             )}
-                            {
-                                selectedDireccion && (
-                                    <>
+                            <>
                                         <div
                                             onDragOver={handleDragOver}
                                             onDragLeave={handleDragLeave}
@@ -430,9 +413,6 @@ export const CargarEstudios = () => {
                                             </div>
                                         </div>
                                     </>
-                                )
-                            }
-
 
 
                         </TabsContent>

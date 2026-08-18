@@ -7,6 +7,11 @@ const unificacionColumns: TableColumn<Patient>[] = [
 
 
     {
+        key: "patientid",
+        label: "PATIENT ID",
+        className: "font-medium",
+    },
+    {
         key: "name",
         label: "NOMBRE",
         className: "font-medium",

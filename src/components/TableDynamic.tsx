@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import type { DragEvent } from "react";
 import { useTheme } from "@/context/ThemeContext";
 //shadcn ui
 import {
@@ -17,7 +18,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 //icons and utilities
-import { ArrowUpDown, ArrowUp, ArrowDown, Search, X } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Search, X, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 //types
 import { TablePagination } from "./Pagination";
@@ -45,6 +46,8 @@ export function TablaDynamic<T extends Record<string, any>>({
     allColumns,
     visibleColumns,
     onToggleColumn,
+    fixedColumnKeys = [],
+    onColumnOrderChange,
     additionalControls,
     tableBackgroundImage,
     tableBackgroundImageDark,
@@ -89,13 +92,23 @@ export function TablaDynamic<T extends Record<string, any>>({
         ? (controlledSortColumn ? { key: controlledSortColumn, direction: controlledSortDirection || "asc" } : null)
         : internalSortConfig;
     const [bgRevealed, setBgRevealed] = useState(false);
+    const [dragState, setDragState] = useState<{ sourceKey: string | null; targetKey: string | null }>({ sourceKey: null, targetKey: null });
     const { actualTheme } = useTheme();
     const isDark = actualTheme === 'dark';
     const hasBgImage = !!(tableBackgroundImage || tableBackgroundImageDark);
     const effectiveAllColumns = allColumns ?? columns;
-    const effectiveVisibleColumns = visibleColumns ?? internalVisibleColumns;
-    const visibleColumnSet = new Set(effectiveVisibleColumns);
-    const renderColumns = columns.filter((column) => visibleColumnSet.has(getColumnKey(column)));
+    const requestedVisibleColumns = visibleColumns ?? internalVisibleColumns;
+    const availableColumnKeys = new Set(columns.map(getColumnKey));
+    const effectiveVisibleColumns = [
+        ...fixedColumnKeys.filter((key) => availableColumnKeys.has(key)),
+        ...requestedVisibleColumns.filter(
+            (key) => !fixedColumnKeys.includes(key) && availableColumnKeys.has(key)
+        ),
+    ];
+    const columnsByKey = new Map(columns.map((column) => [getColumnKey(column), column]));
+    const renderColumns = effectiveVisibleColumns
+        .map((key) => columnsByKey.get(key))
+        .filter((column): column is TableColumn<T> => Boolean(column));
 
     useEffect(() => {
         if (tableBackgroundImage) {
@@ -222,6 +235,8 @@ export function TablaDynamic<T extends Record<string, any>>({
         actions.filter((action) => !action.hidden?.(row));
 
     const handleToggleColumn = (columnKey: string) => {
+        if (fixedColumnKeys.includes(columnKey)) return;
+
         if (onToggleColumn) {
             onToggleColumn(columnKey);
             return;
@@ -243,11 +258,45 @@ export function TablaDynamic<T extends Record<string, any>>({
         });
     };
 
+    const handleColumnDrop = (event: DragEvent, targetKey: string) => {
+        event.preventDefault();
+
+        const sourceKey = event.dataTransfer.getData("text/plain");
+        const sourceIsFixed = fixedColumnKeys.includes(sourceKey);
+        const targetIsFixed = fixedColumnKeys.includes(targetKey);
+
+        if (!sourceKey || sourceKey === targetKey || sourceIsFixed || targetIsFixed) {
+            setDragState({ sourceKey: null, targetKey: null });
+            return;
+        }
+
+        const sourceIndex = effectiveVisibleColumns.indexOf(sourceKey);
+        const targetIndex = effectiveVisibleColumns.indexOf(targetKey);
+        if (sourceIndex < 0 || targetIndex < 0) {
+            setDragState({ sourceKey: null, targetKey: null });
+            return;
+        }
+
+        const nextColumnKeys = [...effectiveVisibleColumns];
+        const [movedColumn] = nextColumnKeys.splice(sourceIndex, 1);
+        const adjustedTargetIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+        nextColumnKeys.splice(adjustedTargetIndex, 0, movedColumn);
+
+        if (onColumnOrderChange) {
+            onColumnOrderChange(nextColumnKeys);
+        } else {
+            setInternalVisibleColumns(nextColumnKeys);
+        }
+
+        setOpenFilterColumn(null);
+        setDragState({ sourceKey: null, targetKey: null });
+    };
+
     const indexColumnWidth = 56;
 
     // Each button is w-8 (32px) + gap-1 (4px between buttons), plus 4px base.
     // Keep a minimum width so the header label "Acciones" is fully visible.
-    const actionsColumnWidth = actions.length > 0 ? Math.max(actions.length * 36 + 4, 92) : 92;
+    const actionsColumnWidth = actions.length > 0 ? Math.max(actions.length * 36 + 16, 140) : 140;
 
     useEffect(() => {
         if (!preserveTableHeight || !pagination) return;
@@ -347,9 +396,112 @@ export function TablaDynamic<T extends Record<string, any>>({
                 )}
                 {/* Contenedor interno: aquí ocurre el scroll, encima del fondo fijo */}
                 <div className="relative z-2 h-full overflow-y-auto overflow-x-hidden table-scrollbar-purple">
-                <Table className={cn("w-full table-fixed", tableClassName)}>
-                    <TableHeader ref={tableHeaderRef} className="sticky top-0 z-3 bg-[linear-gradient(90deg,#6a1bb0,#4a148c)] dark:bg-[linear-gradient(90deg,#4a157a,#2d0d52)] border-b border-white/10 shadow-[0_6px_18px_rgba(32,12,62,0.35)]">
+                    <Table containerClassName="!overflow-visible" className={cn("w-full table-fixed", tableClassName)}>
+                    <TableHeader ref={tableHeaderRef} className="sticky top-0 z-20 bg-[linear-gradient(90deg,#6a1bb0,#4a148c)] dark:bg-[linear-gradient(90deg,#4a157a,#2d0d52)] border-b border-white/10 shadow-[0_6px_18px_rgba(32,12,62,0.35)]">
                         <TableRow className="bg-transparent hover:bg-transparent border-b-0">
+                            {renderColumns.length > 0 && (() => {
+                                const [firstColumn] = renderColumns;
+                                const firstColKey = String(firstColumn.key);
+                                return (
+                                    <TableHead
+                                        key={0}
+                                        draggable={!fixedColumnKeys.includes(firstColKey)}
+                                        onDragStart={(e) => {
+                                            e.dataTransfer.setData("text/plain", firstColKey);
+                                            setDragState({ sourceKey: firstColKey, targetKey: null });
+                                        }}
+                                        onDragOver={(e) => {
+                                            if (fixedColumnKeys.includes(firstColKey) || fixedColumnKeys.includes(dragState.sourceKey || "")) return;
+                                            e.preventDefault();
+                                            if (dragState.sourceKey !== firstColKey) {
+                                                setDragState((prev) => ({ ...prev, targetKey: firstColKey }));
+                                            }
+                                        }}
+                                        onDragLeave={() => {
+                                            setDragState((prev) => ({ ...prev, targetKey: null }));
+                                        }}
+                                        onDrop={(e) => {
+                                            handleColumnDrop(e, firstColKey);
+                                        }}
+                                        onDragEnd={() => {
+                                            setDragState({ sourceKey: null, targetKey: null });
+                                        }}
+                                        className={cn(
+                                            "text-white/95 text-left py-0 px-2 text-xs group/header overflow-hidden tracking-[0.015em]",
+                                            firstColumn.headerClassName,
+                                            firstColumn.sortable !== false &&
+                                            "cursor-pointer select-none",
+                                            firstColumn.hideOnMobile && "hidden md:table-cell",
+                                            dragState.sourceKey === firstColKey && "opacity-50",
+                                            dragState.targetKey === firstColKey && "bg-white/20"
+                                        )}
+                                        onClick={() => firstColumn.sortable !== false && handleSort(firstColumn)}
+                                    >
+                                        <div className="flex items-center min-w-0 gap-1">
+                                            {!fixedColumnKeys.includes(firstColKey) && (
+                                                <GripVertical className="h-3 w-3 shrink-0 opacity-40 cursor-grab active:cursor-grabbing" />
+                                            )}
+                                            {(() => {
+                                                const colKey = String(firstColumn.key);
+                                                const filterActive = !!columnFilters[colKey]?.trim();
+                                                const isEditing = openFilterColumn === colKey;
+                                                if (isEditing) {
+                                                    return (
+                                                        <div className="flex items-center gap-1 flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                                                            <input
+                                                                ref={filterInputRef}
+                                                                type="text"
+                                                                placeholder={`${firstColumn.label}...`}
+                                                                value={columnFilters[colKey] || ""}
+                                                                autoFocus
+                                                                onChange={(e) => {
+                                                                    const nextFilters = { ...columnFilters, [colKey]: e.target.value };
+                                                                    setColumnFilters(nextFilters);
+                                                                    onColumnFiltersChange?.(nextFilters);
+                                                                }}
+                                                                onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setOpenFilterColumn(null); }}
+                                                                onBlur={() => setOpenFilterColumn(null)}
+                                                                className="w-full text-xs bg-white/25 dark:bg-white/10 text-foreground dark:text-white placeholder-muted-foreground dark:placeholder-white/60 border border-white/30 dark:border-white/25 rounded px-2 py-0.5 outline-none focus:bg-white/35 dark:focus:bg-white/20"
+                                                            />
+                                                        </div>
+                                                    );
+                                                }
+                                                if (firstColumn.headerRender) {
+                                                    return firstColumn.headerRender();
+                                                }
+                                                return (
+                                                    <>
+                                                        {filterActive ? (
+                                                            <div className="flex items-center gap-1 flex-1 min-w-0">
+                                                                <span className="text-yellow-300 truncate text-xs">{columnFilters[colKey]}</span>
+                                                                <button onClick={(e) => { e.stopPropagation(); const next = { ...columnFilters }; delete next[colKey]; setColumnFilters(next); onColumnFiltersChange?.(next); }} className="p-0.5 rounded hover:bg-white/20 dark:hover:bg-white/20 shrink-0">
+                                                                    <X className="h-3 w-3 text-yellow-300" />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="truncate min-w-0 text-xs">{firstColumn.label}</span>
+                                                        )}
+                                                        {firstColumn.filterable !== false && (
+                                                            <button onClick={(e) => { e.stopPropagation(); setOpenFilterColumn(colKey); }} className={cn("ml-1 p-0.5 rounded hover:bg-white/20 dark:hover:bg-white/20 transition-all shrink-0", filterActive ? "opacity-100" : "opacity-0 group-hover/header:opacity-100")}>
+                                                                <Search className={cn("h-3 w-3", filterActive ? "text-yellow-300" : "text-white/70")} />
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
+                                        <span className="ml-auto shrink-0">{getSortIcon(firstColumn)}</span>
+                                    </TableHead>
+                                );
+                            })()}
+                            {actions.length > 0 && (
+                                <TableHead
+                                    style={{ width: `${actionsColumnWidth}px`, minWidth: `${actionsColumnWidth}px` }}
+                                    className="text-white/95 text-left py-2 px-2 text-sm"
+                                >
+                                    Acciones
+                                </TableHead>
+                            )}
                             {showIndex && (
                                 <TableHead
                                     style={{ width: `${indexColumnWidth}px`, minWidth: `${indexColumnWidth}px`, maxWidth: `${indexColumnWidth}px` }}
@@ -358,25 +510,55 @@ export function TablaDynamic<T extends Record<string, any>>({
                                     #
                                 </TableHead>
                             )}
-                            {renderColumns.map((column, index) => {
+                            {renderColumns.slice(1).map((column, index) => {
                                 const colKey = column.key as string;
+                                const isReorderable = !fixedColumnKeys.includes(colKey);
                                 const filterActive = !!columnFilters[colKey]?.trim();
                                 const isEditing = openFilterColumn === colKey;
                                 const isSortable = column.sortable !== false;
                                 const isFilterable = column.filterable !== false;
+                                const isDragSource = dragState.sourceKey === colKey;
+                                const isDragTarget = dragState.targetKey === colKey;
                                 return (
                                     <TableHead
                                         key={index}
+                                        draggable={isReorderable}
+                                        onDragStart={(e) => {
+                                            if (!isReorderable) return;
+                                            e.dataTransfer.setData("text/plain", colKey);
+                                            setDragState({ sourceKey: colKey, targetKey: null });
+                                        }}
+                                        onDragOver={(e) => {
+                                            if (!isReorderable || fixedColumnKeys.includes(dragState.sourceKey || "")) return;
+                                            e.preventDefault();
+                                            if (dragState.sourceKey !== colKey) {
+                                                setDragState((prev) => ({ ...prev, targetKey: colKey }));
+                                            }
+                                        }}
+                                        onDragLeave={() => {
+                                            setDragState((prev) => ({ ...prev, targetKey: null }));
+                                        }}
+                                        onDrop={(e) => {
+                                            handleColumnDrop(e, colKey);
+                                        }}
+                                        onDragEnd={() => {
+                                            setDragState({ sourceKey: null, targetKey: null });
+                                        }}
                                         className={cn(
                                             "text-white/95 py-0 px-2 text-xs group/header overflow-hidden tracking-[0.015em]",
                                             column.headerClassName,
                                             isSortable && !isEditing &&
                                             "cursor-pointer select-none",
-                                            column.hideOnMobile && "hidden md:table-cell"
+                                            column.hideOnMobile && "hidden md:table-cell",
+                                            isDragSource && "opacity-50",
+                                            isDragTarget && "bg-white/20"
                                         )}
                                         onClick={() => !isEditing && isSortable && handleSort(column)}
                                     >
                                         <div className="flex items-center min-w-0 gap-1">
+                                            {isReorderable && (
+                                                <GripVertical className="h-3 w-3 shrink-0 opacity-40 cursor-grab active:cursor-grabbing" />
+                                            )}
                                             {isEditing ? (
                                                 <div className="flex items-center gap-1 flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
                                                     <input
@@ -402,6 +584,8 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                         className="w-full text-xs bg-white/25 dark:bg-white/10 text-foreground dark:text-white placeholder-muted-foreground dark:placeholder-white/60 border border-white/30 dark:border-white/25 rounded px-2 py-0.5 outline-none focus:bg-white/35 dark:focus:bg-white/20"
                                                     />
                                                 </div>
+                                            ) : column.headerRender ? (
+                                                column.headerRender()
                                             ) : (
                                                 <>
                                                     {filterActive ? (
@@ -453,14 +637,6 @@ export function TablaDynamic<T extends Record<string, any>>({
                                     </TableHead>
                                 );
                             })}
-                            {actions.length > 0 && (
-                                <TableHead
-                                    style={{ width: `${actionsColumnWidth}px`, minWidth: `${actionsColumnWidth}px` }}
-                                    className="text-white/95 py-2 px-2 text-sm text-right"
-                                >
-                                    Acciones
-                                </TableHead>
-                            )}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -534,36 +710,31 @@ export function TablaDynamic<T extends Record<string, any>>({
                                             onClick={() => onRowClick?.(row, getRowIndex(index))}
                                             onDoubleClick={() => onRowDoubleClick?.(row, getRowIndex(index))}
                                         >
-                                            {showIndex && (
-                                                <TableCell
-                                                    style={{ width: `${indexColumnWidth}px`, minWidth: `${indexColumnWidth}px`, maxWidth: `${indexColumnWidth}px` }}
-                                                    className="py-2 px-2 text-xs text-center text-muted-foreground"
-                                                >
-                                                    {getRowIndex(index) + 1}
-                                                </TableCell>
-                                            )}
-                                            {renderColumns.map((column, colIndex) => (
-                                                <TableCell
-                                                    key={colIndex}
-                                                    className={cn(
-                                                        "py-2 px-3 text-xs overflow-hidden whitespace-nowrap text-ellipsis",
-                                                        column.className,
-                                                        column.hideOnMobile && "hidden md:table-cell"
-                                                    )}
-                                                >
-                                                    {renderCellContent(column, row, getRowIndex(index))}
-                                                </TableCell>
-                                            ))}
+                                            {renderColumns.length > 0 && (() => {
+                                                const [firstColumn] = renderColumns;
+                                                return (
+                                                    <TableCell
+                                                        key={0}
+                                                        className={cn(
+                                                            "py-2 px-3 text-xs overflow-hidden whitespace-nowrap text-ellipsis",
+                                                            firstColumn.className,
+                                                            firstColumn.hideOnMobile && "hidden md:table-cell"
+                                                        )}
+                                                    >
+                                                        {renderCellContent(firstColumn, row, getRowIndex(index))}
+                                                    </TableCell>
+                                                );
+                                            })()}
                                             {actions.length > 0 && (
                                                 <TableCell
-                                                    style={{ width: `${actionsColumnWidth}px`, minWidth: `${actionsColumnWidth}px`, maxWidth: `${actionsColumnWidth}px` }}
-                                                    className="py-1 px-2"
+                                                    style={{ width: `${actionsColumnWidth}px`, minWidth: `${actionsColumnWidth}px` }}
+                                                    className="py-1 px-2 overflow-visible"
                                                 >
                                                     <TooltipProvider>
-                                                        <div className="flex items-center justify-end gap-1 w-full overflow-hidden">
+                                                        <div className="flex items-center justify-start gap-1 w-max min-w-full whitespace-nowrap">
                                                             {visibleActions(row).map((action, actionIndex) => (
                                                                 action.component ? (
-                                                                    <div key={actionIndex} onClick={(e) => e.stopPropagation()}>
+                                                                    <div key={actionIndex} className="shrink-0" onClick={(e) => e.stopPropagation()}>
                                                                         {action.component(row, getRowIndex(index))}
                                                                     </div>
                                                                 ) : (
@@ -573,7 +744,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                                                 variant="ghost"
                                                                                 size="icon"
                                                                                 className={cn(
-                                                                                    "h-8 w-8 hover:bg-brand-purple/15 dark:hover:bg-purple-800/45 cursor-pointer",
+                                                                                    "h-8 w-8 shrink-0 hover:bg-brand-purple/15 dark:hover:bg-purple-800/45 cursor-pointer",
                                                                                     action.variant === "destructive" && "hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400"
                                                                                 )}
                                                                                 onClick={(e) => {
@@ -595,6 +766,26 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                     </TooltipProvider>
                                                 </TableCell>
                                             )}
+                                            {showIndex && (
+                                                <TableCell
+                                                    style={{ width: `${indexColumnWidth}px`, minWidth: `${indexColumnWidth}px`, maxWidth: `${indexColumnWidth}px` }}
+                                                    className="py-2 px-2 text-xs text-center text-muted-foreground"
+                                                >
+                                                    {getRowIndex(index) + 1}
+                                                </TableCell>
+                                            )}
+                                            {renderColumns.slice(1).map((column, colIndex) => (
+                                                <TableCell
+                                                    key={colIndex + 1}
+                                                    className={cn(
+                                                        "py-2 px-3 text-xs overflow-hidden whitespace-nowrap text-ellipsis",
+                                                        column.className,
+                                                        column.hideOnMobile && "hidden md:table-cell"
+                                                    )}
+                                                >
+                                                    {renderCellContent(column, row, getRowIndex(index))}
+                                                </TableCell>
+                                            ))}
                                         </TableRow>
                                     );
                                 })}

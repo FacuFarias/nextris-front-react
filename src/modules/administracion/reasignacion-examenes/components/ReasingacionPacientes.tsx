@@ -15,11 +15,7 @@ export const ReasingacionPacientes = ({ selectedEstudio, handleSubmit }: Reasing
     const { estudiosPacientes, isLoading } = useReasignacionExamenesPacientes();
     const [selectedPatient, setSelectedPatient] = React.useState<ReasignacionExamenesPacientes | null>(null);
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(8);
-    const handlePaginationChange = (newPage: number, newPageSize: number) => {
-        setPage(newPage);
-        setPageSize(newPageSize);
-    };
+    const [perPage, setPerPage] = useState(10);
 
     const handleConfirmReassignment = () => {
         if (selectedEstudio && selectedPatient) {
@@ -32,40 +28,37 @@ export const ReasingacionPacientes = ({ selectedEstudio, handleSubmit }: Reasing
     };
 
     return (
-        <div className="bg-card dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 p-4">
-            <div className="w-full flex justify-between">
-                <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 ">
-                    Seleccione un paciente
-                </h2>
-            </div>
-
-            {isLoading ? (
-                <div className='flex justify-center items-center h-40'>
-                    <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
-                </div>
-            ) : (
-                <TablaDynamic<ReasignacionExamenesPacientes>
-                    data={(estudiosPacientes?.data || [])}
-                    columns={pacienteEstudioColumns}
-                    showIndex
-                    selectedRow={selectedPatient}
-                    rowIdKey="guid"
-                    onRowClick={(estudioPacientes: ReasignacionExamenesPacientes) => {
-                        setSelectedPatient(estudioPacientes);
-                    }}
-                    onRowDoubleClick={(estudioPacientes: ReasignacionExamenesPacientes) => {
-                        setSelectedPatient(estudioPacientes);
-                    }}
-                    pagination={{
-                        page,
-                        pageSize,
-                        serverSide: false,
-                        total: Array.isArray(estudiosPacientes?.data) ? estudiosPacientes.data.length : 0,
-                    }}
-                    onPaginationChange={handlePaginationChange}
-                    emptyMessage="Seleccione un paciente."
-                />
-            )}
+        <>
+            <TablaDynamic<ReasignacionExamenesPacientes>
+                data={(estudiosPacientes?.data || [])}
+                columns={pacienteEstudioColumns}
+                showIndex
+                loading={isLoading}
+                selectedRow={selectedPatient}
+                rowIdKey="guid"
+                onRowClick={(estudioPacientes: ReasignacionExamenesPacientes) => {
+                    setSelectedPatient(estudioPacientes);
+                }}
+                onRowDoubleClick={(estudioPacientes: ReasignacionExamenesPacientes) => {
+                    setSelectedPatient(estudioPacientes);
+                }}
+                pagination={{
+                    page,
+                    pageSize: perPage,
+                    serverSide: false,
+                    total: Array.isArray(estudiosPacientes?.data) ? estudiosPacientes.data.length : 0,
+                }}
+                onPaginationChange={(newPage) => {
+                    setPage(newPage);
+                }}
+                perPageValue={perPage}
+                onPerPageChange={(value) => {
+                    setPerPage(value);
+                    setPage(1);
+                }}
+                perPageOptions={[10, 20, 50, 100]}
+                emptyMessage="Seleccione un paciente."
+            />
 
 
             <Modal isOpen={selectedPatient !== null} onClose={() => setSelectedPatient(null)} title="Reasignar Estudio">
@@ -167,6 +160,6 @@ export const ReasingacionPacientes = ({ selectedEstudio, handleSubmit }: Reasing
                     </PrimaryButton>
                 </div>
             </Modal>
-        </div>
+        </>
     )
 }

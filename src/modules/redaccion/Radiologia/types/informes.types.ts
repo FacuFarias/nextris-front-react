@@ -20,6 +20,8 @@ export type Informes = {
     tag_ids: string[];
     report_date: string | null;
     general_notes: string | null;
+    assigned_to: string | null;
+    assignto_name: string;
 }
 
 

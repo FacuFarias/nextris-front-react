@@ -10,7 +10,7 @@ import { useLocationsInstitutional } from "@/hooks/use-locations"
 //layout
 import { MainLayout } from "@/layouts/layout"
 //icons and react
-import { Calendar, User, ClipboardList, FileCheck, UserPlus, Loader2, CircleCheck, MapPin } from "lucide-react"
+import { Calendar, User, ClipboardList, FileCheck, UserPlus, Loader2, CircleCheck, MapPin, MonitorSmartphone } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPaciente";
 import { usePacienteDireccion } from "@/modules/admision/admision-espontanea/hooks/use-paciente-direccion"
@@ -128,21 +128,21 @@ export const NuevaCita = () => {
      }, [debouncedSearch, selectedDireccion]); */
     return (
         <MainLayout>
-            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm border border-border z-10 h-full flex flex-col overflow-hidden">
+            <div className="page-dark-gradient z-10 flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-border p-3 shadow-sm sm:p-6">
                 {/* Header con Tabs integrados */}
                 <div className="">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="mb-2 flex items-center gap-2 sm:gap-3">
                         <div className="bg-brand-purple dark:bg-gradient-to-br dark:from-purple-600 dark:to-purple-900 p-2 rounded-lg dark:shadow-[0_0_16px_rgba(139,92,246,0.5),0_2px_8px_rgba(0,0,0,0.4)]">
                             <Calendar className="w-6 h-6 text-white" />
                         </div>
-                        <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400 dark:drop-shadow-[0_0_8px_rgba(167,139,250,0.3)]">Crear cita</h1>
+                        <h1 className="text-xl font-bold text-brand-purple dark:text-purple-400 dark:drop-shadow-[0_0_8px_rgba(167,139,250,0.3)] sm:text-2xl">Crear cita</h1>
                     </div>
                     {/* Tabs modernos */}
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         <div className="relative shrink-0">
                             <TabsList
                                 ref={tabsListRef}
-                                className="bg-transparent border-b border-gray-200 dark:border-[rgba(255,255,255,0.08)] rounded-none h-auto p-0 justify-start gap-0 w-full"
+                                className="w-full justify-start gap-0 overflow-x-auto overscroll-x-contain rounded-none border-b border-gray-200 bg-transparent p-0 dark:border-[rgba(255,255,255,0.08)] [&>[data-slot=tabs-trigger]]:flex-none"
                             >
                                 {!hasSingleLocation && (
                                     <TabsTrigger
@@ -183,7 +183,7 @@ export const NuevaCita = () => {
                                 </TabsTrigger>
                                 <TabsTrigger
                                     value="agenda"
-                                    disabled={selectedEstudios.length === 0}
+                                    disabled={!hasEvents}
                                     ref={(el) => {
                                         if (el) tabRefs.current.set("agenda", el)
                                     }}
@@ -279,6 +279,7 @@ export const NuevaCita = () => {
                                             total: Array.isArray(pacientesData?.data) ? pacientesData.data.length : 0,
                                         }}
                                         onPaginationChange={handlePaginationChange}
+                                        mobileMode="cards"
                                         emptyMessage="Seleccione una dirección para ver los pacientes asociados."
                                     />
                                 )}
@@ -299,19 +300,25 @@ export const NuevaCita = () => {
                             />
                         </TabsContent>
                         <TabsContent value="agenda" className="mt-6">
-                            {<Agenda
-                                selectedPatient={selectedPatient}
-                                selectedEstudios={selectedEstudios}
-                                selectedEquipo={selectedEquipo}
-                                onAgendaSelected={(agenda) => {
-                                    setSelectedAgenda(agenda);
-                                    /* setActiveTab("prestacion"); */
-                                }}
-                                selectedDireccion={selectedDireccion}
-                                setAllEvents={setAllEvents}
-                                allEvents={allEvents}
-                                onGoNext={() => setActiveTab('prestacion')}
-                            />}
+                            <div className="rounded-xl border border-amber-300 bg-amber-50 p-5 text-center text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 md:hidden">
+                                <MonitorSmartphone className="mx-auto mb-3 h-8 w-8" />
+                                <h2 className="font-semibold">La agenda requiere una pantalla mayor</h2>
+                                <p className="mt-1 text-sm">Continúa este paso desde una tablet o computadora para arrastrar los estudios a un horario disponible.</p>
+                            </div>
+                            <div className="hidden md:block">
+                                <Agenda
+                                    selectedPatient={selectedPatient}
+                                    selectedEstudios={selectedEstudios}
+                                    selectedEquipo={selectedEquipo}
+                                    onAgendaSelected={(agenda) => {
+                                        setSelectedAgenda(agenda);
+                                    }}
+                                    selectedDireccion={selectedDireccion}
+                                    setAllEvents={setAllEvents}
+                                    allEvents={allEvents}
+                                    onGoNext={() => setActiveTab('prestacion')}
+                                />
+                            </div>
                         </TabsContent>
 
                         {/* Tab Content - Prestación */}

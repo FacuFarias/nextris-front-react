@@ -14,6 +14,9 @@ export const formatDate = (dateString: string): string => {
         const day = dateString.substring(6, 8);
         return `${day}/${month}/${year}`;
     }
-    // Si viene en otro formato, intentar parsear como fecha normal
-    return new Date(dateString).toLocaleDateString();
+    // Si viene en formato YYYY-MM-DD
+    if (dateString.includes("-")) {
+        return dateString.split("-").reverse().join("/");
+    }
+    return dateString;
 };

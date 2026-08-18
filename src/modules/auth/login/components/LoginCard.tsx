@@ -9,9 +9,8 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { User, Lock, Shield, Activity, Clipboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoginTypeSelector } from "./LoginTypeSelector";
+import clinicaLogo from "@/assets/logo/CLINICA PARQUE_LOGO.png";
 import { UseLogin } from "../hooks/use-login";
-import { Link } from "react-router-dom";
-
 interface LoginCardProps {
     isPatient: boolean;
     onTypeChange: (isPatient: boolean) => void;
@@ -50,29 +49,19 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
 
     return (
         <div className={cn(
-            "w-full max-w-md p-8 rounded-3xl shadow-card transition-theme login-card-entry",
+            "w-full max-w-md rounded-3xl p-4 shadow-card transition-theme login-card-entry sm:p-8",
             "bg-card/95 backdrop-blur-xl border border-border/50"
         )}>
-            <div className="mb-8 animate-slide-up">
-                <h2 className={cn(
-                    "font-display text-4xl font-bold tracking-tight transition-colors duration-500 text-center",
-                    isPatient ? "text-teal-700" : "text-brand-purple"
-                )}>
-                    Next<span className={cn(
-                        "transition-colors duration-500",
-                        isPatient ? "text-cyan-600" : "text-indigo-400"
-                    )}>RIS</span>
-                </h2>
-                <p className={cn(
-                    "text-center text-sm mt-1 transition-colors duration-500",
-                    isPatient ? "text-teal-600/70" : "text-brand-purple/70"
-                )}>
-                    Sistema de Información Radiológica
-                </p>
+            <div className="mb-4 animate-slide-up flex flex-col items-center sm:mb-8">
+                <img
+                    src={clinicaLogo}
+                    alt="Clínica Parque"
+                    className="h-24 w-auto sm:h-32"
+                />
             </div>
 
             {/* Title */}
-            <div className="text-center mb-8">
+            <div className="mb-5 text-center sm:mb-8">
                 <h1 className="font-display text-2xl font-bold text-foreground mb-2">
                     {isPatient ? "Portal del Paciente" : "Portal Médico"}
                 </h1>
@@ -107,7 +96,7 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
                                             </div>
                                             <Input
                                                 type="text"
-                                                placeholder={isPatient ? "Número de documento" : "Usuario médico"}
+                                                placeholder={isPatient ? "Usuario ID" : "Usuario médico"}
                                                 className="pl-12"
                                                 disabled={mutation.isLoading}
                                                 {...field}
@@ -195,18 +184,6 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
                         )}
                     </Button>
 
-                    {!isPatient && (
-                        <Link to="/registro-gratuito" className="block">
-                            <Button
-                                type="button"
-                                size="lg"
-                                variant="outline"
-                                className="w-full"
-                            >
-                                Crear Usuario Gratuito
-                            </Button>
-                        </Link>
-                    )}
                 </form>
             </Form>
 

@@ -8,29 +8,34 @@ const admisionColumns: TableColumn<Patient>[] = [
         key: "name",
         label: "NOMBRE",
         className: "font-medium",
+        mobile: { role: "title", order: 1 },
     },
     {
         key: "surname",
         label: "APELLIDO",
         className: "font-medium",
+        mobile: { label: "Apellido", order: 2 },
     },
     {
         key: "gender",
         label: "GENERO",
         className: "font-medium",
         hideOnMobile: true,
+        mobile: { label: "Género", order: 4 },
     },
     {
         key: "birthdate",
         label: "FECHA DE NACIMIENTO",
         className: "font-medium",
         hideOnMobile: true,
+        mobile: { role: "hidden" },
     },
     {
         key: "nationalcode",
         label: "DNI",
         className: "font-medium",
         hideOnMobile: true,
+        mobile: { label: "DNI", order: 3 },
     },
 ];
 

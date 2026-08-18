@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
 interface UserModulesData {
   module_codes: string[];
@@ -15,12 +16,15 @@ interface UserModulesResponse {
 }
 
 const userModulesKeys = {
-  me: ['user-modules'] as const,
+  me: (userId: string) => ['user-modules', userId] as const,
 };
 
 export const useUserModules = (enabled = true) => {
+  const { authData } = useAuth();
+  const userId = authData?.user?.id ?? 'anonymous';
+
   const { data, isLoading, error } = useQuery({
-    queryKey: userModulesKeys.me,
+    queryKey: userModulesKeys.me(userId),
     queryFn: async (): Promise<UserModulesData> => {
       const response = await api.get<UserModulesResponse>('/config/me/modules');
       return response.data.data;

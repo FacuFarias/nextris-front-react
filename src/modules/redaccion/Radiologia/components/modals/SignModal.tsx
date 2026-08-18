@@ -12,6 +12,7 @@ interface SignModalProps {
     setPassword: (password: string) => void;
     isSigning: boolean;
     onVerifyCredentials: () => void;
+    requirePassword?: boolean;
 }
 
 export const SignModal = ({
@@ -21,7 +22,8 @@ export const SignModal = ({
     password,
     setPassword,
     isSigning,
-    onVerifyCredentials
+    onVerifyCredentials,
+    requirePassword = true
 }: SignModalProps) => {
     return (
         <Modal
@@ -41,7 +43,9 @@ export const SignModal = ({
                         <p className={`text-sm ${isSigned ? 'text-red-700' : 'text-blue-700'} mt-1`}>
                             {isSigned
                                 ? 'Esta acción removerá la firma del informe y permitirá editarlo nuevamente.'
-                                : 'Esta acción requiere verificación de su identidad mediante contraseña.'}
+                                : requirePassword
+                                    ? 'Esta acción requiere verificación de su identidad mediante contraseña.'
+                                    : 'Esta acción firmará el informe sin verificación de contraseña.'}
                         </p>
                     </div>
                 </div>
@@ -50,21 +54,22 @@ export const SignModal = ({
                 <div className="space-y-2">
                     <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                         <Lock className="h-4 w-4 text-gray-500" />
-                        Contraseña
+                        Contraseña {requirePassword && <span className="text-red-500">*</span>}
                     </label>
                     <div className="relative">
                         <Input
                             type="password"
-                            placeholder="Ingrese su contraseña"
+                            placeholder={requirePassword ? "Ingrese su contraseña" : "Contraseña no requerida"}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="pl-10 h-12 text-base border-gray-300 focus:border-brand-purple focus:ring-brand-purple"
                             onKeyDown={(e) => {
-                                if (e.key === 'Enter' && password.trim() && !isSigning) {
+                                if (e.key === 'Enter' && (requirePassword ? password.trim() : true) && !isSigning) {
                                     onVerifyCredentials();
                                 }
                             }}
-                            autoFocus
+                            autoFocus={requirePassword}
+                            disabled={!requirePassword}
                         />
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     </div>
@@ -78,7 +83,7 @@ export const SignModal = ({
                     </SecondaryButton>
                     <PrimaryButton
                         onClick={onVerifyCredentials}
-                        disabled={!password.trim() || isSigning}
+                        disabled={(requirePassword && !password.trim()) || isSigning}
                     >
                         <Signature className="h-5 w-5 mr-2" />
                         {isSigning ? (isSigned ? 'Quitando firma...' : 'Firmando...') : (isSigned ? 'Confirmar y Quitar Firma' : 'Confirmar y Firmar')}

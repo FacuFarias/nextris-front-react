@@ -1,9 +1,29 @@
 import { api } from "@/lib/api"
 
-export const getInformes = async ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, show_only_with_notes = false, modality_id = "", bodypart_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc", facility_id = "" }) => {
+export const getInformes = async ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, assigned_to_me = false, show_no_image = false, show_without_order = false, show_only_with_notes = false, modality_id = "", bodypart_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc", facility_id = "" }) => {
 
     try {
-        const response = await api.get(`/examinations/for-reporting?page=${page}&per_page=${per_page}&search=${search}&show_reported=${show_reported}&show_ready=${show_ready}&show_no_image=${show_no_image}&show_only_with_notes=${show_only_with_notes}&modality_id=${modality_id}&body_part_id=${bodypart_id}&study_group_id=${study_group_id}&flag_filter=${flag_filter}&date_range=${date_range}&date_field=${date_field}&sort_column=${sort_column}&sort_direction=${sort_direction}&facility_id=${facility_id}`);
+        const params = new URLSearchParams({
+            page: String(page),
+            per_page: String(per_page),
+            search,
+            show_reported: String(show_reported),
+            show_ready: String(show_ready),
+            assigned_to_me: String(assigned_to_me),
+            show_no_image: String(show_no_image),
+            show_without_order: String(show_without_order),
+            show_only_with_notes: String(show_only_with_notes),
+            modality_id: modality_id || "",
+            body_part_id: bodypart_id || "",
+            study_group_id: study_group_id || "",
+            flag_filter,
+            date_range,
+            date_field,
+            sort_column,
+            sort_direction,
+            facility_id: facility_id || "",
+        });
+        const response = await api.get(`/examinations/for-reporting?${params.toString()}`);
         return response.data;
     } catch (error) {
         throw error;
@@ -73,9 +93,62 @@ export const updateExaminationTagIds = async (exam_id: string, tag_ids: string[]
     }
 }
 
+export const assignExamBatch = async (exam_ids: string[], user_id: string) => {
+    try {
+        const results = await Promise.allSettled(
+            exam_ids.map(exam_id =>
+                api.post(`/reports/${exam_id}/assign`, { user_id })
+            )
+        );
+        const failed = results.filter(r => r.status === 'rejected').length;
+        if (failed > 0) {
+            throw new Error(`${failed} de ${exam_ids.length} estudios no pudieron ser asignados`);
+        }
+        return { success: true, message: `${exam_ids.length} estudios asignados correctamente` };
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const addTagsToExamsBatch = async (exam_ids: string[], tag_ids: string[]) => {
+    try {
+        const results = await Promise.allSettled(
+            exam_ids.map(exam_id =>
+                api.patch(`/examinations/${exam_id}/tag_ids`, { tag_ids })
+            )
+        );
+        const failed = results.filter(r => r.status === 'rejected').length;
+        if (failed > 0) {
+            throw new Error(`${failed} de ${exam_ids.length} estudios no pudieron ser actualizados`);
+        }
+        return { success: true, message: `${exam_ids.length} estudios actualizados correctamente` };
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const addFlagsToExamsBatch = async (exam_ids: string[], flags: string[]) => {
+    try {
+        const results = await Promise.allSettled(
+            exam_ids.map(exam_id =>
+                api.patch(`/examinations/${exam_id}/flags`, { flags })
+            )
+        );
+        const failed = results.filter(r => r.status === 'rejected').length;
+        if (failed > 0) {
+            throw new Error(`${failed} de ${exam_ids.length} estudios no pudieron ser actualizados`);
+        }
+        return { success: true, message: `${exam_ids.length} estudios actualizados correctamente` };
+    } catch (error) {
+        throw error;
+    }
+};
+
 export const updateGeneralNotes = async (exam_id: string, general_notes: string) => {
     try {
-        const response = await api.patch(`/examinations/${exam_id}/general-notes`, { general_notes });
+        const response = await api.patch(`/examinations/${exam_id}/notes`, {
+            others_details: general_notes,
+        });
         return response.data;
     } catch (error) {
         throw error;
@@ -94,6 +167,15 @@ export const getAllTags = async () => {
 export const getPatientHistory = async (patientId: string) => {
     try {
         const response = await api.get(`/patients/${patientId}/history`);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const assignExam = async (exam_id: string, user_id: string) => {
+    try {
+        const response = await api.post(`/reports/${exam_id}/assign`, { user_id });
         return response.data;
     } catch (error) {
         throw error;

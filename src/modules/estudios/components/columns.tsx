@@ -3,8 +3,9 @@ import type { TableColumn } from "@/types/table";
 import type { Study } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Image, Calendar, Clock, User, MapPin, Share2, Loader2 } from "lucide-react";
+import { FileText, Image, Calendar, Clock, User, Share2, Loader2, Stethoscope } from "lucide-react";
 import { estudiosService } from "../services/estudios.service";
+import { toast } from "sonner";
 
 const ReportButton = ({ study }: { study: Study }) => {
     const [loading, setLoading] = useState(false);
@@ -36,6 +37,61 @@ const ReportButton = ({ study }: { study: Study }) => {
     );
 };
 
+const ViewImagesButton = ({ study }: { study: Study }) => {
+    const [loading, setLoading] = useState(false);
+
+    const handleViewDicom = () => {
+        if (!study.study_uid) {
+            toast.error("El estudio no tiene Study Instance UID");
+            return;
+        }
+
+        setLoading(true);
+
+        const authDataRaw = localStorage.getItem("authData");
+        const token = authDataRaw ? JSON.parse(authDataRaw).access_token : null;
+
+        fetch("/api/general/viewer-url-by-iuid", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ study_iuid: study.study_uid }),
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                setLoading(false);
+                if (data.success && data.data?.viewer_url) {
+                    window.open(data.data.viewer_url, "_blank");
+                } else {
+                    toast.error(data.message || "No se pudo obtener la URL del visor");
+                }
+            })
+            .catch(() => {
+                setLoading(false);
+                toast.error("No se pudo abrir el visor DICOM");
+            });
+    };
+
+    return (
+        <Button
+            size="sm"
+            variant="outline"
+            className="gap-1 h-7 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+            onClick={handleViewDicom}
+            disabled={loading}
+        >
+            {loading ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+                <Image className="h-3 w-3" />
+            )}
+            Imágenes
+        </Button>
+    );
+};
+
 export const createStudyColumns = (onShare: (study: Study) => void): TableColumn<Study>[] => [
     {
         key: "accession_number",
@@ -62,7 +118,7 @@ export const createStudyColumns = (onShare: (study: Study) => void): TableColumn
                 <Calendar className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                 <div>
                     <div className="text-sm font-medium">
-                        {new Date(value).toLocaleDateString("es-AR")}
+                        {value ? value.split("-").reverse().join("/") : ""}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                         <Clock className="h-3 w-3" />
@@ -87,23 +143,23 @@ export const createStudyColumns = (onShare: (study: Study) => void): TableColumn
         hideOnMobile: true,
     },
     {
-        key: "referring_physician",
-        label: "MÉDICO",
+        key: "requesting_physician",
+        label: "MÉDICO SOLICITANTE",
         render: (value) => (
             <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                <span className="text-sm">{value}</span>
+                <Stethoscope className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                <span className="text-sm">{value || "-"}</span>
             </div>
         ),
         hideOnMobile: true,
     },
     {
-        key: "location",
-        label: "UBICACIÓN",
+        key: "author_physician",
+        label: "MÉDICO AUTOR",
         render: (value) => (
             <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                <span className="text-sm">{value}</span>
+                <User className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                <span className="text-sm">{value || "-"}</span>
             </div>
         ),
         hideOnMobile: true,
@@ -114,22 +170,7 @@ export const createStudyColumns = (onShare: (study: Study) => void): TableColumn
         render: (_, row) => (
             <div className="flex flex-wrap gap-2 items-center">
                 {row.has_report && <ReportButton study={row} />}
-                {row.has_images && row.study_uid && (
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1 h-7 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-                        onClick={() =>
-                            window.open(
-                                `https://viewer.nextris.cloud/viewer?StudyInstanceUIDs=${row.study_uid}`,
-                                "_blank"
-                            )
-                        }
-                    >
-                        <Image className="h-3 w-3" />
-                        Imágenes
-                    </Button>
-                )}
+                {row.has_images && row.study_uid && <ViewImagesButton study={row} />}
                 {row.has_report && (
                     <Button
                         size="sm"

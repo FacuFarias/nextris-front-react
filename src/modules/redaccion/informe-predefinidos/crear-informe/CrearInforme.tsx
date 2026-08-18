@@ -17,6 +17,7 @@ import { parserFacilityRelService } from "@/services/parser-facility-rel.service
 import { criteriaService, type ParserCriterionVariable, type StructuredCriterion } from "@/services/criteria.service";
 import type { ReportType } from "../types/informe-pred.types";
 import { useAuth } from "@/context/AuthContext";
+import type { CommandProps } from "@tiptap/core";
 
 const stripVariablePlaceholdersFromHtml = (html: string): string => {
     if (!html) return html;
@@ -114,6 +115,29 @@ export const CrearInforme = () => {
     }, [editorsRef]);
 
     const activeEditor: any = activeEditorField ? editorsRef.current[activeEditorField] : null;
+
+    const handleInsertPlaceholder = () => {
+        if (!activeEditor) return;
+
+        const { from, to, empty } = activeEditor.state.selection;
+
+        if (empty) {
+            activeEditor.chain().focus().insertContent('[[ ]]').run();
+            return;
+        }
+
+        activeEditor
+            .chain()
+            .focus()
+            .command(({ tr }: CommandProps) => {
+                // Insertar desde el final evita desplazar la posición inicial del rango.
+                // El contenido seleccionado y sus marcas (negrita, cursiva, etc.) se conservan.
+                tr.insertText(']]', to);
+                tr.insertText('[[', from);
+                return true;
+            })
+            .run();
+    };
 
     const handleVariableDragStart = (variableName: string) => {
         const normalized = (variableName || '').trim();
@@ -392,12 +416,12 @@ export const CrearInforme = () => {
                 }
 
                 toast.success("Plantilla actualizada exitosamente");
+                navigate('/estudios/informes-predefinidos');
             } else {
                 // Modo creación: crear nueva plantilla
                 await createTemplateMutation.mutateAsync(templatePayload);
                 toast.success("Plantilla creada exitosamente");
 
-                // En creación volvemos al listado; en edición permanecemos en la vista actual
                 navigate('/estudios/informes-predefinidos');
             }
         } catch (error: any) {
@@ -487,10 +511,10 @@ export const CrearInforme = () => {
 
     return (
         <MainLayout>
-            <div className="h-full min-h-0 bg-gray-50 dark:bg-[#0f1218] rounded-xl p-2 dark:text-gray-100 flex flex-col overflow-hidden">
-                <div className="flex justify-between items-center mb-3 shrink-0">
-                    <div className="relative bg-white dark:bg-[#151922] rounded-lg p-3 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 w-full">
-                        <div className="flex items-center gap-3 text-gray-800 dark:text-gray-100">
+            <div className="flex h-full min-h-0 flex-col overflow-y-auto rounded-xl bg-gray-50 p-2 dark:bg-[#0f1218] dark:text-gray-100 lg:overflow-hidden">
+                <div className="mb-3 shrink-0">
+                    <div className="relative flex w-full flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-[#151922] sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 items-center gap-2 text-gray-800 dark:text-gray-100 sm:gap-3">
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -505,21 +529,18 @@ export const CrearInforme = () => {
                                     <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"></path>
                                 </svg>
                             </div>
-                            <h1 className="text-2xl font-semibold">
+                            <h1 className="min-w-0 text-lg font-semibold leading-tight sm:text-2xl">
                                 {isEditMode ? "Editar Informe Predefinido" : "Crear Informe Predefinido"}
                             </h1>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
                             <Button
                                 variant="outline"
                                 className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1e2430] font-mono"
                                 disabled={!activeEditor}
-                                title="Insertar [[ ]] en el cursor (placeholder de informe)"
-                                onClick={() => {
-                                    if (!activeEditor) return;
-                                    activeEditor.chain().focus().insertContent('[[ ]]').run();
-                                }}
+                                title="Envolver la selección con [[ ]] o insertarlos en el cursor"
+                                onClick={handleInsertPlaceholder}
                             >
                                 [[ ]]
                             </Button>
@@ -547,9 +568,9 @@ export const CrearInforme = () => {
 
                 {/* Layout principal como Redactar Informe */}
                 <div className="flex-1 min-h-0 relative">
-                    <div className="flex gap-1 h-full">
+                    <div className="flex h-full flex-col gap-2 lg:flex-row lg:gap-1">
                         {/* Columna Izquierda: Redacción */}
-                        <div className="flex-1 space-y-2.5 p-2.5 transition-all ease-in-out min-w-0 bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-y-auto h-full table-scrollbar-purple">
+                        <div className="min-w-0 flex-1 space-y-2.5 overflow-y-auto rounded-lg border border-gray-200 bg-white p-2 transition-all ease-in-out dark:border-gray-700 dark:bg-[#151922] lg:h-full lg:p-2.5 table-scrollbar-purple">
                         {/* Toolbar única global */}
                         <div className="sticky top-0 z-20 bg-gray-50 dark:bg-[#0f1218] rounded-md border border-gray-200 dark:border-gray-700 p-1.5 flex items-center gap-0.5 flex-wrap">
                             <button onClick={() => activeEditor?.chain().focus().toggleBold().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('bold') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Negrita" disabled={!activeEditor}><Bold className="w-4 h-4 dark:text-gray-200" /></button>
@@ -694,7 +715,7 @@ export const CrearInforme = () => {
 
                         {/* Columna Derecha: secciones de metadata */}
                         {isStudySidebarOpen && (
-                            <div className="w-full lg:w-[360px] shrink-0 h-full overflow-y-auto table-scrollbar-purple">
+                            <div className="h-auto w-full shrink-0 overflow-y-auto lg:h-full lg:w-[360px] table-scrollbar-purple">
                                 <Card className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden p-0">
                                     <div className="bg-gray-100 dark:bg-[#1e2430] px-2 py-2 border-b border-gray-200 dark:border-gray-700">
                                         <div className={`grid gap-1 ${showStructuredTabs ? 'grid-cols-3' : 'grid-cols-1'}`}>

@@ -1,6 +1,6 @@
 import { Archive, Image, Link2, RefreshCw, Loader2, ChevronLeft, ChevronRight, Search, ArrowRight, CheckCircle2, ScanLine } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { DireccionSelector, PrimaryButton, SecondaryButton } from "@/components"
+import { PrimaryButton, SecondaryButton } from "@/components"
 import { useState, useMemo } from "react"
 import { useEstudiosNoVinculados, useSearchExams, useVincularEstudio } from "../hooks/use-cargar-estudios"
 import {
@@ -12,10 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { formatDate } from "@fullcalendar/core/index.js"
 
-
-
 export const VincularImagenTab = () => {
-    const [selectedDireccion, setSelectedDireccion] = useState<string>("");
     const [selectedEstudio, setSelectedEstudio] = useState<any>(null);
     const [selectedOrden, setSelectedOrden] = useState<any>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -30,9 +27,8 @@ export const VincularImagenTab = () => {
     const [ordenesPagina, setOrdenesPagina] = useState(1);
     const [ordenesPerPage] = useState(10);
 
-
-    const { estudiosNoVinculadosData, isLoading, refetchEstudiosNoVinculados } = useEstudiosNoVinculados({ location_id: selectedDireccion });
-    const { ordenesSinImagenData, isLoading: isLoadingOrdenes, refetchOrdenesSinImagen } = useSearchExams({ location_id: selectedDireccion });
+    const { estudiosNoVinculadosData, isLoading, refetchEstudiosNoVinculados } = useEstudiosNoVinculados();
+    const { ordenesSinImagenData, isLoading: isLoadingOrdenes, refetchOrdenesSinImagen } = useSearchExams();
     const { mutate: vincularEstudio } = useVincularEstudio();
 
     // Datos paginados para estudios
@@ -61,14 +57,6 @@ export const VincularImagenTab = () => {
         const fin = inicio + ordenesPerPage;
         return ordenesFiltradas.slice(inicio, fin);
     }, [ordenesFiltradas, ordenesPagina, ordenesPerPage]);
-
-    const handleDireccionChange = (direccionId: string) => {
-        setSelectedDireccion(direccionId);
-        setSelectedEstudio(null);
-        setSelectedOrden(null);
-        setEstudiosPagina(1);
-        setOrdenesPagina(1);
-    };
 
     const handleEstudioClick = (estudio: any) => {
         setSelectedEstudio(estudio);
@@ -130,25 +118,14 @@ export const VincularImagenTab = () => {
 
     return (
         <>
-            {/* Selector de dirección */}
-            <div className="mb-5">
-                <DireccionSelector
-                    selectedDireccion={selectedDireccion}
-                    onDireccionChange={handleDireccionChange}
-                    isRow={true}
-                    includeAllOption={true}
-                />
-            </div>
-
-            {selectedDireccion && (
-                <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4">
                     {/* Grilla de dos paneles */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
                         {/* ── PANEL IZQUIERDO: Estudios Sin Vincular ── */}
-                        <div className="flex flex-col rounded-xl overflow-hidden border border-purple-200 dark:border-purple-900 shadow-sm">
+                        <div className="flex flex-col overflow-x-auto overflow-y-hidden rounded-xl border border-purple-200 shadow-sm dark:border-purple-900">
                             {/* Header */}
-                            <div className="bg-gradient-to-r from-brand-purple to-purple-700 px-5 py-4 text-white">
+                            <div className="min-w-[420px] bg-gradient-to-r from-brand-purple to-purple-700 px-5 py-4 text-white">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="bg-white/15 p-2 rounded-lg">
@@ -176,7 +153,7 @@ export const VincularImagenTab = () => {
                             </div>
 
                             {/* Tabla */}
-                            <div className="flex-1 flex flex-col bg-transparent">
+                            <div className="flex min-w-[420px] flex-1 flex-col bg-transparent">
                                 {/* Cabecera tabla */}
                                 <div className="grid grid-cols-3 px-4 py-2.5 bg-transparent border-b border-gray-200/60 dark:border-gray-700/60">
                                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Paciente</span>
@@ -254,9 +231,9 @@ export const VincularImagenTab = () => {
                         </div>
 
                         {/* ── PANEL DERECHO: Órdenes Sin Imagen ── */}
-                        <div className="flex flex-col rounded-xl overflow-hidden border border-cyan-200 dark:border-cyan-900 shadow-sm">
+                        <div className="flex flex-col overflow-x-auto overflow-y-hidden rounded-xl border border-cyan-200 shadow-sm dark:border-cyan-900">
                             {/* Header */}
-                            <div className="bg-gradient-to-r from-cyan-600 to-cyan-500 px-5 py-4 text-white">
+                            <div className="min-w-[540px] bg-gradient-to-r from-cyan-600 to-cyan-500 px-5 py-4 text-white">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="bg-white/15 p-2 rounded-lg">
@@ -305,7 +282,7 @@ export const VincularImagenTab = () => {
                             </div>
 
                             {/* Tabla */}
-                            <div className="flex-1 flex flex-col bg-transparent">
+                            <div className="flex min-w-[540px] flex-1 flex-col bg-transparent">
                                 {/* Cabecera tabla */}
                                 <div className="grid grid-cols-4 px-4 py-2.5 bg-transparent border-b border-gray-200/60 dark:border-gray-700/60">
                                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Paciente</span>
@@ -447,7 +424,6 @@ export const VincularImagenTab = () => {
                         )}
                     </div>
                 </div>
-            )}
 
             {/* Modal de confirmación */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

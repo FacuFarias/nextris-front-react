@@ -31,6 +31,7 @@ interface RichTextEditorProps {
     onDrop?: (e: React.DragEvent) => void;
     onEditorReady?: (editor: any) => void;
     readOnly?: boolean;
+    readOnlyLabel?: string;
     showToolbar?: boolean;
     variableChipTone?: 'default' | 'warning';
 }
@@ -156,6 +157,7 @@ export const RichTextEditor = ({
     onDrop,
     onEditorReady,
     readOnly = false,
+    readOnlyLabel = 'Campo bloqueado - Documento firmado',
     showToolbar = true,
     variableChipTone = 'default'
 }: RichTextEditorProps) => {
@@ -197,6 +199,10 @@ export const RichTextEditor = ({
         }
     }, [value, editor]);
 
+    useEffect(() => {
+        editor?.setEditable(!readOnly);
+    }, [editor, readOnly]);
+
     // Notificar cuando el editor esté listo
     useEffect(() => {
         if (editor && onEditorReady) {
@@ -215,7 +221,7 @@ export const RichTextEditor = ({
                 <div className="relative z-10 flex items-center gap-2 px-2 py-1.5 bg-yellow-50 dark:bg-yellow-900/30 border-b border-yellow-200 dark:border-yellow-800">
                     <Lock className="w-4 h-4 text-yellow-700 dark:text-yellow-400" />
                     <span className="text-xs font-medium text-yellow-700 dark:text-yellow-400">
-                        Campo bloqueado - Documento firmado
+                        {readOnlyLabel}
                     </span>
                 </div>
             )}

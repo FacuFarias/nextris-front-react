@@ -53,14 +53,14 @@ export const Modal = ({
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogContent className={cn(sizeClasses[size], className)} showCloseButton={showCloseButton}>
                 {(title || description) && (
-                    <DialogHeader className="bg-brand-purple text-white p-4 rounded-t-lg -m-6 mb-6">
+                    <DialogHeader className="-m-4 mb-4 rounded-t-lg bg-brand-purple p-4 pr-10 text-white sm:-m-6 sm:mb-6">
                         {title && <DialogTitle className="text-white">{title}</DialogTitle>}
                         {description && (
                             <DialogDescription className="text-white/90">{description}</DialogDescription>
                         )}
                     </DialogHeader>
                 )}
-                <div>{children}</div>
+                <div className="min-h-0 overflow-y-auto overscroll-contain pr-1">{children}</div>
             </DialogContent>
         </Dialog>
     );

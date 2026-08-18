@@ -1,11 +1,10 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import posthog from "posthog-js";
+import { api } from "@/lib/api";
+import { queryClient } from "@/lib/queryClient";
 
 interface User {
     email: string;
-    email_verification_required?: boolean;
-    email_verified?: boolean;
-    facility_id?: string | null;
     id: string;
     location_id?: string | null;
     name: string;
@@ -32,6 +31,7 @@ interface AuthContextType {
     logout: () => void;
     updateUser: (user: User) => void;
     markPasswordChanged: () => void;
+    refreshPermissions: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,9 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const login = (data: AuthData) => {
         setAuthData(data);
-        // Guardar en localStorage
         localStorage.setItem("authData", JSON.stringify(data));
-        // Identify user in PostHog
         try {
             posthog.identify(data.user.id, {
                 username: data.user.username,
@@ -65,16 +63,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 email: data.user.email,
                 role_id: data.user.role_id,
                 user_type: data.user.user_type,
-                facility_id: data.user.facility_id ?? null,
             });
             posthog.capture("user_login", { user_type: data.user.user_type });
         } catch {
-            // silent — analytics must never break auth
+            // silent
         }
     };
 
     const logout = () => {
-        // Capture before clearing state
         try {
             posthog.capture("user_logout");
             posthog.reset();
@@ -82,9 +78,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // silent
         }
         setAuthData(null);
-        // Limpiar localStorage
         localStorage.removeItem("authData");
         localStorage.removeItem("activeFacilityId");
+        queryClient.clear();
     };
 
     const updateUser = (user: User) => {
@@ -112,6 +108,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem("authData", JSON.stringify(updatedAuthData));
     };
 
+    const refreshPermissions = async () => {
+        if (!authData) {
+            return;
+        }
+
+        try {
+            const response = await api.post<{ success: boolean; data: { permissions: string[] } }>(
+                "/auth/refresh-permissions"
+            );
+            const newPermissions = response.data.data.permissions;
+            const updatedAuthData = {
+                ...authData,
+                user: {
+                    ...authData.user,
+                    permissions: newPermissions,
+                },
+            };
+            setAuthData(updatedAuthData);
+            localStorage.setItem("authData", JSON.stringify(updatedAuthData));
+        } catch (error) {
+            console.error("[AuthContext] Error refreshing permissions:", error);
+            throw error;
+        }
+    };
+
 
 
     const isAuthenticated = !!authData;
@@ -126,6 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 logout,
                 updateUser,
                 markPasswordChanged,
+                refreshPermissions,
             }}
         >
             {children}

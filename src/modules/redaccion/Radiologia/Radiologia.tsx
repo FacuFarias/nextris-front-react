@@ -1,11 +1,12 @@
 import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
 import { InputSearch } from "@/components/InputSearch"
 import { MainLayout } from "@/layouts/layout"
-import { HandHelping, RefreshCcw, Loader2, AlertTriangle } from "lucide-react"
+import { HandHelping, RefreshCcw, Loader2, AlertTriangle, SlidersHorizontal, X, UserCheck, Tags, Flag } from "lucide-react"
 import { useMemo, useState, useEffect, useRef, useCallback } from "react"
-import { useInformes, useBlockExam, useUnblockExam, useUpdateFlags, useUpdateTagIds, useAllTags, useUpdateGeneralNotes } from "./hooks/use-informes"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { useInformes, useBlockExam, useUnblockExam, useUpdateFlags, useUpdateTagIds, useAllTags, useUpdateGeneralNotes, useAssignExam, useAssignExamBatch, useAddTagsBatch, useAddFlagsBatch } from "./hooks/use-informes"
 import { useCrossWindowSync } from "./redactar-informe/hooks/use-cross-windows"
-import { getInformesActions, getFlagsColumn, getTagsColumn, getGeneralNotesAction, getPatientNameColumn, informeColumns } from "./components/columns"
+import { getInformesActions, getFlagsColumn, getTagsColumn, getGeneralNotesAction, getPatientNameColumn, getSelectionColumn, informeColumns } from "./components/columns"
 import TablaDynamic from "@/components/TableDynamic"
 import type { Informes } from "./types/informes.types"
 import type { FilterPreset, FilterPresetFilters } from "./types/filter-preset.types"
@@ -16,6 +17,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { ConfirmationModal } from "./components/ConfirmationModal"
+import { AssignExamModal } from "./components/AssignExamModal"
+import { MultiSelectActionsModal } from "./components/MultiSelectActionsModal"
 import { FilterPresetTabs } from "./components/FilterPresetTabs"
 import { Autocomplete } from "@/components/autocomplete"
 import { useBodyParts } from "@/modules/configuracion/configuracion-tablas/examenes/partes-cuerpo"
@@ -23,28 +26,64 @@ import { useModalidades } from "@/modules/configuracion/configuracion-tablas/exa
 import { useGrupoEstudio } from "@/modules/configuracion/configuracion-tablas/examenes/grupos-estudio"
 import { useFilterPresets } from "./hooks/use-filter-presets"
 import { useAuth } from "@/context/AuthContext"
-import { useFacility } from "@/context/FacilityContext"
+import { useAppConfig } from "@/context/AppConfigContext"
 import { getDicomViewerUrl } from "@/services/dicomViewer"
+import { cancelPreparedViewer, openStudyInViewer, prepareViewerWindow } from "@/services/viewerWindow"
+import type { ViewerWindowTicket } from "@/services/viewerWindow"
 import { api } from "@/lib/api"
 import { useQuery } from "@tanstack/react-query"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
 import fondoImage from "@/assets/redaccion.jpg"
 import backDarkImage from "@/assets/back-dark.jpg";
 
+const FIXED_COLUMN_KEYS = ["_selection", "is_reported"] as const;
+
+const normalizeVisibleColumns = (columnKeys: string[]) => [
+    ...FIXED_COLUMN_KEYS,
+    ...columnKeys.filter((key) => !FIXED_COLUMN_KEYS.includes(key as typeof FIXED_COLUMN_KEYS[number])),
+];
+
+const showViewerError = (error: unknown) => {
+    const requestError = error as {
+        response?: { status?: number; data?: { message?: string } };
+    };
+    const status = requestError.response?.status;
+
+    if (status === 403) {
+        toast.error('No tienes permisos para ver las imágenes de esta ubicación');
+    } else if (status === 404) {
+        toast.error('El examen no tiene imágenes asociadas');
+    } else {
+        toast.error(requestError.response?.data?.message || 'No se pudo abrir el visor DICOM');
+    }
+};
+
 export const Radiologia = () => {
+    const isMobile = useIsMobile();
     // Hook para sincronizar entre ventanas
     useCrossWindowSync();
 
-    const { authData } = useAuth();
-    const { selectedFacilityId } = useFacility();
+    const { authData, refreshPermissions } = useAuth();
+    const { config } = useAppConfig();
+
+    useEffect(() => {
+        refreshPermissions();
+    }, []);
     const isAdmin = authData?.user?.name === "Administrador";
 
     const { data: facilityPlanData } = useQuery({
-        queryKey: ["facility-plan", selectedFacilityId, "radiologia"],
+        queryKey: ["facility-plan", config?.id?.toString() || "1", "radiologia"],
         queryFn: async () => {
-            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
+            const response = await api.get(`/config/facilities/${config?.id?.toString() || "1"}/plan`);
             return response.data?.data || null;
         },
-        enabled: Boolean(authData && selectedFacilityId),
+        enabled: Boolean(authData && config?.id?.toString() || "1"),
         staleTime: 60 * 1000,
     });
 
@@ -54,9 +93,6 @@ export const Radiologia = () => {
         typeof readMonthlyLimit === "number"
         && readMonthlyLimit >= 0
         && readCount >= readMonthlyLimit;
-
-    // Ref para guardar las ventanas del visor de imágenes (windowId -> Window)
-    const viewerWindowsRef = useRef<Map<string, Window>>(new Map());
 
     const [studioTypeId, setStudioTypeId] = useState<string | undefined>(undefined);
     const [bodyPartId, setBodyPartId] = useState<string | undefined>(undefined);
@@ -68,18 +104,19 @@ export const Radiologia = () => {
     const [asignadosAMi, setAsignadosAMi] = useState(false);
     const [listoParaLeer, setListoParaLeer] = useState(true);
     const [verSinImagenes, setVerSinImagenes] = useState(false);
+    const [verSinOrden, setVerSinOrden] = useState(false);
     const [soloConNotas, setSoloConNotas] = useState(false);
     const [flagFilter, setFlagFilter] = useState<string[]>([]);
     const [dateRange, setDateRange] = useState<string>("all");
     const [dateField, setDateField] = useState<string>("admision");
-    const [showFilters, setShowFilters] = useState(true);
+    const [showFilters, setShowFilters] = useState(() => typeof window === "undefined" || window.innerWidth >= 768);
     const [siguientePaso, setSiguientePaso] = useState(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [isNoImageModalOpen, setIsNoImageModalOpen] = useState(false);
     const [selectedInforme, setSelectedInforme] = useState<Informes | null>(null);
     const [isBlocking, setIsBlocking] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<string[]>(
-        ["patient_name", ...informeColumns.map(col => col.key as string), "flags", "tag_ids", "report_date"]
+        normalizeVisibleColumns(["patient_name", "patient_dni", "study_type", "accession_number", "created_on", "flags", "tag_ids"])
     );
     const [sortColumn, setSortColumn] = useState("");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -93,14 +130,81 @@ export const Radiologia = () => {
     const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useUpdateTagIds();
     const { allTags } = useAllTags();
     const { mutate: updateGeneralNotes, isPending: isUpdatingNotes } = useUpdateGeneralNotes();
-    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, show_no_image: verSinImagenes, show_only_with_notes: soloConNotas, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField, sort_column: sortColumn, sort_direction: sortDirection, facility_id: selectedFacilityId });
+    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, assigned_to_me: asignadosAMi, show_no_image: verSinImagenes, show_without_order: verSinOrden, show_only_with_notes: soloConNotas, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField, sort_column: sortColumn, sort_direction: sortDirection, facility_id: config?.id?.toString() || "1" });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
     const { presets, isLoading: isLoadingPresets } = useFilterPresets();
 
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [selectedExamForAssign, setSelectedExamForAssign] = useState<Informes | null>(null);
+    const { mutateAsync: assignExam } = useAssignExam();
+    const { mutateAsync: assignExamBatch } = useAssignExamBatch();
+    const { mutateAsync: addTagsBatch } = useAddTagsBatch();
+    const { mutateAsync: addFlagsBatch } = useAddFlagsBatch();
+
+    const canAssign = authData?.user?.permissions?.includes('reports.assign') ?? false;
+
+    const [selectedStudyIds, setSelectedStudyIds] = useState<Set<string>>(new Set());
+    const [multiSelectAction, setMultiSelectAction] = useState<'assign' | 'tags' | 'flags' | null>(null);
+
+    const handleAssignExam = useCallback((informe: Informes) => {
+        setSelectedExamForAssign(informe);
+        setIsAssignModalOpen(true);
+    }, []);
+
+    const handleConfirmAssign = useCallback(async (userId: string) => {
+        if (!selectedExamForAssign) return;
+        await assignExam({ examId: selectedExamForAssign.guid, userId });
+    }, [selectedExamForAssign, assignExam]);
+
+    const handleMultiSelectAssign = useCallback(async (userId: string) => {
+        const ids = Array.from(selectedStudyIds);
+        await assignExamBatch({ examIds: ids, userId });
+        setSelectedStudyIds(new Set());
+    }, [selectedStudyIds, assignExamBatch]);
+
+    const handleMultiSelectAddTags = useCallback(async (tagIds: string[]) => {
+        const ids = Array.from(selectedStudyIds);
+        await addTagsBatch({ examIds: ids, tagIds });
+        setSelectedStudyIds(new Set());
+    }, [selectedStudyIds, addTagsBatch]);
+
+    const handleMultiSelectAddFlags = useCallback(async (flags: string[]) => {
+        const ids = Array.from(selectedStudyIds);
+        await addFlagsBatch({ examIds: ids, flags });
+        setSelectedStudyIds(new Set());
+    }, [selectedStudyIds, addFlagsBatch]);
+
+    const toggleStudySelection = useCallback((studyId: string) => {
+        setSelectedStudyIds(prev => {
+            const next = new Set(prev);
+            if (next.has(studyId)) {
+                next.delete(studyId);
+            } else {
+                next.add(studyId);
+            }
+            return next;
+        });
+    }, []);
+
+    const toggleSelectAll = useCallback(() => {
+        const currentData = informesData?.data?.data || [];
+        if (selectedStudyIds.size === currentData.length) {
+            setSelectedStudyIds(new Set());
+        } else {
+            setSelectedStudyIds(new Set(currentData.map((s: Informes) => s.guid)));
+        }
+    }, [selectedStudyIds.size, informesData]);
+
+    const clearSelection = useCallback(() => {
+        setSelectedStudyIds(new Set());
+    }, []);
+
     // Función para toggle de columnas
     const toggleColumn = useCallback((columnKey: string) => {
+        if (FIXED_COLUMN_KEYS.includes(columnKey as typeof FIXED_COLUMN_KEYS[number])) return;
+
         setVisibleColumns(prev => {
             if (prev.includes(columnKey)) {
                 // No permitir que se desmarquen todas las columnas
@@ -113,6 +217,10 @@ export const Radiologia = () => {
                 return [...prev, columnKey];
             }
         });
+    }, []);
+
+    const handleColumnOrderChange = useCallback((columnKeys: string[]) => {
+        setVisibleColumns(normalizeVisibleColumns(columnKeys));
     }, []);
 
     const handleUpdateFlags = useCallback((examId: string, flags: string[]) => {
@@ -154,8 +262,14 @@ export const Radiologia = () => {
         [allTags, handleUpdateTagIds, isUpdatingTagIds]
     );
 
-    // Todas las columnas disponibles (paciente + estáticas + banderas + tags)
-    const allColumns = useMemo(() => [patientNameColumn, ...informeColumns, flagsColumn, tagsColumn], [patientNameColumn, flagsColumn, tagsColumn]);
+    // Columna de selección múltiple
+    const selectionColumn = useMemo(
+        () => getSelectionColumn(selectedStudyIds, toggleStudySelection, toggleSelectAll, informesData?.data?.data?.length || 0),
+        [selectedStudyIds, toggleStudySelection, toggleSelectAll, informesData]
+    );
+
+    // Todas las columnas disponibles (selección + paciente + estáticas + banderas + tags)
+    const allColumns = useMemo(() => [selectionColumn, patientNameColumn, ...informeColumns, flagsColumn, tagsColumn], [selectionColumn, patientNameColumn, flagsColumn, tagsColumn]);
 
     // Columnas visibles (incluye banderas si está en la lista)
     const filteredColumns = useMemo(
@@ -170,6 +284,7 @@ export const Radiologia = () => {
         ver_finalizados: verFinalizados,
         asignados_a_mi: asignadosAMi,
         ver_sin_imagenes: verSinImagenes,
+        ver_sin_orden: verSinOrden,
         study_group_id: studioTypeId || "",
         modality_id: modalityId || "",
         bodypart_id: bodyPartId || "",
@@ -192,10 +307,11 @@ export const Radiologia = () => {
             setVerFinalizados(false);
             setAsignadosAMi(false);
             setVerSinImagenes(false);
+            setVerSinOrden(false);
             setStudioTypeId(undefined);
             setModalityId(undefined);
             setBodyPartId(undefined);
-            setVisibleColumns([...informeColumns.map(col => col.key as string), "flags", "tag_ids", "report_date"]);
+            setVisibleColumns(normalizeVisibleColumns([...informeColumns.map(col => col.key as string), "flags", "tag_ids", "report_date"]));
             setPerPage(10);
             setSortColumn("");
             setSortDirection("asc");
@@ -211,11 +327,12 @@ export const Radiologia = () => {
             setVerFinalizados(f.ver_finalizados ?? false);
             setAsignadosAMi(f.asignados_a_mi ?? false);
             setVerSinImagenes(f.ver_sin_imagenes ?? false);
+            setVerSinOrden(f.ver_sin_orden ?? false);
             setStudioTypeId(f.study_group_id || undefined);
             setModalityId(f.modality_id || undefined);
             setBodyPartId(f.bodypart_id || undefined);
             const cols = f.visible_columns?.length ? f.visible_columns : [...informeColumns.map(col => col.key as string), "flags"];
-            setVisibleColumns(cols.includes("report_date") ? cols : [...cols, "report_date"]);
+            setVisibleColumns(normalizeVisibleColumns(cols.includes("report_date") ? cols : [...cols, "report_date"]));
             setPerPage(f.per_page || 10);
             setSortColumn(f.sort_column || "");
             setSortDirection(f.sort_direction || "asc");
@@ -239,6 +356,10 @@ export const Radiologia = () => {
         }
     }, [isLoadingPresets, presets, applyPreset]);
 
+    useEffect(() => {
+        if (isMobile) setShowFilters(false);
+    }, [isMobile]);
+
     // Handler para cambio de preset desde las tabs
     const handlePresetChange = useCallback((preset: FilterPreset | null) => {
         applyPreset(preset);
@@ -255,63 +376,35 @@ export const Radiologia = () => {
         const CHANNEL_NAME = 'informe-updates';
         const channel = new BroadcastChannel(CHANNEL_NAME);
 
-        const handleViewerUpdate = (event: MessageEvent) => {
-            console.log('📨 Mensaje recibido en Radiologia.tsx:', event.data);
-            const { type, windowId, studyInstanceUid } = event.data;
+        const handleViewerUpdate = async (event: MessageEvent) => {
+            const { type, guid, studyInstanceUid } = event.data || {};
+            if (type !== 'VIEWER_UPDATE' || !guid || !studyInstanceUid || !authData?.user?.id) return;
 
-            if (type === 'VIEWER_UPDATE') {
-                console.log('🎯 Evento VIEWER_UPDATE detectado:', { windowId, studyInstanceUid });
-                console.log('🗺️ Ventanas guardadas:', Array.from(viewerWindowsRef.current.keys()));
+            const viewerTicket = prepareViewerWindow();
+            if (!viewerTicket) {
+                toast.error('Por favor, permite popups para abrir el visor DICOM');
+                return;
+            }
 
-                if (windowId && studyInstanceUid) {
-                    const viewerWindow = viewerWindowsRef.current.get(windowId);
-                    console.log('🪟 Ventana encontrada:', viewerWindow ? 'Sí' : 'No');
-
-                    if (viewerWindow && !viewerWindow.closed) {
-                        console.log('🔄 Actualizando visor local con postMessage...');
-                        console.log('🆔 Nuevo StudyInstanceUID:', studyInstanceUid);
-
-                        try {
-                            // Enviar postMessage al wrapper para que actualice el iframe
-                            const newViewerUrl = `https://viewer.nextris.cloud/viewer?StudyInstanceUIDs=${studyInstanceUid}`;
-
-                            console.log('📨 Enviando postMessage al wrapper...');
-                            viewerWindow.postMessage(
-                                {
-                                    type: 'UPDATE_VIEWER',
-                                    studyInstanceUid: studyInstanceUid,
-                                    newUrl: newViewerUrl
-                                },
-                                window.location.origin
-                            );
-                            console.log('✅ Mensaje enviado al wrapper exitosamente');
-
-                            // Dar foco a la ventana
-                            viewerWindow.focus();
-                        } catch (error) {
-                            console.log('❌ Error al enviar mensaje:', error);
-                        }
-                    } else if (viewerWindow?.closed) {
-                        console.log('⚠️ La ventana del visor está cerrada');
-                        viewerWindowsRef.current.delete(windowId);
-                    } else {
-                        console.log('❌ No se encontró ventana del visor para windowId:', windowId);
-                    }
-                } else {
-                    console.log('⚠️ Faltan datos:', { windowId, studyInstanceUid });
-                }
+            try {
+                const data = await getDicomViewerUrl(authData.user.id, guid);
+                await openStudyInViewer(viewerTicket, {
+                    studyInstanceUID: data.study_uid,
+                    viewerUrl: data.viewer_url,
+                });
+            } catch (error: unknown) {
+                cancelPreparedViewer(viewerTicket);
+                showViewerError(error);
             }
         };
 
         channel.addEventListener('message', handleViewerUpdate);
-        console.log('👂 Listener registrado');
 
         return () => {
-            console.log('🔌 Desconectando listener del visor');
             channel.removeEventListener('message', handleViewerUpdate);
             channel.close();
         };
-    }, []);
+    }, [authData?.user?.id]);
 
     const pagination = {
         page: informesData?.data?.page || 1,
@@ -350,11 +443,17 @@ export const Radiologia = () => {
     };
 
     const blockAndOpenReport = async (informe: Informes) => {
+        const viewerTicket = informe.is_image ? prepareViewerWindow() : null;
+        if (informe.is_image && !viewerTicket) {
+            toast.error('Por favor, permite popups para abrir el visor DICOM');
+        }
+
         setIsBlocking(true);
         try {
             await blockExam(informe.guid);
-            openReportWindow(informe);
+            await openReportWindow(informe, viewerTicket);
         } catch (error) {
+            if (viewerTicket) cancelPreparedViewer(viewerTicket);
             // El error ya se maneja en el hook
             console.error('Error al bloquear el informe:', error);
         } finally {
@@ -362,7 +461,7 @@ export const Radiologia = () => {
         }
     };
 
-    const openReportWindow = async (informe: Informes) => {
+    const openReportWindow = async (informe: Informes, viewerTicket: ViewerWindowTicket | null) => {
         const windowId = `report_window_${Date.now()}`;
 
         const params = new URLSearchParams();
@@ -370,6 +469,13 @@ export const Radiologia = () => {
         if (siguientePaso !== undefined && siguientePaso !== null) {
             params.set('siguiente_paso', String(siguientePaso));
         }
+        params.set('show_ready', String(listoParaLeer));
+        params.set('show_reported', String(verFinalizados));
+        params.set('assigned_to_me', String(asignadosAMi));
+        params.set('show_no_image', String(verSinImagenes));
+        params.set('show_without_order', String(verSinOrden));
+        params.set('sort_column', sortColumn);
+        params.set('sort_direction', sortDirection);
         if (modalityId) params.set('modality_id', modalityId);
         if (bodyPartId) params.set('bodypart_id', bodyPartId);
         if (studioTypeId) params.set('study_group_id', studioTypeId);
@@ -380,38 +486,23 @@ export const Radiologia = () => {
             params.set('tag_ids', informe.tag_ids.join(','));
         }
 
-        const url = `/estudios/redaccion/redactar-informe/${informe.guid}/${informe.study_instance_uid}?${params.toString()}`;
+        const studyPath = informe.study_instance_uid
+            ? `/${encodeURIComponent(informe.study_instance_uid)}`
+            : '';
+        const url = `/estudios/redaccion/redactar-informe/${encodeURIComponent(informe.guid)}${studyPath}?${params.toString()}`;
 
         localStorage.setItem(windowId, informe.guid);
 
-        // Abrir visor de imágenes si el informe tiene imágenes
-        let viewerWindow: Window | null = null;
-        if (informe.is_image) {
-            // Abrir ventana inmediatamente para evitar bloqueo de popups
-            viewerWindow = window.open(
-                '',
-                `viewer_${windowId}`,
-                `toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=no,width=1400,height=900,top=50,left=-1920,titlebar=no`
-            );
-
-            if (viewerWindow) {
-                viewerWindow.document.write('<html><head><title>Cargando visor DICOM...</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#1a1a2e;color:#fff"><p>Abriendo visor DICOM...</p></body></html>');
-                try {
-                    const data = await getDicomViewerUrl(authData!.user.id, informe.guid);
-                    viewerWindow.location.href = data.viewer_url;
-                    viewerWindowsRef.current.set(windowId, viewerWindow);
-                } catch (error: any) {
-                    viewerWindow.close();
-                    viewerWindow = null;
-                    const status = error.response?.status;
-                    if (status === 403) {
-                        toast.error('No tienes permisos para ver las imágenes de esta ubicación');
-                    } else if (status === 404) {
-                        toast.error('El examen no tiene imágenes asociadas');
-                    } else {
-                        toast.error(error.response?.data?.message || 'No se pudo abrir el visor DICOM');
-                    }
-                }
+        if (viewerTicket) {
+            try {
+                const data = await getDicomViewerUrl(authData!.user.id, informe.guid);
+                await openStudyInViewer(viewerTicket, {
+                    studyInstanceUID: data.study_uid,
+                    viewerUrl: data.viewer_url,
+                });
+            } catch (error: unknown) {
+                cancelPreparedViewer(viewerTicket);
+                showViewerError(error);
             }
         }
         const reportLeft = informe.is_image ? 2500 : 100;
@@ -427,11 +518,6 @@ export const Radiologia = () => {
         if (!reportWindow) {
             localStorage.removeItem(windowId);
             await unblockExam(informe.guid);
-            // Cerrar ventana del visor si se abrió
-            if (viewerWindow) {
-                viewerWindow.close();
-                viewerWindowsRef.current.delete(windowId);
-            }
             return;
         }
 
@@ -446,45 +532,37 @@ export const Radiologia = () => {
                     await unblockExam(currentGuid);
                     localStorage.removeItem(windowId);
                 }
-
-                // Cerrar ventana del visor si sigue abierta
-                const viewerRef = viewerWindowsRef.current.get(windowId);
-                if (viewerRef && !viewerRef.closed) {
-                    viewerRef.close();
-                }
-                viewerWindowsRef.current.delete(windowId);
             }
         }, 300);
     };
 
 
     const handleViewImagenes = async (informe: Informes) => {
-        // Abrir ventana inmediatamente para evitar bloqueo de popups
-        const viewerWindow = window.open('', '_blank', 'width=1400,height=900,resizable=yes,scrollbars=yes');
-        if (!viewerWindow) {
+        const viewerTicket = prepareViewerWindow();
+        if (!viewerTicket) {
             toast.error('Por favor, permite popups para abrir el visor DICOM');
             return;
         }
-        viewerWindow.document.write('<html><head><title>Cargando visor DICOM...</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#1a1a2e;color:#fff"><p>Abriendo visor DICOM...</p></body></html>');
 
         try {
             const data = await getDicomViewerUrl(authData!.user.id, informe.guid);
-            viewerWindow.location.href = data.viewer_url;
-        } catch (error: any) {
-            viewerWindow.close();
-            const status = error.response?.status;
-            if (status === 403) {
-                toast.error('No tienes permisos para ver las imágenes de esta ubicación');
-            } else if (status === 404) {
-                toast.error('El examen no tiene imágenes asociadas');
-            } else {
-                toast.error(error.response?.data?.message || 'No se pudo abrir el visor DICOM');
-            }
+            await openStudyInViewer(viewerTicket, {
+                studyInstanceUID: data.study_uid,
+                viewerUrl: data.viewer_url,
+            });
+        } catch (error: unknown) {
+            cancelPreparedViewer(viewerTicket);
+            showViewerError(error);
         }
     };
     const handleViewPdf = (informe: Informes) => {
+        if (!informe.pdf_path) {
+            toast.error('Este informe todavía no tiene un PDF generado');
+            return;
+        }
+        const baseURL = import.meta.env.VITE_API_URL || '/api';
         window.open(
-            `http://148.230.72.8:5001/api/pdfs/${informe.pdf_path}`,
+            `${baseURL}/pdfs/by-exam/${encodeURIComponent(informe.guid)}`,
             '_blank',
         );
     };
@@ -515,14 +593,22 @@ export const Radiologia = () => {
 
 
 
+    const activeFilterCount = [
+        searchTerm.trim(), studioTypeId, modalityId, bodyPartId,
+        verFinalizados, asignadosAMi, verSinImagenes, verSinOrden, soloConNotas,
+        flagFilter.length > 0, dateRange !== "all", dateField !== "admision", !listoParaLeer,
+    ].filter(Boolean).length;
+
     return (
-        <MainLayout>
-            <div className="page-dark-gradient rounded-lg p-3 sm:p-3 shadow-sm z-10 h-full flex flex-col overflow-hidden">
+        <MainLayout mobileTitle="Redacción de reportes">
+            <div className="page-dark-gradient min-h-0 flex-1 rounded-lg p-3 shadow-sm z-10 flex flex-col overflow-hidden">
                 {/* Breadcrumb */}
-                <DynamicBreadcrumb />
+                <div className="hidden md:block">
+                    <DynamicBreadcrumb />
+                </div>
 
                 {/* Header */}
-                <div className="flex items-center gap-2 sm:gap-3 mb-2 ">
+                <div className="hidden items-center gap-2 sm:gap-3 mb-2 md:flex">
                     <div className="bg-brand-purple p-2  rounded-lg">
                         <HandHelping className="w-4 h-4 sm:w-6 sm:h-5 text-white" />
                     </div>
@@ -538,24 +624,56 @@ export const Radiologia = () => {
                     </div>
                 )}
 
+                <div className="mb-2 space-y-2 md:hidden">
+                    <div className="flex items-center gap-2">
+                        <div className="rounded-lg bg-brand-purple p-2 text-white"><HandHelping className="h-5 w-5" /></div>
+                        <div className="min-w-0">
+                            <h1 className="text-lg font-semibold text-foreground">Reportes</h1>
+                            <p className="text-xs text-muted-foreground">Solo visualización</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1"><InputSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Buscar paciente o historial..." /></div>
+                        <button type="button" onClick={() => setShowFilters(true)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground" aria-label="Abrir filtros">
+                            <SlidersHorizontal className="h-5 w-5" />
+                        </button>
+                    </div>
+                </div>
+
                 {/* Pestañas de presets de filtros */}
-                <FilterPresetTabs
-                    activePresetId={activePresetId}
-                    onPresetChange={handlePresetChange}
-                    currentFilters={getCurrentFilters()}
-                    filtersVisible={showFilters}
-                    onToggleFilters={() => setShowFilters(prev => !prev)}
-                />
+                <div className="block">
+                    <FilterPresetTabs
+                        activePresetId={activePresetId}
+                        onPresetChange={handlePresetChange}
+                        currentFilters={getCurrentFilters()}
+                        filtersVisible={showFilters}
+                        onToggleFilters={() => setShowFilters(prev => !prev)}
+                        activeFilterCount={activeFilterCount}
+                    />
+                </div>
+
+                <div className="mb-1 flex items-center justify-between px-1 text-xs md:hidden">
+                    <span className="font-semibold text-foreground">Listado de reportes</span>
+                    <span className="text-muted-foreground">{pagination?.total ?? 0} resultados</span>
+                </div>
 
                 {/* Bloque unificado de filtros */}
                 <div className={`grid transition-all duration-300 ease-in-out ${showFilters ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-                    <div className="overflow-hidden">
-                        <div className="flex flex-col sm:flex-row gap-3 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200 mb-2 dark:bg-[#2a2e32] dark:border-gray-700">
+                    <div className="overflow-visible md:overflow-hidden">
+                        {showFilters && <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setShowFilters(false)} aria-hidden="true" />}
+                        <div className={`fixed inset-y-0 left-0 z-50 w-[min(22rem,92vw)] overflow-y-auto bg-background p-3 pt-[calc(1rem+env(safe-area-inset-top))] shadow-2xl md:static md:w-auto md:overflow-visible md:bg-transparent md:p-0 md:pt-0 md:shadow-none ${showFilters ? "" : "pointer-events-none invisible"}`}>
+                            <div className="mb-2 flex items-center justify-between md:hidden">
+                                <span className="text-sm font-semibold text-foreground">Filtros</span>
+                                <button type="button" onClick={() => setShowFilters(false)} className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-accent" aria-label="Cerrar filtros">
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+                        <div className="report-filters-panel mb-2 flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 sm:px-4 lg:flex-row">
                             {/* Sección de Filtros */}
                             <div className="flex flex-col gap-2 flex-1">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Filtros</span>
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                    <div className="sm:min-w-[250px]">
+                                <span className="report-filters-panel__heading text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Filtros</span>
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-2">
+                                    <div className="min-w-0">
                                         <InputSearch
                                             searchTerm={searchTerm}
                                             setSearchTerm={setSearchTerm}
@@ -563,6 +681,7 @@ export const Radiologia = () => {
                                         />
                                     </div>
                                     <Autocomplete
+                                        className="report-filters-panel__autocomplete"
                                         options={gruposEstudioOptions}
                                         value={studioTypeId}
                                         onValueChange={(value) => {
@@ -574,6 +693,7 @@ export const Radiologia = () => {
                                         searchPlaceholder="Buscar grupo de estudio..."
                                     />
                                     <Autocomplete
+                                        className="report-filters-panel__autocomplete"
                                         options={modalidadesOptions}
                                         value={modalityId}
                                         onValueChange={(value) => {
@@ -585,6 +705,7 @@ export const Radiologia = () => {
                                         searchPlaceholder="Buscar modalidad..."
                                     />
                                     <Autocomplete
+                                        className="report-filters-panel__autocomplete"
                                         options={bodyPartsOptions}
                                         value={bodyPartId || ''}
                                         onValueChange={(value) => {
@@ -599,13 +720,13 @@ export const Radiologia = () => {
                             </div>
 
                             {/* Separador vertical */}
-                            <div className="hidden sm:block w-px bg-gray-300 self-stretch" />
-                            <div className="block sm:hidden h-px bg-gray-300" />
+                            <div className="report-filters-panel__divider hidden w-px self-stretch bg-gray-300 lg:block" />
+                            <div className="report-filters-panel__divider block h-px bg-gray-300 lg:hidden" />
 
                             {/* Sección de Checkboxes */}
                             <div className="flex flex-col gap-2 shrink-0">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-200">Opciones</span>
-                                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                <span className="report-filters-panel__heading text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Opciones</span>
+                                <div className="grid grid-cols-1 gap-x-4 gap-y-2 min-[420px]:grid-cols-2">
                                     <div className="flex items-center space-x-2">
                                         <Checkbox
                                             id="listo-leer"
@@ -631,7 +752,7 @@ export const Radiologia = () => {
                                             className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
                                         />
                                         <Label htmlFor="finalizados" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
-                                            Ver finalizados
+                                            Incluir finalizados
                                         </Label>
                                     </div>
                                     <div className="flex items-center space-x-2">
@@ -659,7 +780,21 @@ export const Radiologia = () => {
                                             className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
                                         />
                                         <Label htmlFor="sin-imagenes" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
-                                            Ver sin imágenes
+                                            Incluir sin imágenes
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="sin-orden"
+                                            checked={verSinOrden}
+                                            onCheckedChange={(checked) => {
+                                                setVerSinOrden(checked as boolean);
+                                                setPage(1);
+                                            }}
+                                            className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
+                                        />
+                                        <Label htmlFor="sin-orden" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
+                                            Incluir sin orden CP
                                         </Label>
                                     </div>
                                     <div className="flex items-center space-x-2">
@@ -680,12 +815,12 @@ export const Radiologia = () => {
                             </div>
 
                             {/* Separador vertical */}
-                            <div className="hidden sm:block w-px bg-gray-300 self-stretch" />
-                            <div className="block sm:hidden h-px bg-gray-300" />
+                            <div className="report-filters-panel__divider hidden w-px self-stretch bg-gray-300 lg:block" />
+                            <div className="report-filters-panel__divider block h-px bg-gray-300 lg:hidden" />
 
                             {/* Sección de Banderas */}
                             <div className="flex flex-col gap-2 shrink-0">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-300">Banderas</span>
+                                <span className="report-filters-panel__heading text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Banderas</span>
                                 <div className="flex items-center gap-1.5">
                                     {(["red", "green", "blue", "yellow"] as const).map((color) => {
                                         const active = flagFilter.includes(color);
@@ -710,8 +845,8 @@ export const Radiologia = () => {
                                                     );
                                                     setPage(1);
                                                 }}
-                                                className={`flex flex-col items-center gap-0.5 p-1.5 rounded-md transition-all focus:outline-none
-                                            ${active ? "bg-gray-200 ring-1 ring-gray-400 scale-110 dark:bg-gray-700 dark:ring-gray-500" : "opacity-35 hover:opacity-70 dark:opacity-35 dark:hover:opacity-70"}`}
+                                                className={`report-filters-panel__flag flex flex-col items-center gap-0.5 p-1.5 rounded-md transition-all focus:outline-none
+                                            ${active ? "report-filters-panel__flag--active bg-gray-200 ring-1 ring-gray-400 scale-110" : "opacity-50 hover:opacity-80"}`}
                                             >
                                                 <svg width="18" height="18" viewBox="0 0 24 24"
                                                     fill={svgFill[color]} stroke={svgStroke[color]}
@@ -719,14 +854,14 @@ export const Radiologia = () => {
                                                     <line x1="4" y1="2" x2="4" y2="22" />
                                                     <polyline points="4,2 20,9 4,16" />
                                                 </svg>
-                                                <span className="text-[9px] text-gray-500 leading-none dark:text-gray-300">{label[color]}</span>
+                                                <span className="report-filters-panel__flag-label text-[9px] text-gray-500 leading-none">{label[color]}</span>
                                             </button>
                                         );
                                     })}
                                     {flagFilter.length > 0 && (
                                         <button
                                             onClick={() => { setFlagFilter([]); setPage(1); }}
-                                            className="text-xs text-gray-400 hover:text-gray-600 ml-1 self-start mt-1 dark:text-gray-400 dark:hover:text-gray-200"
+                                            className="report-filters-panel__clear-flags text-xs text-gray-400 hover:text-gray-600 ml-1 self-start mt-1"
                                             title="Limpiar filtro de banderas"
                                         >✕</button>
                                     )}
@@ -734,13 +869,13 @@ export const Radiologia = () => {
                             </div>
 
                             {/* Separador vertical */}
-                            <div className="hidden sm:block w-px bg-gray-300 self-stretch" />
-                            <div className="block sm:hidden h-px bg-gray-300" />
+                            <div className="report-filters-panel__divider hidden w-px self-stretch bg-gray-300 lg:block" />
+                            <div className="report-filters-panel__divider block h-px bg-gray-300 lg:hidden" />
 
                             {/* Sección de Fechas */}
                             <div className="flex flex-col gap-2 shrink-0">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Fechas</span>
-                                <div className="flex gap-2">
+                                <span className="report-filters-panel__heading text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Fechas</span>
+                                <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
                                     <Select
                                         value={dateField}
                                         onValueChange={(value) => {
@@ -764,22 +899,23 @@ export const Radiologia = () => {
                                         }}
                                     >
                                         <SelectTrigger className="h-9 text-sm min-w-[130px]">
-                                            <SelectValue placeholder="Hace >" />
+                                            <SelectValue placeholder="Hasta" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Todo</SelectItem>
-                                            <SelectItem value="1d">Hace &gt; 1 día</SelectItem>
-                                            <SelectItem value="3d">Hace &gt; 3 días</SelectItem>
-                                            <SelectItem value="7d">Hace &gt; 7 días</SelectItem>
-                                            <SelectItem value="14d">Hace &gt; 14 días</SelectItem>
-                                            <SelectItem value="1m">Hace &gt; 1 mes</SelectItem>
-                                            <SelectItem value="2m">Hace &gt; 2 meses</SelectItem>
-                                            <SelectItem value="3m">Hace &gt; 3 meses</SelectItem>
-                                            <SelectItem value="1y">Hace &gt; 1 año</SelectItem>
+                                            <SelectItem value="1d">Último día</SelectItem>
+                                            <SelectItem value="3d">Últimos 3 días</SelectItem>
+                                            <SelectItem value="7d">Últimos 7 días</SelectItem>
+                                            <SelectItem value="14d">Últimos 14 días</SelectItem>
+                                            <SelectItem value="1m">Último mes</SelectItem>
+                                            <SelectItem value="2m">Últimos 2 meses</SelectItem>
+                                            <SelectItem value="3m">Últimos 3 meses</SelectItem>
+                                            <SelectItem value="1y">Último año</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -787,10 +923,9 @@ export const Radiologia = () => {
                 <TablaDynamic<Informes>
                     data={(informesData?.data?.data) || []}
                     columns={filteredColumns}
-                    showIndex
                     loading={isLoadingInformes}
                     pagination={pagination}
-                    actions={getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf, getGeneralNotesAction(handleUpdateGeneralNotes, isUpdatingNotes), isReadLimitReached)}
+                    actions={getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf, getGeneralNotesAction(handleUpdateGeneralNotes, isUpdatingNotes), isReadLimitReached, canAssign ? handleAssignExam : undefined)}
                     onPaginationChange={(newPage) => {
                         setPage(newPage);
                     }}
@@ -803,13 +938,54 @@ export const Radiologia = () => {
                     allColumns={allColumns}
                     visibleColumns={visibleColumns}
                     onToggleColumn={toggleColumn}
+                    fixedColumnKeys={[...FIXED_COLUMN_KEYS]}
+                    onColumnOrderChange={handleColumnOrderChange}
                     tableBackgroundImage={fondoImage}
                     tableBackgroundImageDark={backDarkImage}
                     sortColumn={sortColumn}
                     sortDirection={sortDirection}
                     onSortChange={handleSortChange}
+                    mobileMode="cards"
+                    mobileActions="menu"
+                    mobileStatusKey="status"
                     additionalControls={
                         <div className="flex items-center gap-4">
+                            {selectedStudyIds.size > 0 && (
+                                <>
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">
+                                        <span>{selectedStudyIds.size} seleccionado{selectedStudyIds.size !== 1 ? 's' : ''}</span>
+                                        <button
+                                            onClick={clearSelection}
+                                            className="ml-1 hover:text-purple-900"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="outline" size="sm" className="gap-2">
+                                                Accion multiple
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            {canAssign && (
+                                                <DropdownMenuItem onClick={() => setMultiSelectAction('assign')}>
+                                                    <UserCheck className="h-4 w-4 mr-2" />
+                                                    Asignar a...
+                                                </DropdownMenuItem>
+                                            )}
+                                            <DropdownMenuItem onClick={() => setMultiSelectAction('tags')}>
+                                                <Tags className="h-4 w-4 mr-2" />
+                                                Agregar tag
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => setMultiSelectAction('flags')}>
+                                                <Flag className="h-4 w-4 mr-2" />
+                                                Agregar banderas
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </>
+                            )}
                             <div className="flex items-center gap-2">
                                 <Label htmlFor="siguiente-paso-toggle" className="text-sm font-medium text-gray-700 dark:text-gray-200">
                                     Siguiente estudio:
@@ -832,7 +1008,6 @@ export const Radiologia = () => {
                         </div>
                     }
                 />
-
 
             </div>
 
@@ -875,6 +1050,30 @@ export const Radiologia = () => {
                 confirmText="Sí, continuar"
                 cancelText="Cancelar"
                 variant="warning"
+            />
+
+            {/* Modal de Asignar Estudio */}
+            <AssignExamModal
+                isOpen={isAssignModalOpen}
+                onClose={() => {
+                    setIsAssignModalOpen(false);
+                    setSelectedExamForAssign(null);
+                }}
+                examId={selectedExamForAssign?.guid || ""}
+                currentAssigneeName={selectedExamForAssign?.assignto_name}
+                onAssign={handleConfirmAssign}
+            />
+
+            {/* Modal de Acciones Múltiples */}
+            <MultiSelectActionsModal
+                isOpen={multiSelectAction !== null}
+                onClose={() => setMultiSelectAction(null)}
+                action={multiSelectAction}
+                selectedCount={selectedStudyIds.size}
+                onAssign={handleMultiSelectAssign}
+                onAddTags={handleMultiSelectAddTags}
+                onAddFlags={handleMultiSelectAddFlags}
+                availableTags={allTags || []}
             />
 
             {/* Modal de carga mientras bloquea */}

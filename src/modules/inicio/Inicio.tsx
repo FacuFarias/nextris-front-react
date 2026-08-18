@@ -15,22 +15,17 @@ import {
     Settings,
     LogOut,
     Clock,
-    Sparkles,
-    FileCode,
     Gauge,
-    Layers,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useFacility } from "@/context/FacilityContext";
+import { useAppConfig } from "@/context/AppConfigContext";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useUserModules } from "@/hooks/use-user-modules";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import agendaModuleImage from "@/assets/modules-images/agenda.png";
-import nexiModuleImage from "@/assets/modules-images/nexi.png";
 import portalModuleImage from "@/assets/modules-images/portal.png";
-import structuredReportsModuleImage from "@/assets/modules-images/reportes-estructurados.png";
 
 interface MenuItem {
     id: string;
@@ -101,7 +96,7 @@ const menuSections: MenuSection[] = [
                 description: "Consulta y gestiona pacientes registrados",
                 icon: <Users className="w-5 h-5" />,
                 path: "/buscar-pacientes",
-                allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo"],
+                allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo", "Administrador"],
                     requiredPermissions: ["tabs.patients.view", "patients.view"],
                 },
             {
@@ -110,7 +105,7 @@ const menuSections: MenuSection[] = [
                 description: "Consolida registros duplicados",
                 icon: <UserCheck className="w-5 h-5" />,
                 path: "/administracion/unificacion-paciente",
-                allowedRoles: ["Sysadmin"],
+                allowedRoles: ["Sysadmin", "Administrador"],
                     requiredPermissions: ["tabs.gestion.view"],
             },
         ],
@@ -126,7 +121,7 @@ const menuSections: MenuSection[] = [
                 description: "Agenda turnos de pacientes",
                 path: "/cita/nueva-cita",
                 icon: <Calendar className="w-5 h-5" />,
-                allowedRoles: ["Sysadmin", "Administrativo"],
+                allowedRoles: ["Sysadmin", "Administrativo", "Administrador"],
                 requiredPermissions: ["tabs.appointments.view", "appointments.create"],
                 requiredModule: "appointments",
             },
@@ -136,7 +131,7 @@ const menuSections: MenuSection[] = [
                 description: "Reprograma o ajusta turnos existentes",
                 icon: <CalendarCheck className="w-5 h-5" />,
                 path: "/cita/editar-cita",
-                allowedRoles: ["Sysadmin", "Administrativo"],
+                allowedRoles: ["Sysadmin", "Administrativo", "Administrador"],
                     requiredPermissions: ["tabs.appointments.view", "appointments.view"],
                     requiredModule: "appointments",
             },
@@ -146,7 +141,7 @@ const menuSections: MenuSection[] = [
                 path: "/nueva-admision",
                 description: "Gestiona admisiones desde agenda",
                 icon: <UserPlus className="w-5 h-5" />,
-                allowedRoles: ["Sysadmin", "Administrativo"],
+                allowedRoles: ["Sysadmin", "Administrativo", "Administrador"],
                 requiredPermissions: ["tabs.admissions.view", "admissions.view", "admissions.admit_appointments"],
                 requiredModule: "appointments",
             },
@@ -156,7 +151,7 @@ const menuSections: MenuSection[] = [
                 path: "/admision-espontanea",
                 description: "Registra ingresos sin cita previa",
                 icon: <UserCog className="w-5 h-5" />,
-                allowedRoles: ["Sysadmin", "Administrativo", "Medico"],
+                allowedRoles: ["Sysadmin", "Administrativo", "Administrador", "Medico"],
                 requiredPermissions: ["tabs.admissions.view", "admissions.view", "admissions.create_spontaneous"],
             },
         ],
@@ -171,7 +166,7 @@ const menuSections: MenuSection[] = [
                 description: "Redistribuye estudios entre usuarios",
                 path: "/administracion/reasignacion-examenes",
                 icon: <ClipboardList className="w-5 h-5" />,
-                allowedRoles: ["Sysadmin"],
+                allowedRoles: ["Sysadmin", "Administrador"],
                 requiredPermissions: ["tabs.gestion.view"],
             },
             {
@@ -180,7 +175,7 @@ const menuSections: MenuSection[] = [
                 description: "Gestiona flujo operativo de estudios",
                 icon: <MousePointer className="w-5 h-5" />,
                 path: "/ejecucion",
-                allowedRoles: ["Sysadmin", "Tecnico"],
+                allowedRoles: ["Sysadmin", "Tecnico", "Administrador"],
                 requiredPermissions: ["tabs.execution.view", "execution.view_pending"],
             },
             {
@@ -189,7 +184,7 @@ const menuSections: MenuSection[] = [
                 path: "/estudios/redaccion",
                 description: "Redacta e interpreta informes",
                 icon: <FileText className="w-5 h-5" />,
-                allowedRoles: ["Sysadmin", "Medico"],
+                allowedRoles: ["Sysadmin", "Medico", "Administrador", "Administrativo"],
                 requiredPermissions: ["tabs.reports.view", "reports.view_writing"],
             },
             {
@@ -198,7 +193,7 @@ const menuSections: MenuSection[] = [
                 description: "Usa plantillas para informes rápidos",
                 icon: <FileEdit className="w-5 h-5" />,
                 path: "/estudios/informes-predefinidos",
-                allowedRoles: ["Sysadmin", "Medico"],
+                allowedRoles: ["Sysadmin", "Medico", "Administrador"],
                 requiredPermissions: ["tabs.reports.view", "reports.view_reports"],
             },
             {
@@ -207,7 +202,7 @@ const menuSections: MenuSection[] = [
                 description: "Carga estudios DICOM",
                 icon: <FileEdit className="w-5 h-5" />,
                 path: "/estudios/cargar-estudios",
-                allowedRoles: ["Sysadmin", "Medico"],
+                allowedRoles: ["Sysadmin", "Medico", "Administrador"],
                 requiredPermissions: ["tabs.reports.view", "reports.view_writing"],
             },
             {
@@ -216,7 +211,7 @@ const menuSections: MenuSection[] = [
                 description: "Envía resultados y reportes",
                 path: "/distribucion",
                 icon: <Send className="w-5 h-5" />,
-                allowedRoles: ["Sysadmin", "Administrativo", "Medico"],
+                allowedRoles: ["Sysadmin", "Administrativo", "Administrador", "Medico"],
                 requiredPermissions: ["tabs.distribution.view", "distribution.view"],
             },
         ],
@@ -280,26 +275,28 @@ const menuSections: MenuSection[] = [
 ];
 
 const extraModulePromos: ExtraModulePromo[] = [
-    {
-        id: "promo-nexi",
-        title: "Nexi IA",
-        description: "Asistente inteligente para ayudarte en flujos clínicos y operativos.",
-        icon: <Sparkles className="w-5 h-5" />,
-        path: "/nexi",
-        requiredModule: "nexi",
-        allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo"],
-        requiredPermissions: ["tabs.nexi.view"],
-    },
-    {
-        id: "promo-structured-reports",
-        title: "Reportes Estructurados",
-        description: "Automatiza reglas y criterios para informes avanzados.",
-        icon: <FileCode className="w-5 h-5" />,
-        path: "/reportes-estructurados/lista-parser",
-        requiredModule: "structured_reports",
-        allowedRoles: ["Sysadmin"],
-        requiredPermissions: ["tabs.structured_reports.view"],
-    },
+    // nexi — deshabilitado temporalmente
+    // {
+    //     id: "promo-nexi",
+    //     title: "Nexi IA",
+    //     description: "Asistente inteligente para ayudarte en flujos clínicos y operativos.",
+    //     icon: <Sparkles className="w-5 h-5" />,
+    //     path: "/nexi",
+    //     requiredModule: "nexi",
+    //     allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo", "Administrador"],
+    //     requiredPermissions: ["tabs.nexi.view"],
+    // },
+    // structured_reports — deshabilitado temporalmente
+    // {
+    //     id: "promo-structured-reports",
+    //     title: "Reportes Estructurados",
+    //     description: "Automatiza reglas y criterios para informes avanzados.",
+    //     icon: <FileCode className="w-5 h-5" />,
+    //     path: "/reportes-estructurados/lista-parser",
+    //     requiredModule: "structured_reports",
+    //     allowedRoles: ["Sysadmin", "Administrador"],
+    //     requiredPermissions: ["tabs.structured_reports.view"],
+    // },
     {
         id: "promo-appointments",
         title: "Agendas Inteligentes",
@@ -307,7 +304,7 @@ const extraModulePromos: ExtraModulePromo[] = [
         icon: <Calendar className="w-5 h-5" />,
         path: "/cita/nueva-cita",
         requiredModule: "appointments",
-        allowedRoles: ["Sysadmin", "Administrativo"],
+        allowedRoles: ["Sysadmin", "Administrativo", "Administrador"],
         requiredPermissions: ["tabs.appointments.view", "appointments.create"],
     },
     {
@@ -324,14 +321,14 @@ const extraModulePromos: ExtraModulePromo[] = [
 const extraModuleImageByCode: Record<string, string> = {
     patient_portal: portalModuleImage,
     appointments: agendaModuleImage,
-    nexi: nexiModuleImage,
-    structured_reports: structuredReportsModuleImage,
+    // nexi: nexiModuleImage, — deshabilitado temporalmente
+    // structured_reports: structuredReportsModuleImage, — deshabilitado temporalmente
 };
 
 export const Inicio = () => {
 
     const { authData, logout } = useAuth();
-    const { selectedFacilityId } = useFacility();
+    const { config } = useAppConfig();
     const { moduleCodesSet, isLoading: isModulesLoading, hasError: hasModulesError } = useUserModules(Boolean(authData));
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -350,12 +347,12 @@ export const Inicio = () => {
     });
 
     const { data: facilityPlanData } = useQuery({
-        queryKey: ["facility-plan", selectedFacilityId, "inicio"],
+        queryKey: ["facility-plan", config?.id?.toString() || "1", "inicio"],
         queryFn: async () => {
-            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
+            const response = await api.get(`/config/facilities/${config?.id?.toString() || "1"}/plan`);
             return (response.data?.data || null) as FacilityPlanData | null;
         },
-        enabled: Boolean(authData && selectedFacilityId),
+        enabled: Boolean(authData && config?.id?.toString() || "1"),
         staleTime: 60 * 1000,
     });
 
@@ -457,18 +454,10 @@ export const Inicio = () => {
     };
 
     const selectedPlanCode = String(facilityPlanData?.plan?.plan_code || dashboardSummary?.plan_code || "").toLowerCase();
-    const selectedPlanName = facilityPlanData?.plan?.plan_name || dashboardSummary?.plan_name || "-";
 
     const performedStudies = facilityPlanData?.usage_monthly?.read_count ?? dashboardSummary?.performed_studies ?? 0;
-    const receivedStudies = facilityPlanData?.usage_monthly?.received_count ?? dashboardSummary?.received_studies ?? 0;
-    const distributedStudies = facilityPlanData?.usage_monthly?.distributed_count ?? dashboardSummary?.distributed_studies ?? 0;
 
     const readMonthlyLimit = facilityPlanData?.plan?.max_read_monthly ?? dashboardSummary?.limit_studies;
-    const receiveMonthlyLimit = facilityPlanData?.plan?.max_receive_monthly ?? dashboardSummary?.received_limit;
-    const distributeMonthlyLimit = facilityPlanData?.plan?.max_distribute_monthly ?? dashboardSummary?.distributed_limit;
-
-    const receivedRemaining = receiveMonthlyLimit == null ? null : Math.max(receiveMonthlyLimit - receivedStudies, 0);
-    const distributedRemaining = distributeMonthlyLimit == null ? null : Math.max(distributeMonthlyLimit - distributedStudies, 0);
 
     const dailyReadLimit = selectedPlanCode === "free" ? 5 : selectedPlanCode === "pro" ? 10 : 5;
 
@@ -495,71 +484,36 @@ export const Inicio = () => {
 
                     <div className="grid grid-cols-1 lg:grid-cols-[80%_20%] gap-3 lg:min-h-[calc(100vh-220px)] lg:items-stretch">
                         <div className="space-y-3">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2">
-                                <div className="rounded-lg border border-border p-3 bg-background/40">
-                                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                                        <Layers className="w-4 h-4" />
-                                        Plan Actual
-                                    </div>
-                                    <div className="mt-1 text-lg font-bold text-foreground">
-                                        {selectedPlanName}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                        Código: {(selectedPlanCode || "-").toUpperCase()}
-                                    </div>
-                                </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-2">
+                                {authData?.user?.user_type === "Medico" && (
+                                    <>
+                                        <div className="rounded-lg border border-purple-300/60 dark:border-purple-500/30 p-3 bg-[linear-gradient(145deg,rgba(196,181,253,0.45),rgba(255,255,255,0.92))] dark:bg-[linear-gradient(145deg,rgba(124,58,237,0.18),rgba(12,14,24,0.92))] shadow-[0_8px_20px_rgba(139,92,246,0.16)] dark:shadow-[0_8px_26px_rgba(88,28,135,0.26)]">
+                                            <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-purple-700 dark:text-purple-200/80">
+                                                <Gauge className="w-4 h-4 text-purple-700 dark:text-purple-300" />
+                                                Redacción (Mes)
+                                            </div>
+                                            <div className="mt-1 text-2xl font-extrabold text-purple-900 dark:text-white tracking-tight">
+                                                {formatUsedLimit(performedStudies, readMonthlyLimit)}
+                                            </div>
+                                            <div className="text-xs text-purple-700/80 dark:text-purple-200/75">
+                                                Estudios redactados en el mes
+                                            </div>
+                                        </div>
 
-                                <div className="rounded-lg border border-purple-300/60 dark:border-purple-500/30 p-3 bg-[linear-gradient(145deg,rgba(196,181,253,0.45),rgba(255,255,255,0.92))] dark:bg-[linear-gradient(145deg,rgba(124,58,237,0.18),rgba(12,14,24,0.92))] shadow-[0_8px_20px_rgba(139,92,246,0.16)] dark:shadow-[0_8px_26px_rgba(88,28,135,0.26)]">
-                                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-purple-700 dark:text-purple-200/80">
-                                        <Gauge className="w-4 h-4 text-purple-700 dark:text-purple-300" />
-                                        Redacción (Mes)
-                                    </div>
-                                    <div className="mt-1 text-2xl font-extrabold text-purple-900 dark:text-white tracking-tight">
-                                        {formatUsedLimit(performedStudies, readMonthlyLimit)}
-                                    </div>
-                                    <div className="text-xs text-purple-700/80 dark:text-purple-200/75">
-                                        Estudios redactados en el mes
-                                    </div>
-                                </div>
-
-                                <div className="rounded-lg border border-violet-300/60 dark:border-violet-500/30 p-3 bg-[linear-gradient(145deg,rgba(221,214,254,0.45),rgba(255,255,255,0.92))] dark:bg-[linear-gradient(145deg,rgba(139,92,246,0.16),rgba(12,14,24,0.92))] shadow-[0_8px_20px_rgba(109,40,217,0.14)] dark:shadow-[0_8px_24px_rgba(76,29,149,0.24)]">
-                                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-violet-700 dark:text-violet-200/80">
-                                        <ClipboardList className="w-4 h-4 text-violet-700 dark:text-violet-300" />
-                                        Redaccion Diaria
-                                    </div>
-                                    <div className="mt-1 text-2xl font-extrabold text-violet-900 dark:text-white tracking-tight">
-                                        0/{dailyReadLimit}
-                                    </div>
-                                    <div className="text-xs text-violet-700/80 dark:text-violet-200/75">
-                                        Límite diario de redacción
-                                    </div>
-                                </div>
-
-                                <div className="rounded-lg border border-indigo-300/60 dark:border-indigo-500/30 p-3 bg-[linear-gradient(145deg,rgba(191,219,254,0.45),rgba(255,255,255,0.92))] dark:bg-[linear-gradient(145deg,rgba(59,130,246,0.18),rgba(12,14,24,0.92))] shadow-[0_8px_20px_rgba(37,99,235,0.14)] dark:shadow-[0_8px_24px_rgba(30,64,175,0.24)]">
-                                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-indigo-700 dark:text-indigo-200/80">
-                                        <FileText className="w-4 h-4 text-indigo-700 dark:text-indigo-300" />
-                                        Carga DICOM (Mes)
-                                    </div>
-                                    <div className="mt-1 text-2xl font-extrabold text-indigo-900 dark:text-white tracking-tight">
-                                        {formatUsedLimit(receivedStudies, receiveMonthlyLimit)}
-                                    </div>
-                                    <div className="text-xs text-indigo-700/80 dark:text-indigo-200/75">
-                                        Restantes: {receivedRemaining == null ? "Ilimitado" : receivedRemaining}
-                                    </div>
-                                </div>
-
-                                <div className="rounded-lg border border-fuchsia-300/60 dark:border-fuchsia-500/30 p-3 bg-[linear-gradient(145deg,rgba(245,208,254,0.45),rgba(255,255,255,0.92))] dark:bg-[linear-gradient(145deg,rgba(217,70,239,0.16),rgba(12,14,24,0.92))] shadow-[0_8px_20px_rgba(192,38,211,0.14)] dark:shadow-[0_8px_24px_rgba(162,28,175,0.24)]">
-                                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-200/80">
-                                        <Send className="w-4 h-4 text-fuchsia-700 dark:text-fuchsia-300" />
-                                        Distribución (Mes)
-                                    </div>
-                                    <div className="mt-1 text-2xl font-extrabold text-fuchsia-900 dark:text-white tracking-tight">
-                                        {formatUsedLimit(distributedStudies, distributeMonthlyLimit)}
-                                    </div>
-                                    <div className="text-xs text-fuchsia-700/80 dark:text-fuchsia-200/75">
-                                        Restantes: {distributedRemaining == null ? "Ilimitado" : distributedRemaining}
-                                    </div>
-                                </div>
+                                        <div className="rounded-lg border border-violet-300/60 dark:border-violet-500/30 p-3 bg-[linear-gradient(145deg,rgba(221,214,254,0.45),rgba(255,255,255,0.92))] dark:bg-[linear-gradient(145deg,rgba(139,92,246,0.16),rgba(12,14,24,0.92))] shadow-[0_8px_20px_rgba(109,40,217,0.14)] dark:shadow-[0_8px_24px_rgba(76,29,149,0.24)]">
+                                            <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-violet-700 dark:text-violet-200/80">
+                                                <ClipboardList className="w-4 h-4 text-violet-700 dark:text-violet-300" />
+                                                Redaccion Diaria
+                                            </div>
+                                            <div className="mt-1 text-2xl font-extrabold text-violet-900 dark:text-white tracking-tight">
+                                                0/{dailyReadLimit}
+                                            </div>
+                                            <div className="text-xs text-violet-700/80 dark:text-violet-200/75">
+                                                Límite diario de redacción
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             <div className="module-grid grid grid-cols-1 lg:grid-cols-2 gap-3">

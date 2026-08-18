@@ -5,6 +5,7 @@ export interface Patient {
     guid: string;
     name: string;
     nationalcode: string;
+    patient_type?: string | null;
     patientid: string;
     phone?: string;
     study_count?: number;
@@ -24,6 +25,8 @@ export interface HistoryPatient {
     con_imagen: string;
     isreported: number;
     pdf_path: string | null;
+    hidden_in_portal: number;
+    studyinstanceuid: string | null;
 }
 
 export interface HistoryPatientResponse {

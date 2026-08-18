@@ -1,9 +1,9 @@
 import { api } from "@/lib/api";
 import type { CreatePatientFormValues } from "../schemas/create-patient.schema";
 
-export const getAllPacientes = async ({ page = 1, per_page = 8, search = "", hide_without_studies = false }) => {
+export const getAllPacientes = async ({ page = 1, per_page = 8, search = "", hide_without_studies = false, column_filters = "{}" }) => {
     try {
-        const response = await api.get(`/patients?page=${page}&per_page=${per_page}&search=${search}&hide_without_studies=${hide_without_studies}`);
+        const response = await api.get(`/patients?page=${page}&per_page=${per_page}&search=${search}&hide_without_studies=${hide_without_studies}&column_filters=${encodeURIComponent(column_filters)}`);
         return response.data;
     } catch (error) {
         throw error;
@@ -18,12 +18,20 @@ export const createPatient = async (data: CreatePatientFormValues) => {
         throw error;
     }
 }
-export const deletePatient = async (patientId: string) => {
+export const deactivatePatientUser = async (patientId: string) => {
     try {
-        const response = await api.delete(`/patients/${patientId}`);
+        const response = await api.post(`/config/patients/${patientId}/deactivate`);
         return response.data;
     } catch (error) {
-        console.error('🔴 DELETE Patient - Error:', error);
+        throw error;
+    }
+}
+
+export const activatePatientUser = async (patientId: string) => {
+    try {
+        const response = await api.post(`/config/patients/${patientId}/activate`);
+        return response.data;
+    } catch (error) {
         throw error;
     }
 }
@@ -63,6 +71,15 @@ export const postViewImagenDicom = async ({ imageId, userId }: { imageId?: strin
             examination_id: imageId,
         });
         return response.data.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const toggleExamVisibility = async (examGuid: string) => {
+    try {
+        const response = await api.put(`/patients/examination/${examGuid}/toggle-visibility`);
+        return response.data;
     } catch (error) {
         throw error;
     }

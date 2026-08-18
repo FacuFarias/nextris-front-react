@@ -13,7 +13,19 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    allowedHosts: ['nextris.cloud'],
+    allowedHosts: ['nextris.cloud', 'clinicacp.ddns.net'],
+    hmr: {
+      host: 'clinicacp.ddns.net',
+      protocol: 'wss',
+      clientPort: 3001,
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   resolve: {
     alias: {

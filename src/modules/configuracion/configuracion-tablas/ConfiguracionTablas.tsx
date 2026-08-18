@@ -4,13 +4,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Building2, FlaskConical, Monitor, Users, Settings } from "lucide-react"
 
 // Institucional
-import { Facilities } from "./institucional/facilities"
 import { Locations } from "./institucional/locations"
+import { InformacionBasica } from "./institucional/informacion-basica"
 import { ObrasSociales } from "./institucional/obras-sociales"
-import { DominioPacientes } from "./institucional/dominio-pacientes"
 import { Tags } from "./institucional/tags"
-import { RelParserFacility } from "./institucional/rel-parser-facility/RelParserFacility"
-import { Modulos } from "./institucional/modulos"
 
 // Exámenes
 import { TiposEstudio } from "./examenes/tipos-estudio"
@@ -177,19 +174,16 @@ export const ConfiguracionTablas = () => {
                     {/* Tab Institucional */}
                     <TabsContent value="institucional" className="flex-1 mt-0">
                         <AnimatedSubTabs
-                            defaultValue="facilities"
+                            defaultValue="datos-institucionales"
                             tabs={[
-                                { value: "facilities", label: "Instituciones" },
+                                { value: "datos-institucionales", label: "Datos Institucionales" },
                                 { value: "locations", label: "Ubicaciones" },
                                 { value: "obras-sociales", label: "Obras Sociales" },
-                                { value: "dominio-pacientes", label: "Dominio de Pacientes" },
-                                { value: "modulos", label: "Módulos" },
                                 { value: "tags", label: "Tags" },
-                                { value: "rel-parser-facility", label: "Rel Parser Facility" },
                             ]}
                         >
-                            <TabsContent value="facilities" className="p-4">
-                                <Facilities />
+                            <TabsContent value="datos-institucionales" className="p-4">
+                                <InformacionBasica />
                             </TabsContent>
                             <TabsContent value="locations" className="p-4">
                                 <Locations />
@@ -197,17 +191,8 @@ export const ConfiguracionTablas = () => {
                             <TabsContent value="obras-sociales" className="p-4">
                                 <ObrasSociales />
                             </TabsContent>
-                            <TabsContent value="dominio-pacientes" className="p-4">
-                                <DominioPacientes />
-                            </TabsContent>
-                            <TabsContent value="modulos" className="p-4">
-                                <Modulos />
-                            </TabsContent>
                             <TabsContent value="tags" className="p-4">
                                 <Tags />
-                            </TabsContent>
-                            <TabsContent value="rel-parser-facility" className="p-4">
-                                <RelParserFacility />
                             </TabsContent>
                         </AnimatedSubTabs>
                     </TabsContent>

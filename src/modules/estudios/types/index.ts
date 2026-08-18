@@ -10,7 +10,8 @@ export interface Study {
     has_report: boolean;
     has_images: boolean;
     referring_physician: string;
-    location: string;
+    requesting_physician: string;
+    author_physician: string;
     urgency: "Urgente" | "Normal";
     report_date: string | null;
     study_uid: string | null;
@@ -22,4 +23,7 @@ export interface StudiesFilters {
     page?: number;
     per_page?: number;
     status?: "reported" | "pending" | "";
+    date_from?: string;
+    date_to?: string;
+    search?: string;
 }

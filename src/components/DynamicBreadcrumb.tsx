@@ -37,7 +37,7 @@ export const DynamicBreadcrumb = () => {
     if (pathnames.length === 0) return null;
 
     return (
-        <Breadcrumb className="mb-4">
+        <Breadcrumb className="mb-4 hidden md:block">
             <BreadcrumbList>
                 {/* Home siempre visible */}
                 <BreadcrumbItem>

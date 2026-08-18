@@ -10,7 +10,6 @@ import {
     Mail,
     Phone,
     Calendar,
-    CreditCard,
     IdCard,
     Users,
     Pencil,
@@ -18,14 +17,11 @@ import {
     UserCircle,
     Home,
     MapPin,
-    CheckCircle2,
-    Clock,
     Check,
     X,
     Building2,
     Hash,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -58,7 +54,7 @@ const EditableField = ({
 
     return (
         <div className={cn(
-            "group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+            "group flex items-center gap-3 rounded-xl px-3 py-3 transition-all duration-200 sm:px-4",
             isEditing
                 ? "bg-purple-50 ring-1 ring-purple-200"
                 : "hover:bg-gray-50 cursor-default"
@@ -69,13 +65,13 @@ const EditableField = ({
             <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">{label}</p>
                 {isEditing ? (
-                    <div className="flex items-center gap-1.5 mt-1">
+                    <div className="mt-1 flex min-w-0 items-center gap-1.5">
                         <Input
                             type={type}
                             value={editingValue}
                             onChange={(e) => onChange(e.target.value)}
                             placeholder={placeholder}
-                            className="h-7 text-sm px-2"
+                            className="h-11 min-w-0 px-2 text-base sm:h-7 sm:text-sm"
                             autoFocus
                             onKeyDown={(e) => {
                                 if (e.key === "Enter") onSave(field);
@@ -84,7 +80,7 @@ const EditableField = ({
                         />
                         <Button
                             size="icon"
-                            className="h-7 w-7 bg-green-500 hover:bg-green-600 shrink-0"
+                            className="h-11 w-11 shrink-0 bg-green-500 hover:bg-green-600 sm:h-7 sm:w-7"
                             onClick={() => onSave(field)}
                             disabled={isPending}
                         >
@@ -95,7 +91,7 @@ const EditableField = ({
                         <Button
                             size="icon"
                             variant="outline"
-                            className="h-7 w-7 shrink-0"
+                            className="h-11 w-11 shrink-0 sm:h-7 sm:w-7"
                             onClick={onCancel}
                             disabled={isPending}
                         >
@@ -112,7 +108,7 @@ const EditableField = ({
                         </span>
                         <button
                             onClick={() => onEdit(field, value)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-purple-100 text-gray-400 hover:text-purple-600 shrink-0"
+                            className="min-h-11 min-w-11 shrink-0 rounded-lg p-1.5 text-gray-400 transition-opacity hover:bg-purple-100 hover:text-purple-600 sm:min-h-0 sm:min-w-0 sm:opacity-0 sm:group-hover:opacity-100"
                             title="Editar"
                         >
                             <Pencil className="w-3.5 h-3.5" />
@@ -211,62 +207,27 @@ export const MisDatos = () => {
 
     return (
         <MainLayout>
-            <div className="space-y-6 p-6">
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm border border-border flex flex-col flex-1">
                 <DynamicBreadcrumb />
 
                 {/* ── Header ── */}
-                <div className="bg-gradient-to-br from-brand-purple via-purple-600 to-purple-800 rounded-2xl p-7 shadow-lg">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-                        {/* Avatar */}
-                        <div className="relative shrink-0">
-                            <div className="w-20 h-20 rounded-full bg-white/15 border-4 border-white/30 flex items-center justify-center shadow-xl">
-                                <User className="w-9 h-9 text-white" />
-                            </div>
-                            {profile?.account_status === "Active" && (
-                                <div className="absolute -bottom-1 -right-1 bg-green-400 rounded-full p-1 border-2 border-white shadow">
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Info */}
-                        <div className="text-white min-w-0">
-                            <h1 className="text-2xl sm:text-3xl font-bold leading-tight truncate">
-                                {profile?.full_name || "Usuario"}
-                            </h1>
-                            <p className="text-white/60 text-sm mt-0.5">
-                                @{profile?.username || "-"}
-                            </p>
-                            <div className="flex flex-wrap gap-2 mt-3">
-                                <Badge className="bg-white/15 hover:bg-white/20 border border-white/25 text-white text-xs font-medium">
-                                    <IdCard className="w-3 h-3 mr-1.5" />
-                                    DNI: {profile?.national_code || "-"}
-                                </Badge>
-                                <Badge className="bg-white/15 hover:bg-white/20 border border-white/25 text-white text-xs font-medium">
-                                    <Users className="w-3 h-3 mr-1.5" />
-                                    {profile?.sex || "-"}
-                                </Badge>
-                                {profile?.age && (
-                                    <Badge className="bg-white/15 hover:bg-white/20 border border-white/25 text-white text-xs font-medium">
-                                        {profile.age} años
-                                    </Badge>
-                                )}
-                            </div>
-                        </div>
+                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <div className="bg-brand-purple dark:bg-gradient-to-br dark:from-purple-600 dark:to-purple-900 p-2 sm:p-3 rounded-lg dark:shadow-[0_0_16px_rgba(139,92,246,0.5),0_2px_8px_rgba(0,0,0,0.4)]">
+                        <UserCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
+                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400 dark:drop-shadow-[0_0_8px_rgba(167,139,250,0.3)]">Mis Datos</h1>
                 </div>
 
                 {/* ── Cards grid ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                     {/* Datos Personales */}
-                    <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                    <Card className="bg-transparent">
                         <CardContent className="p-5">
                             <SectionHeader
                                 icon={<UserCircle className="w-5 h-5 text-white" />}
                                 title="Datos Personales"
                             />
-                            <div className="space-y-1 divide-y divide-gray-50">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                                 <ReadOnlyField
                                     label="Nombre completo"
                                     value={profile?.full_name || ""}
@@ -276,7 +237,7 @@ export const MisDatos = () => {
                                     label="Fecha de nacimiento"
                                     value={
                                         profile?.birthdate
-                                            ? new Date(profile.birthdate).toLocaleDateString("es-AR")
+                                            ? new Date(profile.birthdate + "T00:00:00").toLocaleDateString("es-AR")
                                             : ""
                                     }
                                     icon={<Calendar className="w-4 h-4" />}
@@ -296,13 +257,13 @@ export const MisDatos = () => {
                     </Card>
 
                     {/* Contacto — campos editables */}
-                    <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                    <Card className="bg-transparent">
                         <CardContent className="p-5">
                             <SectionHeader
                                 icon={<Mail className="w-5 h-5 text-white" />}
                                 title="Contacto"
                             />
-                            <div className="space-y-1 divide-y divide-gray-50">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                                 <EditableField
                                     label="Teléfono"
                                     value={profile?.phone || ""}
@@ -352,63 +313,6 @@ export const MisDatos = () => {
                                     placeholder="1000"
                                     {...editProps}
                                 />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Obra Social */}
-                    <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <CardContent className="p-5">
-                            <SectionHeader
-                                icon={<CreditCard className="w-5 h-5 text-white" />}
-                                title="Obra Social"
-                            />
-                            <div className="space-y-1 divide-y divide-gray-50">
-                                <ReadOnlyField
-                                    label="N° Afiliado"
-                                    value={profile?.health_card || "No registrado"}
-                                    icon={<CreditCard className="w-4 h-4" />}
-                                />
-                                <ReadOnlyField
-                                    label="CUIL"
-                                    value={profile?.patient_id_number || ""}
-                                    icon={<IdCard className="w-4 h-4" />}
-                                />
-                            </div>
-
-                            {/* Estado de cuenta */}
-                            <div className="mt-5 pt-4 border-t border-gray-100">
-                                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
-                                    Estado de cuenta
-                                </p>
-                                <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50">
-                                    <div className="flex items-center gap-2">
-                                        <CheckCircle2 className={cn(
-                                            "w-4 h-4",
-                                            profile?.account_status === "Active" ? "text-green-500" : "text-gray-400"
-                                        )} />
-                                        <span className="text-sm font-medium text-gray-700">Estado</span>
-                                    </div>
-                                    <Badge
-                                        className={cn(
-                                            "text-xs font-semibold",
-                                            profile?.account_status === "Active"
-                                                ? "bg-green-100 text-green-700 hover:bg-green-100"
-                                                : "bg-red-100 text-red-700 hover:bg-red-100"
-                                        )}
-                                    >
-                                        {profile?.account_status === "Active" ? "Activo" : "Inactivo"}
-                                    </Badge>
-                                </div>
-                                <div className="flex items-center gap-2 mt-3 px-4 text-gray-400">
-                                    <Clock className="w-3.5 h-3.5 shrink-0" />
-                                    <span className="text-xs">
-                                        Último acceso:{" "}
-                                        {profile?.last_login
-                                            ? new Date(profile.last_login).toLocaleString("es-AR")
-                                            : "-"}
-                                    </span>
-                                </div>
                             </div>
                         </CardContent>
                     </Card>

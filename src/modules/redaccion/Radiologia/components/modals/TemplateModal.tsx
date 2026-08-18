@@ -68,7 +68,7 @@ export const TemplateModal = ({
                             {filteredTemplates.map((template) => (
                                 <div
                                     key={template.guid}
-                                    className={`p-4 cursor-pointer transition-all grid grid-cols-2 gap-4 relative ${selectedTemplate?.guid === template.guid
+                                    className={`relative grid cursor-pointer grid-cols-1 gap-4 p-4 transition-all sm:grid-cols-2 ${selectedTemplate?.guid === template.guid
                                         ? 'bg-purple-100 border-2 border-brand-purple shadow-md'
                                         : 'hover:bg-gray-50 border-2 border-transparent'
                                         }`}

@@ -12,7 +12,7 @@ export const Login = ({ initialIsPatient = false }: LoginProps) => {
 
     return (
         <div className={cn(
-            "min-h-screen flex items-center justify-center p-4 transition-theme relative",
+            "relative flex min-h-dvh items-center justify-center overflow-x-hidden px-3 py-4 transition-theme sm:p-4",
             !isPatient && "theme-staff"
         )}>
             {/* Background Effects */}
@@ -30,11 +30,11 @@ export const Login = ({ initialIsPatient = false }: LoginProps) => {
 
                 {/* Bottom info */}
                 <div className={cn(
-                    "mt-8 text-center animate-slide-up transition-colors duration-500",
+                    "mt-4 text-center animate-slide-up transition-colors duration-500 sm:mt-8",
                     isPatient ? "text-teal-700/60" : "text-indigo-300/60"
                 )} style={{ animationDelay: '0.2s' }}>
                     <p className="text-sm">
-                        © 2024 NextRIS - Todos los derechos reservados
+                        © 2026 NextRIS - Todos los derechos reservados
                     </p>
                 </div>
             </div>

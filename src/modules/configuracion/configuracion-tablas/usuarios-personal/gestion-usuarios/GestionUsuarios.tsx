@@ -7,8 +7,10 @@ import { UserModal } from "./components/UserModal";
 import { ResetPasswordModal } from "./components/ResetPasswordModal";
 import type { User, UserFormData, UserMedicalSubmitData } from "./types/users.types";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 export const GestionUsuarios = () => {
+    const { authData, refreshPermissions } = useAuth();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(8);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -95,7 +97,10 @@ export const GestionUsuarios = () => {
 
                             userService
                                 .setUserPermissions(selectedUser.guid, permissionCodes)
-                                .then(() => {
+                                .then(async () => {
+                                    if (authData?.user?.id === selectedUser.guid) {
+                                        await refreshPermissions();
+                                    }
                                     toast.success("Usuario actualizado exitosamente");
                                     handleCloseModal();
                                 })

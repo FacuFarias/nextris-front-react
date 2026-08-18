@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,7 +6,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Search, Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useTemplates, useDeleteTemplate, useSetUserDefault, useUnsetUserDefault } from "../hooks/use-templates";
 import { TemplateCard } from "./TemplateCard";
-import { TemplateDetailModal } from "./TemplateDetailModal";
 import type { Template } from "../types/informe-pred.types";
 /* import { useEstudiosPorModalidad } from "@/hooks/use-global"; */
 import { PrimaryButton } from "@/components";
@@ -15,6 +14,31 @@ import { useTiposEstudio } from "@/modules/configuracion/configuracion-tablas/ex
 import { useModalidades } from "@/modules/configuracion/configuracion-tablas/examenes/modalidades";
 import { useBodyParts } from "@/modules/configuracion/configuracion-tablas/examenes/partes-cuerpo";
 import { useNavigate } from "react-router-dom";
+
+const TEMPLATE_FILTERS_STORAGE_KEY = "informe-predefinidos-filters";
+
+interface StoredTemplateFilters {
+    studyTypeFilter?: string;
+    reportTypeFilter?: string;
+    searchTerm?: string;
+    onlyMine?: boolean;
+    modalityId?: string;
+    bodypartId?: string;
+    currentPage?: number;
+}
+
+interface FilterOptionSource {
+    guid: string;
+    description: string;
+}
+
+const getStoredFilters = (): StoredTemplateFilters => {
+    try {
+        return JSON.parse(sessionStorage.getItem(TEMPLATE_FILTERS_STORAGE_KEY) || "{}");
+    } catch {
+        return {};
+    }
+};
 
 interface TemplateListProps {
     onSelect?: (template: Template) => void;
@@ -31,19 +55,30 @@ export const TemplateList = ({
     onModalityClick,
     onBodypartClick
 }: TemplateListProps) => {
-    const [studyTypeFilter, setStudyTypeFilter] = useState<string>("");
-    const [reportTypeFilter, setReportTypeFilter] = useState<string>("");
-    const [searchTerm, setSearchTerm] = useState("");
-    const [onlyMine, setOnlyMine] = useState(false);
-    const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const storedFilters = useMemo(() => getStoredFilters(), []);
+    const [studyTypeFilter, setStudyTypeFilter] = useState<string>(storedFilters.studyTypeFilter || "");
+    const [reportTypeFilter, setReportTypeFilter] = useState<string>(storedFilters.reportTypeFilter || "");
+    const [searchTerm, setSearchTerm] = useState(storedFilters.searchTerm || "");
+    const [onlyMine, setOnlyMine] = useState(storedFilters.onlyMine || false);
     const navigate = useNavigate();
     // Paginación
-    const [currentPage, setCurrentPage] = useState(1);
+    const [currentPage, setCurrentPage] = useState(storedFilters.currentPage || 1);
     const itemsPerPage = 9; // 3x3 grid
     const { tiposEstudio } = useTiposEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
+
+    useEffect(() => {
+        sessionStorage.setItem(TEMPLATE_FILTERS_STORAGE_KEY, JSON.stringify({
+            studyTypeFilter,
+            reportTypeFilter,
+            searchTerm,
+            onlyMine,
+            modalityId: modalityId || "",
+            bodypartId: bodypartId || "",
+            currentPage,
+        }));
+    }, [studyTypeFilter, reportTypeFilter, searchTerm, onlyMine, modalityId, bodypartId, currentPage]);
 
     // Hooks
     const { data, isLoading, isError, error } = useTemplates(
@@ -72,10 +107,11 @@ export const TemplateList = ({
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const paginatedTemplates = filteredTemplates.slice(startIndex, endIndex);
+
     // Preparar opciones para el Autocomplete
     const tiposEstudioOptions = useMemo(() => {
         if (!Array.isArray(tiposEstudio?.data)) return [];
-        return tiposEstudio.data.map((estudio: any) => ({
+        return (tiposEstudio.data as FilterOptionSource[]).map((estudio) => ({
             value: estudio.guid,
             label: estudio.description
         }));
@@ -83,7 +119,7 @@ export const TemplateList = ({
 
     const modalidadesOptions = useMemo(() => {
         if (!Array.isArray(modalidades?.data)) return [];
-        return modalidades.data.map((modalidad: any) => ({
+        return (modalidades.data as FilterOptionSource[]).map((modalidad) => ({
             value: modalidad.guid,
             label: modalidad.description
         }));
@@ -91,7 +127,7 @@ export const TemplateList = ({
 
     const bodyPartsOptions = useMemo(() => {
         if (!Array.isArray(bodyParts?.data)) return [];
-        return bodyParts.data.map((bodyPart: any) => ({
+        return (bodyParts.data as FilterOptionSource[]).map((bodyPart) => ({
             value: bodyPart.guid,
             label: bodyPart.description
         }));
@@ -147,13 +183,6 @@ export const TemplateList = ({
     };
 
     // Handlers
-    const handleView = (template: Template) => {
-        setSelectedTemplate(template);
-        setIsDetailModalOpen(true);
-    };
-
-
-
     const handleEdit = (template: Template) => {
         if (!template.can_edit) return;
         // Navegar a la página de edición con el ID de la plantilla
@@ -196,7 +225,7 @@ export const TemplateList = ({
     return (
         <div className="space-y-4 h-full flex flex-col">
             {/* Filtros y búsqueda */}
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6 lg:gap-4">
                 {/* Búsqueda */}
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -326,7 +355,6 @@ export const TemplateList = ({
                                 key={template.guid}
                                 template={template}
                                 index={index}
-                                onView={handleView}
                                 onEdit={handleEdit}
                                 onDelete={handleDelete}
                                 onToggleUserDefault={handleToggleUserDefault}
@@ -397,13 +425,6 @@ export const TemplateList = ({
                     )}
                 </>
             )}
-
-            {/* Modal de detalles */}
-            <TemplateDetailModal
-                template={selectedTemplate}
-                isOpen={isDetailModalOpen}
-                onClose={() => setIsDetailModalOpen(false)}
-            />
         </div>
     );
 };

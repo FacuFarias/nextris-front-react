@@ -45,8 +45,8 @@ const ROLE_PERMISSION_SUGGESTIONS: Record<string, string[]> = {
         "users.manage",
         "users.permissions.manage",
         "tabs.gestion.view",
-        "tabs.structured_reports.view",
-        "tabs.nexi.view",
+        // "tabs.structured_reports.view", — deshabilitado temporalmente
+        // "tabs.nexi.view", — deshabilitado temporalmente
     ],
     tecnico: [
         "tabs.patients.view",
@@ -534,16 +534,13 @@ export const UserForm = ({
                         </div>
 
                         <div className="sm:col-span-2 space-y-1.5">
-                            <Label htmlFor="email">
-                                Email <span className="text-red-500">*</span>
-                            </Label>
+                            <Label htmlFor="email">Email</Label>
                             <Input
                                 id="email"
                                 type="email"
                                 value={formData.email}
                                 onChange={(e) => handleChange("email", e.target.value)}
                                 placeholder="Ej: jperez@hospital.com"
-                                required
                             />
                         </div>
                     </div>

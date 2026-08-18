@@ -11,6 +11,7 @@ const citaColumns: TableColumn<Cita>[] = [
         className: "font-medium",
         sortable: true,
         filterable: true,
+        mobile: { role: "title", order: 1 },
     },
     {
         key: "start",
@@ -18,6 +19,7 @@ const citaColumns: TableColumn<Cita>[] = [
         className: "font-medium",
         sortable: true,
         filterable: true,
+        mobile: { label: "Turno", order: 2 },
         render: (value: string) => {
             if (!value) return "";
 
@@ -46,6 +48,7 @@ const citaColumns: TableColumn<Cita>[] = [
         label: "DOCTOR",
         className: "font-medium",
         hideOnMobile: true,
+        mobile: { label: "Doctor", order: 4 },
         sortable: true,
         filterable: true,
     },
@@ -54,6 +57,7 @@ const citaColumns: TableColumn<Cita>[] = [
         label: "EXAMEN",
         className: "font-medium",
         hideOnMobile: true,
+        mobile: { label: "Examen", order: 3 },
         sortable: true,
         filterable: true,
     },
@@ -62,6 +66,7 @@ const citaColumns: TableColumn<Cita>[] = [
         label: "EQUIPO",
         className: "font-medium",
         hideOnMobile: true,
+        mobile: { role: "hidden" },
         sortable: true,
         filterable: true,
     },
@@ -78,6 +83,7 @@ export const getCitasActions = (
             label: "Editar",
             icon: <Edit className="h-4 w-4 text-blue-900" />,
             onClick: onEdit,
+            mobilePrimary: true,
         },
         {
             label: "Editar fecha",

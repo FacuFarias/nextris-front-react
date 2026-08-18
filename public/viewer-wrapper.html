@@ -13,6 +13,9 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
+            background: #10131d;
+            color: #f8fafc;
+            font-family: Arial, sans-serif;
         }
 
         #viewer-frame {
@@ -20,106 +23,188 @@
             height: 100%;
             border: none;
         }
+
+        #status {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+            background: #10131d;
+        }
+
+        #status[hidden] {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
-    <iframe id="viewer-frame" src="" allow="fullscreen"></iframe>
+    <div id="status" role="status">Esperando un estudio desde NextRIS…</div>
+    <iframe id="viewer-frame" title="Visor DICOM" src="about:blank" allow="fullscreen"></iframe>
 
     <script>
+        const CHANNEL_NAME = 'nextris-dicom-viewer-v1';
+        const GEOMETRY_KEY = 'nextris.dicomViewer.geometry.v1';
+        const STUDY_UID_PATTERN = /^[0-9]+(?:\.[0-9]+)+$/;
+        const GEOMETRY_POLL_INTERVAL = 1000;
+        const RESIZE_DEBOUNCE = 250;
+
         const iframe = document.getElementById('viewer-frame');
-        const urlParams = new URLSearchParams(window.location.search);
-        const initialStudyUID = urlParams.get('StudyInstanceUIDs');
+        const status = document.getElementById('status');
+        const viewerId = createId();
+        const channel = new BroadcastChannel(CHANNEL_NAME);
+        let lastGeometry = null;
+        let resizeTimer = null;
 
-        let currentStudyUID = initialStudyUID;
-        let retryCount = 0;
-        const MAX_RETRIES = 3;
-        const RETRY_DELAY = 2000; // 2 segundos
-
-        // Función para cargar un estudio con reintentos
-        function loadStudy(studyUID, isRetry = false) {
-            if (!studyUID) return;
-
-            if (isRetry) {
-                console.log(`🔄 Reintentando cargar estudio (${retryCount + 1}/${MAX_RETRIES}):`, studyUID);
-            } else {
-                console.log('📥 Cargando estudio:', studyUID);
-                retryCount = 0;
+        function createId() {
+            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                return window.crypto.randomUUID();
             }
 
-            currentStudyUID = studyUID;
-            const url = `https://viewer.nextris.cloud/viewer?StudyInstanceUIDs=${studyUID}`;
-
-            // Forzar recarga agregando un timestamp para evitar cache
-            const timestamp = new Date().getTime();
-            iframe.src = `${url}&_t=${timestamp}`;
+            return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
         }
 
-        // Cargar el estudio inicial
-        if (initialStudyUID) {
-            loadStudy(initialStudyUID);
+        function isRecord(value) {
+            return typeof value === 'object' && value !== null;
         }
 
-        // Escuchar mensajes de la ventana padre (la aplicación principal)
-        window.addEventListener('message', function (event) {
-            // Verificar que el mensaje venga del mismo origen (seguridad)
-            if (event.origin !== window.location.origin) {
+        function isValidStudyUID(value) {
+            return typeof value === 'string'
+                && value.length <= 64
+                && STUDY_UID_PATTERN.test(value);
+        }
+
+        function isValidViewerUrl(value) {
+            if (typeof value !== 'string') return false;
+
+            try {
+                const url = new URL(value);
+                const validProtocol = url.protocol === 'https:' || url.protocol === 'http:';
+                const validPath = url.pathname.endsWith('/set-token.html')
+                    || url.pathname.endsWith('/viewer');
+                return validProtocol && validPath;
+            } catch {
+                return false;
+            }
+        }
+
+        function announceReady(replyTo) {
+            channel.postMessage({
+                type: 'VIEWER_READY',
+                viewerId,
+                ...(replyTo ? { replyTo } : {}),
+            });
+        }
+
+        function loadStudy(message) {
+            if (!isValidStudyUID(message.studyInstanceUID) || !isValidViewerUrl(message.viewerUrl)) {
                 return;
             }
-            if (event.data && event.data.type === 'UPDATE_VIEWER') {
-                const { newUrl, studyInstanceUid } = event.data;
 
-                if (studyInstanceUid) {
-                    // Esperar un momento antes de actualizar para dar tiempo al servidor
-                    setTimeout(() => {
-                        loadStudy(studyInstanceUid);
-                        // Actualizar también la URL de esta ventana
-                        const newWrapperUrl = `${window.location.pathname}?StudyInstanceUIDs=${studyInstanceUid}`;
-                        window.history.pushState({}, '', newWrapperUrl);
-                    }, 500);
-                } else if (newUrl) {
-                    iframe.src = newUrl;
-                }
+            status.textContent = 'Cargando estudio…';
+            status.hidden = false;
+            iframe.src = message.viewerUrl;
+
+            const wrapperUrl = new URL(window.location.href);
+            wrapperUrl.searchParams.set('bridge', '2');
+            wrapperUrl.searchParams.set('StudyInstanceUIDs', message.studyInstanceUID);
+            window.history.replaceState({}, '', `${wrapperUrl.pathname}${wrapperUrl.search}`);
+
+            channel.postMessage({
+                type: 'STUDY_ACCEPTED',
+                viewerId,
+                requestId: message.requestId,
+                replyTo: message.sourceId,
+            });
+        }
+
+        channel.addEventListener('message', function (event) {
+            const message = event.data;
+            if (!isRecord(message) || typeof message.type !== 'string') return;
+
+            if (message.type === 'VIEWER_PING' && typeof message.sourceId === 'string') {
+                announceReady(message.sourceId);
+                return;
+            }
+
+            if (message.type !== 'OPEN_STUDY') return;
+            if (message.targetViewerId !== viewerId) return;
+            if (typeof message.sourceId !== 'string' || typeof message.requestId !== 'string') return;
+
+            loadStudy(message);
+        });
+
+        iframe.addEventListener('load', function () {
+            if (iframe.src !== 'about:blank') {
+                status.hidden = true;
             }
         });
 
-        // Monitorear el contenido del iframe para detectar errores
-        iframe.addEventListener('load', function () {
-            console.log('✅ Iframe cargado:', iframe.src);
+        function getGeometry() {
+            return {
+                x: Math.round(window.screenX),
+                y: Math.round(window.screenY),
+                width: Math.round(window.outerWidth),
+                height: Math.round(window.outerHeight),
+            };
+        }
 
-            // Resetear el contador de reintentos cuando carga exitosamente
-            retryCount = 0;
+        function isValidGeometry(geometry) {
+            return Object.values(geometry).every(Number.isFinite)
+                && geometry.width >= 640
+                && geometry.height >= 480
+                && geometry.width <= 10000
+                && geometry.height <= 10000
+                && Math.abs(geometry.x) <= 100000
+                && Math.abs(geometry.y) <= 100000;
+        }
 
-            // Intentar detectar si hay un error en el contenido
-            setTimeout(() => {
-                try {
-                    // Si podemos acceder al contenido del iframe (mismo origen)
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    const bodyText = iframeDoc.body.innerText || '';
+        function sameGeometry(left, right) {
+            return left && right
+                && left.x === right.x
+                && left.y === right.y
+                && left.width === right.width
+                && left.height === right.height;
+        }
 
-                    // Detectar el mensaje de error específico
-                    if (bodyText.includes('One or more of the requested studies are not available') ||
-                        bodyText.includes('not available at this time')) {
-                        console.log('⚠️ Error detectado: Estudio no disponible');
+        function persistGeometry() {
+            const geometry = getGeometry();
+            if (!isValidGeometry(geometry) || sameGeometry(geometry, lastGeometry)) return;
 
-                        if (retryCount < MAX_RETRIES && currentStudyUID) {
-                            retryCount++;
-                            console.log(`⏳ Esperando ${RETRY_DELAY}ms antes de reintentar...`);
-                            setTimeout(() => {
-                                loadStudy(currentStudyUID, true);
-                            }, RETRY_DELAY);
-                        } else if (retryCount >= MAX_RETRIES) {
-                            console.log('❌ Máximo de reintentos alcanzado. El estudio podría no estar disponible.');
-                        }
-                    }
-                } catch (e) {
-                    // Si no podemos acceder al contenido (diferente origen), no hay problema
-                    // El visor está en un dominio diferente, así que esto es esperado
-                    console.log('📺 Visor cargado (contenido de diferente origen)');
-                }
-            }, 1500);
+            try {
+                localStorage.setItem(GEOMETRY_KEY, JSON.stringify(geometry));
+                lastGeometry = geometry;
+            } catch {
+                // El visor sigue funcionando aunque el almacenamiento esté deshabilitado.
+            }
+        }
+
+        function scheduleGeometrySave() {
+            window.clearTimeout(resizeTimer);
+            resizeTimer = window.setTimeout(persistGeometry, RESIZE_DEBOUNCE);
+        }
+
+        const geometryPoll = window.setInterval(persistGeometry, GEOMETRY_POLL_INTERVAL);
+        window.addEventListener('resize', scheduleGeometrySave);
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'hidden') persistGeometry();
         });
 
-        console.log('✅ Wrapper del visor configurado y escuchando mensajes');
-        console.log('👂 Esperando mensajes de tipo "UPDATE_VIEWER"...');
+        window.addEventListener('pagehide', function () {
+            window.clearInterval(geometryPoll);
+            window.clearTimeout(resizeTimer);
+            persistGeometry();
+            channel.postMessage({ type: 'VIEWER_CLOSED', viewerId });
+            channel.close();
+        });
+
+        persistGeometry();
+        announceReady();
     </script>
+</body>
+
+</html>

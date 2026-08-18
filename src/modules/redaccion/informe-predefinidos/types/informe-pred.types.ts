@@ -5,6 +5,7 @@ export interface Template {
     title: string;
     study_type_id: string;
     study_type_description?: string;
+    study_type_code?: string;
     findings: string;
     technique: string;
     impression: string;
@@ -60,5 +61,4 @@ export interface UpdateTemplateRequest {
     structured_variables?: string;
     criteria?: string;
 }
-
 

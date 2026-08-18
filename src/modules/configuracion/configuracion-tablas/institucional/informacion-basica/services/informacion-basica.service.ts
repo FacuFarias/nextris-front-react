@@ -1,14 +1,22 @@
 import { api } from '@/lib/api';
-import type { InformacionBasica } from '../types/informacion-basica.types';
+import type { InformacionBasica, InformacionBasicaFormData } from '../types/informacion-basica.types';
 
 export const informacionBasicaService = {
-    get: async (): Promise<InformacionBasica> => {
-        const { data } = await api.get('/configuracion/informacion-basica');
-        return data;
+    get: async (): Promise<InformacionBasica | null> => {
+        const { data } = await api.get('/institutional/info');
+        return data.data;
     },
 
-    update: async (data: InformacionBasica): Promise<InformacionBasica> => {
-        const { data: response } = await api.put('/configuracion/informacion-basica', data);
-        return response;
+    update: async (locationId: string, formData: InformacionBasicaFormData) => {
+        const payload = new FormData();
+        payload.append('name', formData.name);
+        payload.append('mail', formData.mail);
+        payload.append('address', formData.address);
+        payload.append('phone', formData.phone);
+        payload.append('require_signature_password', String(formData.require_signature_password ?? true));
+        if (formData.logo) payload.append('logo', formData.logo);
+
+        const { data: response } = await api.put(`/institutional/info/${locationId}`, payload);
+        return response.data;
     },
 };

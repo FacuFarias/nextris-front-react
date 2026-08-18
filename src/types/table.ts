@@ -4,15 +4,23 @@ export interface TableColumn<T = any> {
     label: string;
     sortable?: boolean;
     render?: (value: any, row: T, index: number) => React.ReactNode;
+    headerRender?: () => React.ReactNode;
     className?: string;
     headerClassName?: string;
+    headerTitle?: string;
     hideOnMobile?: boolean;
+    mobile?: {
+        role?: "title" | "detail" | "hidden";
+        label?: string;
+        order?: number;
+        icon?: React.ReactNode;
+    };
     filterable?: boolean;
 }
 
 export interface TableAction<T = any> {
-    label: string;
-    icon?: React.ReactNode;
+    label: string | ((row: T) => string);
+    icon?: React.ReactNode | ((row: T) => React.ReactNode);
     onClick?: (row: T, index: number) => void;
     component?: (row: T, index: number) => React.ReactNode;
     variant?:
@@ -24,6 +32,7 @@ export interface TableAction<T = any> {
     | "link";
     disabled?: (row: T) => boolean;
     hidden?: (row: T) => boolean;
+    mobilePrimary?: boolean;
 }
 
 export interface PaginationConfig {
@@ -61,6 +70,8 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     allColumns?: TableColumn<T>[]; // Todas las columnas para el selector
     visibleColumns?: string[];
     onToggleColumn?: (columnKey: string) => void;
+    fixedColumnKeys?: string[];
+    onColumnOrderChange?: (columnKeys: string[]) => void;
     additionalControls?: React.ReactNode; // Controles adicionales en la barra de paginación
     tableBackgroundImage?: string; // URL de imagen de fondo para el área de la tabla (light mode)
     tableBackgroundImageDark?: string; // URL de imagen de fondo en dark mode (crossfade automático)
@@ -73,4 +84,7 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     preserveTableHeight?: boolean;
     stickyPagination?: boolean;
     compactSpacing?: boolean;
+    mobileMode?: "cards" | "scroll";
+    mobileActions?: "primary" | "menu";
+    mobileStatusKey?: keyof T | string;
 }

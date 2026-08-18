@@ -6,14 +6,13 @@ import { useState } from "react";
 import { useDistribucion } from "./hooks/useDistribucion";
 import { distribucionColumns } from "./components/columns";
 import { getDistribucionActions } from "./components/actions";
-import { UpdateEmailModal } from "./components/UpdateEmailModal";
-import { SendReportModal } from "./components/SendReportModal";
 import type { Examen } from "./types/distribucion.types";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { distribucionService } from "./services/distribucion.service";
-import { useFacility } from "@/context/FacilityContext";
+import { useAppConfig } from "@/context/AppConfigContext";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import fondoImage from "@/assets/mail.jpg";
@@ -24,20 +23,19 @@ export const Distribucion = () => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [allReported, setAllReported] = useState(false);
+    const [dateField, setDateField] = useState<string>("admision");
+    const [dateRange, setDateRange] = useState<string>("all");
+    const isEnviadoFilter = dateField === "enviado";
 
-    // Modals state
-    const [isUpdateEmailModalOpen, setIsUpdateEmailModalOpen] = useState(false);
-    const [isSendReportModalOpen, setIsSendReportModalOpen] = useState(false);
-    const [selectedExamen, setSelectedExamen] = useState<Examen | null>(null);
-    const { selectedFacilityId } = useFacility();
+    const { config } = useAppConfig();
 
     const { data: facilityPlanData } = useQuery({
-        queryKey: ["facility-plan", selectedFacilityId, "distribucion"],
+        queryKey: ["facility-plan", config?.id?.toString() || "1", "distribucion"],
         queryFn: async () => {
-            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
+            const response = await api.get(`/config/facilities/${config?.id?.toString() || "1"}/plan`);
             return response.data?.data || null;
         },
-        enabled: Boolean(selectedFacilityId),
+        enabled: Boolean(config?.id?.toString() || "1"),
         staleTime: 60 * 1000,
     });
 
@@ -52,10 +50,7 @@ export const Distribucion = () => {
         examenes,
         isLoading,
         sendReportAsync,
-        isSendingReport,
-        updateEmailAsync,
-        isUpdatingEmail
-    } = useDistribucion(allReported, page, pageSize, selectedFacilityId);
+    } = useDistribucion(allReported, page, pageSize, dateRange, dateField);
 
     const pagination = {
         page: examenes?.data?.page || page,
@@ -67,56 +62,15 @@ export const Distribucion = () => {
         setPageSize(newPageSize);
     };
 
-    const handleOpenUpdateEmailModal = (examen: Examen) => {
-        setSelectedExamen(examen);
-        setIsUpdateEmailModalOpen(true);
-    };
-
-    const handleOpenSendReportModal = (examen: Examen) => {
-        if (isDistributeLimitReached) {
-            toast.error(`Límite mensual de distribución alcanzado (${distributedCount}/${distributeMonthlyLimit}).`);
-            return;
-        }
-        setSelectedExamen(examen);
-        setIsSendReportModalOpen(true);
-    };
-
-    const handleCloseModals = () => {
-        setIsUpdateEmailModalOpen(false);
-        setIsSendReportModalOpen(false);
-        setSelectedExamen(null);
-    };
-
-    const handleUpdateEmail = async (email: string) => {
-        if (!selectedExamen) return;
-
-        try {
-            await updateEmailAsync({
-                examId: selectedExamen.guid,
-                payload: { email }
-            });
-            toast.success("Email actualizado correctamente");
-            handleCloseModals();
-        } catch (error) {
-            toast.error("Error al actualizar el email");
-            console.error(error);
-        }
-    };
-
-    const handleSendReport = async (email: string) => {
-        if (!selectedExamen) return;
+    const handleSendReport = async (examen: Examen) => {
         if (isDistributeLimitReached) {
             toast.error(`Límite mensual de distribución alcanzado (${distributedCount}/${distributeMonthlyLimit}).`);
             return;
         }
 
         try {
-            await sendReportAsync({
-                examId: selectedExamen.guid,
-                payload: { email }
-            });
+            await sendReportAsync({ examId: examen.guid });
             toast.success("Informe enviado correctamente");
-            handleCloseModals();
         } catch (error: any) {
             const backendMessage = error?.response?.data?.message;
             toast.error(backendMessage || "Error al enviar el informe");
@@ -134,8 +88,6 @@ export const Distribucion = () => {
         }
     };
 
-
-
     const handleOpenDicomViewer = async (examen: Examen) => {
         try {
             toast.loading("Abriendo visor DICOM...");
@@ -150,14 +102,11 @@ export const Distribucion = () => {
     };
 
     const actions = getDistribucionActions(
-        handleOpenUpdateEmailModal,
-        handleOpenSendReportModal,
+        handleSendReport,
         handleViewReport,
         handleOpenDicomViewer,
         isDistributeLimitReached,
     );
-
-
 
     return (
         <MainLayout>
@@ -193,12 +142,43 @@ export const Distribucion = () => {
                     <div className="flex items-center space-x-2 bg-gray-50 px-4 py-2 rounded-lg dark:bg-[#2a2e32]">
                         <Switch
                             id="all-reported"
-                            checked={allReported}
+                            checked={isEnviadoFilter ? true : allReported}
                             onCheckedChange={setAllReported}
+                            disabled={isEnviadoFilter}
                         />
                         <Label htmlFor="all-reported" className="text-sm cursor-pointer">
-                            Mostrar todos los enviados
+                            Incluir enviados
                         </Label>
+                    </div>
+
+                    {/* Filtro de Fecha */}
+                    <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg dark:bg-[#2a2e32]">
+                        <Select value={dateField} onValueChange={(v) => { setDateField(v); if (v === 'enviado') setAllReported(true); setPage(1); }}>
+                            <SelectTrigger className="h-9 text-sm min-w-[100px] border-0 bg-transparent">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="admision">Admisión</SelectItem>
+                                <SelectItem value="estudio">Estudio</SelectItem>
+                                <SelectItem value="enviado">Enviado</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={dateRange} onValueChange={(v) => { setDateRange(v); setPage(1); }}>
+                            <SelectTrigger className="h-9 text-sm min-w-[130px] border-0 bg-transparent">
+                                <SelectValue placeholder="Hasta" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todo</SelectItem>
+                                <SelectItem value="1d">Último día</SelectItem>
+                                <SelectItem value="3d">Últimos 3 días</SelectItem>
+                                <SelectItem value="7d">Últimos 7 días</SelectItem>
+                                <SelectItem value="14d">Últimos 14 días</SelectItem>
+                                <SelectItem value="1m">Último mes</SelectItem>
+                                <SelectItem value="2m">Últimos 2 meses</SelectItem>
+                                <SelectItem value="3m">Últimos 3 meses</SelectItem>
+                                <SelectItem value="1y">Último año</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
 
@@ -220,28 +200,8 @@ export const Distribucion = () => {
                     perPageOptions={[10, 20, 50, 100]}
                     tableBackgroundImage={fondoImage}
                     tableBackgroundImageDark={backDarkImage}
+                    mobileMode="cards"
                     stickyPagination
-                />
-
-                {/* Modal Actualizar Email */}
-                <UpdateEmailModal
-                    isOpen={isUpdateEmailModalOpen}
-                    onClose={handleCloseModals}
-                    onSubmit={handleUpdateEmail}
-                    initialEmail={selectedExamen?.mail}
-                    patientName={selectedExamen?.paciente}
-                    isLoading={isUpdatingEmail}
-                />
-
-                {/* Modal Enviar Informe */}
-                <SendReportModal
-                    isOpen={isSendReportModalOpen}
-                    onClose={handleCloseModals}
-                    onSubmit={handleSendReport}
-                    initialEmail={selectedExamen?.mail}
-                    examName={selectedExamen?.examen}
-                    patientName={selectedExamen?.paciente}
-                    isLoading={isSendingReport}
                 />
             </div>
         </MainLayout>

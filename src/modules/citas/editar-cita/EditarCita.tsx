@@ -137,6 +137,7 @@ export const EditarCita = () => {
                         actions={citasActions}
                         tableBackgroundImage={fondoImage}
                         tableBackgroundImageDark={backDarkImage}
+                        mobileMode="cards"
                         stickyPagination
                     />
                 </div>

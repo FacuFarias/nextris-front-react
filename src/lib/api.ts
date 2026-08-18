@@ -68,9 +68,6 @@ api.interceptors.request.use(
         // Configurar header de Authorization si hay token
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
-            console.log('[API] Request con token:', config.method?.toUpperCase(), config.url);
-        } else {
-            console.warn('[API] Request SIN token:', config.method?.toUpperCase(), config.url);
         }
 
         // Forward session ID to backend analytics middleware
@@ -121,8 +118,9 @@ api.interceptors.response.use(
 
             const authDataStr = localStorage.getItem('authData');
             if (!authDataStr) {
+                isRefreshing = false;
                 // No hay refresh token, redirigir al login
-                window.location.href = '/';
+                // Avoid redirect — prevent infinite reload loop
                 return Promise.reject(error);
             }
 
@@ -130,9 +128,10 @@ api.interceptors.response.use(
             const refreshToken = authData?.refresh_token;
 
             if (!refreshToken) {
+                isRefreshing = false;
                 // No hay refresh token, redirigir al login
                 localStorage.removeItem('authData');
-                window.location.href = '/';
+                // Avoid redirect — prevent infinite reload loop
                 return Promise.reject(error);
             }
 
@@ -168,7 +167,7 @@ api.interceptors.response.use(
                 processQueue(refreshError, null);
                 isRefreshing = false;
                 localStorage.removeItem('authData');
-                window.location.href = '/';
+                // Avoid redirect — prevent infinite reload loop
                 return Promise.reject(refreshError);
             }
         }

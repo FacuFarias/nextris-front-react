@@ -13,7 +13,8 @@ const ejecucionColumns: TableColumn<Ejecucion>[] = [
         filterable: true,
         render: (value: string) => {
             return fechaYhora(value);
-        }
+        },
+        mobile: { label: "Fecha y hora", order: 4 },
     },
     {
         key: "patient_surname",
@@ -21,6 +22,7 @@ const ejecucionColumns: TableColumn<Ejecucion>[] = [
         className: "font-medium",
         sortable: true,
         filterable: true,
+        mobile: { role: "title", label: "Paciente", order: 1 },
     },
     {
         key: "patient_name",
@@ -28,6 +30,7 @@ const ejecucionColumns: TableColumn<Ejecucion>[] = [
         className: "font-medium",
         sortable: true,
         filterable: true,
+        mobile: { label: "Nombre", order: 2 },
     },
     {
         key: "study_type",
@@ -35,12 +38,14 @@ const ejecucionColumns: TableColumn<Ejecucion>[] = [
         className: "font-medium",
         sortable: true,
         filterable: true,
+        mobile: { label: "Estudio", order: 3 },
     },
     {
         key: "status",
         label: "ESTADO",
         className: "font-medium",
         hideOnMobile: true,
+        mobile: { label: "Estado", order: 5 },
         sortable: true,
         filterable: true,
     },
@@ -50,6 +55,7 @@ const ejecucionColumns: TableColumn<Ejecucion>[] = [
         className: "font-medium",
         sortable: true,
         filterable: true,
+        mobile: { role: "hidden" },
     },
     {
         key: "admission_number",
@@ -57,6 +63,7 @@ const ejecucionColumns: TableColumn<Ejecucion>[] = [
         className: "font-medium",
         sortable: true,
         filterable: true,
+        mobile: { role: "hidden" },
     },
     {
         key: "accession_number",
@@ -64,6 +71,7 @@ const ejecucionColumns: TableColumn<Ejecucion>[] = [
         className: "font-medium",
         sortable: true,
         filterable: true,
+        mobile: { label: "Acceso", order: 6 },
     }
 ];
 
@@ -75,6 +83,7 @@ export const getEjecucionActions = (
             label: "Ver Detalle",
             icon: <Eye className="h-4 w-4 text-blue-900" />,
             onClick: onVerDetalle,
+            mobilePrimary: true,
         },
 
     ];

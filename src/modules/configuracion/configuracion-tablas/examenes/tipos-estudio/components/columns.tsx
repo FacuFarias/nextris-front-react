@@ -2,12 +2,12 @@ import type { TableColumn, TableAction } from "@/types/table";
 import type { TipoEstudio } from "../types/tipos-estudio.types";
 import { Edit } from "lucide-react";
 
-// Configuración de columnas para usuarios
 const tipoEstudioColumns: TableColumn<TipoEstudio>[] = [
     {
         key: "code",
         label: "CÓDIGO",
         className: "font-medium",
+        headerClassName: "w-[60px]",
     },
     {
         key: "description",
@@ -18,32 +18,22 @@ const tipoEstudioColumns: TableColumn<TipoEstudio>[] = [
         key: "studygroup",
         label: "GRUPO DE ESTUDIO",
         className: "font-medium",
+        headerClassName: "w-[150px]",
     },
     {
         key: "bodypart",
         label: "PARTE DEL CUERPO",
         className: "font-medium",
+        headerClassName: "w-[160px]",
     },
     {
         key: "modality",
-        label: "MODALIDAD",
+        label: "MOD",
         className: "font-medium",
-    },
-    {
-        key: "rvu",
-        label: "RVU",
-        className: "font-medium",
-    },
-    {
-        key: "nofviews",
-        label: "NÚMERO DE VISTAS",
-        className: "font-medium",
-        render: (value) => Math.round(value)
-
+        headerClassName: "w-[55px]",
     },
 ];
 
-// Función que genera las acciones con handlers personalizados
 export const getTipoEstudioActions = (
     onEditar: (tipoEstudio: TipoEstudio) => void,
 ): TableAction<TipoEstudio>[] => [

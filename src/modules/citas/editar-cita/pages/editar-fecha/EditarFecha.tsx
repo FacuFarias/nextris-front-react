@@ -1,6 +1,6 @@
 import { MainLayout } from "@/layouts/layout";
 import { useCalendarEventos } from "@/modules/citas/nueva-cita/hooks/use-calendar-eventos";
-import { CalendarPlus, ArrowLeft, Check } from "lucide-react";
+import { CalendarPlus, ArrowLeft, Check, MonitorSmartphone } from "lucide-react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -389,17 +389,17 @@ export const EditarFecha = () => {
             <div className="space-y-4">
                 {/* Header */}
                 <div className="bg-card rounded-lg p-3 sm:p-6 shadow-md border border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3">
                             <div className="bg-brand-purple p-2.5 rounded-lg">
                                 <CalendarPlus className="w-6 h-6 text-white" />
                             </div>
                             <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400">Editar Cita</h1>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 md:flex md:items-center">
                             <Button
                                 onClick={handleAplicarCambios}
-                                className={actionButtonClass}
+                                className={`${actionButtonClass} hidden md:inline-flex`}
                             >
                                 <Check className="w-4 h-4 mr-2" />
                                 Aplicar cambios
@@ -414,7 +414,13 @@ export const EditarFecha = () => {
                         </div>
                     </div>
 
-                    <div className="mt-4 grid grid-cols-1 xl:grid-cols-12 gap-4">
+                    <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-5 text-center text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 md:hidden">
+                        <MonitorSmartphone className="mx-auto mb-3 h-8 w-8" />
+                        <h2 className="font-semibold">La reprogramación requiere una pantalla mayor</h2>
+                        <p className="mt-1 text-sm">Utiliza una tablet o computadora para mover la cita dentro de la agenda.</p>
+                    </div>
+
+                    <div className="mt-4 hidden grid-cols-1 gap-4 md:grid xl:grid-cols-12">
                         <div className="xl:col-span-4">
                             <Card className="bg-white dark:bg-[#2a2e32] shadow-lg border-0 overflow-hidden rounded-xl p-0 h-full">
                                 <CardContent className="py-4 space-y-4">

@@ -19,9 +19,10 @@ interface FilterPresetTabsProps {
     currentFilters: FilterPresetFilters
     filtersVisible: boolean
     onToggleFilters: () => void
+    activeFilterCount?: number
 }
 
-export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilters, filtersVisible, onToggleFilters }: FilterPresetTabsProps) => {
+export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilters, filtersVisible, onToggleFilters, activeFilterCount = 0 }: FilterPresetTabsProps) => {
     const { presets, isLoading } = useFilterPresets()
     const { mutateAsync: createPreset, isPending: isCreating } = useCreateFilterPreset()
     const { mutateAsync: updatePreset, isPending: isUpdating } = useUpdateFilterPreset()
@@ -117,13 +118,13 @@ export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilter
 
     return (
         <>
-            <div className="flex items-center gap-3 mb-2 overflow-hidden border-b border-gray-200">
+            <div className="mb-2 flex min-w-0 items-center gap-2 border-b border-gray-200">
                 {/* Tabs container */}
-                <div className="flex items-center gap-0 shrink-0">
+                <div className="flex min-w-0 flex-1 items-center gap-0 overflow-x-auto overscroll-x-contain pb-1 table-scrollbar-purple">
                     {/* Tab "Todos" - siempre presente */}
                     <button
                         onClick={() => handleTabClick(null)}
-                        className={`px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap border-b-2 -mb-px ${activePresetId === null
+                        className={`min-h-11 px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap border-b-2 -mb-px sm:min-h-0 ${activePresetId === null
                             ? "border-brand-purple text-brand-purple dark:border-purple-400 dark:text-purple-400"
                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300"
                             }`}
@@ -135,7 +136,7 @@ export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilter
                     {presets.map((preset) => (
                         <div
                             key={preset.guid}
-                            className={`group flex items-center gap-0.5 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer whitespace-nowrap border-b-2 -mb-px ${activePresetId === preset.guid
+                            className={`group flex min-h-11 items-center gap-0.5 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer whitespace-nowrap border-b-2 -mb-px sm:min-h-0 ${activePresetId === preset.guid
                                 ? "border-brand-purple text-brand-purple dark:border-purple-400 dark:text-purple-400"
                                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300"
                                 }`}
@@ -170,14 +171,14 @@ export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilter
                 </div>
 
                 {/* Botones de acción */}
-                <div className="flex items-center gap-1 shrink-0 ml-auto pb-1">
+                <div className="ml-auto flex shrink-0 items-center gap-1 pb-1">
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <button
                                     onClick={handleSaveLayout}
                                     disabled={activePresetId === null || isUpdating}
-                                    className="p-1 text-gray-400 hover:text-brand-purple disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    className="h-11 w-11 p-1 text-gray-400 hover:text-brand-purple disabled:opacity-30 disabled:cursor-not-allowed transition-colors sm:h-auto sm:w-auto"
                                 >
                                     {isUpdating ? (
                                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -199,7 +200,7 @@ export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilter
                             <TooltipTrigger asChild>
                                 <button
                                     onClick={() => setIsSaveDialogOpen(true)}
-                                    className="p-1 text-gray-400 hover:text-brand-purple transition-colors"
+                                    className="flex h-11 w-11 items-center justify-center p-1 text-gray-400 transition-colors hover:text-brand-purple sm:h-auto sm:w-auto"
                                 >
                                     <Plus className="w-3.5 h-3.5" />
                                 </button>
@@ -213,12 +214,17 @@ export const FilterPresetTabs = ({ activePresetId, onPresetChange, currentFilter
                             <TooltipTrigger asChild>
                                 <button
                                     onClick={onToggleFilters}
-                                    className="p-1 text-gray-400 hover:text-brand-purple transition-colors"
+                                    className="h-11 w-11 p-1 text-gray-400 hover:text-brand-purple transition-colors sm:h-auto sm:w-auto"
                                 >
                                     {filtersVisible
                                         ? <EyeOff className="w-3.5 h-3.5" />
                                         : <Eye className="w-3.5 h-3.5" />
                                     }
+                                    {activeFilterCount > 0 && (
+                                        <span className="ml-0.5 rounded-full bg-brand-purple px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                                            {activeFilterCount}
+                                        </span>
+                                    )}
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent>

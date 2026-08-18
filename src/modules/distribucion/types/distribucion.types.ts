@@ -8,12 +8,14 @@ export interface Examen {
     medico_autor: string;       // Médico que realizó el informe
     medico_solicitante: string; // Médico que solicitó el estudio
     urgencia: "S" | "N";
-    isimage: boolean      // S = Sí, N = No
+    isimage: boolean;           // S = Sí, N = No
+    sent_at: string | null;     // Fecha de envío (DD/MM/YYYY HH24:MI)
+    send_error: string | null;  // Error de envío si falló
 }
 
 
 export interface SendReportPayload {
-    email: string;
+    examId: string;
 }
 
 export interface UpdateEmailPayload {
