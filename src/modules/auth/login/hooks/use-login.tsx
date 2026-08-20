@@ -17,6 +17,7 @@ interface LoginResponse {
         name: string;
         requires_password_change: boolean;
         role_id: string;
+        role_name?: string;
         surname: string;
         user_type: string;
         username: string;
@@ -36,7 +37,17 @@ export const UseLogin = () => {
             toast.success(data?.message || "¡Inicio de sesión exitoso!", {
                 position: "top-right",
             });
-            navigate(data?.user?.user_type === "patient" ? "/estudios" : "/inicio");
+            const userTypes = [data?.user?.user_type, data?.user?.role_name]
+                .filter(Boolean)
+                .map((type) => type!.trim().toLowerCase());
+            const isPatient = userTypes.includes("patient");
+            const isDoctor = userTypes.some((type) => type === "medico" || type === "médico");
+            const destination = isPatient
+                ? "/estudios"
+                : isDoctor
+                    ? "/estudios/redaccion"
+                    : "/inicio";
+            navigate(destination);
         },
         onError: (error) => {
             console.error("Error during login:", error);

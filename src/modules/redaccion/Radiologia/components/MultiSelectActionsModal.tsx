@@ -4,7 +4,6 @@ import { SecondaryButton } from "@/components";
 import { UserCheck, Tags, Flag, X, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getMedicosAll } from "@/services/api-global.service";
-import { getAllTags } from "./services/informes.service";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 

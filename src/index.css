@@ -44,7 +44,37 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  /* Densidad de la interfaz: equivalente a trabajar con el navegador al 75%,
+     sin escalar el documento completo ni alterar el viewport. */
+  --spacing: 0.1875rem;
+  --text-xs: 0.5625rem;
+  --text-xs--line-height: 0.75rem;
+  --text-sm: 0.65625rem;
+  --text-sm--line-height: 0.9375rem;
+  --text-base: 0.75rem;
+  --text-base--line-height: 1.125rem;
+  --text-lg: 0.84375rem;
+  --text-lg--line-height: 1.3125rem;
+  --text-xl: 0.9375rem;
+  --text-xl--line-height: 1.3125rem;
+  --text-2xl: 1.125rem;
+  --text-2xl--line-height: 1.5rem;
+  --text-3xl: 1.40625rem;
+  --text-3xl--line-height: 1.6875rem;
+  --text-4xl: 1.6875rem;
+  --text-4xl--line-height: 1.875rem;
+  --container-xs: 15rem;
+  --container-sm: 18rem;
+  --container-md: 21rem;
+  --container-lg: 24rem;
+  --container-xl: 27rem;
+  --container-2xl: 31.5rem;
+  --container-3xl: 36rem;
+  --container-4xl: 42rem;
+  --container-5xl: 48rem;
+  --container-6xl: 54rem;
+  --container-7xl: 60rem;
+  --radius: 0.46875rem;
   --gradient: linear-gradient(to bottom, #2D1B4E 0%, #2D1B4E 40%, #1a0f2e 100%);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -121,6 +151,8 @@
 
   body {
     @apply bg-background text-foreground;
+    font-size: 0.75rem;
+    line-height: 1.125rem;
     min-width: 320px;
     min-height: 100dvh;
     overflow-x: hidden;
@@ -597,4 +629,55 @@
 
 .table-scrollbar-purple::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, rgba(124, 58, 237, 1) 0%, rgba(68, 15, 109, 1) 100%);
+}
+
+.report-editor-rich-text > div:last-child,
+.report-editor-rich-text > div:last-child > div,
+.report-editor-rich-text .ProseMirror {
+  min-height: 0;
+  height: 100%;
+}
+
+.report-editor-rich-text .ProseMirror {
+  overflow-y: auto;
+}
+
+.report-editor-auto-grow > div:last-child,
+.report-editor-auto-grow > div:last-child > div,
+.report-editor-auto-grow .ProseMirror {
+  height: auto;
+}
+
+.report-editor-fill > div:last-child,
+.report-editor-fill > div:last-child > div,
+.report-editor-fill .ProseMirror {
+  height: 100%;
+}
+
+.report-editor-rich-text {
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+}
+
+/* Algunos módulos antiguos todavía declaran tamaños tipográficos en px en
+   clases arbitrarias. Los alineamos con la misma densidad de la interfaz. */
+[class~="text-[9px]"] {
+  font-size: 6.75px;
+}
+
+[class~="text-[10px]"] {
+  font-size: 7.5px;
+}
+
+[class~="text-[11px]"] {
+  font-size: 8.25px;
+}
+
+[class~="text-[15px]"] {
+  font-size: 11.25px;
+}
+
+[class~="text-[40px]"] {
+  font-size: 30px;
 }

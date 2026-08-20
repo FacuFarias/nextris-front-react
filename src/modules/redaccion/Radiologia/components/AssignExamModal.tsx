@@ -17,7 +17,6 @@ interface AssignExamModalProps {
 export const AssignExamModal = ({
     isOpen,
     onClose,
-    examId,
     currentAssigneeName,
     onAssign,
 }: AssignExamModalProps) => {

@@ -18,7 +18,7 @@ import {
     Redo,
     Lock
 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface RichTextEditorProps {
     value: string;
@@ -34,6 +34,8 @@ interface RichTextEditorProps {
     readOnlyLabel?: string;
     showToolbar?: boolean;
     variableChipTone?: 'default' | 'warning';
+    autoGrow?: boolean;
+    fillWhenEmpty?: boolean;
 }
 
 const VariableChip = Node.create({
@@ -159,8 +161,12 @@ export const RichTextEditor = ({
     readOnly = false,
     readOnlyLabel = 'Campo bloqueado - Documento firmado',
     showToolbar = true,
-    variableChipTone = 'default'
+    variableChipTone = 'default',
+    autoGrow = false,
+    fillWhenEmpty = false,
 }: RichTextEditorProps) => {
+    const editorWrapperRef = useRef<HTMLDivElement>(null);
+    const [hasManualResize, setHasManualResize] = useState(false);
     const variableChipClasses = variableChipTone === 'warning'
         ? '[&_code]:inline-block [&_code]:bg-red-100 dark:[&_code]:bg-red-900/40 [&_code]:text-red-800 dark:[&_code]:text-red-200 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:font-semibold [&_code]:border [&_code]:border-red-200 dark:[&_code]:border-red-700 [&_code]:not-italic [&_[data-variable-chip="true"]]:inline-block [&_[data-variable-chip="true"]]:bg-red-100 dark:[&_[data-variable-chip="true"]]:bg-red-900/40 [&_[data-variable-chip="true"]]:text-red-800 dark:[&_[data-variable-chip="true"]]:text-red-200 [&_[data-variable-chip="true"]]:px-1.5 [&_[data-variable-chip="true"]]:py-0.5 [&_[data-variable-chip="true"]]:rounded-md [&_[data-variable-chip="true"]]:font-semibold [&_[data-variable-chip="true"]]:border [&_[data-variable-chip="true"]]:border-red-200 dark:[&_[data-variable-chip="true"]]:border-red-700 [&_[data-variable-chip="true"]]:select-none [&_[data-criterion-chip="true"]]:inline-block [&_[data-criterion-chip="true"]]:bg-orange-100 dark:[&_[data-criterion-chip="true"]]:bg-orange-900/40 [&_[data-criterion-chip="true"]]:text-orange-800 dark:[&_[data-criterion-chip="true"]]:text-orange-200 [&_[data-criterion-chip="true"]]:px-1.5 [&_[data-criterion-chip="true"]]:py-0.5 [&_[data-criterion-chip="true"]]:rounded-md [&_[data-criterion-chip="true"]]:font-semibold [&_[data-criterion-chip="true"]]:border [&_[data-criterion-chip="true"]]:border-orange-200 dark:[&_[data-criterion-chip="true"]]:border-orange-700 [&_[data-criterion-chip="true"]]:select-none'
         : '[&_code]:inline-block [&_code]:bg-purple-100 dark:[&_code]:bg-purple-900/40 [&_code]:text-purple-800 dark:[&_code]:text-purple-200 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:font-semibold [&_code]:border [&_code]:border-purple-200 dark:[&_code]:border-purple-700 [&_code]:not-italic [&_[data-variable-chip="true"]]:inline-block [&_[data-variable-chip="true"]]:bg-purple-100 dark:[&_[data-variable-chip="true"]]:bg-purple-900/40 [&_[data-variable-chip="true"]]:text-purple-800 dark:[&_[data-variable-chip="true"]]:text-purple-200 [&_[data-variable-chip="true"]]:px-1.5 [&_[data-variable-chip="true"]]:py-0.5 [&_[data-variable-chip="true"]]:rounded-md [&_[data-variable-chip="true"]]:font-semibold [&_[data-variable-chip="true"]]:border [&_[data-variable-chip="true"]]:border-purple-200 dark:[&_[data-variable-chip="true"]]:border-purple-700 [&_[data-variable-chip="true"]]:select-none [&_[data-criterion-chip="true"]]:inline-block [&_[data-criterion-chip="true"]]:bg-orange-100 dark:[&_[data-criterion-chip="true"]]:bg-orange-900/40 [&_[data-criterion-chip="true"]]:text-orange-800 dark:[&_[data-criterion-chip="true"]]:text-orange-200 [&_[data-criterion-chip="true"]]:px-1.5 [&_[data-criterion-chip="true"]]:py-0.5 [&_[data-criterion-chip="true"]]:rounded-md [&_[data-criterion-chip="true"]]:font-semibold [&_[data-criterion-chip="true"]]:border [&_[data-criterion-chip="true"]]:border-orange-200 dark:[&_[data-criterion-chip="true"]]:border-orange-700 [&_[data-criterion-chip="true"]]:select-none';
@@ -195,13 +201,50 @@ export const RichTextEditor = ({
     // Sincronizar el valor externo con el editor
     useEffect(() => {
         if (editor && value !== editor.getHTML()) {
-            editor.commands.setContent(value);
+            // Este cambio proviene del estado externo (por ejemplo, al aplicar
+            // una plantilla), no de una edición del usuario. Evitar emitir
+            // onUpdate aquí previene que el editor vuelva a escribir un valor
+            // anterior sobre la plantilla recién seleccionada.
+            editor.commands.setContent(value, { emitUpdate: false });
         }
     }, [value, editor]);
 
     useEffect(() => {
         editor?.setEditable(!readOnly);
     }, [editor, readOnly]);
+
+    useEffect(() => {
+        if (!autoGrow || !editor || hasManualResize) return;
+
+        const frame = window.requestAnimationFrame(() => {
+            const wrapper = editorWrapperRef.current;
+            const content = editor.view.dom as HTMLElement | undefined;
+            if (!wrapper || !content) return;
+
+            const hasContent = Boolean(
+                content.textContent?.trim() || content.querySelector('img, [data-variable-chip="true"], [data-criterion-chip="true"]'),
+            );
+            if (fillWhenEmpty && !hasContent) {
+                wrapper.style.height = '';
+                return;
+            }
+
+            wrapper.style.height = 'auto';
+            wrapper.style.height = `${Math.max(40, content.scrollHeight)}px`;
+        });
+
+        return () => window.cancelAnimationFrame(frame);
+    }, [autoGrow, editor, fillWhenEmpty, hasManualResize, value]);
+
+    const handleResizeMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+        if (!autoGrow) return;
+
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const isResizeCorner = event.clientX >= bounds.right - 18 && event.clientY >= bounds.bottom - 18;
+        if (isResizeCorner) {
+            setHasManualResize(true);
+        }
+    };
 
     // Notificar cuando el editor esté listo
     useEffect(() => {
@@ -215,7 +258,11 @@ export const RichTextEditor = ({
     }
 
     return (
-        <div className={`relative border dark:border-gray-700 rounded-md bg-white dark:bg-[#2a2e32] ${dragOver ? 'border-purple-500 border-2 bg-purple-50 dark:bg-purple-900/20' : ''} ${className}`}>
+        <div
+            ref={editorWrapperRef}
+            onMouseDown={handleResizeMouseDown}
+            className={`relative border dark:border-gray-700 rounded-md bg-white dark:bg-[#2a2e32] ${autoGrow ? 'report-editor-auto-grow' : ''} ${fillWhenEmpty ? 'report-editor-fill' : ''} ${dragOver ? 'border-purple-500 border-2 bg-purple-50 dark:bg-purple-900/20' : ''} ${className}`}
+        >
             {/* Indicador de solo lectura */}
             {readOnly && (
                 <div className="relative z-10 flex items-center gap-2 px-2 py-1.5 bg-yellow-50 dark:bg-yellow-900/30 border-b border-yellow-200 dark:border-yellow-800">

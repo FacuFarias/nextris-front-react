@@ -18,6 +18,7 @@ export interface Template {
     location_ids?: string[];
     structured_variables?: string;
     criteria?: string;
+    is_default?: boolean;
     owner_id: string;
     can_edit: boolean;
     can_delete: boolean;
@@ -60,5 +61,5 @@ export interface UpdateTemplateRequest {
     location_ids?: string[];
     structured_variables?: string;
     criteria?: string;
+    is_default?: boolean;
 }
-

@@ -3,7 +3,7 @@ import { useAllTags, useInformeDetalle, useUpdateFlags, useUpdateReport, useUpda
 import { putRedactarInforme } from "../services/informes.service";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronRight, ChevronUp, FileMinus, FileX, Image as ImageIcon, Save, Signature, User, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, FileMinus, FileX, Image as ImageIcon, Save, Signature, User, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces, Search, SkipForward } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -25,6 +25,7 @@ import { TagsCell } from "../components/TagsCell";
 import { useAppConfig } from "@/context/AppConfigContext";
 import { api } from "@/lib/api";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ReportNotesPanel } from "./components/ReportNotesPanel";
 
 const normalizeVariableKey = (value: string | null | undefined): string =>
     String(value || "")
@@ -44,6 +45,31 @@ type PatientStudySummary = {
     modalidad?: string | null;
     fecha?: string | null;
     pdf_path?: string | null;
+};
+
+type ReportFormData = {
+    history: string;
+    techniques: string;
+    findings: string;
+    impressions: string;
+    conclusions: string;
+};
+
+const EMPTY_REPORT_FORM: ReportFormData = {
+    history: '',
+    techniques: '',
+    findings: '',
+    impressions: '',
+    conclusions: '',
+};
+
+const hasReportContent = (value: string | null | undefined) => {
+    const document = new DOMParser().parseFromString(value || '', 'text/html');
+    const text = (document.body.textContent || '').replace(/\u200B/g, '').trim();
+
+    return Boolean(
+        text || document.body.querySelector('img, [data-variable-chip="true"], [data-criterion-chip="true"]'),
+    );
 };
 
 export const RedactarInforme = () => {
@@ -89,13 +115,30 @@ export const RedactarInforme = () => {
     const { mutate: updateFlags, isPending: isUpdatingFlags } = useUpdateFlags();
     const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useUpdateTagIds();
     const { allTags } = useAllTags();
-    const [formData, setFormData] = useState({
-        history: '',
-        techniques: '',
-        findings: '',
-        impressions: '',
-        conclusions: ''
-    });
+    const [formData, setFormData] = useState<ReportFormData>(EMPTY_REPORT_FORM);
+    const initialReportDataRef = useRef<ReportFormData>(EMPTY_REPORT_FORM);
+    const initializedReportGuidRef = useRef<string | undefined>(undefined);
+    const defaultAppliedReportGuidRef = useRef<string | undefined>(undefined);
+    const historyTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const [historyHasManualResize, setHistoryHasManualResize] = useState(false);
+
+    useEffect(() => {
+        if (historyHasManualResize) return;
+
+        const textarea = historyTextareaRef.current;
+        if (!textarea) return;
+
+        textarea.style.height = 'auto';
+        textarea.style.height = `${Math.max(32, textarea.scrollHeight)}px`;
+    }, [formData.history, historyHasManualResize]);
+
+    const handleHistoryResizeMouseDown = (event: React.MouseEvent<HTMLTextAreaElement>) => {
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const isResizeCorner = event.clientX >= bounds.right - 18 && event.clientY >= bounds.bottom - 18;
+        if (isResizeCorner) {
+            setHistoryHasManualResize(true);
+        }
+    };
     const [examFlags, setExamFlags] = useState<string[]>(initialFlagsFromParams);
     const [examTagIds, setExamTagIds] = useState<string[]>(initialTagIdsFromParams);
     const [isSignModalOpen, setIsSignModalOpen] = useState(false);
@@ -153,6 +196,8 @@ export const RedactarInforme = () => {
     const [isNextExamModalOpen, setIsNextExamModalOpen] = useState(false);
     const [nextExamData, setNextExamData] = useState<any>(null);
     const [isCloseTabModalOpen, setIsCloseTabModalOpen] = useState(false);
+    const [isSkipConfirmationOpen, setIsSkipConfirmationOpen] = useState(false);
+    const [isSkipping, setIsSkipping] = useState(false);
     const navigate = useNavigate();
 
     const readMonthlyLimit: number | null = facilityPlanData?.plan?.max_read_monthly ?? null;
@@ -219,6 +264,8 @@ export const RedactarInforme = () => {
         : [];
 
     const filteredTemplates = [...preferredTemplates, ...fallbackTemplates];
+    const defaultTemplate = templatesData?.data?.find((template) => template.is_user_default)
+        || templatesData?.data?.find((template) => template.is_system_default);
 
     const getExamMetaFromCachedLists = useCallback(() => {
         const cachedQueries = queryClient.getQueriesData({ queryKey: informesKeys.lists() });
@@ -242,15 +289,20 @@ export const RedactarInforme = () => {
     // Actualizar formData cuando informeDetalle cambie
     useEffect(() => {
         if (informeDetalle?.data) {
+            if (initializedReportGuidRef.current === informeGuid) return;
+
+            initializedReportGuidRef.current = informeGuid;
             const cachedExamMeta = getExamMetaFromCachedLists();
 
-            setFormData({
+            const nextFormData: ReportFormData = {
                 history: informeDetalle.data.history || '',
                 techniques: informeDetalle.data.techniques || '',
                 findings: informeDetalle.data.findings || '',
                 impressions: informeDetalle.data.impressions || '',
-                conclusions: informeDetalle.data.conclusions || ''
-            });
+                conclusions: informeDetalle.data.conclusions || '',
+            };
+            initialReportDataRef.current = nextFormData;
+            setFormData(nextFormData);
             setExamFlags((prev) => {
                 if (Array.isArray(informeDetalle.data.flags)) return informeDetalle.data.flags;
                 if (cachedExamMeta) return cachedExamMeta.flags;
@@ -263,7 +315,46 @@ export const RedactarInforme = () => {
             });
             setIsSigned(informeDetalle.data.is_reported || false);
         }
-    }, [getExamMetaFromCachedLists, informeDetalle?.data]);
+    }, [getExamMetaFromCachedLists, informeDetalle?.data, informeGuid]);
+
+    const applyTemplateToReport = useCallback((template: Template) => {
+        setFormData(prev => ({
+            ...prev,
+            techniques: template.technique || '',
+            findings: template.findings || '',
+            impressions: template.impression || '',
+            conclusions: template.conclusion || '',
+        }));
+    }, []);
+
+    // Algunos reportes antiguos llegan vacíos aunque exista un default asociado.
+    // Aplicarlo desde el frontend evita que el redactor quede en blanco mientras
+    // se mantiene la selección equivalente en el backend.
+    useEffect(() => {
+        if (!informeGuid || !informeDetalle?.data || !defaultTemplate) return;
+        if (defaultAppliedReportGuidRef.current === informeGuid) return;
+
+        const reportAlreadyHasContent = [
+            informeDetalle.data.techniques,
+            informeDetalle.data.findings,
+            informeDetalle.data.impressions,
+            informeDetalle.data.conclusions,
+        ].some(hasReportContent);
+        const localReportAlreadyHasContent = [
+            formData.techniques,
+            formData.findings,
+            formData.impressions,
+            formData.conclusions,
+        ].some(hasReportContent);
+
+        if (reportAlreadyHasContent || localReportAlreadyHasContent) {
+            defaultAppliedReportGuidRef.current = informeGuid;
+            return;
+        }
+
+        defaultAppliedReportGuidRef.current = informeGuid;
+        applyTemplateToReport(defaultTemplate);
+    }, [applyTemplateToReport, defaultTemplate, formData, informeDetalle?.data, informeGuid]);
 
     useEffect(() => {
         const srDebug = (informeDetalle as any)?.debug_sr;
@@ -359,24 +450,10 @@ export const RedactarInforme = () => {
     } | null>(null);
     const [dragOverField, setDragOverField] = useState<string | null>(null);
 
-    // Estado para controlar qué secciones están abiertas/cerradas
-    const [openSections, setOpenSections] = useState({
-        datosExamen: true,
-        datosTecnicos: true,
-        informesPredefinidos: true,
-        historiaClinicaSidebar: true,
-        historiaClinica: true,
-        tecnica: true,
-        hallazgos: true,
-        impresiones: true,
-        conclusiones: true,
-        imagenes: true
-    });
-
     // Estados para controlar la visibilidad de los sidebars
     const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
     const [rightSidebarTab, setRightSidebarTab] = useState<'history' | 'images' | 'variables' | 'ai'>('history');
-    const [rightSidebarWidth, setRightSidebarWidth] = useState(380);
+    const [rightSidebarWidth, setRightSidebarWidth] = useState(285);
     const [srVariableTree, setSrVariableTree] = useState<ParserVariableTreeNode[]>([]);
     const [expandedSrNodeIds, setExpandedSrNodeIds] = useState<Record<string, boolean>>({});
     const [isLoadingSrTree, setIsLoadingSrTree] = useState(false);
@@ -388,7 +465,8 @@ export const RedactarInforme = () => {
     const [isResizingRightSidebar, setIsResizingRightSidebar] = useState(false);
     const [activeEditorField, setActiveEditorField] = useState<keyof typeof editorsRef.current | null>(null);
     const rightSidebarResizeStartXRef = useRef(0);
-    const rightSidebarResizeStartWidthRef = useRef(380);
+    const rightSidebarResizeStartWidthRef = useRef(285);
+    const rightSidebarResizeMovedRef = useRef(false);
 
     const getApiOrigin = useCallback(() => {
         try {
@@ -463,17 +541,29 @@ export const RedactarInforme = () => {
 
     const handleRightSidebarResizeStart = (e: React.MouseEvent) => {
         e.preventDefault();
+        rightSidebarResizeMovedRef.current = false;
         rightSidebarResizeStartXRef.current = e.clientX;
         rightSidebarResizeStartWidthRef.current = rightSidebarWidth;
         setIsResizingRightSidebar(true);
+    };
+
+    const handleRightSidebarToggle = () => {
+        const wasResized = rightSidebarResizeMovedRef.current;
+        rightSidebarResizeMovedRef.current = false;
+
+        if (wasResized && rightSidebarOpen) return;
+        setRightSidebarOpen((isOpen) => !isOpen);
     };
 
     useEffect(() => {
         if (!isResizingRightSidebar) return;
 
         const handleMouseMove = (e: MouseEvent) => {
+            if (Math.abs(e.clientX - rightSidebarResizeStartXRef.current) > 4) {
+                rightSidebarResizeMovedRef.current = true;
+            }
             const delta = rightSidebarResizeStartXRef.current - e.clientX;
-            const nextWidth = Math.max(320, Math.min(560, rightSidebarResizeStartWidthRef.current + delta));
+            const nextWidth = Math.max(240, Math.min(420, rightSidebarResizeStartWidthRef.current + delta));
             setRightSidebarWidth(nextWidth);
         };
 
@@ -493,10 +583,6 @@ export const RedactarInforme = () => {
             document.body.style.userSelect = '';
         };
     }, [isResizingRightSidebar]);
-
-    const toggleSection = (section: keyof typeof openSections) => {
-        setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
-    };
 
     const handleChange = (field: string, value: string) => {
         const previousValue = formData[field as keyof typeof formData] || '';
@@ -829,18 +915,6 @@ export const RedactarInforme = () => {
 
 
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'F3') {
-                e.preventDefault();
-                findNextPlaceholder();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [findNextPlaceholder]);
-
-    useEffect(() => {
         const handleVoiceCommand = (text: string) => {
             const lowerText = text.toLowerCase().trim();
 
@@ -895,20 +969,22 @@ export const RedactarInforme = () => {
             mark_as_reported: false
         };
 
-        updateReportMutation.mutate(dataToSave);
+        updateReportMutation.mutate(dataToSave, {
+            onSuccess: () => {
+                initialReportDataRef.current = { ...formData };
+            },
+        });
     };
 
-    const hasReportContent = (value: string) => {
-        const document = new DOMParser().parseFromString(value || '', 'text/html');
-        const text = (document.body.textContent || '').replace(/\u200B/g, '').trim();
-
-        // Las imágenes y los chips también son contenido válido del editor.
-        return Boolean(text || document.body.querySelector('img, [data-variable-chip="true"], [data-criterion-chip="true"]'));
-    };
+    const reportHasUnsavedChanges = useMemo(
+        () => (Object.keys(formData) as Array<keyof ReportFormData>)
+            .some((field) => formData[field] !== initialReportDataRef.current[field]),
+        [formData],
+    );
 
     const validateReportBeforeSigning = () => {
         const fields = [formData.techniques, formData.findings, formData.impressions, formData.conclusions];
-        const requiredFields = [formData.techniques, formData.findings, formData.impressions];
+        const requiredFields = [formData.techniques, formData.findings, formData.conclusions];
         const emptyBracketPattern = /\[\s*\[\s*\]\s*\]/;
 
         if (fields.some((field) => emptyBracketPattern.test(field))) {
@@ -925,7 +1001,7 @@ export const RedactarInforme = () => {
     };
 
     const handleVerifyCredentials = async () => {
-        if (!password.trim()) {
+        if (requirePasswordForSigning && !password.trim()) {
             toast.error('Por favor ingrese su contraseña');
             return;
         }
@@ -937,8 +1013,10 @@ export const RedactarInforme = () => {
         setIsSigning(true);
 
         try {
-            // 1. Verificar credenciales (pasa exam_id para verificar si requiere password)
-            await verifyCredentials({ password, examId: informeGuid || undefined });
+            // 1. Verificar credenciales cuando la institución lo requiere.
+            if (requirePasswordForSigning) {
+                await verifyCredentials({ password, examId: informeGuid || undefined });
+            }
 
             // Si el informe ya está firmado, quitar la firma
             if (isSigned) {
@@ -1138,6 +1216,21 @@ export const RedactarInforme = () => {
         }
     };
 
+    const handleSignAction = () => {
+        if (isSigning || isSkipping || updateReportMutation.isPending) return;
+
+        void refetchInstitutionalInfo();
+        if (isSigned) {
+            setIsSignModalOpen(true);
+            return;
+        }
+        if (!requirePasswordForSigning) {
+            void handleSignWithoutPassword();
+            return;
+        }
+        setIsSignModalOpen(true);
+    };
+
     const handleCloseTab = () => {
         unblockExam(informeGuid || '').finally(() => {
             // Limpiar localStorage antes de cerrar
@@ -1155,7 +1248,10 @@ export const RedactarInforme = () => {
     const handleStayOnPage = () => {
         setIsCloseTabModalOpen(false);
     };
-    const handleOpenNextExam = async (examData?: typeof nextExamData) => {
+    const handleOpenNextExam = async (
+        examData?: typeof nextExamData,
+        options?: { releaseCurrentExam?: boolean },
+    ) => {
         const dataToUse = examData || nextExamData;
         if (!dataToUse) {
             toast.error('No se recibió información del siguiente estudio');
@@ -1174,6 +1270,14 @@ export const RedactarInforme = () => {
 
                 // 3. TERCERO: Bloquear el nuevo examen
                 await blockExam(dataToUse.guid);
+
+                if (
+                    options?.releaseCurrentExam
+                    && currentInformeGuidRef.current
+                    && currentInformeGuidRef.current !== dataToUse.guid
+                ) {
+                    await unblockExam(currentInformeGuidRef.current);
+                }
 
                 // 4. CUARTO: Esperar un poco para que el servidor procese
                 await new Promise(resolve => setTimeout(resolve, 300));
@@ -1224,6 +1328,52 @@ export const RedactarInforme = () => {
         toast.success('Informe firmado exitosamente');
     };
 
+    const executeSkipReport = async () => {
+        if (!informeGuid || isSkipping || isSigning || updateReportMutation.isPending) return;
+
+        setIsSkipConfirmationOpen(false);
+        setIsSkipping(true);
+
+        const payload: Record<string, string> = {};
+        if (modalityId && modalityId !== 'undefined') payload.modality_id = modalityId;
+        if (bodypartId && bodypartId !== 'undefined') payload.body_part_id = bodypartId;
+        if (studyGroupId && studyGroupId !== 'undefined') payload.study_group_id = studyGroupId;
+
+        const preferredFacilityId = String(reportData?.facility_id || config?.id?.toString() || '1').trim();
+        if (preferredFacilityId) payload.facility_id = preferredFacilityId;
+
+        try {
+            const nextExam = await getNextExam({
+                ...payload,
+                current_exam_id: informeGuid,
+                ...nextExamFilters,
+            });
+
+            if (!nextExam?.data) {
+                toast.info('No hay siguiente estudio disponible');
+                return;
+            }
+
+            toast.info('Abriendo siguiente estudio...');
+            await handleOpenNextExam(nextExam.data, { releaseCurrentExam: true });
+        } catch (error) {
+            console.error('Error al saltar el estudio:', error);
+            const requestError = error as { response?: { data?: { message?: string } } };
+            toast.error(requestError?.response?.data?.message || 'No se pudo abrir el siguiente estudio');
+        } finally {
+            setIsSkipping(false);
+        }
+    };
+
+    const handleSkipReport = () => {
+        if (isSkipping || isSigning || updateReportMutation.isPending) return;
+        if (reportHasUnsavedChanges) {
+            setIsSkipConfirmationOpen(true);
+            return;
+        }
+        void executeSkipReport();
+    };
+
     // Función para cerrar la ventana de forma segura (desbloqueando primero)
     // Al cerrar la ventana
     const handleCloseWindow = async () => {
@@ -1254,6 +1404,44 @@ export const RedactarInforme = () => {
             window.close();
         }
     };
+
+    useEffect(() => {
+        const handleActionShortcut = (event: KeyboardEvent) => {
+            const supportedKeys = ['F1', 'F2', 'F3', 'F4', 'F8'];
+            if (!supportedKeys.includes(event.key)) return;
+
+            event.preventDefault();
+            if (event.repeat) return;
+
+            const hasOpenModal = Boolean(
+                isSignModalOpen
+                || isTemplateModalOpen
+                || isConfirmationModalOpen
+                || isSkipConfirmationOpen
+                || isNextExamModalOpen
+                || isCloseTabModalOpen
+                || historyPdfUrl
+                || document.querySelector('[role="dialog"][data-state="open"]')
+            );
+            const actionIsPending = isSigning || isSkipping || updateReportMutation.isPending;
+            if (hasOpenModal || actionIsPending) return;
+
+            if (event.key === 'F1') {
+                handleSignAction();
+            } else if (event.key === 'F2') {
+                if (!isSigned) handleGuardarInforme();
+            } else if (event.key === 'F3') {
+                findNextPlaceholder();
+            } else if (event.key === 'F4') {
+                handleSkipReport();
+            } else if (event.key === 'F8') {
+                void handleCloseWindow();
+            }
+        };
+
+        window.addEventListener('keydown', handleActionShortcut);
+        return () => window.removeEventListener('keydown', handleActionShortcut);
+    });
 
     const srVariables = useMemo<Array<{ key?: string; name?: string; value?: string }>>(
         () => (Array.isArray(reportData.sr_variables) ? reportData.sr_variables : []),
@@ -1579,7 +1767,13 @@ export const RedactarInforme = () => {
         });
     };
 
-    if (isLoading) {
+    // Esperar a que el efecto de inicialización copie el informe al estado antes
+    // de montar TipTap. Si los editores se crean con cadenas vacías y reciben la
+    // plantilla inmediatamente después, pueden conservar el documento inicial
+    // vacío aunque el formulario ya tenga el contenido del predefinido.
+    const isReportFormInitialized = initializedReportGuidRef.current === informeGuid;
+
+    if (isLoading || !informeDetalle?.data || !isReportFormInitialized) {
         return <LayoutSinSidebar>
             <div className="flex justify-center items-center h-40">
                 <Loader2 className="animate-spin w-8 h-8 text-brand-purple" />
@@ -1596,13 +1790,21 @@ export const RedactarInforme = () => {
     const accessionLabel = reportData.accession_number || reportData.localacc || reportData.admission_number || '-';
     const dateLabel = reportData.exam_date || reportData.date || reportData.study_date || '13/12/2025';
     const statLabel = reportData.stat || reportData.priority || 'A';
+    const hasGeneratedReport = Boolean(reportData.pdf_path);
+    const reportHasAnyContent = [
+        formData.history,
+        formData.techniques,
+        formData.findings,
+        formData.impressions,
+        formData.conclusions,
+    ].some(hasReportContent);
     return (
         <LayoutSinSidebar disableDefaultBackground>
             <div className="flex h-[calc(100dvh-5rem)] flex-col overflow-hidden rounded-xl bg-gray-50 p-2 dark:bg-[#0f1218] dark:text-gray-100 lg:h-[calc(100dvh-24px)]">
-                {/* Header con botones de acción */}
+                {/* Encabezado del estudio y notas */}
                 <div className="mb-3 flex shrink-0 items-center justify-between">
-                    <div className="relative flex w-full flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-[#151922] md:flex-row md:items-center md:justify-between">
-                        <div className="flex min-w-0 items-start gap-3 md:items-center">
+                    <div className="relative flex w-full flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-[#151922] md:flex-row md:items-start md:justify-between">
+                        <div className="flex min-w-0 flex-1 items-start gap-3 md:items-center">
                             <div className="bg-gray-100 dark:bg-[#1e2430] rounded-full p-2.5">
                                 <User className="w-6 h-6 text-gray-600 dark:text-gray-300" />
                             </div>
@@ -1627,57 +1829,26 @@ export const RedactarInforme = () => {
                                         onUpdate={handleUpdateExamTags}
                                         isUpdating={isUpdatingTagIds || isSigned || isMobile || !examId}
                                     />
+                                    {hasGeneratedReport && (
+                                        <button
+                                            type="button"
+                                            onClick={handleOpenPdf}
+                                            className="flex h-9 items-center gap-2 rounded-md bg-brand-purple px-3 text-xs font-semibold text-white transition hover:bg-purple-800"
+                                        >
+                                            <FileMinus className="h-4 w-4" />
+                                            PDF
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="hidden gap-2 md:flex">
-                            <PrimaryButton onClick={handleOpenPdf}>
-                                <FileMinus />
-                                PDF
-                            </PrimaryButton>
-                            <PrimaryButton onClick={() => setIsTemplateModalOpen(true)}>
-                                <FileText />
-                                INFORMES PREDEFINIDOS
-                            </PrimaryButton>
-                            <PrimaryButton
-                                onClick={() => {
-                                    void refetchInstitutionalInfo();
-                                    if (!requirePasswordForSigning && !isSigned && !isSigning) {
-                                        void handleSignWithoutPassword();
-                                    } else if (!isSigned && !isSigning) {
-                                        setIsSignModalOpen(true);
-                                    }
-                                }}
-                                disabled={isSigning}
+                        <ReportNotesPanel key={examId} examId={examId} />
 
-                            >
-                                <Signature />
-                                {isSigning ? 'FIRMANDO...' : (isSigned ? 'QUITAR FIRMA' : 'FIRMAR')}
-                            </PrimaryButton>
-                            <PrimaryButton
-                                onClick={handleGuardarInforme}
-                                disabled={updateReportMutation.isPending || isSigned}
-                            >
-                                <Save />
-                                {updateReportMutation.isPending ? 'GUARDANDO...' : 'GUARDAR'}
-                            </PrimaryButton>
-                            <PrimaryButton
-                                onClick={handleCloseWindow}
-                            >
-                                <X />
-                                CERRAR
-                            </PrimaryButton>
-
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 md:hidden">
-                            <PrimaryButton onClick={handleOpenPdf}>
-                                <FileMinus className="h-4 w-4" />
-                                PDF
-                            </PrimaryButton>
+                        <div className="grid gap-2 md:hidden">
                             <PrimaryButton onClick={handleCloseWindow}>
                                 <X className="h-4 w-4" />
-                                CERRAR
+                                CANCELAR
                             </PrimaryButton>
                         </div>
                     </div>
@@ -1692,7 +1863,7 @@ export const RedactarInforme = () => {
                 <div className="flex-1 min-h-0 relative">
                     <div className="flex gap-1 h-full">
                         {/* Columna central */}
-                        <div className="flex-1 space-y-2.5 p-2.5 transition-all ease-in-out min-w-0 bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-y-auto h-full table-scrollbar-purple">
+                        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 overflow-y-auto rounded-lg border border-gray-200 bg-white p-2.5 transition-all ease-in-out table-scrollbar-purple dark:border-gray-700 dark:bg-[#151922]">
 
                             {/* Toolbar única global */}
                             <div className="sticky top-0 z-20 hidden flex-wrap items-center gap-0.5 rounded-md border border-gray-200 bg-gray-50 p-1.5 dark:border-gray-700 dark:bg-[#0f1218] md:flex">
@@ -1709,144 +1880,122 @@ export const RedactarInforme = () => {
                                 <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
                                 <button onClick={() => activeEditor?.chain().focus().undo().run()} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600" type="button" title="Deshacer" disabled={!activeEditor || !activeEditor?.can?.().undo() || isSigned}><Undo className="w-4 h-4 dark:text-gray-200" /></button>
                                 <button onClick={() => activeEditor?.chain().focus().redo().run()} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600" type="button" title="Rehacer" disabled={!activeEditor || !activeEditor?.can?.().redo() || isSigned}><Redo className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsTemplateModalOpen(true)}
+                                    disabled={isSigned}
+                                    className="ml-auto flex h-8 items-center gap-2 rounded-md bg-brand-purple px-3 text-xs font-semibold text-white transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    title="Abrir informes predefinidos"
+                                >
+                                    <FileText className="h-4 w-4" />
+                                    INFORMES PREDEFINIDOS
+                                </button>
                             </div>
 
+                            <div
+                                className={`report-editor-sections flex min-h-0 flex-col gap-0 overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-[#151922] ${!reportHasAnyContent ? 'md:flex-1' : ''}`}
+                            >
                             {/* Historia Clínica */}
-                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden relative">
-                                <div
-                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
-                                    onClick={() => toggleSection('historiaClinica')}
-                                >
-                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Historia Clínica</h3>
-                                    {openSections.historiaClinica ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
-                                </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinica ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                    <div className="p-2">
-                                        <textarea
-                                            className="w-full h-20 p-3 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-[#1e2430] text-gray-800 dark:text-gray-200 resize-y focus:outline-none focus:ring-2 focus:ring-brand-purple/40"
-                                            placeholder="Historia clínica..."
-                                            disabled={isSigned || isMobile}
-                                            value={formData.history}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, history: e.target.value }))}
-                                        />
-                                    </div>
+                            <div className="relative p-1">
+                                <div className="px-1 pb-1 md:min-h-0 md:flex-1">
+                                    <textarea
+                                        ref={historyTextareaRef}
+                                        rows={1}
+                                        onMouseDown={handleHistoryResizeMouseDown}
+                                        className="min-h-0 w-full resize-y rounded-none border-0 bg-transparent p-2 text-gray-800 focus:outline-none focus:ring-0 dark:bg-transparent dark:text-gray-200"
+                                        placeholder="Historia clínica..."
+                                        disabled={isSigned || isMobile}
+                                        value={formData.history}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, history: e.target.value }))}
+                                    />
                                 </div>
                             </div>
 
                             {/* Técnica de examen */}
-                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                                <div
-                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
-                                    onClick={() => toggleSection('tecnica')}
-                                >
-                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Técnica de examen</h3>
-                                    {openSections.tecnica ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
-                                </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.tecnica ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                    <div className="p-2 space-y-2">
-                                        <RichTextEditor
-                                            value={formData.techniques}
-                                            onChange={(value) => handleChange('techniques', value)}
-                                            placeholder="Descripción de la técnica utilizada... (Arrastra imágenes aquí)"
-                                            dragOver={dragOverField === 'techniques'}
-                                            onDragOver={(e) => handleDragOver(e, 'techniques')}
-                                            onDragLeave={handleDragLeave}
-                                            onDrop={(e) => handleDrop(e, 'techniques', editorsRef.current.techniques)}
-                                            onEditorReady={(editor) => handleEditorReady(editor, 'techniques')}
-                                            readOnly={isSigned || isMobile}
-                                            readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
-                                            showToolbar={false}
-                                            className="resize-y overflow-auto"
-                                        />
-                                    </div>
+                            <div className="p-1">
+                                <div className="px-1">
+                                    <RichTextEditor
+                                        value={formData.techniques}
+                                        onChange={(value) => handleChange('techniques', value)}
+                                        placeholder="Descripción de la técnica utilizada..."
+                                        dragOver={dragOverField === 'techniques'}
+                                        onDragOver={(e) => handleDragOver(e, 'techniques')}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={(e) => handleDrop(e, 'techniques', editorsRef.current.techniques)}
+                                        onEditorReady={(editor) => handleEditorReady(editor, 'techniques')}
+                                        readOnly={isSigned || isMobile}
+                                        readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
+                                        showToolbar={false}
+                                        autoGrow
+                                        className="report-editor-rich-text h-10 min-h-0 resize-y overflow-auto"
+                                    />
                                 </div>
                             </div>
 
                             {/* Hallazgos */}
-                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                                <div
-                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
-                                    onClick={() => toggleSection('hallazgos')}
-                                >
-                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Hallazgos</h3>
-                                    {openSections.hallazgos ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
-                                </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.hallazgos ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                    <div className="p-2 space-y-2">
-                                        <RichTextEditor
-                                            value={formData.findings}
-                                            onChange={(value) => handleChange('findings', value)}
-                                            placeholder="Descripción de hallazgos... (Arrastra imágenes aquí)"
-                                            dragOver={dragOverField === 'findings'}
-                                            onDragOver={(e) => handleDragOver(e, 'findings')}
-                                            onDragLeave={handleDragLeave}
-                                            onDrop={(e) => handleDrop(e, 'findings', editorsRef.current.findings)}
-                                            onEditorReady={(editor) => handleEditorReady(editor, 'findings')}
-                                            readOnly={isSigned || isMobile}
-                                            readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
-                                            showToolbar={false}
-                                            className="resize-y overflow-auto"
-                                        />
-                                    </div>
+                            <div className={!reportHasAnyContent ? 'flex min-h-0 flex-1 flex-col p-1' : 'p-1'}>
+                                <div className={!reportHasAnyContent ? 'flex min-h-0 flex-1 px-1' : 'px-1'}>
+                                    <RichTextEditor
+                                        value={formData.findings}
+                                        onChange={(value) => handleChange('findings', value)}
+                                        placeholder="Descripción de hallazgos..."
+                                        dragOver={dragOverField === 'findings'}
+                                        onDragOver={(e) => handleDragOver(e, 'findings')}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={(e) => handleDrop(e, 'findings', editorsRef.current.findings)}
+                                        onEditorReady={(editor) => handleEditorReady(editor, 'findings')}
+                                        readOnly={isSigned || isMobile}
+                                        readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
+                                        showToolbar={false}
+                                        autoGrow
+                                        fillWhenEmpty={!reportHasAnyContent}
+                                        className={`report-editor-rich-text min-h-0 resize-y overflow-auto ${!reportHasAnyContent ? 'h-full flex-1' : 'h-10'}`}
+                                    />
                                 </div>
                             </div>
 
                             {/* Impresiones */}
-                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                                <div
-                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
-                                    onClick={() => toggleSection('impresiones')}
-                                >
-                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Impresiones</h3>
-                                    {openSections.impresiones ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
-                                </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.impresiones ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                    <div className="p-2 space-y-2">
-                                        <RichTextEditor
-                                            value={formData.impressions}
-                                            onChange={(value) => handleChange('impressions', value)}
-                                            placeholder="Impresiones del estudio... (Arrastra imágenes aquí)"
-                                            dragOver={dragOverField === 'impressions'}
-                                            onDragOver={(e) => handleDragOver(e, 'impressions')}
-                                            onDragLeave={handleDragLeave}
-                                            onDrop={(e) => handleDrop(e, 'impressions', editorsRef.current.impressions)}
-                                            onEditorReady={(editor) => handleEditorReady(editor, 'impressions')}
-                                            readOnly={isSigned || isMobile}
-                                            readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
-                                            showToolbar={false}
-                                            className="resize-y overflow-auto"
-                                        />
-                                    </div>
+                            <div className="p-1">
+                                <div className="px-1">
+                                    <RichTextEditor
+                                        value={formData.impressions}
+                                        onChange={(value) => handleChange('impressions', value)}
+                                        placeholder="Impresiones del estudio..."
+                                        dragOver={dragOverField === 'impressions'}
+                                        onDragOver={(e) => handleDragOver(e, 'impressions')}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={(e) => handleDrop(e, 'impressions', editorsRef.current.impressions)}
+                                        onEditorReady={(editor) => handleEditorReady(editor, 'impressions')}
+                                        readOnly={isSigned || isMobile}
+                                        readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
+                                        showToolbar={false}
+                                        autoGrow
+                                        className="report-editor-rich-text h-10 min-h-0 resize-y overflow-auto"
+                                    />
                                 </div>
                             </div>
 
                             {/* Conclusiones */}
-                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                                <div
-                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
-                                    onClick={() => toggleSection('conclusiones')}
-                                >
-                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Conclusiones</h3>
-                                    {openSections.conclusiones ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
+                            <div className={!reportHasAnyContent ? 'flex min-h-0 flex-1 flex-col p-1' : 'p-1'}>
+                                <div className={!reportHasAnyContent ? 'flex min-h-0 flex-1 px-1' : 'px-1'}>
+                                    <RichTextEditor
+                                        value={formData.conclusions}
+                                        onChange={(value) => handleChange('conclusions', value)}
+                                        placeholder="Conclusiones del estudio..."
+                                        dragOver={dragOverField === 'conclusions'}
+                                        onDragOver={(e) => handleDragOver(e, 'conclusions')}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={(e) => handleDrop(e, 'conclusions', editorsRef.current.conclusions)}
+                                        onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')}
+                                        readOnly={isSigned || isMobile}
+                                        readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
+                                        showToolbar={false}
+                                        autoGrow
+                                        fillWhenEmpty={!reportHasAnyContent}
+                                        className={`report-editor-rich-text min-h-0 resize-y overflow-auto ${!reportHasAnyContent ? 'h-full flex-1' : 'h-10'}`}
+                                    />
                                 </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.conclusiones ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                    <div className="p-2 space-y-2">
-                                        <RichTextEditor
-                                            value={formData.conclusions}
-                                            onChange={(value) => handleChange('conclusions', value)}
-                                            placeholder="Conclusiones del estudio... (Arrastra imágenes aquí)"
-                                            dragOver={dragOverField === 'conclusions'}
-                                            onDragOver={(e) => handleDragOver(e, 'conclusions')}
-                                            onDragLeave={handleDragLeave}
-                                            onDrop={(e) => handleDrop(e, 'conclusions', editorsRef.current.conclusions)}
-                                            onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')}
-                                            readOnly={isSigned || isMobile}
-                                            readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
-                                            showToolbar={false}
-                                            className="resize-y overflow-auto"
-                                        />
-                                    </div>
-                                </div>
+                            </div>
                             </div>
                             <details className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-[#1e2430] md:hidden">
                                 <summary className="min-h-11 cursor-pointer font-semibold text-gray-800 dark:text-gray-100">
@@ -1915,9 +2064,10 @@ export const RedactarInforme = () => {
                         <div className="hidden self-stretch md:block">
                             {rightSidebarOpen ? (
                                 <button
-                                    onClick={() => setRightSidebarOpen(false)}
-                                    className="bg-gray-200 dark:bg-[#1f2937] h-full hover:bg-gray-300 dark:hover:bg-[#2a3444] text-gray-700 dark:text-gray-200 p-1.5 rounded-md border border-gray-300 dark:border-gray-700 transition-colors"
-                                    title={`Ocultar panel lateral (${rightSidebarTabLabel})`}
+                                    onMouseDown={handleRightSidebarResizeStart}
+                                    onClick={handleRightSidebarToggle}
+                                    className="h-full cursor-col-resize rounded-md border border-gray-300 bg-gray-200 p-1.5 text-gray-700 transition-colors hover:bg-gray-300 dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-200 dark:hover:bg-[#2a3444]"
+                                    title={`Clic para ocultar o mantén presionado y arrastra para ajustar el ancho (${rightSidebarTabLabel})`}
                                 >
                                     <RightSidebarTabIcon className="w-4 h-4" />
                                 </button>
@@ -2282,6 +2432,56 @@ export const RedactarInforme = () => {
                         </div>
                     </div>
                 </div>
+
+                <div className="mt-3 hidden shrink-0 items-center justify-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2.5 shadow-[0_-4px_16px_rgba(15,23,42,0.08)] dark:border-gray-700 dark:bg-[#151922] md:flex">
+                    <button
+                        type="button"
+                        onClick={handleSignAction}
+                        disabled={isSigning || isSkipping || updateReportMutation.isPending}
+                        aria-keyshortcuts="F1"
+                        className="flex h-12 min-w-56 items-center justify-center gap-2 rounded-lg bg-brand-purple px-7 text-base font-bold text-white shadow-lg shadow-purple-900/20 transition hover:-translate-y-0.5 hover:bg-purple-800 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                    >
+                        {isSigning ? <Loader2 className="h-5 w-5 animate-spin" /> : <Signature className="h-5 w-5" />}
+                        {isSigning ? 'FIRMANDO...' : (isSigned ? 'QUITAR FIRMA' : 'FIRMAR')}
+                        <kbd className="rounded border border-white/30 bg-white/15 px-2 py-0.5 text-xs">F1</kbd>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={handleGuardarInforme}
+                        disabled={updateReportMutation.isPending || isSigned || isSigning || isSkipping}
+                        aria-keyshortcuts="F2"
+                        className="flex h-10 min-w-36 items-center justify-center gap-2 rounded-md border border-brand-purple bg-white px-4 text-sm font-semibold text-brand-purple transition hover:bg-brand-purple/10 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-transparent dark:text-purple-300"
+                    >
+                        {updateReportMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        {updateReportMutation.isPending ? 'GUARDANDO...' : 'GUARDAR'}
+                        <kbd className="rounded border border-current/20 px-1.5 py-0.5 text-[10px]">F2</kbd>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={handleSkipReport}
+                        disabled={isSkipping || isSigning || updateReportMutation.isPending}
+                        aria-keyshortcuts="F4"
+                        className="flex h-10 min-w-36 items-center justify-center gap-2 rounded-md border border-amber-400 bg-amber-50 px-4 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-900/40"
+                    >
+                        {isSkipping ? <Loader2 className="h-4 w-4 animate-spin" /> : <SkipForward className="h-4 w-4" />}
+                        {isSkipping ? 'SALTANDO...' : 'SALTAR'}
+                        <kbd className="rounded border border-current/20 bg-white/60 px-1.5 py-0.5 text-[10px] dark:bg-black/20">F4</kbd>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => void handleCloseWindow()}
+                        disabled={isSkipping || isSigning}
+                        aria-keyshortcuts="F8"
+                        className="flex h-10 min-w-36 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-transparent dark:text-gray-200 dark:hover:border-red-800 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                    >
+                        <X className="h-4 w-4" />
+                        CANCELAR
+                        <kbd className="rounded border border-current/20 px-1.5 py-0.5 text-[10px]">F8</kbd>
+                    </button>
+                </div>
             </div>
 
             {/* Modal de Firma */}
@@ -2306,6 +2506,7 @@ export const RedactarInforme = () => {
                     setIsTemplateModalOpen(false);
                     setSearchTerm('');
                     setStudyTypeFilter('');
+                    setSelectedTemplate(null);
                 }}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
@@ -2314,20 +2515,27 @@ export const RedactarInforme = () => {
                 setSelectedTemplate={setSelectedTemplate}
                 onAccept={() => {
                     if (selectedTemplate) {
+                        const templateHasContent = [
+                            selectedTemplate.technique,
+                            selectedTemplate.findings,
+                            selectedTemplate.impression,
+                            selectedTemplate.conclusion,
+                        ].some(hasReportContent);
+
+                        if (!templateHasContent) {
+                            toast.warning('La plantilla seleccionada no contiene contenido para insertar');
+                            return;
+                        }
+
                         const hasChanges = formData.techniques || formData.findings ||
                             formData.impressions || formData.conclusions;
 
                         if (hasChanges) {
                             setIsConfirmationModalOpen(true);
                         } else {
-                            setFormData(prev => ({
-                                ...prev,
-                                techniques: selectedTemplate.technique || '',
-                                findings: selectedTemplate.findings || '',
-                                impressions: selectedTemplate.impression || '',
-                                conclusions: selectedTemplate.conclusion || ''
-                            }));
+                            applyTemplateToReport(selectedTemplate);
                             setIsTemplateModalOpen(false);
+                            setSelectedTemplate(null);
                             toast.success('Plantilla aplicada exitosamente');
                         }
                     } else {
@@ -2342,15 +2550,10 @@ export const RedactarInforme = () => {
                 onClose={() => setIsConfirmationModalOpen(false)}
                 onConfirm={() => {
                     if (selectedTemplate) {
-                        setFormData(prev => ({
-                            ...prev,
-                            techniques: selectedTemplate.technique || '',
-                            findings: selectedTemplate.findings || '',
-                            impressions: selectedTemplate.impression || '',
-                            conclusions: selectedTemplate.conclusion || ''
-                        }));
+                        applyTemplateToReport(selectedTemplate);
                         setIsConfirmationModalOpen(false);
                         setIsTemplateModalOpen(false);
+                        setSelectedTemplate(null);
                         toast.success('Plantilla aplicada exitosamente');
                     }
                 }}
@@ -2359,6 +2562,18 @@ export const RedactarInforme = () => {
                 confirmText="Sí, cambiar plantilla"
                 cancelText="No, mantener cambios"
                 variant="warning"
+            />
+
+            <ConfirmationModal
+                isOpen={isSkipConfirmationOpen}
+                onClose={() => setIsSkipConfirmationOpen(false)}
+                onConfirm={() => void executeSkipReport()}
+                title="Saltar estudio"
+                message="Hay cambios sin guardar en el informe. Si continúas, se descartarán y se abrirá el siguiente estudio disponible."
+                confirmText="Sí, descartar y saltar"
+                cancelText="Continuar editando"
+                variant="warning"
+                isLoading={isSkipping}
             />
 
             <NextExamModal

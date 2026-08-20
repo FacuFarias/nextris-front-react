@@ -4,7 +4,7 @@ import { MainLayout } from "@/layouts/layout"
 import { HandHelping, RefreshCcw, Loader2, AlertTriangle, SlidersHorizontal, X, UserCheck, Tags, Flag } from "lucide-react"
 import { useMemo, useState, useEffect, useRef, useCallback } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { useInformes, useBlockExam, useUnblockExam, useUpdateFlags, useUpdateTagIds, useAllTags, useUpdateGeneralNotes, useAssignExam, useAssignExamBatch, useAddTagsBatch, useAddFlagsBatch } from "./hooks/use-informes"
+import { useInformes, useBlockExam, useUnblockExam, useUpdateFlags, useUpdateTagIds, useAllTags, useUpdateGeneralNotes, useDeleteExaminationNote, useAssignExam, useAssignExamBatch, useAddTagsBatch, useAddFlagsBatch, useConfirmStudy } from "./hooks/use-informes"
 import { useCrossWindowSync } from "./redactar-informe/hooks/use-cross-windows"
 import { getInformesActions, getFlagsColumn, getTagsColumn, getGeneralNotesAction, getPatientNameColumn, getSelectionColumn, informeColumns } from "./components/columns"
 import TablaDynamic from "@/components/TableDynamic"
@@ -19,6 +19,7 @@ import { toast } from "sonner"
 import { ConfirmationModal } from "./components/ConfirmationModal"
 import { AssignExamModal } from "./components/AssignExamModal"
 import { MultiSelectActionsModal } from "./components/MultiSelectActionsModal"
+import { ConfirmStudyModal } from "./components/ConfirmStudyModal"
 import { FilterPresetTabs } from "./components/FilterPresetTabs"
 import { Autocomplete } from "@/components/autocomplete"
 import { useBodyParts } from "@/modules/configuracion/configuracion-tablas/examenes/partes-cuerpo"
@@ -30,6 +31,7 @@ import { useAppConfig } from "@/context/AppConfigContext"
 import { getDicomViewerUrl } from "@/services/dicomViewer"
 import { cancelPreparedViewer, openStudyInViewer, prepareViewerWindow } from "@/services/viewerWindow"
 import type { ViewerWindowTicket } from "@/services/viewerWindow"
+import type { ConfirmStudyPayload } from "./services/informes.service"
 import { api } from "@/lib/api"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -43,6 +45,8 @@ import fondoImage from "@/assets/redaccion.jpg"
 import backDarkImage from "@/assets/back-dark.jpg";
 
 const FIXED_COLUMN_KEYS = ["_selection", "is_reported"] as const;
+const XRAY_MODALITY_CODES = ["DX", "CR", "RX"] as const;
+const DISPLAY_MODALITY_CODES: Record<string, string> = { RMN: "MR" };
 
 const normalizeVisibleColumns = (columnKeys: string[]) => [
     ...FIXED_COLUMN_KEYS,
@@ -75,7 +79,13 @@ export const Radiologia = () => {
     useEffect(() => {
         refreshPermissions();
     }, []);
-    const isAdmin = authData?.user?.name === "Administrador";
+    const user = authData?.user;
+    const isAdmin = Boolean(
+        user?.permissions?.includes("*")
+        || user?.role_name?.toLowerCase() === "sysadmin"
+        || user?.user_type?.toLowerCase() === "sysadmin"
+        || user?.username?.toLowerCase() === "sysadmin"
+    );
 
     const { data: facilityPlanData } = useQuery({
         queryKey: ["facility-plan", config?.id?.toString() || "1", "radiologia"],
@@ -104,7 +114,9 @@ export const Radiologia = () => {
     const [asignadosAMi, setAsignadosAMi] = useState(false);
     const [listoParaLeer, setListoParaLeer] = useState(true);
     const [verSinImagenes, setVerSinImagenes] = useState(false);
-    const [verSinOrden, setVerSinOrden] = useState(false);
+    // Los estudios recibidos desde PACS pueden no tener todavía una orden CP.
+    // Se muestran por defecto y el usuario puede ocultarlos desde el filtro.
+    const [verSinOrden, setVerSinOrden] = useState(true);
     const [soloConNotas, setSoloConNotas] = useState(false);
     const [flagFilter, setFlagFilter] = useState<string[]>([]);
     const [dateRange, setDateRange] = useState<string>("all");
@@ -113,10 +125,12 @@ export const Radiologia = () => {
     const [siguientePaso, setSiguientePaso] = useState(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [isNoImageModalOpen, setIsNoImageModalOpen] = useState(false);
+    const [isConfirmStudyModalOpen, setIsConfirmStudyModalOpen] = useState(false);
+    const [selectedExamForConfirm, setSelectedExamForConfirm] = useState<Informes | null>(null);
     const [selectedInforme, setSelectedInforme] = useState<Informes | null>(null);
     const [isBlocking, setIsBlocking] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<string[]>(
-        normalizeVisibleColumns(["patient_name", "patient_dni", "study_type", "accession_number", "created_on", "flags", "tag_ids"])
+        normalizeVisibleColumns(["patient_name", "patient_dni", "assignto_name", "study_type", "accession_number", "created_on", "num_instances", "flags", "tag_ids"])
     );
     const [sortColumn, setSortColumn] = useState("");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -130,6 +144,7 @@ export const Radiologia = () => {
     const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useUpdateTagIds();
     const { allTags } = useAllTags();
     const { mutate: updateGeneralNotes, isPending: isUpdatingNotes } = useUpdateGeneralNotes();
+    const { mutate: deleteExaminationNote, isPending: isDeletingNote } = useDeleteExaminationNote();
     const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, assigned_to_me: asignadosAMi, show_no_image: verSinImagenes, show_without_order: verSinOrden, show_only_with_notes: soloConNotas, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField, sort_column: sortColumn, sort_direction: sortDirection, facility_id: config?.id?.toString() || "1" });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
@@ -139,11 +154,15 @@ export const Radiologia = () => {
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [selectedExamForAssign, setSelectedExamForAssign] = useState<Informes | null>(null);
     const { mutateAsync: assignExam } = useAssignExam();
+    const { mutateAsync: confirmStudy } = useConfirmStudy();
     const { mutateAsync: assignExamBatch } = useAssignExamBatch();
     const { mutateAsync: addTagsBatch } = useAddTagsBatch();
     const { mutateAsync: addFlagsBatch } = useAddFlagsBatch();
 
     const canAssign = authData?.user?.permissions?.includes('reports.assign') ?? false;
+    const canDeleteNotes = authData?.user?.permissions?.includes('*')
+        || authData?.user?.permissions?.includes('reports.notes.delete')
+        || false;
 
     const [selectedStudyIds, setSelectedStudyIds] = useState<Set<string>>(new Set());
     const [multiSelectAction, setMultiSelectAction] = useState<'assign' | 'tags' | 'flags' | null>(null);
@@ -157,6 +176,23 @@ export const Radiologia = () => {
         if (!selectedExamForAssign) return;
         await assignExam({ examId: selectedExamForAssign.guid, userId });
     }, [selectedExamForAssign, assignExam]);
+
+    const handleOpenConfirmStudy = useCallback((informe: Informes) => {
+        setSelectedExamForConfirm(informe);
+        setIsConfirmStudyModalOpen(true);
+    }, []);
+
+    const handleConfirmStudy = useCallback(async (data: ConfirmStudyPayload) => {
+        if (!selectedExamForConfirm) return;
+        await confirmStudy({ examId: selectedExamForConfirm.guid, data });
+        setIsConfirmStudyModalOpen(false);
+        setSelectedExamForConfirm(null);
+    }, [confirmStudy, selectedExamForConfirm]);
+
+    const closeConfirmStudyModal = useCallback(() => {
+        setIsConfirmStudyModalOpen(false);
+        setSelectedExamForConfirm(null);
+    }, []);
 
     const handleMultiSelectAssign = useCallback(async (userId: string) => {
         const ids = Array.from(selectedStudyIds);
@@ -235,6 +271,10 @@ export const Radiologia = () => {
         updateGeneralNotes({ examId, notes });
     }, [updateGeneralNotes]);
 
+    const handleDeleteNote = useCallback((examId: string, noteId: string) => {
+        deleteExaminationNote({ examId, noteId });
+    }, [deleteExaminationNote]);
+
     const handleAdminUnlock = useCallback(async (examId: string) => {
         try {
             await unblockExam(examId);
@@ -307,7 +347,7 @@ export const Radiologia = () => {
             setVerFinalizados(false);
             setAsignadosAMi(false);
             setVerSinImagenes(false);
-            setVerSinOrden(false);
+            setVerSinOrden(true);
             setStudioTypeId(undefined);
             setModalityId(undefined);
             setBodyPartId(undefined);
@@ -332,7 +372,9 @@ export const Radiologia = () => {
             setModalityId(f.modality_id || undefined);
             setBodyPartId(f.bodypart_id || undefined);
             const cols = f.visible_columns?.length ? f.visible_columns : [...informeColumns.map(col => col.key as string), "flags"];
-            setVisibleColumns(normalizeVisibleColumns(cols.includes("report_date") ? cols : [...cols, "report_date"]));
+            const colsWithReportDate = cols.includes("report_date") ? cols : [...cols, "report_date"];
+            const colsWithInstances = colsWithReportDate.includes("num_instances") ? colsWithReportDate : [...colsWithReportDate, "num_instances"];
+            setVisibleColumns(normalizeVisibleColumns(colsWithInstances.includes("assignto_name") ? colsWithInstances : [...colsWithInstances, "assignto_name"]));
             setPerPage(f.per_page || 10);
             setSortColumn(f.sort_column || "");
             setSortDirection(f.sort_direction || "asc");
@@ -577,11 +619,61 @@ export const Radiologia = () => {
 
     const modalidadesOptions = useMemo(() => {
         if (!Array.isArray(modalidades?.data)) return [];
-        return modalidades.data.map((modalidad: any) => ({
-            value: modalidad.guid,
-            label: modalidad.description
-        }));
+
+        const xrayModalities = modalidades.data.filter((modalidad: any) =>
+            XRAY_MODALITY_CODES.includes(String(modalidad.externalcode || '').trim().toUpperCase() as typeof XRAY_MODALITY_CODES[number])
+        );
+        const xrayIds = new Set(xrayModalities.map((modalidad: any) => String(modalidad.guid)));
+        const xrayValue = XRAY_MODALITY_CODES
+            .map((code) => xrayModalities.find((modalidad: any) => String(modalidad.externalcode || '').trim().toUpperCase() === code)?.guid)
+            .filter(Boolean)
+            .join(',');
+
+        const options: { value: string; label: string }[] = [];
+        let xrayOptionAdded = false;
+
+        modalidades.data.forEach((modalidad: any) => {
+            const code = String(modalidad.externalcode || '').trim().toUpperCase();
+            if (xrayIds.has(String(modalidad.guid))) {
+                if (!xrayOptionAdded && xrayValue) {
+                    options.push({
+                        value: xrayValue,
+                        label: `RADIOGRAFÍA (${XRAY_MODALITY_CODES.join(' / ')})`,
+                    });
+                    xrayOptionAdded = true;
+                }
+                return;
+            }
+
+            const displayCode = DISPLAY_MODALITY_CODES[code] || code;
+            options.push({
+                value: modalidad.guid,
+                label: `${modalidad.description} ${displayCode}`.trim(),
+            });
+        });
+
+        return options;
     }, [modalidades]);
+
+    // Presets antiguos podían guardar una sola modalidad de rayos X. Al
+    // cargar el catálogo, los convertimos al nuevo filtro agrupado.
+    useEffect(() => {
+        if (!modalityId || !Array.isArray(modalidades?.data)) return;
+
+        const xrayIds = new Set(
+            modalidades.data
+                .filter((modalidad: any) => XRAY_MODALITY_CODES.includes(String(modalidad.externalcode || '').trim().toUpperCase() as typeof XRAY_MODALITY_CODES[number]))
+                .map((modalidad: any) => String(modalidad.guid))
+        );
+        const selectedIds = modalityId.split(',').filter(Boolean);
+        if (selectedIds.length !== 1 || !xrayIds.has(selectedIds[0])) return;
+
+        const groupedValue = XRAY_MODALITY_CODES
+            .map((code) => modalidades.data.find((modalidad: any) => String(modalidad.externalcode || '').trim().toUpperCase() === code)?.guid)
+            .filter(Boolean)
+            .join(',');
+        if (groupedValue) setModalityId(groupedValue);
+    }, [modalityId, modalidades]);
 
     const bodyPartsOptions = useMemo(() => {
         if (!Array.isArray(bodyParts?.data)) return [];
@@ -925,7 +1017,7 @@ export const Radiologia = () => {
                     columns={filteredColumns}
                     loading={isLoadingInformes}
                     pagination={pagination}
-                    actions={getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf, getGeneralNotesAction(handleUpdateGeneralNotes, isUpdatingNotes), isReadLimitReached, canAssign ? handleAssignExam : undefined)}
+                    actions={getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf, getGeneralNotesAction(handleUpdateGeneralNotes, handleDeleteNote, canDeleteNotes, isUpdatingNotes, isDeletingNote), isReadLimitReached, canAssign ? handleAssignExam : undefined, handleOpenConfirmStudy)}
                     onPaginationChange={(newPage) => {
                         setPage(newPage);
                     }}
@@ -945,6 +1037,15 @@ export const Radiologia = () => {
                     sortColumn={sortColumn}
                     sortDirection={sortDirection}
                     onSortChange={handleSortChange}
+                    selectedRowIds={selectedStudyIds}
+                    onRowClick={(row, _index, event) => {
+                        if (event.ctrlKey || event.metaKey) {
+                            toggleStudySelection(row.guid);
+                        } else {
+                            setSelectedStudyIds(new Set([row.guid]));
+                        }
+                    }}
+                    onRowDoubleClick={(row) => handleRedactarInforme(row)}
                     mobileMode="cards"
                     mobileActions="menu"
                     mobileStatusKey="status"
@@ -1062,6 +1163,23 @@ export const Radiologia = () => {
                 examId={selectedExamForAssign?.guid || ""}
                 currentAssigneeName={selectedExamForAssign?.assignto_name}
                 onAssign={handleConfirmAssign}
+            />
+
+            <ConfirmStudyModal
+                isOpen={isConfirmStudyModalOpen}
+                onClose={closeConfirmStudyModal}
+                patientName={selectedExamForConfirm?.patient_name}
+                initialData={{
+                    referring_physician_id: selectedExamForConfirm?.referring_physician_id || null,
+                    requesting_physician_id: selectedExamForConfirm?.requesting_physician_id || null,
+                    requesting_physician_name: selectedExamForConfirm?.requesting_physician_name || "",
+                    studytype_id: selectedExamForConfirm?.study_type_id || "",
+                    clinical_question: selectedExamForConfirm?.clinical_question || "",
+                    modality_id: selectedExamForConfirm?.modality_id || null,
+                    modality_description: selectedExamForConfirm?.modality_description || "",
+                    other_details: selectedExamForConfirm?.other_details || "",
+                }}
+                onConfirm={handleConfirmStudy}
             />
 
             {/* Modal de Acciones Múltiples */}

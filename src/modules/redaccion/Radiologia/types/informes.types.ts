@@ -1,3 +1,12 @@
+export type StudyNote = {
+    id: string;
+    author_id: string;
+    author_username: string;
+    author_display_name: string;
+    message: string;
+    created_on: string;
+};
+
 export type Informes = {
     guid: string;
     patient_name: string;
@@ -14,15 +23,40 @@ export type Informes = {
     blocked_by: string;
     blocked_by_name: string;
     study_instance_uid: string;
+    num_instances: number;
     location: string;
     pdf_path: string;
     flags: string[];
     tag_ids: string[];
     report_date: string | null;
     general_notes: string | null;
+    recent_notes: StudyNote[];
+    notes_count: number;
     assigned_to: string | null;
     assignto_name: string;
+    modality_id: string | null;
+    modality_description: string;
+    w_order: number;
+    referring_physician_id: string | null;
+    requesting_physician_id: string | null;
+    requesting_physician_name: string;
+    clinical_question: string;
+    study_type_id: string | null;
+    other_details: string;
 }
+
+export type ExaminationNotesResponse = {
+    success: boolean;
+    data: {
+        history: string;
+        clinical_question: string;
+        others_details: string;
+        number_of_views: string;
+        stat: string;
+        laterality: string;
+        notes: StudyNote[];
+    };
+};
 
 
 
@@ -56,5 +90,3 @@ export type InformeDetalle = {
     }
 
 }
-
-

@@ -19,6 +19,7 @@ import {
     Monitor,
     Image,
     Info,
+    PlayCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
@@ -76,6 +77,13 @@ const menuItems: MenuItem[] = [
         path: "/estudios/imagenes",
         allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrador"],
         requiredPermissions: ["tabs.images.view", "images.view"],
+    },
+    {
+        icon: PlayCircle,
+        label: "Ejecución",
+        path: "/ejecucion",
+        allowedRoles: ["Sysadmin", "Tecnico", "Administrador"],
+        requiredPermissions: ["tabs.execution.view", "execution.view_pending"],
     },
     {
         icon: NotebookText, label: "Estudios", subItems: [

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import type { DragEvent } from "react";
+import type { DragEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useTheme } from "@/context/ThemeContext";
 //shadcn ui
 import {
@@ -18,7 +18,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 //icons and utilities
-import { ArrowUpDown, ArrowUp, ArrowDown, Search, X, GripVertical } from "lucide-react";
+import { ArrowUp, ArrowDown, Search, X, GripVertical, Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 //types
 import { TablePagination } from "./Pagination";
@@ -38,6 +38,7 @@ export function TablaDynamic<T extends Record<string, any>>({
     pagination,
     onPaginationChange,
     selectedRow,
+    selectedRowIds,
     rowIdKey = 'guid' as keyof T,
     maxHeight,
     perPageValue,
@@ -93,6 +94,11 @@ export function TablaDynamic<T extends Record<string, any>>({
         : internalSortConfig;
     const [bgRevealed, setBgRevealed] = useState(false);
     const [dragState, setDragState] = useState<{ sourceKey: string | null; targetKey: string | null }>({ sourceKey: null, targetKey: null });
+    const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+    const [resizingColumnKey, setResizingColumnKey] = useState<string | null>(null);
+    const [copiedCellKey, setCopiedCellKey] = useState<string | null>(null);
+    const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const resizeStateRef = useRef<{ key: string; startX: number; startWidth: number } | null>(null);
     const { actualTheme } = useTheme();
     const isDark = actualTheme === 'dark';
     const hasBgImage = !!(tableBackgroundImage || tableBackgroundImageDark);
@@ -121,6 +127,19 @@ export function TablaDynamic<T extends Record<string, any>>({
     const getNestedValue = (obj: any, path: string): any => {
         return path.split(".").reduce((current, key) => current?.[key], obj);
     };
+
+    const handleCopyCell = (cellKey: string, text: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedCellKey(cellKey);
+        if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = setTimeout(() => setCopiedCellKey(null), 1500);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+        };
+    }, []);
 
     // Cuando el ordenamiento es controlado (servidor), los datos ya vienen ordenados del backend
     // y no se debe aplicar ordenamiento client-side para no romper el orden global
@@ -214,7 +233,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                 <ArrowDown className="ml-2 h-4 w-4" />
             );
         }
-        return <ArrowUpDown className="ml-2 h-4 w-4" />;
+        return null;
     };
 
     const renderCellContent = (column: TableColumn<T>, row: T, index: number) => {
@@ -231,8 +250,46 @@ export function TablaDynamic<T extends Record<string, any>>({
         return String(value);
     };
 
-    const visibleActions = (row: T) =>
-        actions.filter((action) => !action.hidden?.(row));
+    const getCellTextValue = (column: TableColumn<T>, row: T): string => {
+        const value = getNestedValue(row, column.key as string);
+        if (value === null || value === undefined) return "";
+        return String(value);
+    };
+
+    const renderCopyableCell = (column: TableColumn<T>, row: T, rowIndex: number, children: React.ReactNode) => {
+        const cellKey = `${row[rowIdKey]}-${column.key}`;
+        const textValue = getCellTextValue(column, row);
+        const isCopied = copiedCellKey === cellKey;
+
+        if (!textValue || column.key === "_selection") {
+            return children;
+        }
+
+        return (
+            <div className="group/cell relative flex items-center min-w-0">
+                <div className="min-w-0 flex-1">{children}</div>
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopyCell(cellKey, textValue);
+                    }}
+                    className={cn(
+                        "ml-1 shrink-0 p-0.5 rounded transition-opacity cursor-pointer",
+                        "opacity-0 group-hover/cell:opacity-100",
+                        "hover:bg-purple-100 dark:hover:bg-purple-900/40",
+                        isCopied && "opacity-100"
+                    )}
+                    title="Copiar"
+                >
+                    {isCopied ? (
+                        <Check className="h-3 w-3 text-green-500" />
+                    ) : (
+                        <Copy className="h-3 w-3 text-muted-foreground" />
+                    )}
+                </button>
+            </div>
+        );
+    };
 
     const handleToggleColumn = (columnKey: string) => {
         if (fixedColumnKeys.includes(columnKey)) return;
@@ -290,6 +347,71 @@ export function TablaDynamic<T extends Record<string, any>>({
 
         setOpenFilterColumn(null);
         setDragState({ sourceKey: null, targetKey: null });
+    };
+
+    const handleResizeStart = (event: ReactMouseEvent<HTMLSpanElement>, columnKey: string) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const header = event.currentTarget.parentElement;
+        if (!header) return;
+
+        resizeStateRef.current = {
+            key: columnKey,
+            startX: event.clientX,
+            startWidth: header.getBoundingClientRect().width,
+        };
+        setResizingColumnKey(columnKey);
+    };
+
+    useEffect(() => {
+        if (!resizingColumnKey) return;
+
+        const handleResizeMove = (event: globalThis.MouseEvent) => {
+            const resizeState = resizeStateRef.current;
+            if (!resizeState) return;
+
+            const nextWidth = Math.max(56, Math.round(resizeState.startWidth + event.clientX - resizeState.startX));
+            setColumnWidths((previous) => ({ ...previous, [resizeState.key]: nextWidth }));
+        };
+
+        const handleResizeEnd = () => {
+            resizeStateRef.current = null;
+            setResizingColumnKey(null);
+        };
+
+        window.addEventListener("mousemove", handleResizeMove);
+        window.addEventListener("mouseup", handleResizeEnd);
+
+        return () => {
+            window.removeEventListener("mousemove", handleResizeMove);
+            window.removeEventListener("mouseup", handleResizeEnd);
+        };
+    }, [resizingColumnKey]);
+
+    const getColumnWidthStyle = (columnKey: string) => {
+        const width = columnWidths[columnKey];
+        return width ? { width: `${width}px`, minWidth: `${width}px` } : undefined;
+    };
+
+    const renderResizeHandle = (column: TableColumn<T>) => {
+        const columnKey = getColumnKey(column);
+        if (fixedColumnKeys.includes(columnKey) || column.resizable === false) return null;
+
+        return (
+            <span
+                role="separator"
+                aria-orientation="vertical"
+                aria-label={`Ajustar ancho de ${column.label || columnKey}`}
+                className={cn(
+                    "absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize",
+                    "hover:bg-white/45",
+                    resizingColumnKey === columnKey && "bg-white/60"
+                )}
+                onMouseDown={(event) => handleResizeStart(event, columnKey)}
+                onClick={(event) => event.stopPropagation()}
+            />
+        );
     };
 
     const indexColumnWidth = 56;
@@ -396,7 +518,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                 )}
                 {/* Contenedor interno: aquí ocurre el scroll, encima del fondo fijo */}
                 <div className="relative z-2 h-full overflow-y-auto overflow-x-hidden table-scrollbar-purple">
-                    <Table containerClassName="!overflow-visible" className={cn("w-full table-fixed", tableClassName)}>
+                    <Table containerClassName="!overflow-visible" className={cn("w-full table-fixed select-none", tableClassName)}>
                     <TableHeader ref={tableHeaderRef} className="sticky top-0 z-20 bg-[linear-gradient(90deg,#6a1bb0,#4a148c)] dark:bg-[linear-gradient(90deg,#4a157a,#2d0d52)] border-b border-white/10 shadow-[0_6px_18px_rgba(32,12,62,0.35)]">
                         <TableRow className="bg-transparent hover:bg-transparent border-b-0">
                             {renderColumns.length > 0 && (() => {
@@ -405,6 +527,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 return (
                                     <TableHead
                                         key={0}
+                                        style={getColumnWidthStyle(firstColKey)}
                                         draggable={!fixedColumnKeys.includes(firstColKey)}
                                         onDragStart={(e) => {
                                             e.dataTransfer.setData("text/plain", firstColKey);
@@ -427,7 +550,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                             setDragState({ sourceKey: null, targetKey: null });
                                         }}
                                         className={cn(
-                                            "text-white/95 text-left py-0 px-2 text-xs group/header overflow-hidden tracking-[0.015em]",
+                                            "relative text-white/95 text-left py-0 px-2 text-xs group/header overflow-hidden tracking-[0.015em]",
                                             firstColumn.headerClassName,
                                             firstColumn.sortable !== false &&
                                             "cursor-pointer select-none",
@@ -491,6 +614,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                             })()}
                                         </div>
                                         <span className="ml-auto shrink-0">{getSortIcon(firstColumn)}</span>
+                                        {renderResizeHandle(firstColumn)}
                                     </TableHead>
                                 );
                             })()}
@@ -522,6 +646,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                 return (
                                     <TableHead
                                         key={index}
+                                        style={getColumnWidthStyle(colKey)}
                                         draggable={isReorderable}
                                         onDragStart={(e) => {
                                             if (!isReorderable) return;
@@ -545,7 +670,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                             setDragState({ sourceKey: null, targetKey: null });
                                         }}
                                         className={cn(
-                                            "text-white/95 py-0 px-2 text-xs group/header overflow-hidden tracking-[0.015em]",
+                                            "relative text-white/95 py-0 px-2 text-xs group/header overflow-hidden tracking-[0.015em]",
                                             column.headerClassName,
                                             isSortable && !isEditing &&
                                             "cursor-pointer select-none",
@@ -634,6 +759,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                 </span>
                                             )}
                                         </div>
+                                        {renderResizeHandle(column)}
                                     </TableHead>
                                 );
                             })}
@@ -689,6 +815,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                             <>
                                 {paginatedData.map((row, index) => {
                                     const isSelected = selectedRow && row[rowIdKey] === selectedRow[rowIdKey];
+                                    const isInSelectedSet = selectedRowIds?.has(String(row[rowIdKey]));
                                     return (
                                         <TableRow
                                             key={getRowIndex(index)}
@@ -701,27 +828,29 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                 (onRowClick || onRowDoubleClick) && hasBgImage && "cursor-pointer hover:bg-white/30 dark:hover:bg-purple-900/25",
                                                 (onRowClick || onRowDoubleClick) && !hasBgImage && "cursor-pointer hover:bg-purple-100/40 dark:hover:bg-[#2a1848]/75",
                                                 isSelected && "bg-purple-100/85 dark:bg-[#3a2060]/78 hover:bg-purple-100/90 dark:hover:bg-[#472676]/85 border-l-4 border-l-brand-purple dark:border-l-purple-300 dark:shadow-[inset_4px_0_12px_rgba(168,85,247,0.28)]",
+                                                isInSelectedSet && !isSelected && "bg-purple-100/50 dark:bg-purple-900/30 hover:bg-purple-100/60 dark:hover:bg-purple-900/40",
                                                 "animate-in fade-in duration-300 ease-out"
                                             )}
                                             style={{
                                                 animationDelay: `${index * 40}ms`,
                                                 animationFillMode: 'both'
                                             }}
-                                            onClick={() => onRowClick?.(row, getRowIndex(index))}
-                                            onDoubleClick={() => onRowDoubleClick?.(row, getRowIndex(index))}
+                                            onClick={(e) => onRowClick?.(row, getRowIndex(index), e)}
+                                            onDoubleClick={(e) => onRowDoubleClick?.(row, getRowIndex(index), e)}
                                         >
                                             {renderColumns.length > 0 && (() => {
                                                 const [firstColumn] = renderColumns;
                                                 return (
                                                     <TableCell
                                                         key={0}
+                                                        style={getColumnWidthStyle(getColumnKey(firstColumn))}
                                                         className={cn(
                                                             "py-2 px-3 text-xs overflow-hidden whitespace-nowrap text-ellipsis",
                                                             firstColumn.className,
                                                             firstColumn.hideOnMobile && "hidden md:table-cell"
                                                         )}
                                                     >
-                                                        {renderCellContent(firstColumn, row, getRowIndex(index))}
+                                                        {renderCopyableCell(firstColumn, row, getRowIndex(index), renderCellContent(firstColumn, row, getRowIndex(index)))}
                                                     </TableCell>
                                                 );
                                             })()}
@@ -732,9 +861,15 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                 >
                                                     <TooltipProvider>
                                                         <div className="flex items-center justify-start gap-1 w-max min-w-full whitespace-nowrap">
-                                                            {visibleActions(row).map((action, actionIndex) => (
-                                                                action.component ? (
-                                                                    <div key={actionIndex} className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                            {actions.map((action, actionIndex) => {
+                                                                const isHidden = action.hidden?.(row) ?? false;
+
+                                                                if (isHidden) {
+                                                                    return <div key={actionIndex} className="h-8 w-8 shrink-0" aria-hidden="true" />;
+                                                                }
+
+                                                                return action.component ? (
+                                                                    <div key={actionIndex} className="h-8 w-8 shrink-0" onClick={(e) => e.stopPropagation()}>
                                                                         {action.component(row, getRowIndex(index))}
                                                                     </div>
                                                                 ) : (
@@ -753,15 +888,15 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                                                 }}
                                                                                 disabled={action.disabled?.(row)}
                                                                             >
-                                                                                {action.icon}
+                                                                                {typeof action.icon === "function" ? action.icon(row) : action.icon}
                                                                             </Button>
                                                                         </TooltipTrigger>
-                                                                        <TooltipContent>
-                                                                            <p>{action.label}</p>
+                                                                        <TooltipContent side="top" align="center" sideOffset={6}>
+                                                                            <p>{typeof action.label === "function" ? action.label(row) : action.label}</p>
                                                                         </TooltipContent>
                                                                     </Tooltip>
-                                                                )
-                                                            ))}
+                                                                );
+                                                            })}
                                                         </div>
                                                     </TooltipProvider>
                                                 </TableCell>
@@ -777,13 +912,14 @@ export function TablaDynamic<T extends Record<string, any>>({
                                             {renderColumns.slice(1).map((column, colIndex) => (
                                                 <TableCell
                                                     key={colIndex + 1}
+                                                    style={getColumnWidthStyle(getColumnKey(column))}
                                                     className={cn(
                                                         "py-2 px-3 text-xs overflow-hidden whitespace-nowrap text-ellipsis",
                                                         column.className,
                                                         column.hideOnMobile && "hidden md:table-cell"
                                                     )}
                                                 >
-                                                    {renderCellContent(column, row, getRowIndex(index))}
+                                                    {renderCopyableCell(column, row, getRowIndex(index), renderCellContent(column, row, getRowIndex(index)))}
                                                 </TableCell>
                                             ))}
                                         </TableRow>

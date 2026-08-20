@@ -4,6 +4,7 @@ export const informesKeys = {
     list: (page: number, per_page: number, search: string, show_reported: boolean, show_ready: boolean, assigned_to_me: boolean, show_no_image: boolean, show_without_order: boolean, bodypart_id: string, modality_id: string, study_group_id: string, flag_filter: string, date_range: string, date_field: string, sort_column: string, sort_direction: string, show_only_with_notes?: boolean, facility_id?: string) =>
         [...informesKeys.lists(), { page, per_page, search, show_reported, show_ready, assigned_to_me, show_no_image, show_without_order, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction, show_only_with_notes, facility_id }] as const,
     listDetalle: (guid: string | undefined) => [...informesKeys.all, "list-detalle", guid] as const,
+    notes: (guid: string | undefined) => [...informesKeys.all, "notes", guid] as const,
     quitarFirm: (examId: string | undefined) => [...informesKeys.all, "quitar-firm", examId] as const,
 };
 

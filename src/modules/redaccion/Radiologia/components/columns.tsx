@@ -1,7 +1,7 @@
 import type { TableAction, TableColumn } from "@/types/table";
 import type { Informes } from "../types/informes.types";
 import { fechaYhora } from "@/lib/fechaYhora";
-import { CalendarDays, ClipboardPlus, FileText, Hash, Image, KeyRound, Lock, LockOpen, CircleCheck, Clock, CheckCircle2, UserCheck } from "lucide-react";
+import { CalendarDays, ClipboardPlus, FileText, Hash, Image, KeyRound, Lock, LockOpen, CircleCheck, Clock, CheckCircle2, HelpCircle, UserCheck } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FlagsCell } from "./FlagsCell";
 import { TagsCell } from "./TagsCell";
@@ -25,7 +25,8 @@ export const getSelectionColumn = (
             checked={totalCount > 0 && selectedIds.size === totalCount}
             ref={(el) => {
                 if (el) {
-                    el.indeterminate = selectedIds.size > 0 && selectedIds.size < totalCount;
+                    (el as HTMLButtonElement & { indeterminate?: boolean }).indeterminate =
+                        selectedIds.size > 0 && selectedIds.size < totalCount;
                 }
             }}
             onCheckedChange={onToggleAll}
@@ -74,7 +75,7 @@ export const getPatientNameColumn = (
                             </span>
                         )}
                     </TooltipTrigger>
-                    <TooltipContent>
+                    <TooltipContent side="top" align="center" sideOffset={6}>
                         <p>Bloqueado por: <strong>{informe.blocked_by_name || 'otro usuario'}</strong></p>
                         {isAdmin && <p className="text-xs opacity-75 mt-0.5">Click para desbloquear</p>}
                     </TooltipContent>
@@ -95,6 +96,15 @@ const informeColumns: TableColumn<Informes>[] = [
         sortable: true,
         filterable: true,
         mobile: { label: "DNI", order: 4, icon: <Hash className="h-3.5 w-3.5" /> },
+    },
+    {
+        key: "assignto_name",
+        label: "ASIGNADO",
+        className: "font-medium",
+        headerClassName: "w-[130px]",
+        sortable: true,
+        filterable: true,
+        render: (value: string | null | undefined) => value || "Sin asignar",
     },
     {
         key: "study_type",
@@ -150,6 +160,15 @@ const informeColumns: TableColumn<Informes>[] = [
         render: (value: string) => {
             return fechaYhora(value);
         }
+    },
+    {
+        key: "num_instances",
+        label: "INS",
+        className: "font-medium text-center",
+        headerClassName: "w-[64px]",
+        sortable: true,
+        filterable: true,
+        render: (value: number | null | undefined) => value ?? 0,
     },
     {
         key: "is_reported",
@@ -231,15 +250,22 @@ export const getTagsColumn = (
 // Acción de notas generales: renderiza un componente Popover propio
 export const getGeneralNotesAction = (
     onUpdateNotes: (examId: string, notes: string) => void,
+    onDeleteNote: (examId: string, noteId: string) => void,
+    canDeleteNotes: boolean,
     isPending?: boolean,
+    isDeletePending?: boolean,
 ): TableAction<Informes> => ({
     label: "Nota general",
     component: (informe: Informes) => (
         <GeneralNotesCell
             examId={informe.guid}
-            currentNotes={informe.general_notes ?? null}
+            recentNotes={informe.recent_notes ?? []}
+            notesCount={informe.notes_count ?? 0}
             onUpdate={onUpdateNotes}
+            onDelete={onDeleteNote}
+            canDeleteNotes={canDeleteNotes}
             isPending={isPending}
+            isDeletePending={isDeletePending}
         />
     ),
 });
@@ -252,6 +278,7 @@ export const getInformesActions = (
     generalNotesAction?: TableAction<Informes>,
     redactDisabled: boolean = false,
     onAssign?: (informe: Informes) => void,
+    onConfirmStudy?: (informe: Informes) => void,
 ): TableAction<Informes>[] => [
         {
             label: "Redactar Informe",
@@ -272,6 +299,18 @@ export const getInformesActions = (
             onClick: onViewPdf,
             hidden: (informe) => !(informe.pdf_path), // Solo mostrar si is_image es true
         },
+        ...(onConfirmStudy ? [{
+            label: (informe: Informes) => (informe.w_order === 1 || informe.is_executed) ? "Estudio confirmado" : "Confirmar estudio",
+            icon: (informe: Informes) => (informe.w_order === 1 || informe.is_executed)
+                ? <CheckCircle2 className="h-4 w-4 text-green-600" />
+                : <HelpCircle className="h-4 w-4 text-amber-500" />,
+            onClick: (informe: Informes) => {
+                if (informe.w_order !== 1 && !informe.is_executed) {
+                    onConfirmStudy(informe);
+                }
+            },
+            disabled: (informe: Informes) => informe.w_order === 1 || informe.is_executed,
+        }] : []),
         ...(onAssign ? [{
             label: "Asignar",
             icon: <UserCheck className="h-4 w-4 text-purple-900" />,

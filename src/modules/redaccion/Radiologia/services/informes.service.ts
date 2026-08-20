@@ -1,4 +1,5 @@
 import { api } from "@/lib/api"
+import type { ExaminationNotesResponse } from "../types/informes.types"
 
 export const getInformes = async ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, assigned_to_me = false, show_no_image = false, show_without_order = false, show_only_with_notes = false, modality_id = "", bodypart_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc", facility_id = "" }) => {
 
@@ -144,11 +145,27 @@ export const addFlagsToExamsBatch = async (exam_ids: string[], flags: string[]) 
     }
 };
 
-export const updateGeneralNotes = async (exam_id: string, general_notes: string) => {
+export const createGeneralNote = async (exam_id: string, message: string) => {
     try {
-        const response = await api.patch(`/examinations/${exam_id}/notes`, {
-            others_details: general_notes,
-        });
+        const response = await api.post(`/examinations/${exam_id}/notes`, { message });
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const getExaminationNotes = async (exam_id: string) => {
+    try {
+        const response = await api.get<ExaminationNotesResponse>(`/examinations/${exam_id}/notes`);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const deleteExaminationNote = async (exam_id: string, note_id: string) => {
+    try {
+        const response = await api.delete(`/examinations/${exam_id}/notes/${note_id}`);
         return response.data;
     } catch (error) {
         throw error;
@@ -181,6 +198,20 @@ export const assignExam = async (exam_id: string, user_id: string) => {
         throw error;
     }
 }
+
+export interface ConfirmStudyPayload {
+    referring_physician_id: string | null;
+    requesting_physician_id: string | null;
+    requesting_physician_name: string | null;
+    studytype_id: string;
+    clinical_question: string;
+    other_details: string;
+}
+
+export const confirmStudy = async (exam_id: string, data: ConfirmStudyPayload) => {
+    const response = await api.post(`/examinations/${exam_id}/confirm-study`, data);
+    return response.data;
+};
 
 // Versión para desbloquear al cerrar la ventana - usa fetch con keepalive
 export const unblockExamOnUnload = (exam_id: string): void => {

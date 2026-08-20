@@ -3,6 +3,7 @@ export interface TableColumn<T = any> {
     key: keyof T | string;
     label: string;
     sortable?: boolean;
+    resizable?: boolean;
     render?: (value: any, row: T, index: number) => React.ReactNode;
     headerRender?: () => React.ReactNode;
     className?: string;
@@ -59,9 +60,10 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     emptyMessage?: string | React.ReactNode;
     className?: string;
     showIndex?: boolean;
-    onRowClick?: (row: T, index: number) => void;
-    onRowDoubleClick?: (row: T, index: number) => void;
+    onRowClick?: (row: T, index: number, event: React.MouseEvent) => void;
+    onRowDoubleClick?: (row: T, index: number, event: React.MouseEvent) => void;
     selectedRow?: T | null;
+    selectedRowIds?: Set<string>;
     rowIdKey?: keyof T;
     maxHeight?: string; // Altura máxima para hacer scroll solo en la tabla
     perPageValue?: number;

@@ -216,6 +216,7 @@ export const CrearInforme = () => {
             setTechnique(template.technique || "");
             setStudyTypeFilter(template.study_type_id || "");
             setReportType((template.report_type as ReportType) || 'simple');
+            setIsDefaultReport(Boolean(template.is_system_default || template.is_user_default));
             setStructuredVariables((template as any).structured_variables || "");
             setCriteria((template as any).criteria || "");
             setSelectedLocationIds(Array.isArray((template as any).location_ids) ? (template as any).location_ids : []);

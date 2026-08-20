@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { type InformeDetalle, type Informes } from "../types/informes.types";
+import { type InformeDetalle, type Informes, type StudyNote, type ExaminationNotesResponse } from "../types/informes.types";
 import type { ApiPaginatedResponse } from "@/types/global.type";
-import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, updateExaminationFlags, updateExaminationTagIds, getAllTags, updateGeneralNotes, getPatientHistory, assignExam, assignExamBatch, addTagsToExamsBatch, addFlagsToExamsBatch, type UpdateReportPayload } from "../services/informes.service";
+import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, updateExaminationFlags, updateExaminationTagIds, getAllTags, createGeneralNote, getExaminationNotes, deleteExaminationNote, getPatientHistory, assignExam, assignExamBatch, addTagsToExamsBatch, addFlagsToExamsBatch, confirmStudy, type ConfirmStudyPayload, type UpdateReportPayload } from "../services/informes.service";
 import { informesKeys } from "../constants/query-keys";
 import { toast } from "sonner";
 import { notifyInformeChange, useCrossWindowSync } from "../redactar-informe/hooks/use-cross-windows";
@@ -56,6 +56,23 @@ export const useUpdateReport = (examId: string) => {
         }
     });
 }
+
+export const useConfirmStudy = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examId, data }: { examId: string; data: ConfirmStudyPayload }) =>
+            confirmStudy(examId, data),
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: informesKeys.listDetalle(undefined) });
+            toast.success(response.message || 'Estudio confirmado correctamente');
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Error al confirmar el estudio');
+        },
+    });
+};
 
 export const useBlockExam = () => {
     const queryClient = useQueryClient();
@@ -217,17 +234,84 @@ export const useAllTags = () => {
     };
 }
 
+export const useExaminationNotes = (examId: string, enabled: boolean) => {
+    const { data, isLoading, isFetching, error } = useQuery<ExaminationNotesResponse>({
+        queryKey: informesKeys.notes(examId),
+        queryFn: () => getExaminationNotes(examId),
+        enabled,
+    });
+
+    return {
+        notes: data?.data?.notes ?? [],
+        isLoading: isLoading || isFetching,
+        error,
+    };
+};
+
 export const useUpdateGeneralNotes = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: ({ examId, notes }: { examId: string; notes: string }) =>
-            updateGeneralNotes(examId, notes),
+            createGeneralNote(examId, notes),
 
-        onMutate: async ({ examId, notes }) => {
-            await queryClient.cancelQueries({ queryKey: informesKeys.lists() });
-            const previousData = queryClient.getQueriesData({ queryKey: informesKeys.lists() });
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Error al guardar la nota');
+        },
 
+        onSuccess: (response, { examId }) => {
+            const note = response?.data as StudyNote | undefined;
+            if (note) {
+                queryClient.setQueriesData(
+                    { queryKey: informesKeys.lists() },
+                    (old: any) => {
+                        if (!old?.data?.data) return old;
+                        return {
+                            ...old,
+                            data: {
+                                ...old.data,
+                                data: old.data.data.map((item: Informes) => {
+                                    if (item.guid !== examId) return item;
+                                    return {
+                                        ...item,
+                                        general_notes: note.message,
+                                        notes_count: (item.notes_count ?? 0) + 1,
+                                        recent_notes: [note, ...(item.recent_notes ?? [])].slice(0, 3),
+                                    };
+                                }),
+                            },
+                        };
+                    }
+                );
+
+                queryClient.setQueryData<ExaminationNotesResponse>(informesKeys.notes(examId), (old) => {
+                    if (!old?.data) return old;
+                    return {
+                        ...old,
+                        data: {
+                            ...old.data,
+                            notes: [note, ...(old.data.notes ?? [])],
+                        },
+                    };
+                });
+            }
+            toast.success('Nota guardada');
+        },
+    });
+}
+
+export const useDeleteExaminationNote = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examId, noteId }: { examId: string; noteId: string }) =>
+            deleteExaminationNote(examId, noteId),
+
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Error al eliminar la nota');
+        },
+
+        onSuccess: (_response, { examId, noteId }) => {
             queryClient.setQueriesData(
                 { queryKey: informesKeys.lists() },
                 (old: any) => {
@@ -236,28 +320,31 @@ export const useUpdateGeneralNotes = () => {
                         ...old,
                         data: {
                             ...old.data,
-                            data: old.data.data.map((item: Informes) =>
-                                item.guid === examId ? { ...item, general_notes: notes } : item
-                            ),
+                            data: old.data.data.map((item: Informes) => {
+                                if (item.guid !== examId) return item;
+                                const recentNotes = (item.recent_notes ?? []).filter((note) => note.id !== noteId);
+                                return {
+                                    ...item,
+                                    general_notes: recentNotes[0]?.message ?? null,
+                                    notes_count: Math.max(0, (item.notes_count ?? 0) - 1),
+                                    recent_notes: recentNotes,
+                                };
+                            }),
                         },
                     };
                 }
             );
-
-            return { previousData, examId };
-        },
-
-        onError: (error: any, _vars, context: any) => {
-            if (context?.previousData) {
-                context.previousData.forEach(([queryKey, data]: [any, any]) => {
-                    queryClient.setQueryData(queryKey, data);
-                });
-            }
-            toast.error(error.response?.data?.message || 'Error al guardar la nota');
-        },
-
-        onSuccess: () => {
-            toast.success('Nota guardada');
+            queryClient.setQueryData<ExaminationNotesResponse>(informesKeys.notes(examId), (old) => {
+                if (!old?.data) return old;
+                return {
+                    ...old,
+                    data: {
+                        ...old.data,
+                        notes: old.data.notes.filter((note) => note.id !== noteId),
+                    },
+                };
+            });
+            toast.success('Nota eliminada');
         },
     });
 }
