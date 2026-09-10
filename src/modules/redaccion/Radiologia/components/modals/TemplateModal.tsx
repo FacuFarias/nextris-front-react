@@ -10,6 +10,8 @@ interface TemplateModalProps {
     onClose: () => void;
     searchTerm: string;
     setSearchTerm: (term: string) => void;
+    onlyStudyType: boolean;
+    setOnlyStudyType: (value: boolean) => void;
     filteredTemplates: Template[];
     selectedTemplate: Template | null;
     setSelectedTemplate: (template: Template) => void;
@@ -21,6 +23,8 @@ export const TemplateModal = ({
     onClose,
     searchTerm,
     setSearchTerm,
+    onlyStudyType,
+    setOnlyStudyType,
     filteredTemplates,
     selectedTemplate,
     setSelectedTemplate,
@@ -51,6 +55,8 @@ export const TemplateModal = ({
                             <input
                                 type="checkbox"
                                 className="rounded"
+                                checked={onlyStudyType}
+                                onChange={(event) => setOnlyStudyType(event.target.checked)}
                             />
                             Mi tipo de estudio
                         </label>

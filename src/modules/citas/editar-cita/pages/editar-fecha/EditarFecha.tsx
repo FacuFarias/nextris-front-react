@@ -4,7 +4,6 @@ import { CalendarPlus, ArrowLeft, Check, MonitorSmartphone } from "lucide-react"
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import FullCalendar from '@fullcalendar/react'
@@ -14,6 +13,7 @@ import interactionPlugin from '@fullcalendar/interaction'
 import { toast } from "sonner";
 import { useEditarFecha } from "./hooks/use-editar-fecha";
 import { useEquiposPorLocacion } from "@/hooks/use-global";
+import { DateInput } from "@/components/ui/date-input";
 
 
 export const EditarFecha = () => {
@@ -233,8 +233,7 @@ export const EditarFecha = () => {
     };
 
     // Manejar cambio de fecha deseada
-    const handleFechaDeseadaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const nuevaFecha = e.target.value;
+    const handleFechaDeseadaChange = (nuevaFecha: string) => {
         setFechaDeseada(nuevaFecha);
 
         if (nuevaFecha && calendarRef.current) {
@@ -462,12 +461,11 @@ export const EditarFecha = () => {
 
                                     <div className="space-y-2 border-t pt-3">
                                         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 dark:text-gray-200">Fecha deseada</p>
-                                        <Input
-                                            type="date"
+                                        <DateInput
                                             value={fechaDeseada}
                                             onChange={handleFechaDeseadaChange}
                                             className="w-full h-9 border-2 border-gray-200 rounded-lg focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 transition-all"
-                                            placeholder="dd/mm/aaaa"
+                                            placeholder="DD/MM/AA"
                                         />
                                     </div>
                                 </CardContent>

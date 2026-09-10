@@ -1,9 +1,9 @@
-import { useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { useParams, useSearchParams } from "react-router-dom"
 import { useAllTags, useInformeDetalle, useUpdateFlags, useUpdateReport, useUpdateTagIds, useUnblockExam, useBlockExam, usePatientHistory } from "../hooks/use-informes";
 import { putRedactarInforme } from "../services/informes.service";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronRight, FileMinus, FileX, Image as ImageIcon, Save, Signature, User, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces, Search, SkipForward } from "lucide-react";
+import { ChevronDown, ChevronRight, FileMinus, FileX, Image as ImageIcon, Save, Signature, User, Mars, Venus, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces, Search, SkipForward } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -12,20 +12,21 @@ import { criteriaService, type ParserVariableTreeNode, type StructuredCriterion,
 import { useTemplates } from "@/modules/redaccion/informe-predefinidos/hooks/use-templates";
 import type { Template } from "@/modules/redaccion/informe-predefinidos/types/informe-pred.types";
 import { ConfirmationModal } from "../components/ConfirmationModal";
-import { useVerifyCredentials } from "./hooks/use-verify-credentials";
 import { useSignReport } from "./hooks/use-sing-report";
 import { useQuitarFirma } from "./hooks/use-quitar-firma";
 import { useNextExam } from "./hooks/use-next-exam";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { informesKeys } from "../constants/query-keys";
 import { CloseTabModal, NextExamModal, SignModal, TemplateModal } from "../components/modals";
 import { clearWindowStorage, notifyGuidChange, notifyViewerUpdate } from "./hooks/use-cross-windows";
 import { FlagsCell } from "../components/FlagsCell";
 import { TagsCell } from "../components/TagsCell";
-import { useAppConfig } from "@/context/AppConfigContext";
-import { api } from "@/lib/api";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ReportNotesPanel } from "./components/ReportNotesPanel";
+import { openReportPdf, reportPdfObjectUrl } from "@/services/reportPdf";
+import { closeViewerWindow } from "@/services/viewerWindow";
+import { formatDate } from "@/lib/fechaYhora";
+import { mergeTemplateStudyReason } from "./reportTemplate";
 
 const normalizeVariableKey = (value: string | null | undefined): string =>
     String(value || "")
@@ -44,23 +45,27 @@ type PatientStudySummary = {
     estudio?: string | null;
     modalidad?: string | null;
     fecha?: string | null;
-    pdf_path?: string | null;
+    report_available?: boolean;
+    studyinstanceuid?: string | null;
 };
 
 type ReportFormData = {
-    history: string;
-    techniques: string;
-    findings: string;
-    impressions: string;
-    conclusions: string;
+    study_reason: string;
+    content: string;
+    conclusion: string;
+};
+
+type BracketMatch = {
+    text: string;
+    index: number;
+    contentStart: number;
+    contentEnd: number;
 };
 
 const EMPTY_REPORT_FORM: ReportFormData = {
-    history: '',
-    techniques: '',
-    findings: '',
-    impressions: '',
-    conclusions: '',
+    study_reason: '',
+    content: '',
+    conclusion: '',
 };
 
 const hasReportContent = (value: string | null | undefined) => {
@@ -119,26 +124,7 @@ export const RedactarInforme = () => {
     const initialReportDataRef = useRef<ReportFormData>(EMPTY_REPORT_FORM);
     const initializedReportGuidRef = useRef<string | undefined>(undefined);
     const defaultAppliedReportGuidRef = useRef<string | undefined>(undefined);
-    const historyTextareaRef = useRef<HTMLTextAreaElement>(null);
-    const [historyHasManualResize, setHistoryHasManualResize] = useState(false);
-
-    useEffect(() => {
-        if (historyHasManualResize) return;
-
-        const textarea = historyTextareaRef.current;
-        if (!textarea) return;
-
-        textarea.style.height = 'auto';
-        textarea.style.height = `${Math.max(32, textarea.scrollHeight)}px`;
-    }, [formData.history, historyHasManualResize]);
-
-    const handleHistoryResizeMouseDown = (event: React.MouseEvent<HTMLTextAreaElement>) => {
-        const bounds = event.currentTarget.getBoundingClientRect();
-        const isResizeCorner = event.clientX >= bounds.right - 18 && event.clientY >= bounds.bottom - 18;
-        if (isResizeCorner) {
-            setHistoryHasManualResize(true);
-        }
-    };
+    const [appliedTemplateId, setAppliedTemplateId] = useState<string | null>(null);
     const [examFlags, setExamFlags] = useState<string[]>(initialFlagsFromParams);
     const [examTagIds, setExamTagIds] = useState<string[]>(initialTagIdsFromParams);
     const [isSignModalOpen, setIsSignModalOpen] = useState(false);
@@ -146,74 +132,53 @@ export const RedactarInforme = () => {
     const [isSigning, setIsSigning] = useState(false);
     const [isSigned, setIsSigned] = useState(false);
 
-    const { data: institutionalInfo, refetch: refetchInstitutionalInfo } = useQuery({
-        queryKey: ['institutional-info'],
-        queryFn: async () => {
-            const response = await api.get('/institutional/info');
-            return response.data?.data;
-        },
-        staleTime: 0,
-    });
-
-    const requirePasswordForSigning = institutionalInfo?.require_signature_password ?? true;
+    // La firma se autoriza por permiso de usuario; no requiere reingresar contraseña.
+    const requirePasswordForSigning = false;
 
     // Estados para el modal de plantillas
     const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
     const [studyTypeFilter, setStudyTypeFilter] = useState<string>("");
     const [searchTerm, setSearchTerm] = useState("");
+    const [onlyStudyType, setOnlyStudyType] = useState(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
 
     // Hooks para plantillas
     const activeStudyTypeFilter = studyTypeFilter || reportStudyTypeId;
+    const reportModalityId = String(reportData.modality_id || '').trim();
     const reportTypeFilter = structuredReportsEnabled ? undefined : 'simple';
-    const { data: templatesData } = useTemplates(
+    const { data: templatesByStudyType } = useTemplates(
         activeStudyTypeFilter || undefined,
         undefined,
         undefined,
         reportTypeFilter,
     );
+    const { data: templatesByModality } = useTemplates(
+        undefined,
+        reportModalityId || undefined,
+        undefined,
+        reportTypeFilter,
+        Boolean(reportModalityId),
+    );
+    const studyTypeDefaultTemplate = templatesByStudyType?.data?.find((template) => template.is_user_default)
+        || templatesByStudyType?.data?.find((template) => template.is_system_default);
+    const hasStudyTypeDefault = Boolean(studyTypeDefaultTemplate);
+    const templatesData = hasStudyTypeDefault ? templatesByStudyType : templatesByModality;
+    const templateOptions = onlyStudyType
+        ? templatesByStudyType?.data || []
+        : templatesData?.data || [];
     // En tu componente
-    const { mutateAsync: verifyCredentials } = useVerifyCredentials();
     const { mutateAsync: signReport } = useSignReport();
     const { mutateAsync: quitarFirma } = useQuitarFirma();
     const { mutateAsync: getNextExam } = useNextExam();
     const { mutateAsync: unblockExam } = useUnblockExam();
     const { mutateAsync: blockExam } = useBlockExam();
-    const { config } = useAppConfig();
-
-    const { data: facilityPlanData } = useQuery({
-        queryKey: ["facility-plan", config?.id?.toString() || "1", "redactar-informe", informeGuid],
-        queryFn: async () => {
-            const response = await api.get(`/config/facilities/${config?.id?.toString() || "1"}/plan`);
-            return response.data?.data || null;
-        },
-        enabled: Boolean(informeGuid),
-        staleTime: 60 * 1000,
-    });
-
     const queryClient = useQueryClient();
     const [isNextExamModalOpen, setIsNextExamModalOpen] = useState(false);
     const [nextExamData, setNextExamData] = useState<any>(null);
     const [isCloseTabModalOpen, setIsCloseTabModalOpen] = useState(false);
     const [isSkipConfirmationOpen, setIsSkipConfirmationOpen] = useState(false);
     const [isSkipping, setIsSkipping] = useState(false);
-    const navigate = useNavigate();
-
-    const readMonthlyLimit: number | null = facilityPlanData?.plan?.max_read_monthly ?? null;
-    const readCount: number = facilityPlanData?.usage_monthly?.read_count ?? 0;
-    const isReadLimitReached =
-        typeof readMonthlyLimit === "number"
-        && readMonthlyLimit >= 0
-        && readCount >= readMonthlyLimit;
-
-    useEffect(() => {
-        if (!informeGuid) return;
-        if (!isReadLimitReached) return;
-        toast.error(`Límite mensual de redacción alcanzado (${readCount}/${readMonthlyLimit}). No puedes abrir el redactor.`);
-        navigate('/estudios/redaccion');
-    }, [informeGuid, isReadLimitReached, navigate, readCount, readMonthlyLimit]);
-
     // Ref para mantener el informeGuid actual actualizado en el listener
     const currentInformeGuidRef = useRef(informeGuid);
 
@@ -238,7 +203,7 @@ export const RedactarInforme = () => {
 
 
     // Filtrar plantillas por búsqueda local y priorizar segun modulo/facility.
-    const searchMatchedTemplates = templatesData?.data?.filter((template) => {
+    const searchMatchedTemplates = templateOptions.filter((template) => {
         const searchLower = searchTerm.toLowerCase();
         return (
             template.title.toLowerCase().includes(searchLower) ||
@@ -264,8 +229,7 @@ export const RedactarInforme = () => {
         : [];
 
     const filteredTemplates = [...preferredTemplates, ...fallbackTemplates];
-    const defaultTemplate = templatesData?.data?.find((template) => template.is_user_default)
-        || templatesData?.data?.find((template) => template.is_system_default);
+    const defaultTemplate = hasStudyTypeDefault ? studyTypeDefaultTemplate : undefined;
 
     const getExamMetaFromCachedLists = useCallback(() => {
         const cachedQueries = queryClient.getQueriesData({ queryKey: informesKeys.lists() });
@@ -294,15 +258,15 @@ export const RedactarInforme = () => {
             initializedReportGuidRef.current = informeGuid;
             const cachedExamMeta = getExamMetaFromCachedLists();
 
+            const detailData = informeDetalle.data as any;
             const nextFormData: ReportFormData = {
-                history: informeDetalle.data.history || '',
-                techniques: informeDetalle.data.techniques || '',
-                findings: informeDetalle.data.findings || '',
-                impressions: informeDetalle.data.impressions || '',
-                conclusions: informeDetalle.data.conclusions || '',
+                study_reason: detailData.study_reason || detailData.clinical_question || detailData.history || '',
+                content: detailData.content || detailData.findings || '',
+                conclusion: detailData.conclusion || detailData.conclusions || '',
             };
             initialReportDataRef.current = nextFormData;
             setFormData(nextFormData);
+            setAppliedTemplateId(detailData.applied_template_id || null);
             setExamFlags((prev) => {
                 if (Array.isArray(informeDetalle.data.flags)) return informeDetalle.data.flags;
                 if (cachedExamMeta) return cachedExamMeta.flags;
@@ -318,14 +282,15 @@ export const RedactarInforme = () => {
     }, [getExamMetaFromCachedLists, informeDetalle?.data, informeGuid]);
 
     const applyTemplateToReport = useCallback((template: Template) => {
+        const examinationReason = reportData.clinical_question || reportData.history || '';
+        setAppliedTemplateId(template.guid);
         setFormData(prev => ({
             ...prev,
-            techniques: template.technique || '',
-            findings: template.findings || '',
-            impressions: template.impression || '',
-            conclusions: template.conclusion || '',
+            study_reason: mergeTemplateStudyReason(template.study_reason, examinationReason),
+            content: template.content || template.findings || '',
+            conclusion: template.conclusion || '',
         }));
-    }, []);
+    }, [reportData.clinical_question, reportData.history]);
 
     // Algunos reportes antiguos llegan vacíos aunque exista un default asociado.
     // Aplicarlo desde el frontend evita que el redactor quede en blanco mientras
@@ -335,16 +300,14 @@ export const RedactarInforme = () => {
         if (defaultAppliedReportGuidRef.current === informeGuid) return;
 
         const reportAlreadyHasContent = [
-            informeDetalle.data.techniques,
-            informeDetalle.data.findings,
-            informeDetalle.data.impressions,
-            informeDetalle.data.conclusions,
+            informeDetalle.data.study_reason,
+            informeDetalle.data.content,
+            informeDetalle.data.conclusion,
         ].some(hasReportContent);
         const localReportAlreadyHasContent = [
-            formData.techniques,
-            formData.findings,
-            formData.impressions,
-            formData.conclusions,
+            formData.study_reason,
+            formData.content,
+            formData.conclusion,
         ].some(hasReportContent);
 
         if (reportAlreadyHasContent || localReportAlreadyHasContent) {
@@ -378,18 +341,39 @@ export const RedactarInforme = () => {
 
     const patientId = informeDetalle?.data?.patient_id;
     const { historyData } = usePatientHistory(patientId);
-    const patientStudies = (historyData?.data || []) as PatientStudySummary[];
+    const currentHistoryGuid = String(informeDetalle?.data?.exam_id || informeGuid || '').trim().toLowerCase();
+    const currentHistoryStudyUid = String(
+        studyInstanceUID || reportData?.study_instance_uid || ''
+    ).trim().toLowerCase();
+    const patientStudies = ((historyData?.data || []) as PatientStudySummary[]).filter((study) => {
+        const studyGuid = String(study.guid || '').trim().toLowerCase();
+        const studyUid = String(study.studyinstanceuid || '').trim().toLowerCase();
+
+        if (currentHistoryGuid && studyGuid === currentHistoryGuid) return false;
+        if (currentHistoryStudyUid && studyUid === currentHistoryStudyUid) return false;
+        return true;
+    });
 
     const [historyPdfUrl, setHistoryPdfUrl] = useState<string | null>(null);
 
-    const handleOpenHistoryPdf = (pdfPath: string) => {
-        const baseURL = import.meta.env.VITE_API_URL || '/api';
-        const filename = String(pdfPath || '').split('/').pop();
-        if (!filename) {
+    useEffect(() => () => {
+        if (historyPdfUrl) URL.revokeObjectURL(historyPdfUrl);
+    }, [historyPdfUrl]);
+
+    const handleOpenHistoryPdf = async (examId: string) => {
+        if (!examId) {
             toast.error('Este estudio todavía no tiene un PDF generado');
             return;
         }
-        setHistoryPdfUrl(`${baseURL}/pdfs/${encodeURIComponent(filename)}`);
+        try {
+            const objectUrl = await reportPdfObjectUrl(examId);
+            setHistoryPdfUrl((previous) => {
+                if (previous) URL.revokeObjectURL(previous);
+                return objectUrl;
+            });
+        } catch {
+            toast.error('No se pudo abrir el informe previo');
+        }
     };
 
     const examId = informeDetalle?.data?.exam_id || informeGuid || '';
@@ -425,15 +409,13 @@ export const RedactarInforme = () => {
 
     // Referencias a los editores usando useRef
     const editorsRef = useRef<{
-        techniques: any;
-        findings: any;
-        impressions: any;
-        conclusions: any;
+        study_reason: any;
+        content: any;
+        conclusion: any;
     }>({
-        techniques: null,
-        findings: null,
-        impressions: null,
-        conclusions: null
+        study_reason: null,
+        content: null,
+        conclusion: null
     });
 
     // Ref para rastrear imágenes ya cargadas (evita reemplazar las arrastradas al campo)
@@ -741,88 +723,154 @@ export const RedactarInforme = () => {
 
     const activeEditor = activeEditorField ? editorsRef.current[activeEditorField] : null;
 
-    const findNextPlaceholder = useCallback(() => {
-        const fieldOrder: Array<keyof typeof editorsRef.current> = ['techniques', 'findings', 'impressions', 'conclusions'];
+    const handleEditorContainerClick = useCallback((
+        event: React.MouseEvent<HTMLDivElement>,
+        fieldName: 'content' | 'conclusion',
+    ) => {
+        const target = event.target;
+        if (target instanceof HTMLElement && target.closest('[contenteditable="true"]')) {
+            // El editor editable ya sabe ubicar el cursor donde se hizo click.
+            return;
+        }
 
-        // Encontrar el índice del campo actual
+        const editor = editorsRef.current[fieldName];
+        if (!editor || editor.isDestroyed) return;
+
+        const editorElement = editor.view.dom as HTMLElement;
+        const bounds = editorElement.getBoundingClientRect();
+        if (bounds.width <= 0 || bounds.height <= 0) return;
+
+        // posAtCoords necesita coordenadas dentro del área editable. Si el
+        // click ocurrió en el espacio muerto del contenedor, lo aproximamos al
+        // borde más cercano del editor para obtener la posición más próxima.
+        const left = Math.max(bounds.left + 1, Math.min(event.clientX, bounds.right - 1));
+        const top = Math.max(bounds.top + 1, Math.min(event.clientY, bounds.bottom - 1));
+        const position = editor.view.posAtCoords({ left, top });
+
+        if (position) {
+            editor.commands.focus(position.pos);
+        } else {
+            editor.commands.focus('end');
+        }
+    }, []);
+
+    const getBracketMatches = (editor: any): BracketMatch[] => {
+        // Aceptar tanto campos con corchetes simples ([campo]) como el formato
+        // anterior con dobles corchetes ([[campo]]). El primer alternador evita
+        // que un campo doble se interprete como uno simple.
+        const text = editor.getText({ blockSeparator: '\n' });
+        const regex = /\[\[([^\]]*)\]\]|\[([^[]*)\]/g;
+        const matches: BracketMatch[] = [];
+        let match: RegExpExecArray | null;
+
+        while ((match = regex.exec(text)) !== null) {
+            const fieldText = match[1] ?? match[2] ?? '';
+            const openingLength = match[1] !== undefined ? 2 : 1;
+            const contentStart = match.index + openingLength;
+
+            matches.push({
+                text: fieldText,
+                index: match.index,
+                contentStart,
+                contentEnd: contentStart + fieldText.length,
+            });
+        }
+
+        return matches;
+    };
+
+    // Convierte un índice del texto serializado por TipTap en una posición de
+    // ProseMirror. Esto mantiene la selección correcta aun cuando el informe
+    // tiene varios párrafos o texto con formato.
+    const getEditorPositionAtTextOffset = (editor: any, textOffset: number): number | null => {
+        const doc = editor.state.doc;
+        let position: number | null = null;
+
+        doc.descendants((node: any, pos: number) => {
+            if (!node.isText || position !== null) return;
+
+            const textBeforeNode = doc.textBetween(0, pos, '\n');
+            const nodeStart = textBeforeNode.length;
+            const nodeEnd = nodeStart + node.text.length;
+
+            if (textOffset >= nodeStart && textOffset <= nodeEnd) {
+                position = pos + (textOffset - nodeStart);
+            }
+        });
+
+        return position;
+    };
+
+    const findPlaceholder = useCallback((direction: 'next' | 'previous') => {
+        const fieldOrder: Array<keyof typeof editorsRef.current> = ['study_reason', 'content', 'conclusion'];
         let currentFieldIndex = fieldOrder.indexOf(currentFieldRef.current as keyof typeof editorsRef.current);
         if (currentFieldIndex === -1) currentFieldIndex = 0;
 
-        // Obtener el editor actual y la posición del cursor
-        const currentEditor = editorsRef.current[currentFieldRef.current as keyof typeof editorsRef.current];
-        let currentCursorPos = 0;
-
-        if (currentEditor && !currentEditor.isDestroyed) {
-            // Obtener la posición actual del cursor
-            const { from } = currentEditor.state.selection;
-            currentCursorPos = from;
-        }
-
-        // Buscar en todos los campos empezando por el actual
-        for (let i = 0; i < fieldOrder.length; i++) {
-            const fieldIndex = (currentFieldIndex + i) % fieldOrder.length;
+        for (let offset = 0; offset < fieldOrder.length; offset++) {
+            const fieldIndex = direction === 'next'
+                ? (currentFieldIndex + offset) % fieldOrder.length
+                : (currentFieldIndex - offset + fieldOrder.length) % fieldOrder.length;
             const fieldName = fieldOrder[fieldIndex];
             const editor = editorsRef.current[fieldName];
 
-            if (!editor) continue;
+            if (!editor || editor.isDestroyed) continue;
 
-            const text = editor.getText();
-            const regex = /\[\[([^\]]+)\]\]/g;
-            let match;
-            const matches = [];
+            const positionedMatches = getBracketMatches(editor)
+                .map((match) => ({
+                    match,
+                    from: getEditorPositionAtTextOffset(editor, match.contentStart),
+                    to: getEditorPositionAtTextOffset(editor, match.contentEnd),
+                }))
+                .filter((item): item is { match: BracketMatch; from: number; to: number } =>
+                    item.from !== null && item.to !== null
+                );
 
-            // Recopilar todos los matches con sus posiciones
-            while ((match = regex.exec(text)) !== null) {
-                matches.push({
-                    text: match[1],
-                    index: match.index,
-                    fullMatch: match[0]
-                });
-            }
+            if (positionedMatches.length === 0) continue;
 
-            if (matches.length === 0) continue;
+            if (offset === 0 && fieldName === currentFieldRef.current) {
+                const { from, to } = editor.state.selection;
+                const currentMatch = direction === 'next'
+                    ? positionedMatches.find((item) => item.from >= to)
+                    : [...positionedMatches].reverse().find((item) => item.to <= from);
 
-            // Si estamos en el mismo campo, buscar desde la posición del cursor
-            if (i === 0 && fieldName === currentFieldRef.current) {
-                // Buscar el primer placeholder después de la posición del cursor
-                const nextMatch = matches.find(m => m.index >= currentCursorPos);
-
-                if (nextMatch) {
-                    // Encontramos un placeholder después del cursor en el mismo campo
-                    selectPlaceholder(editor, nextMatch, fieldName);
+                if (currentMatch) {
+                    selectPlaceholder(editor, currentMatch.match, fieldName);
                     return true;
                 }
-                // Si no hay más placeholders después del cursor, continuar al siguiente campo
                 continue;
-            } else {
-                // En campos diferentes, seleccionar el primer placeholder
-                if (matches.length > 0) {
-                    selectPlaceholder(editor, matches[0], fieldName);
-                    return true;
-                }
             }
+
+            const target = direction === 'next'
+                ? positionedMatches[0]
+                : positionedMatches[positionedMatches.length - 1];
+            selectPlaceholder(editor, target.match, fieldName);
+            return true;
         }
 
-        // No se encontraron más placeholders
         lastPlaceholderIndexRef.current = -1;
-        toast.info('No se encontraron más placeholders [[texto]]');
+        toast.info('No se encontraron más campos entre corchetes');
         return false;
     }, []);
 
-    // Función auxiliar para seleccionar un placeholder
-    const selectPlaceholder = (editor: any, match: { text: string; index: number }, fieldName: string) => {
-        currentFieldRef.current = fieldName;
+    const findNextPlaceholder = useCallback(() => findPlaceholder('next'), [findPlaceholder]);
+    const findPreviousPlaceholder = useCallback(() => findPlaceholder('previous'), [findPlaceholder]);
 
-        const startPos = match.index + 2; // Después de [[
-        const endPos = startPos + match.text.length;
+    // Selecciona únicamente el contenido, dejando los corchetes fuera de la selección.
+    const selectPlaceholder = (editor: any, match: BracketMatch, fieldName: string) => {
+        currentFieldRef.current = fieldName;
+        setActiveEditorField(fieldName as keyof typeof editorsRef.current);
 
         editor.commands.focus();
 
         setTimeout(() => {
             if (editor && !editor.isDestroyed) {
+                const from = getEditorPositionAtTextOffset(editor, match.contentStart);
+                const to = getEditorPositionAtTextOffset(editor, match.contentEnd);
+                if (from === null || to === null) return;
+
                 editor.commands.setTextSelection({
-                    from: startPos + 1,
-                    to: endPos + 1
+                    from,
+                    to,
                 });
 
                 const editorElement = editor.view.dom;
@@ -937,20 +985,20 @@ export const RedactarInforme = () => {
         };
     }, [findNextPlaceholder]);
 
-    const handleOpenPdf = () => {
+    const handleOpenPdf = async () => {
         if (!informeGuid) {
             toast.error('No se encontró el ID del examen');
             return;
         }
-        if (!informeDetalle?.data?.pdf_path) {
+        if (!informeDetalle?.data?.report_available) {
             toast.error('Este informe todavía no tiene un PDF generado');
             return;
         }
-        const baseURL = import.meta.env.VITE_API_URL || '/api';
-        window.open(
-            `${baseURL}/pdfs/by-exam/${encodeURIComponent(informeGuid)}`,
-            '_blank',
-        );
+        try {
+            await openReportPdf(informeGuid);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
+        }
     };
 
 
@@ -961,11 +1009,10 @@ export const RedactarInforme = () => {
         }
 
         const dataToSave = {
-            history: formData.history,
-            techniques: formData.techniques,
-            findings: formData.findings,
-            impressions: formData.impressions,
-            conclusions: formData.conclusions,
+            study_reason: formData.study_reason,
+            content: formData.content,
+            conclusion: formData.conclusion,
+            template_id: appliedTemplateId || undefined,
             mark_as_reported: false
         };
 
@@ -983,8 +1030,8 @@ export const RedactarInforme = () => {
     );
 
     const validateReportBeforeSigning = () => {
-        const fields = [formData.techniques, formData.findings, formData.impressions, formData.conclusions];
-        const requiredFields = [formData.techniques, formData.findings, formData.conclusions];
+        const fields = [formData.study_reason, formData.content, formData.conclusion];
+        const requiredFields = fields;
         const emptyBracketPattern = /\[\s*\[\s*\]\s*\]/;
 
         if (fields.some((field) => emptyBracketPattern.test(field))) {
@@ -1001,11 +1048,6 @@ export const RedactarInforme = () => {
     };
 
     const handleVerifyCredentials = async () => {
-        if (requirePasswordForSigning && !password.trim()) {
-            toast.error('Por favor ingrese su contraseña');
-            return;
-        }
-
         if (!isSigned && !validateReportBeforeSigning()) {
             return;
         }
@@ -1013,11 +1055,6 @@ export const RedactarInforme = () => {
         setIsSigning(true);
 
         try {
-            // 1. Verificar credenciales cuando la institución lo requiere.
-            if (requirePasswordForSigning) {
-                await verifyCredentials({ password, examId: informeGuid || undefined });
-            }
-
             // Si el informe ya está firmado, quitar la firma
             if (isSigned) {
                 // Quitar firma del informe
@@ -1040,10 +1077,10 @@ export const RedactarInforme = () => {
             } else {
                 // 2. Guardar siempre el contenido actual antes de firmar.
                 await putRedactarInforme(informeGuid || '', {
-                    techniques: formData.techniques,
-                    findings: formData.findings,
-                    impressions: formData.impressions,
-                    conclusions: formData.conclusions,
+                    study_reason: formData.study_reason,
+                    content: formData.content,
+                    conclusion: formData.conclusion,
+                    template_id: appliedTemplateId || undefined,
                     mark_as_reported: false,
                 });
 
@@ -1060,11 +1097,6 @@ export const RedactarInforme = () => {
 
                 if (studyGroupId && studyGroupId !== 'undefined') {
                     payload.study_group_id = studyGroupId;
-                }
-
-                const preferredFacilityId = String((reportData as any)?.facility_id || config?.id?.toString() || "1" || '').trim();
-                if (preferredFacilityId) {
-                    payload.facility_id = preferredFacilityId;
                 }
 
                 // 3. Firmar reporte
@@ -1135,10 +1167,10 @@ export const RedactarInforme = () => {
         try {
             // 1. Guardar siempre el contenido actual antes de firmar.
             await putRedactarInforme(informeGuid, {
-                techniques: formData.techniques,
-                findings: formData.findings,
-                impressions: formData.impressions,
-                conclusions: formData.conclusions,
+                study_reason: formData.study_reason,
+                content: formData.content,
+                conclusion: formData.conclusion,
+                template_id: appliedTemplateId || undefined,
                 mark_as_reported: false,
             });
 
@@ -1155,11 +1187,6 @@ export const RedactarInforme = () => {
 
             if (studyGroupId && studyGroupId !== 'undefined') {
                 payload.study_group_id = studyGroupId;
-            }
-
-            const preferredFacilityId = String((reportData as any)?.facility_id || config?.id?.toString() || "1" || '').trim();
-            if (preferredFacilityId) {
-                payload.facility_id = preferredFacilityId;
             }
 
             // 3. Firmar reporte
@@ -1219,7 +1246,6 @@ export const RedactarInforme = () => {
     const handleSignAction = () => {
         if (isSigning || isSkipping || updateReportMutation.isPending) return;
 
-        void refetchInstitutionalInfo();
         if (isSigned) {
             setIsSignModalOpen(true);
             return;
@@ -1304,7 +1330,7 @@ export const RedactarInforme = () => {
                 const studyPath = dataToUse.study_instance_uid
                     ? `/${encodeURIComponent(dataToUse.study_instance_uid)}`
                     : '';
-                const newUrl = `/estudios/redaccion/redactar-informe/${encodeURIComponent(dataToUse.guid)}${studyPath}?${params.toString()}`;
+                const newUrl = `/worklist/redactar-informe/${encodeURIComponent(dataToUse.guid)}${studyPath}?${params.toString()}`;
 
 
                 // 7. SÉPTIMO: Recargar la ventana con el nuevo examen.
@@ -1338,9 +1364,6 @@ export const RedactarInforme = () => {
         if (modalityId && modalityId !== 'undefined') payload.modality_id = modalityId;
         if (bodypartId && bodypartId !== 'undefined') payload.body_part_id = bodypartId;
         if (studyGroupId && studyGroupId !== 'undefined') payload.study_group_id = studyGroupId;
-
-        const preferredFacilityId = String(reportData?.facility_id || config?.id?.toString() || '1').trim();
-        if (preferredFacilityId) payload.facility_id = preferredFacilityId;
 
         try {
             const nextExam = await getNextExam({
@@ -1377,6 +1400,10 @@ export const RedactarInforme = () => {
     // Función para cerrar la ventana de forma segura (desbloqueando primero)
     // Al cerrar la ventana
     const handleCloseWindow = async () => {
+        // El visor se abre desde la ventana de la lista de trabajo, por lo
+        // que se cierra mediante BroadcastChannel antes de cerrar el redactor.
+        closeViewerWindow();
+
         if (currentInformeGuidRef.current) {
             try {
                 await unblockExam(currentInformeGuidRef.current);
@@ -1408,7 +1435,18 @@ export const RedactarInforme = () => {
     useEffect(() => {
         const handleActionShortcut = (event: KeyboardEvent) => {
             const supportedKeys = ['F1', 'F2', 'F3', 'F4', 'F8'];
-            if (!supportedKeys.includes(event.key)) return;
+            const isNextPlaceholderKey = event.key === 'PageDown' || event.code === 'PageDown';
+            const isPreviousPlaceholderKey = event.key === 'PageUp' || event.code === 'PageUp';
+            if (!supportedKeys.includes(event.key) && !isNextPlaceholderKey && !isPreviousPlaceholderKey) return;
+
+            // PageUp/PageDown siguen navegando el documento cuando el foco no
+            // está dentro de uno de los editores del informe.
+            if (isNextPlaceholderKey || isPreviousPlaceholderKey) {
+                const editorHasFocus = Object.values(editorsRef.current).some((editor) =>
+                    editor && !editor.isDestroyed && editor.view.dom.contains(document.activeElement)
+                );
+                if (!editorHasFocus) return;
+            }
 
             event.preventDefault();
             if (event.repeat) return;
@@ -1436,6 +1474,10 @@ export const RedactarInforme = () => {
                 handleSkipReport();
             } else if (event.key === 'F8') {
                 void handleCloseWindow();
+            } else if (isNextPlaceholderKey) {
+                findNextPlaceholder();
+            } else if (isPreviousPlaceholderKey) {
+                findPreviousPlaceholder();
             }
         };
 
@@ -1781,23 +1823,47 @@ export const RedactarInforme = () => {
         </LayoutSinSidebar>;
     }
 
-    const patientName = reportData.patient_name || 'Carlos Fernández';
-    const patientIdentifier = reportData.patientid || reportData.patientit || reportData.patient?.patientit || reportData.patient?.patientid || '-';
-    const nationalCodeLabel = reportData.national_code || reportData.nationalcode || reportData.nationalCode || reportData.patient?.national_code || reportData.patient?.nationalcode || '-';
-    const sexLabel = reportData.sex === 'M' ? 'Masculino' : reportData.sex === 'F' ? 'Femenino' : (reportData.sex || '-');
-    const studyLabel = reportData.study_description || reportData.study_type_description || reportData.study_name || '-';
-    const modalityLabel = reportData.modality || reportData.modality_name || reportData.modality_description || '-';
-    const accessionLabel = reportData.accession_number || reportData.localacc || reportData.admission_number || '-';
-    const dateLabel = reportData.exam_date || reportData.date || reportData.study_date || '13/12/2025';
-    const statLabel = reportData.stat || reportData.priority || 'A';
-    const hasGeneratedReport = Boolean(reportData.pdf_path);
-    const reportHasAnyContent = [
-        formData.history,
-        formData.techniques,
-        formData.findings,
-        formData.impressions,
-        formData.conclusions,
-    ].some(hasReportContent);
+    const patientName = reportData.patient_name || 'Paciente sin nombre';
+    const patientIdentifier = reportData.patientid || reportData.patientit || reportData.patient?.patientit || reportData.patient?.patientid;
+    const nationalCodeLabel = reportData.national_code || reportData.nationalcode || reportData.nationalCode || reportData.patient?.national_code || reportData.patient?.nationalcode;
+    const sexLabel = reportData.sex === 'M' ? 'Masculino' : reportData.sex === 'F' ? 'Femenino' : reportData.sex;
+    const studyLabel = reportData.study_description || reportData.study_type_description || reportData.study_name;
+    const modalityLabel = reportData.modality || reportData.modality_name || reportData.modality_description;
+    const accessionLabel = reportData.accession_number || reportData.localacc || reportData.admission_number;
+    const dateLabel = formatDate(reportData.exam_date || reportData.created_on || reportData.date || reportData.study_date);
+    const statLabel = reportData.stat || reportData.priority;
+    const normalizedSex = String(reportData.sex ?? '').trim().toUpperCase();
+    const SexIcon = normalizedSex === 'M' || normalizedSex === 'MASCULINO'
+        ? Mars
+        : normalizedSex === 'F' || normalizedSex === 'FEMENINO'
+            ? Venus
+            : User;
+    const headerValue = (value: unknown) => {
+        const normalized = String(value ?? '').trim();
+        return normalized && normalized !== '-' ? normalized : 'N/D';
+    };
+    const patientHeaderFields = [
+        { label: 'Paciente', value: patientName },
+        { label: 'Patient ID', value: patientIdentifier },
+        { label: 'Sexo', value: sexLabel },
+        { label: 'National Code', value: nationalCodeLabel },
+    ];
+    const studyHeaderFields = [
+        { label: 'Estudio', value: studyLabel },
+        { label: 'Modalidad', value: modalityLabel },
+        { label: 'Accession', value: accessionLabel },
+        { label: 'Fecha', value: dateLabel },
+        { label: 'Estado', value: statLabel },
+    ];
+    const renderHeaderFields = (fields: typeof patientHeaderFields) => fields.map((field, index) => (
+        <span key={field.label}>
+            {index > 0 && <span aria-hidden="true"> - </span>}
+            <span title={field.label} className="cursor-help">
+                {headerValue(field.value)}
+            </span>
+        </span>
+    ));
+    const hasGeneratedReport = Boolean(reportData.report_available);
     return (
         <LayoutSinSidebar disableDefaultBackground>
             <div className="flex h-[calc(100dvh-5rem)] flex-col overflow-hidden rounded-xl bg-gray-50 p-2 dark:bg-[#0f1218] dark:text-gray-100 lg:h-[calc(100dvh-24px)]">
@@ -1806,14 +1872,14 @@ export const RedactarInforme = () => {
                     <div className="relative flex w-full flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-[#151922] md:flex-row md:items-start md:justify-between">
                         <div className="flex min-w-0 flex-1 items-start gap-3 md:items-center">
                             <div className="bg-gray-100 dark:bg-[#1e2430] rounded-full p-2.5">
-                                <User className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                                <SexIcon className="w-6 h-6 text-gray-600 dark:text-gray-300" aria-hidden="true" />
                             </div>
                             <div className="min-w-0 flex-1">
                                 <h1 className="mb-1 break-words text-base font-semibold text-gray-800 dark:text-gray-100 sm:text-lg md:text-xl">
-                                    {patientName} - {patientIdentifier} - {sexLabel} - {nationalCodeLabel}
+                                    {renderHeaderFields(patientHeaderFields)}
                                 </h1>
                                 <p className="break-words text-xs text-gray-600 dark:text-gray-300 md:text-sm">
-                                    {studyLabel} - {modalityLabel} - {accessionLabel} - {dateLabel} - {statLabel}
+                                    {renderHeaderFields(studyHeaderFields)}
                                 </p>
                                 <div className="mt-2 flex flex-wrap items-center gap-3">
                                     <FlagsCell
@@ -1893,36 +1959,20 @@ export const RedactarInforme = () => {
                             </div>
 
                             <div
-                                className={`report-editor-sections flex min-h-0 flex-col gap-0 overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-[#151922] ${!reportHasAnyContent ? 'md:flex-1' : ''}`}
+                                className="report-editor-sections table-scrollbar-purple flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto overflow-x-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-[#151922]"
                             >
-                            {/* Historia Clínica */}
-                            <div className="relative p-1">
-                                <div className="px-1 pb-1 md:min-h-0 md:flex-1">
-                                    <textarea
-                                        ref={historyTextareaRef}
-                                        rows={1}
-                                        onMouseDown={handleHistoryResizeMouseDown}
-                                        className="min-h-0 w-full resize-y rounded-none border-0 bg-transparent p-2 text-gray-800 focus:outline-none focus:ring-0 dark:bg-transparent dark:text-gray-200"
-                                        placeholder="Historia clínica..."
-                                        disabled={isSigned || isMobile}
-                                        value={formData.history}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, history: e.target.value }))}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Técnica de examen */}
-                            <div className="p-1">
+                            {/* Razón del estudio */}
+                            <div className="flex min-h-0 shrink-0 flex-col p-1">
                                 <div className="px-1">
                                     <RichTextEditor
-                                        value={formData.techniques}
-                                        onChange={(value) => handleChange('techniques', value)}
-                                        placeholder="Descripción de la técnica utilizada..."
-                                        dragOver={dragOverField === 'techniques'}
-                                        onDragOver={(e) => handleDragOver(e, 'techniques')}
+                                        value={formData.study_reason}
+                                        onChange={(value) => handleChange('study_reason', value)}
+                                        placeholder="Razón del estudio..."
+                                        dragOver={dragOverField === 'study_reason'}
+                                        onDragOver={(e) => handleDragOver(e, 'study_reason')}
                                         onDragLeave={handleDragLeave}
-                                        onDrop={(e) => handleDrop(e, 'techniques', editorsRef.current.techniques)}
-                                        onEditorReady={(editor) => handleEditorReady(editor, 'techniques')}
+                                        onDrop={(e) => handleDrop(e, 'study_reason', editorsRef.current.study_reason)}
+                                        onEditorReady={(editor) => handleEditorReady(editor, 'study_reason')}
                                         readOnly={isSigned || isMobile}
                                         readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
                                         showToolbar={false}
@@ -1932,67 +1982,50 @@ export const RedactarInforme = () => {
                                 </div>
                             </div>
 
-                            {/* Hallazgos */}
-                            <div className={!reportHasAnyContent ? 'flex min-h-0 flex-1 flex-col p-1' : 'p-1'}>
-                                <div className={!reportHasAnyContent ? 'flex min-h-0 flex-1 px-1' : 'px-1'}>
+                            {/* Contenido */}
+                            <div
+                                className="report-editor-body-section flex min-h-0 flex-col p-1"
+                                onClick={(event) => handleEditorContainerClick(event, 'content')}
+                            >
+                                <div className="flex min-h-0 flex-1 px-1">
                                     <RichTextEditor
-                                        value={formData.findings}
-                                        onChange={(value) => handleChange('findings', value)}
-                                        placeholder="Descripción de hallazgos..."
-                                        dragOver={dragOverField === 'findings'}
-                                        onDragOver={(e) => handleDragOver(e, 'findings')}
+                                        value={formData.content}
+                                        onChange={(value) => handleChange('content', value)}
+                                        placeholder="Contenido del estudio..."
+                                        dragOver={dragOverField === 'content'}
+                                        onDragOver={(e) => handleDragOver(e, 'content')}
                                         onDragLeave={handleDragLeave}
-                                        onDrop={(e) => handleDrop(e, 'findings', editorsRef.current.findings)}
-                                        onEditorReady={(editor) => handleEditorReady(editor, 'findings')}
+                                        onDrop={(e) => handleDrop(e, 'content', editorsRef.current.content)}
+                                        onEditorReady={(editor) => handleEditorReady(editor, 'content')}
                                         readOnly={isSigned || isMobile}
                                         readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
                                         showToolbar={false}
                                         autoGrow
-                                        fillWhenEmpty={!reportHasAnyContent}
-                                        className={`report-editor-rich-text min-h-0 resize-y overflow-auto ${!reportHasAnyContent ? 'h-full flex-1' : 'h-10'}`}
+                                        className="report-editor-rich-text h-full min-h-0 flex-1 resize-y overflow-auto"
                                     />
                                 </div>
                             </div>
 
-                            {/* Impresiones */}
-                            <div className="p-1">
-                                <div className="px-1">
+                            {/* Conclusión */}
+                            <div
+                                className="report-editor-body-section flex min-h-0 flex-col p-1"
+                                onClick={(event) => handleEditorContainerClick(event, 'conclusion')}
+                            >
+                                <div className="flex min-h-0 flex-1 px-1">
                                     <RichTextEditor
-                                        value={formData.impressions}
-                                        onChange={(value) => handleChange('impressions', value)}
-                                        placeholder="Impresiones del estudio..."
-                                        dragOver={dragOverField === 'impressions'}
-                                        onDragOver={(e) => handleDragOver(e, 'impressions')}
+                                        value={formData.conclusion}
+                                        onChange={(value) => handleChange('conclusion', value)}
+                                        placeholder="Conclusión del estudio..."
+                                        dragOver={dragOverField === 'conclusion'}
+                                        onDragOver={(e) => handleDragOver(e, 'conclusion')}
                                         onDragLeave={handleDragLeave}
-                                        onDrop={(e) => handleDrop(e, 'impressions', editorsRef.current.impressions)}
-                                        onEditorReady={(editor) => handleEditorReady(editor, 'impressions')}
+                                        onDrop={(e) => handleDrop(e, 'conclusion', editorsRef.current.conclusion)}
+                                        onEditorReady={(editor) => handleEditorReady(editor, 'conclusion')}
                                         readOnly={isSigned || isMobile}
                                         readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
                                         showToolbar={false}
                                         autoGrow
-                                        className="report-editor-rich-text h-10 min-h-0 resize-y overflow-auto"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Conclusiones */}
-                            <div className={!reportHasAnyContent ? 'flex min-h-0 flex-1 flex-col p-1' : 'p-1'}>
-                                <div className={!reportHasAnyContent ? 'flex min-h-0 flex-1 px-1' : 'px-1'}>
-                                    <RichTextEditor
-                                        value={formData.conclusions}
-                                        onChange={(value) => handleChange('conclusions', value)}
-                                        placeholder="Conclusiones del estudio..."
-                                        dragOver={dragOverField === 'conclusions'}
-                                        onDragOver={(e) => handleDragOver(e, 'conclusions')}
-                                        onDragLeave={handleDragLeave}
-                                        onDrop={(e) => handleDrop(e, 'conclusions', editorsRef.current.conclusions)}
-                                        onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')}
-                                        readOnly={isSigned || isMobile}
-                                        readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
-                                        showToolbar={false}
-                                        autoGrow
-                                        fillWhenEmpty={!reportHasAnyContent}
-                                        className={`report-editor-rich-text min-h-0 resize-y overflow-auto ${!reportHasAnyContent ? 'h-full flex-1' : 'h-10'}`}
+                                        className="report-editor-rich-text h-full min-h-0 flex-1 resize-y overflow-auto"
                                     />
                                 </div>
                             </div>
@@ -2014,17 +2047,25 @@ export const RedactarInforme = () => {
                                                 <div key={study.guid} className="flex min-w-0 items-center justify-between gap-2 rounded-md border border-gray-200 px-3 py-2 dark:border-gray-700">
                                                     <div className="min-w-0 flex-1">
                                                         <p className="break-words text-xs font-medium">{study.estudio}</p>
-                                                        <p className="text-xs text-muted-foreground">{study.modalidad} · {study.fecha}</p>
+                                                        <p className="text-xs text-muted-foreground">{study.modalidad} · {formatDate(study.fecha)}</p>
                                                     </div>
-                                                    {study.pdf_path && (
+                                            {study.report_available ? (
                                                         <button
                                                             type="button"
-                                                            onClick={() => handleOpenHistoryPdf(study.pdf_path || '')}
+                                                            onClick={() => void handleOpenHistoryPdf(study.guid)}
                                                             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-brand-purple hover:bg-brand-purple/10"
                                                             aria-label={`Ver informe previo de ${study.estudio}`}
                                                         >
                                                             <FileIcon className="h-5 w-5" />
                                                         </button>
+                                                    ) : (
+                                                        <span
+                                                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-600 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
+                                                            title="No hay informe"
+                                                            aria-label="No hay informe"
+                                                        >
+                                                            <FileX className="h-5 w-5" strokeWidth={2.5} />
+                                                        </span>
                                                     )}
                                                 </div>
                                             ))}
@@ -2156,12 +2197,12 @@ export const RedactarInforme = () => {
                                                         <div key={study.guid} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e2430] px-3 py-2">
                                                             <div className="flex-1 min-w-0">
                                                                 <p className="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{study.estudio}</p>
-                                                                <p className="text-xs text-gray-500 dark:text-gray-400">{study.modalidad} · {study.fecha}</p>
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400">{study.modalidad} · {formatDate(study.fecha)}</p>
                                                             </div>
-                                                            {study.pdf_path ? (
+                                                            {study.report_available ? (
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => handleOpenHistoryPdf(study.pdf_path || '')}
+                                                                    onClick={() => void handleOpenHistoryPdf(study.guid)}
                                                                     className="shrink-0 p-1 rounded hover:bg-brand-purple/10 dark:hover:bg-purple-800/30"
                                                                     title="Ver reporte PDF"
                                                                 >
@@ -2169,11 +2210,11 @@ export const RedactarInforme = () => {
                                                                 </button>
                                                             ) : (
                                                                 <span
-                                                                    className="shrink-0 p-1"
-                                                                    title="Estudio sin reporte"
-                                                                    aria-label="Estudio sin reporte"
+                                                                    className="inline-flex shrink-0 items-center justify-center rounded-md border border-red-200 bg-red-50 p-1 text-red-600 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
+                                                                    title="No hay informe"
+                                                                    aria-label="No hay informe"
                                                                 >
-                                                                    <FileX className="w-4 h-4 text-red-500 dark:text-red-400" />
+                                                                    <FileX className="h-5 w-5" strokeWidth={2.5} />
                                                                 </span>
                                                             )}
                                                         </div>
@@ -2506,19 +2547,21 @@ export const RedactarInforme = () => {
                     setIsTemplateModalOpen(false);
                     setSearchTerm('');
                     setStudyTypeFilter('');
+                    setOnlyStudyType(false);
                     setSelectedTemplate(null);
                 }}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
+                onlyStudyType={onlyStudyType}
+                setOnlyStudyType={setOnlyStudyType}
                 filteredTemplates={filteredTemplates}
                 selectedTemplate={selectedTemplate}
                 setSelectedTemplate={setSelectedTemplate}
                 onAccept={() => {
                     if (selectedTemplate) {
                         const templateHasContent = [
-                            selectedTemplate.technique,
-                            selectedTemplate.findings,
-                            selectedTemplate.impression,
+                            selectedTemplate.study_reason,
+                            selectedTemplate.content,
                             selectedTemplate.conclusion,
                         ].some(hasReportContent);
 
@@ -2527,8 +2570,7 @@ export const RedactarInforme = () => {
                             return;
                         }
 
-                        const hasChanges = formData.techniques || formData.findings ||
-                            formData.impressions || formData.conclusions;
+                        const hasChanges = formData.study_reason || formData.content || formData.conclusion;
 
                         if (hasChanges) {
                             setIsConfirmationModalOpen(true);

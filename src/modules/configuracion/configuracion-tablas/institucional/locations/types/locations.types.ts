@@ -23,7 +23,6 @@ export interface Location {
     gateway_ip?: string;
     transmission_type?: 'Manual' | 'Automatic';
     retention_days?: number;
-    require_execution_before_reporting?: boolean;
 }
 
 
@@ -53,5 +52,4 @@ export interface LocationFormData {
     gateway_ip?: string;
     transmission_type?: 'Manual' | 'Automatic';
     retention_days?: number;
-    require_execution_before_reporting?: boolean;
 }

@@ -3,6 +3,7 @@ import { DynamicBreadcrumb } from "@/components";
 import { useState } from "react";
 import { useMisDatos } from "./hooks/use-mis-datos";
 import { useUpdateProfile } from "./hooks/use-update-profile";
+import { PatientChangePasswordModal } from "@/modules/auth/change-password/PatientChangePasswordModal";
 import type { UpdateProfilePayload } from "./types";
 import { toast } from "sonner";
 import {
@@ -21,11 +22,13 @@ import {
     X,
     Building2,
     Hash,
+    KeyRound,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/fechaYhora";
 
 // ─── Inline editable field ──────────────────────────────────────────────────
 
@@ -152,6 +155,7 @@ const SectionHeader = ({
 export const MisDatos = () => {
     const [editingField, setEditingField] = useState<string | null>(null);
     const [editingValue, setEditingValue] = useState("");
+    const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
     const { profile, isLoading, refetch } = useMisDatos();
     const updateProfileMutation = useUpdateProfile();
 
@@ -236,9 +240,7 @@ export const MisDatos = () => {
                                 <ReadOnlyField
                                     label="Fecha de nacimiento"
                                     value={
-                                        profile?.birthdate
-                                            ? new Date(profile.birthdate + "T00:00:00").toLocaleDateString("es-AR")
-                                            : ""
+                                        profile?.birthdate ? formatDate(profile.birthdate) : ""
                                     }
                                     icon={<Calendar className="w-4 h-4" />}
                                 />
@@ -252,6 +254,17 @@ export const MisDatos = () => {
                                     value={profile?.sex || ""}
                                     icon={<Users className="w-4 h-4" />}
                                 />
+                            </div>
+                            <div className="mt-4 border-t border-border pt-4">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full gap-2 border-brand-purple/30 text-brand-purple hover:bg-purple-50 hover:text-brand-purple sm:w-auto"
+                                    onClick={() => setIsChangePasswordOpen(true)}
+                                >
+                                    <KeyRound className="h-4 w-4" />
+                                    Cambiar contraseña
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -318,6 +331,10 @@ export const MisDatos = () => {
                     </Card>
                 </div>
             </div>
+            <PatientChangePasswordModal
+                isOpen={isChangePasswordOpen}
+                onClose={() => setIsChangePasswordOpen(false)}
+            />
         </MainLayout>
     );
 };

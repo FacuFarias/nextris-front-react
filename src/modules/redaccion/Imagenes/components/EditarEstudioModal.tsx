@@ -9,6 +9,7 @@ import { api } from "@/lib/api"
 import TablaDynamic from "@/components/TableDynamic"
 import type { TableColumn } from "@/types/table"
 import type { PacsStudy } from "../hooks/use-studies-by-location"
+import { DateInput } from "@/components/ui/date-input"
 
 interface StudyTypeRow {
   guid: string
@@ -303,11 +304,10 @@ export const EditarEstudioModal = ({ open, onOpenChange, study, onSuccess }: Edi
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="edit-study-date">Fecha de estudio</Label>
-              <Input
+              <DateInput
                 id="edit-study-date"
-                type="date"
                 value={studyDate}
-                onChange={(e) => setStudyDate(e.target.value)}
+                onChange={(value) => setStudyDate(value)}
               />
             </div>
             <div className="space-y-2">

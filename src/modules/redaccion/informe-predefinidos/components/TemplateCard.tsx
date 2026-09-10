@@ -253,28 +253,20 @@ export const TemplateCard = ({
                             </p>
                         </div>
                     </div>
-                    {template.technique && (
+                    {template.study_reason && (
                         <section>
                             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-purple-600 dark:text-purple-400">
-                                Técnica
+                                Razón del estudio
                             </p>
-                            <RichTemplateContent content={template.technique} />
+                            <RichTemplateContent content={template.study_reason} />
                         </section>
                     )}
-                    {template.findings && (
+                    {template.content && (
                         <section>
                             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                Hallazgos
+                                Contenido
                             </p>
-                            <RichTemplateContent content={template.findings} />
-                        </section>
-                    )}
-                    {template.impression && (
-                        <section>
-                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
-                                Impresión
-                            </p>
-                            <RichTemplateContent content={template.impression} />
+                            <RichTemplateContent content={template.content} />
                         </section>
                     )}
                     {template.conclusion && (
@@ -305,7 +297,7 @@ export const TemplateCard = ({
                             </p>
                         </section>
                     )}
-                    {!template.technique && !template.findings && !template.impression && !template.conclusion && !template.structured_variables && !template.criteria && (
+                    {!template.study_reason && !template.content && !template.conclusion && !template.structured_variables && !template.criteria && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                             Esta plantilla no tiene contenido para mostrar.
                         </p>

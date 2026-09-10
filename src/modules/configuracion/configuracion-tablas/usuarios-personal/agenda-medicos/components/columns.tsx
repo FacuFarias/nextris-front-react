@@ -1,6 +1,7 @@
 import type { TableColumn, TableAction } from "@/types/table";
 import type { PhysicianSchedule } from "../types/physician-schedules.types";
 import { Edit, Trash2 } from "lucide-react";
+import { formatDate } from "@/lib/fechaYhora";
 
 export const getPhysicianScheduleColumns = (): TableColumn<PhysicianSchedule>[] => [
     {
@@ -41,7 +42,7 @@ export const getPhysicianScheduleColumns = (): TableColumn<PhysicianSchedule>[] 
         className: "font-medium",
         render: (value) => {
             if (!value) return "-";
-            return new Date(value.toString()).toLocaleDateString();
+            return formatDate(value.toString());
         },
     },
     {
@@ -50,7 +51,7 @@ export const getPhysicianScheduleColumns = (): TableColumn<PhysicianSchedule>[] 
         className: "font-medium",
         render: (value) => {
             if (!value) return "-";
-            return new Date(value.toString()).toLocaleDateString();
+            return formatDate(value.toString());
         },
     },
     {

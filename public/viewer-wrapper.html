@@ -131,6 +131,11 @@
                 return;
             }
 
+            if (message.type === 'CLOSE_VIEWER') {
+                window.close();
+                return;
+            }
+
             if (message.type !== 'OPEN_STUDY') return;
             if (message.targetViewerId !== viewerId) return;
             if (typeof message.sourceId !== 'string' || typeof message.requestId !== 'string') return;

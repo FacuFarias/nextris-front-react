@@ -13,7 +13,6 @@ export const informacionBasicaService = {
         payload.append('mail', formData.mail);
         payload.append('address', formData.address);
         payload.append('phone', formData.phone);
-        payload.append('require_signature_password', String(formData.require_signature_password ?? true));
         if (formData.logo) payload.append('logo', formData.logo);
 
         const { data: response } = await api.put(`/institutional/info/${locationId}`, payload);

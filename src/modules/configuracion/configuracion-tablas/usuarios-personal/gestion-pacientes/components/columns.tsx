@@ -1,6 +1,7 @@
 import type { TableColumn, TableAction } from "@/types/table";
 import type { Patient } from "../types/patients.types";
 import { Edit, Lock, Trash2 } from "lucide-react";
+import { formatDate } from "@/lib/fechaYhora";
 
 export const getPatientColumns = (): TableColumn<Patient>[] => [
     {
@@ -48,7 +49,7 @@ export const getPatientColumns = (): TableColumn<Patient>[] => [
         sortable: true,
         render: (value) => {
             if (!value) return "-";
-            return new Date(value.toString()).toLocaleDateString();
+            return formatDate(value.toString());
         },
     },
     {

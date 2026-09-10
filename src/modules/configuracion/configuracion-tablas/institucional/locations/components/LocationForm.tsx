@@ -10,7 +10,6 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
     Select,
     SelectContent,
@@ -58,7 +57,6 @@ export const LocationForm = ({
             gateway_ip: initialData?.gateway_ip || "",
             transmission_type: initialData?.transmission_type || "Manual",
             retention_days: initialData?.retention_days ?? undefined,
-            require_execution_before_reporting: initialData?.require_execution_before_reporting ?? true,
         },
     });
 
@@ -194,33 +192,6 @@ export const LocationForm = ({
                                 )}
                             />
                         </div>
-
-                        <FormField
-                            control={form.control}
-                            name="require_execution_before_reporting"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <div className="flex items-start gap-3 rounded-md border p-3">
-                                        <FormControl>
-                                            <Checkbox
-                                                checked={Boolean(field.value)}
-                                                onCheckedChange={(checked) => field.onChange(Boolean(checked))}
-                                                disabled={isLoading}
-                                            />
-                                        </FormControl>
-                                        <div className="space-y-1">
-                                            <FormLabel className="cursor-pointer">
-                                                Requerir ejecucion previa para reportar
-                                            </FormLabel>
-                                            <p className="text-xs text-muted-foreground">
-                                                Si se desactiva, esta location permitira redactar y firmar reportes sin marcar ejecucion previa.
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
 
                         {/* Dirección */}
                         <FormField

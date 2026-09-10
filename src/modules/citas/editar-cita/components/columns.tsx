@@ -1,6 +1,7 @@
 import type { TableAction, TableColumn } from "@/types/table";
 import type { Cita } from "../types/cita.type";
 import { Calendar, Delete, Edit } from "lucide-react";
+import { formatDateTime } from "@/lib/fechaYhora";
 
 
 // Configuración de columnas para usuarios
@@ -32,14 +33,7 @@ const citaColumns: TableColumn<Cita>[] = [
             const date = new Date(value);
             if (Number.isNaN(date.getTime())) return value;
 
-            return date.toLocaleString("es-AR", {
-                hour12: false,
-                hour: "2-digit",
-                minute: "2-digit",
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric"
-            });
+            return formatDateTime(date);
 
         },
     },

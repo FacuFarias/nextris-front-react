@@ -1,6 +1,7 @@
 import type { TableAction, TableColumn } from "@/types/table";
 import type { Patient } from "../types/BuscarPaciente";
 import { Edit, History, UserX, UserCheck } from "lucide-react";
+import { formatDate } from "@/lib/fechaYhora";
 
 // Configuración de columnas para usuarios
 const patientColumns: TableColumn<Patient>[] = [
@@ -90,6 +91,7 @@ const patientColumns: TableColumn<Patient>[] = [
         hideOnMobile: true,
         mobile: { label: "Nacimiento", order: 5 },
         sortable: true,
+        render: (value: string | null | undefined) => value ? formatDate(value) : "-",
     },
     {
         key: "study_count",

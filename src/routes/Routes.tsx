@@ -33,20 +33,22 @@ const AdmisionEspontanea = lazy(() => import("@/modules/admision").then(m => ({ 
 const NuevaCita = lazy(() => import("@/modules/citas").then(m => ({ default: m.NuevaCita })));
 const EditarCita = lazy(() => import("@/modules/citas").then(m => ({ default: m.EditarCita })));
 const EditarFecha = lazy(() => import("@/modules/citas").then(m => ({ default: m.EditarFecha })));
-const Ejecucion = lazy(() => import("@/modules/ejecucion/Ejecucion").then(m => ({ default: m.Ejecucion })));
-const DetalleEjecucion = lazy(() => import("@/modules/ejecucion/detalle-ejecucion/DetalleEjecucion").then(m => ({ default: m.DetalleEjecucion })));
-const Radiologia = lazy(() => import("@/modules/redaccion").then(m => ({ default: m.Radiologia })));
-const InformePredefinidos = lazy(() => import("@/modules/redaccion").then(m => ({ default: m.InformePredefinidos })));
-const Imagenes = lazy(() => import("@/modules/redaccion/Imagenes/Imagenes").then(m => ({ default: m.Imagenes })));
+const Worklist = lazy(() => import("@/modules/worklist").then(m => ({ default: m.Worklist })));
+const AdministrativeView = lazy(() => import("@/modules/worklist").then(m => ({ default: m.AdministrativeView })));
+const InformePredefinidos = lazy(() => import("@/modules/gestion").then(m => ({ default: m.InformePredefinidos })));
+const Imagenes = lazy(() => import("@/modules/imagenes").then(m => ({ default: m.Imagenes })));
 const Distribucion = lazy(() => import("@/modules/distribucion").then(m => ({ default: m.Distribucion })));
-const RedactarInforme = lazy(() => import("@/modules/redaccion/Radiologia/redactar-informe/RedactarInforme").then(m => ({ default: m.RedactarInforme })));
+const RedactarInforme = lazy(() => import("@/modules/worklist").then(m => ({ default: m.RedactarInforme })));
 const ConfiguracionTablas = lazy(() => import("@/modules/configuracion/configuracion-tablas/ConfiguracionTablas").then(m => ({ default: m.ConfiguracionTablas })));
 const Estudios = lazy(() => import("@/modules/estudios/Estudios").then(m => ({ default: m.Estudios })));
+const CaseLink = lazy(() => import("@/modules/case-link").then(m => ({ default: m.CaseLink })));
 const MisDatos = lazy(() => import("@/modules/mis-datos/MisDatos").then(m => ({ default: m.MisDatos })));
-const CrearInforme = lazy(() => import("@/modules/redaccion/informe-predefinidos/crear-informe/CrearInforme").then(m => ({ default: m.CrearInforme })));
+const CrearInforme = lazy(() => import("@/modules/gestion").then(m => ({ default: m.CrearInforme })));
 const UnificacionPaciente = lazy(() => import("@/modules/administracion/unificacion-paciente/UnificacionPaciente").then(m => ({ default: m.UnificacionPaciente })));
 const ReasignacionExamenes = lazy(() => import("@/modules/administracion/reasignacion-examenes/ReasignacionExamenes").then(m => ({ default: m.ReasignacionExamenes })));
-const CargarEstudios = lazy(() => import("@/modules/redaccion/cargar-estudios/CargarEstudios").then(m => ({ default: m.CargarEstudios })));
+const CargarEstudios = lazy(() => import("@/modules/gestion").then(m => ({ default: m.CargarEstudios })));
+const AccesosExternos = lazy(() => import("@/modules/gestion/accesos-externos").then(m => ({ default: m.AccesosExternos })));
+const IntegracionClinicaParque = lazy(() => import("@/modules/gestion").then(m => ({ default: m.IntegracionClinicaParque })));
 // structured_reports — deshabilitado temporalmente
 // const ReportesEstructurados = lazy(() => import("@/modules/reportes-estructurados/ReportesEstructurados").then(m => ({ default: m.ReportesEstructurados })));
 // nexi — deshabilitado temporalmente
@@ -184,98 +186,109 @@ const router = createBrowserRouter([
             </ProtectedRoute>
         ),
     },
-    {/*Ejecucion*/ },
+    {/* Lista de trabajo */ },
     {
-        path: "/ejecucion",
+        path: "/worklist",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Tecnico", "Administrador"]}
-                requiredPermissions={["tabs.execution.view", "execution.view_pending"]}
+                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrador"]}
+                requiredPermissions={["tabs.worklist.view"]}
+                deniedRedirect="/administrative_view"
             >
-                <Ejecucion />
+                <Worklist />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/ejecucion/detalle/:guid",
+        path: "/administrative_view",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Tecnico", "Administrador"]}
-                requiredPermissions={["tabs.execution.view", "execution.view_pending"]}
+                allowedRoles={["Sysadmin", "Administrador", "Administrativo"]}
+                requiredPermissions={["tabs.worklist.view"]}
             >
-                <DetalleEjecucion />
-            </ProtectedRoute>
-        ),
-    },
-    {/*Redaccion*/ },
-    {
-        path: "/estudios/redaccion",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico", "Administrador", "Administrativo"]}
-                requiredPermissions={["tabs.reports.view", "reports.view_writing"]}
-            >
-                <Radiologia />
+                <AdministrativeView />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/estudios/redaccion/redactar-informe/:informeGuid/:studyInstanceUID?",
+        path: "/worklist/redactar-informe/:informeGuid/:studyInstanceUID?",
         element: (
             <ProtectedRoute
                 allowedRoles={["Sysadmin", "Medico", "Administrador"]}
-                requiredPermissions={["tabs.reports.view", "reports.view_writing"]}
+                requiredPermissions={["reports.write"]}
             >
                 <RedactarInforme />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/estudios/informes-predefinidos",
+        path: "/gestion/informes-predefinidos",
         element: (
             <ProtectedRoute
                 allowedRoles={["Sysadmin", "Medico", "Administrador"]}
-                requiredPermissions={["tabs.reports.view", "reports.view_reports"]}
+                requiredPermissions={["templates.manage"]}
             >
                 <InformePredefinidos />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/estudios/crear-informe",
+        path: "/gestion/crear-informe",
         element: (
             <ProtectedRoute
                 allowedRoles={["Sysadmin", "Medico", "Administrador"]}
-                requiredPermissions={["tabs.reports.view", "reports.view_reports"]}
+                requiredPermissions={["templates.manage"]}
             >
                 <CrearInforme />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/estudios/editar-informe/:id",
+        path: "/gestion/editar-informe/:id",
         element: (
             <ProtectedRoute
                 allowedRoles={["Sysadmin", "Medico", "Administrador"]}
-                requiredPermissions={["tabs.reports.view", "reports.view_reports"]}
+                requiredPermissions={["templates.manage"]}
             >
                 <CrearInforme />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/estudios/cargar-estudios",
+        path: "/gestion/cargar-estudios",
         element: (
             <ProtectedRoute
                 allowedRoles={["Sysadmin", "Medico", "Administrador"]}
-                requiredPermissions={["tabs.reports.view", "reports.view_writing"]}
+                requiredPermissions={["dicom.studies.manage"]}
             >
                 <CargarEstudios />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/estudios/imagenes",
+        path: "/gestion/accesos-externos",
+        element: (
+            <ProtectedRoute
+                allowedRoles={["Sysadmin", "Administrador"]}
+                requiredPermissions={["tabs.gestion.view"]}
+            >
+                <AccesosExternos />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/gestion/integracion-clinica-parque",
+        element: (
+            <ProtectedRoute
+                allowedRoles={["Sysadmin", "Administrador"]}
+                requiredPermissions={["tabs.gestion.view"]}
+            >
+                <IntegracionClinicaParque />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/imagenes",
         element: (
             <ProtectedRoute
                 allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrador"]}
@@ -355,6 +368,10 @@ const router = createBrowserRouter([
                 <Estudios />
             </ProtectedRoute>
         ),
+    },
+    {
+        path: "/case/:shortCode",
+        element: <CaseLink />,
     },
     {
         path: "/mis-datos",

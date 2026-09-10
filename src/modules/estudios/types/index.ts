@@ -2,6 +2,8 @@ export interface Study {
     examination_id: string;
     order_id: string;
     accession_number: string;
+    patient_name: string;
+    patient_id: string;
     study_type: string;
     modality: string;
     study_date: string;

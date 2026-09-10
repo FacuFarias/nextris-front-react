@@ -1,6 +1,7 @@
 import type { TableAction, TableColumn } from "@/types/table";
 import { File, Image, Eye, EyeOff, Share2 } from "lucide-react";
 import type { HistoryPatient } from "../../types/BuscarPaciente";
+import { formatDate } from "@/lib/fechaYhora";
 
 // Configuración de columnas para usuarios
 const historyColumns: TableColumn<HistoryPatient>[] = [
@@ -33,6 +34,7 @@ const historyColumns: TableColumn<HistoryPatient>[] = [
         hideOnMobile: true,
         mobile: { label: "Fecha", order: 2 },
         sortable: true,
+        render: (value) => formatDate(value),
     },
     {
         key: "modalidad",
@@ -67,7 +69,7 @@ export const getHistoryPatientActions = (
             icon: <File className="h-4 w-4 text-brand-purple" />,
             onClick: onViewReport,
             mobilePrimary: true,
-            hidden: (patient) => !patient.pdf_path,
+            hidden: (patient) => !patient.report_available,
         },
         {
             label: "Ver imagen",

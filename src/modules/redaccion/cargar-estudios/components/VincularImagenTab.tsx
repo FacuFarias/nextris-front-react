@@ -10,7 +10,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { formatDate } from "@fullcalendar/core/index.js"
+import { formatDate } from "@/lib/fechaYhora"
 
 export const VincularImagenTab = () => {
     const [selectedEstudio, setSelectedEstudio] = useState<any>(null);

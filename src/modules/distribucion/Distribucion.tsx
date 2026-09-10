@@ -78,9 +78,9 @@ export const Distribucion = () => {
         }
     };
 
-    const handleViewReport = (examen: Examen) => {
+    const handleViewReport = async (examen: Examen) => {
         try {
-            distribucionService.viewReport(examen.guid);
+            await distribucionService.viewReport(examen.guid);
             toast.success("Abriendo informe en nueva pestaña");
         } catch (error) {
             toast.error("Error al abrir el informe");

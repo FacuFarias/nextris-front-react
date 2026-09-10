@@ -18,7 +18,6 @@ export const locationFormSchema = z.object({
     gateway_ip: z.string().max(45).optional(),
     transmission_type: z.enum(["Manual", "Automatic"]).optional(),
     retention_days: z.number().int().min(1).optional(),
-    require_execution_before_reporting: z.boolean().optional(),
 });
 
 export type LocationFormValues = z.infer<typeof locationFormSchema>;

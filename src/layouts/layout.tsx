@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Menu, X } from "lucide-react";
 import { Sidebar } from "./Sidebar";
+import clinicaParqueLogo from "@/assets/logo/CLINICA PARQUE_LOGO.png";
+import { useAuth } from "@/context/AuthContext";
 
 interface MainLayoutProps {
     children: ReactNode;
@@ -11,6 +13,10 @@ interface MainLayoutProps {
 
 export const MainLayout = ({ children, isOverflow = true, mobileTitle = "NextRIS" }: MainLayoutProps) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    // En escritorio la navegación comienza compacta para dejar más espacio al contenido.
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+    const { authData } = useAuth();
+    const isPatientPortal = authData?.user?.user_type === "patient";
 
     useEffect(() => {
         if (!sidebarOpen) return;
@@ -44,10 +50,23 @@ export const MainLayout = ({ children, isOverflow = true, mobileTitle = "NextRIS
 
             <div className="flex min-h-0 min-w-0 flex-1 pt-[calc(4rem+env(safe-area-inset-top))] lg:pt-0">
                 {/* Sidebar */}
-                <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+                <Sidebar
+                    isOpen={sidebarOpen}
+                    onClose={() => setSidebarOpen(false)}
+                    collapsed={sidebarCollapsed}
+                    onToggleCollapse={() => setSidebarCollapsed((collapsed) => !collapsed)}
+                />
 
                 {/* Main Content */}
-                <main className="relative flex min-h-0 min-w-0 flex-1 flex-col lg:ml-52">
+                <main className={`relative flex min-h-0 min-w-0 flex-1 flex-col transition-[margin] duration-300 ${sidebarCollapsed ? "lg:ml-16" : "lg:ml-52"}`}>
+                    {isPatientPortal && (
+                        <img
+                            src={clinicaParqueLogo}
+                            alt=""
+                            aria-hidden="true"
+                            className="pointer-events-none absolute right-4 top-3 z-20 h-20 w-28 object-contain opacity-15 mix-blend-multiply sm:right-6 sm:top-4 sm:h-24 sm:w-32"
+                        />
+                    )}
                     {/* Content Area */}
 <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
                         <div className="flex-1 flex flex-col min-h-0">

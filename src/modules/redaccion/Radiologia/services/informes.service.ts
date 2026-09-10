@@ -1,7 +1,7 @@
 import { api } from "@/lib/api"
 import type { ExaminationNotesResponse } from "../types/informes.types"
 
-export const getInformes = async ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, assigned_to_me = false, show_no_image = false, show_without_order = false, show_only_with_notes = false, modality_id = "", bodypart_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc", facility_id = "" }) => {
+export const getInformes = async ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, assigned_to_me = false, show_no_image = false, show_without_order = false, show_only_with_notes = false, modality_id = "", bodypart_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc" }) => {
 
     try {
         const params = new URLSearchParams({
@@ -22,7 +22,6 @@ export const getInformes = async ({ page = 1, per_page = 8, search = "", show_re
             date_field,
             sort_column,
             sort_direction,
-            facility_id: facility_id || "",
         });
         const response = await api.get(`/examinations/for-reporting?${params.toString()}`);
         return response.data;
@@ -30,6 +29,31 @@ export const getInformes = async ({ page = 1, per_page = 8, search = "", show_re
         throw error;
     }
 }
+
+export const createImageShareLink = async (
+    study_iuid: string,
+    options: { reason?: string; patient_email?: string } = {},
+) => {
+    const response = await api.post('/general/viewer-share-links', {
+        study_iuid,
+        expires_hours: 720,
+        ...options,
+    });
+    return response.data as {
+        success: boolean;
+        data: { share_url: string; expires_at: string; expires_hours: number; email_sent?: boolean };
+        message?: string;
+    };
+};
+
+export const createCaseLink = async (exam_id: string) => {
+    const response = await api.post(`/reports/${exam_id}/case-link`);
+    return response.data as {
+        success: boolean;
+        data: { case_url: string; share_url: string; expires_at: string; expires_hours: number };
+        message?: string;
+    };
+};
 
 export const getInformeDetalle = async (guid: string | undefined) => {
     try {
@@ -42,10 +66,15 @@ export const getInformeDetalle = async (guid: string | undefined) => {
 
 
 export interface UpdateReportPayload {
+    study_reason?: string;
+    content?: string;
+    conclusion?: string;
+    /** @deprecated aliases accepted by backend */
     findings?: string;
     impressions?: string;
     techniques?: string;
     conclusions?: string;
+    template_id?: string;
     mark_as_reported?: boolean;
 }
 
@@ -206,6 +235,7 @@ export interface ConfirmStudyPayload {
     studytype_id: string;
     clinical_question: string;
     other_details: string;
+    laterality_id: string | null;
 }
 
 export const confirmStudy = async (exam_id: string, data: ConfirmStudyPayload) => {

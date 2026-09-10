@@ -398,7 +398,9 @@ export const RichTextEditor = ({
                     onDragLeave={readOnly ? undefined : onDragLeave}
                     onDrop={readOnly ? undefined : onDrop}
                 >
-                    <EditorContent editor={editor} />
+                    <EditorContent
+                        editor={editor}
+                    />
                 </div>
             </div>
         </div>

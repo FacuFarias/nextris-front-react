@@ -1,0 +1,1 @@
+export { IntegracionClinicaParque } from "./IntegracionClinicaParque";

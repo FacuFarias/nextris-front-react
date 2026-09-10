@@ -11,6 +11,7 @@ import { api } from "@/lib/api"
 import { useQuery } from "@tanstack/react-query"
 import { useAppConfig } from "@/context/AppConfigContext"
 import { toast } from "sonner"
+import { formatDate } from "@/lib/fechaYhora"
 
 export const CargarEstudios = () => {
     const [files, setFiles] = useState<File[]>([])
@@ -380,7 +381,7 @@ export const CargarEstudios = () => {
                                                                             </div>
                                                                             <div className="flex items-center gap-1">
                                                                                 <Calendar className="w-3 h-3 text-gray-500" />
-                                                                                <span>{new Date(estudio.upload_date).toLocaleDateString()}</span>
+                                                                                <span>{formatDate(estudio.upload_date)}</span>
                                                                             </div>
 
                                                                             <Badge variant="outline" className="text-xs">

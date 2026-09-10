@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Database, MessageSquare } from "lucide-react";
 import { useDominioPacientes } from "../../dominio-pacientes/hooks/use-dominio-pacientes";
 import type { FacilityPlan, FacilityPlanChangeLog, FacilityUsageMonthly } from "../types/facilities.types";
+import { formatDateTime } from "@/lib/fechaYhora";
 
 interface FacilityFormProps {
     onSubmit: (data: FacilityFormData) => void;
@@ -217,7 +218,7 @@ export const FacilityForm = ({
                                         {(log.previous_plan_code || "sin plan").toUpperCase()} -&gt; {(log.new_plan_code || "sin plan").toUpperCase()} ({log.action})
                                     </div>
                                     <div className="text-muted-foreground">
-                                        {log.changed_at ? new Date(log.changed_at).toLocaleString("es-AR") : "-"}
+                                        {log.changed_at ? formatDateTime(log.changed_at) : "-"}
                                         {log.reason ? ` | ${log.reason}` : ""}
                                     </div>
                                 </div>

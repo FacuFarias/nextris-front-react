@@ -19,7 +19,10 @@ import {
     Monitor,
     Image,
     Info,
-    PlayCircle,
+    PanelLeftClose,
+    PanelLeftOpen,
+    Share2,
+    Waypoints,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
@@ -42,6 +45,8 @@ interface MenuItem {
 interface SidebarProps {
     isOpen: boolean;
     onClose: () => void;
+    collapsed: boolean;
+    onToggleCollapse: () => void;
 }
 
 const menuItems: MenuItem[] = [
@@ -54,8 +59,7 @@ const menuItems: MenuItem[] = [
             "tabs.patients.view",
             "tabs.appointments.view",
             "tabs.admissions.view",
-            "tabs.execution.view",
-            "tabs.reports.view",
+            "tabs.worklist.view",
             "tabs.distribution.view",
             "tabs.config.view",
             "tabs.gestion.view",
@@ -74,40 +78,23 @@ const menuItems: MenuItem[] = [
     {
         icon: Image,
         label: "Imágenes",
-        path: "/estudios/imagenes",
+        path: "/imagenes",
         allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrador"],
         requiredPermissions: ["tabs.images.view", "images.view"],
     },
     {
-        icon: PlayCircle,
-        label: "Ejecución",
-        path: "/ejecucion",
-        allowedRoles: ["Sysadmin", "Tecnico", "Administrador"],
-        requiredPermissions: ["tabs.execution.view", "execution.view_pending"],
+        icon: NotebookText,
+        label: "Lista de trabajo",
+        path: "/worklist",
+        allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrador"],
+        requiredPermissions: ["tabs.worklist.view"],
     },
     {
-        icon: NotebookText, label: "Estudios", subItems: [
-            {
-                icon: NotebookText,
-                label: "Redaccion",
-                path: "/estudios/redaccion",
-                requiredPermissions: ["tabs.reports.view", "reports.view_writing"],
-            },
-            {
-                icon: NotebookText,
-                label: "Inf.Predef",
-                path: "/estudios/informes-predefinidos",
-                requiredPermissions: ["tabs.reports.view", "reports.view_reports"],
-            },
-            {
-                icon: UploadCloud,
-                label: "Cargar Estudios",
-                path: "/estudios/cargar-estudios",
-                requiredPermissions: ["tabs.reports.view", "reports.view_writing"],
-            }
-        ],
-        allowedRoles: ["Sysadmin", "Medico", "Administrador", "Administrativo"],
-        requiredPermissions: ["tabs.reports.view", "reports.view_writing", "reports.view_reports"],
+        icon: NotebookText,
+        label: "Vista administrativa",
+        path: "/administrative_view",
+        allowedRoles: ["Sysadmin", "Administrador", "Administrativo"],
+        requiredPermissions: ["tabs.worklist.view"],
     },
     {
         icon: Navigation,
@@ -133,6 +120,34 @@ const menuItems: MenuItem[] = [
                 icon: ClipboardList,
                 label: "Reasignación de Exámenes",
                 path: "/administracion/reasignacion-examenes",
+                allowedRoles: ["Sysadmin", "Administrador"],
+                requiredPermissions: ["tabs.gestion.view"],
+            },
+            {
+                icon: NotebookText,
+                label: "Informes predefinidos",
+                path: "/gestion/informes-predefinidos",
+                allowedRoles: ["Sysadmin", "Medico", "Administrador"],
+                requiredPermissions: ["templates.manage"],
+            },
+            {
+                icon: UploadCloud,
+                label: "Cargar estudios",
+                path: "/gestion/cargar-estudios",
+                allowedRoles: ["Sysadmin", "Medico", "Administrador"],
+                requiredPermissions: ["dicom.studies.manage"],
+            },
+            {
+                icon: Share2,
+                label: "Accesos externos compartidos",
+                path: "/gestion/accesos-externos",
+                allowedRoles: ["Sysadmin", "Administrador"],
+                requiredPermissions: ["tabs.gestion.view"],
+            },
+            {
+                icon: Waypoints,
+                label: "Integración Clínica Parque",
+                path: "/gestion/integracion-clinica-parque",
                 allowedRoles: ["Sysadmin", "Administrador"],
                 requiredPermissions: ["tabs.gestion.view"],
             },
@@ -216,7 +231,7 @@ const menuItems: MenuItem[] = [
     },
 ];
 
-export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
+export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) => {
 
     const { authData, logout } = useAuth();
     const { moduleCodesSet, isLoading: isModulesLoading, hasError: hasModulesError } = useUserModules(Boolean(authData));
@@ -283,10 +298,6 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             if (!hasAccess(item.allowedRoles, item.requiredPermissions)) return null;
             if (!hasModuleAccess(item.requiredModule)) return null;
 
-            if (userRole === "Administrativo" && item.label === "Estudios") {
-                return { ...item, path: "/estudios/redaccion", subItems: undefined };
-            }
-
             if (item.subItems) {
                 const filteredSubItems = item.subItems.filter(subItem => {
                     if (!hasAccess(subItem.allowedRoles, subItem.requiredPermissions)) return false;
@@ -322,7 +333,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         <>
             {/* Desktop Sidebar */}
             <aside className={cn(
-                "fixed top-0 left-0 z-40 h-dvh w-[min(20rem,88vw)] border-border pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-transform duration-300 lg:w-52 lg:py-0",
+                "fixed top-0 left-0 z-40 h-dvh w-[min(20rem,88vw)] border-border pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-[width,transform] duration-300 ease-in-out lg:py-0",
+                collapsed ? "lg:w-16" : "lg:w-52",
                 "lg:translate-x-0",
                 isOpen ? "translate-x-0" : "-translate-x-full"
             )}
@@ -333,19 +345,36 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 }}>
                 <div className="flex flex-col h-full">
                     {/* Logo */}
-                    <div className="h-14 flex items-center px-3 border-b border-purple-800/30">
-                        <div className="flex items-center flex-1 cursor-pointer" onClick={() => navigate(userRole === "patient" ? "/estudios" : "/inicio")}>
+                    <div className={cn(
+                        "h-14 flex items-center border-b border-purple-800/30 px-3",
+                        collapsed && "lg:justify-center lg:px-2"
+                    )}>
+                        <div className={cn(
+                            "flex items-center cursor-pointer",
+                            collapsed ? "lg:justify-center" : "flex-1"
+                        )} onClick={() => navigate(userRole === "patient" ? "/estudios" : "/inicio")}>
                             <img src={logo} alt="NextRIS Logo" className="w-6 h-6 brightness-105" />
-                            <span className="ml-2 font-display text-base font-bold text-white">
+                            <span className={cn("ml-2 font-display text-base font-bold text-white", collapsed && "lg:hidden")}>
                                 Next<span className="text-purple-400">RIS</span>
                             </span>
                         </div>
                         <button
                             onClick={cycleTheme}
-                            className="flex h-11 w-11 items-center justify-center rounded-lg text-white transition-colors hover:bg-purple-700/50 lg:h-auto lg:w-auto lg:p-1.5"
+                            className={cn(
+                                "flex h-11 w-11 items-center justify-center rounded-lg text-white transition-colors hover:bg-purple-700/50 lg:h-auto lg:w-auto lg:p-1.5",
+                                collapsed && "lg:hidden"
+                            )}
                             title={themeLabel}
                         >
                             {themeIcon}
+                        </button>
+                        <button
+                            onClick={onToggleCollapse}
+                            className="hidden h-11 w-11 items-center justify-center rounded-lg text-white transition-colors hover:bg-purple-700/50 lg:flex lg:h-auto lg:w-auto lg:p-1.5"
+                            title={collapsed ? "Expandir menú" : "Colapsar menú"}
+                            aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
+                        >
+                            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
                         </button>
                     </div>
 
@@ -357,23 +386,37 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                     {item.subItems ? (
                                         <>
                                             <button
-                                                onClick={() => toggleItem(item.label)}
-                                                className="group flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-2 text-white transition-all duration-300 hover:bg-purple-700 lg:min-h-0"
+                                                onClick={() => {
+                                                    if (collapsed) {
+                                                        onToggleCollapse();
+                                                        setExpandedItems((prev) => prev.includes(item.label) ? prev : [...prev, item.label]);
+                                                        return;
+                                                    }
+                                                    toggleItem(item.label);
+                                                }}
+                                                title={collapsed ? item.label : undefined}
+                                                aria-label={collapsed ? item.label : undefined}
+                                                className={cn(
+                                                    "group flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-2 text-white transition-all duration-300 hover:bg-purple-700 lg:min-h-0",
+                                                    collapsed && "lg:justify-center"
+                                                )}
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <item.icon className="w-4 h-4 text-white transition-transform duration-300 group-hover:scale-110" />
-                                                    <span className="text-xs font-medium">{item.label}</span>
+                                                    <span className={cn("text-xs font-medium", collapsed && "lg:hidden")}>{item.label}</span>
                                                 </div>
-                                                {expandedItems.includes(item.label) ? (
+                                                {!collapsed && (expandedItems.includes(item.label) ? (
                                                     <ChevronDown className="w-3 h-3 transition-transform duration-300" />
                                                 ) : (
                                                     <ChevronRight className="w-3 h-3 transition-transform duration-300" />
-                                                )}
+                                                ))}
                                             </button>
                                             <div className={cn(
                                                 "overflow-hidden transition-all duration-300 ease-in-out",
                                                 expandedItems.includes(item.label)
-                                                    ? "max-h-96 opacity-100"
+                                                    ? (collapsed
+                                                        ? "max-h-96 opacity-100 lg:max-h-0 lg:opacity-0"
+                                                        : "max-h-96 opacity-100")
                                                     : "max-h-0 opacity-0"
                                             )}>
                                                 <ul className="mt-0.5 ml-2 space-y-0.5 pb-0.5">
@@ -397,7 +440,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                                                     "w-3 h-3 transition-transform duration-300",
                                                                     location.pathname === subItem.path ? "text-white" : "group-hover:text-white group-hover:scale-110"
                                                                 )} />
-                                                                <span className="text-xs">{subItem.label}</span>
+                                                                <span className={cn("text-xs", collapsed && "lg:hidden")}>{subItem.label}</span>
                                                             </Link>
                                                         </li>
                                                     ))}
@@ -412,8 +455,11 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                                     onClose();
                                                 }
                                             }}
+                                            title={collapsed ? item.label : undefined}
+                                            aria-label={collapsed ? item.label : undefined}
                                             className={cn(
                                                 "group flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-white transition-all duration-300 lg:min-h-0",
+                                                collapsed && "lg:justify-center",
                                                 location.pathname === item.path
                                                     ? "bg-purple-700"
                                                     : "hover:bg-purple-700"
@@ -422,7 +468,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                             <item.icon className={cn(
                                                 "w-4 h-4 transition-transform duration-300 text-white group-hover:scale-110"
                                             )} />
-                                            <span className="text-xs font-medium">{item.label}</span>
+                                            <span className={cn("text-xs font-medium", collapsed && "lg:hidden")}>{item.label}</span>
                                         </Link>
                                     )}
                                 </li>
@@ -432,11 +478,14 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
                     {/* User Section */}
                     <div className="p-2 border-t border-purple-800/30">
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-purple-800/30">
+                        <div className={cn(
+                            "flex items-center gap-2 p-2 rounded-lg bg-purple-800/30",
+                            collapsed && "lg:justify-center"
+                        )} title={collapsed ? authData?.user.username : undefined}>
                             <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
                                 <span className="text-white font-semibold text-xs">{authData?.user.username.charAt(0).toUpperCase()}{authData?.user.username.charAt(1).toUpperCase()}</span>
                             </div>
-                            <div className="flex-1 min-w-0">
+                            <div className={cn("flex-1 min-w-0", collapsed && "lg:hidden")}>
                                 <p className="text-xs font-medium text-white truncate">{authData?.user.username}</p>
                                 <p className="text-[10px] text-purple-300">{authData?.user?.user_type}</p>
                             </div>
@@ -444,10 +493,15 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
                         <button
                             onClick={() => setIsAboutModalOpen(true)}
-                            className="group mt-1 flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-purple-300 transition-all duration-300 hover:bg-purple-700 lg:min-h-0"
+                            title={collapsed ? "Acerca de NextRIS" : undefined}
+                            aria-label={collapsed ? "Acerca de NextRIS" : undefined}
+                            className={cn(
+                                "group mt-1 flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-purple-300 transition-all duration-300 hover:bg-purple-700 lg:min-h-0",
+                                collapsed && "lg:justify-center"
+                            )}
                         >
                             <Info className="w-3 h-3 transition-transform duration-300 group-hover:scale-110" />
-                            <span>Acerca de NextRIS</span>
+                            <span className={cn(collapsed && "lg:hidden")}>Acerca de NextRIS</span>
                         </button>
 
                         <button
@@ -455,10 +509,15 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                 logout();
                                 navigate('/');
                             }}
-                            className="group mt-1 flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-red-400 transition-all duration-300 hover:bg-red-900/30 lg:min-h-0"
+                            title={collapsed ? "Desconectarse" : undefined}
+                            aria-label={collapsed ? "Desconectarse" : undefined}
+                            className={cn(
+                                "group mt-1 flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-red-400 transition-all duration-300 hover:bg-red-900/30 lg:min-h-0",
+                                collapsed && "lg:justify-center"
+                            )}
                         >
                             <Power className="w-3 h-3 transition-transform duration-300 group-hover:scale-110" />
-                            <span>Desconectarse</span>
+                            <span className={cn(collapsed && "lg:hidden")}>Desconectarse</span>
                         </button>
                     </div>
                 </div>
@@ -468,19 +527,57 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 isOpen={isAboutModalOpen}
                 onClose={() => setIsAboutModalOpen(false)}
                 title="Acerca de NextRIS"
-                size="sm"
+                size="md"
+                className="border-purple-100/80 shadow-2xl dark:border-purple-900/60"
             >
-                <div className="space-y-3 text-sm text-muted-foreground">
-                    <p>
-                        <strong>NextRIS</strong> es un sistema de información radiológica
-                        desarrollado por <strong>Soft in Health</strong>.
+                <div className="space-y-5 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4 rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 via-white to-fuchsia-50 p-4 dark:border-purple-900/60 dark:from-purple-950/50 dark:via-background dark:to-fuchsia-950/30">
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-white p-2 shadow-sm ring-1 ring-purple-100 dark:ring-purple-900/50">
+                            <img src={logo} alt="Logo de NextRIS" className="h-full w-full object-contain" />
+                        </div>
+                        <div className="min-w-0">
+                            <a
+                                href="https://softinhealth.com/es/productos/nextris/"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-display text-lg font-bold tracking-tight text-foreground transition-colors hover:text-brand-purple"
+                            >
+                                Next<span className="text-brand-purple">RIS</span>
+                            </a>
+                            <p className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-brand-purple/75 dark:text-purple-300">
+                                Radiology Information System
+                            </p>
+                        </div>
+                    </div>
+
+                    <p className="leading-6">
+                        <strong className="font-semibold text-foreground">NextRIS</strong> es un sistema de información radiológica
+                        desarrollado por{" "}
+                        <a
+                            href="https://softinhealth.com/es/"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-semibold text-foreground underline decoration-brand-purple/40 underline-offset-2 transition-colors hover:text-brand-purple hover:decoration-brand-purple"
+                        >
+                            Soft in Health
+                        </a>.
                     </p>
-                    <p>
-                        <strong>Líder del proyecto:</strong> Facundo Farias
-                    </p>
-                    <p>
-                        <strong>Especialidad:</strong> Informática médica
-                    </p>
+
+                    <div className="divide-y divide-border overflow-hidden rounded-xl border border-border/80 bg-muted/20 dark:bg-muted/10">
+                        <div className="flex items-center justify-between gap-4 px-4 py-3">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Líder del proyecto</span>
+                            <span className="text-right font-medium text-foreground">Facundo Farias</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4 px-4 py-3">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Especialidad</span>
+                            <span className="text-right font-medium text-foreground">Informática médica</span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border/70 pt-4 text-xs text-muted-foreground">
+                        <span>Gestión radiológica conectada</span>
+                        <span className="font-medium text-brand-purple dark:text-purple-300">NextRIS</span>
+                    </div>
                 </div>
             </Modal>
         </>

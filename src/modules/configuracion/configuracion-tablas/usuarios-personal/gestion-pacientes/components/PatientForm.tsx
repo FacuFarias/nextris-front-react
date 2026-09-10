@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PrimaryButton, SecondaryButton } from "@/components";
 import type { PatientFormData } from "../types/patients.types";
 import { Switch } from "@/components/ui/switch";
+import { DateInput } from "@/components/ui/date-input";
 
 interface PatientFormProps {
     onSubmit: (data: PatientFormData) => void;
@@ -120,11 +121,10 @@ export const PatientForm = ({
 
                 <div className="space-y-2">
                     <Label htmlFor="birth_date">Fecha de Nacimiento</Label>
-                    <Input
+                    <DateInput
                         id="birth_date"
-                        type="date"
                         value={formData.birth_date}
-                        onChange={(e) => handleChange("birth_date", e.target.value)}
+                        onChange={(value) => handleChange("birth_date", value)}
                     />
                 </div>
 

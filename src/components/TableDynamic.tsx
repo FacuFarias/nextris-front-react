@@ -35,6 +35,7 @@ export function TablaDynamic<T extends Record<string, any>>({
     showIndex = false,
     onRowClick,
     onRowDoubleClick,
+    onRowContextMenu,
     pagination,
     onPaginationChange,
     selectedRow,
@@ -102,16 +103,19 @@ export function TablaDynamic<T extends Record<string, any>>({
     const { actualTheme } = useTheme();
     const isDark = actualTheme === 'dark';
     const hasBgImage = !!(tableBackgroundImage || tableBackgroundImageDark);
-    const effectiveAllColumns = allColumns ?? columns;
+    const uniqueColumnsByKey = (sourceColumns: TableColumn<T>[]) => Array.from(
+        new Map(sourceColumns.map((column) => [getColumnKey(column), column])).values()
+    );
+    const effectiveAllColumns = uniqueColumnsByKey(allColumns ?? columns);
     const requestedVisibleColumns = visibleColumns ?? internalVisibleColumns;
     const availableColumnKeys = new Set(columns.map(getColumnKey));
     const effectiveVisibleColumns = [
-        ...fixedColumnKeys.filter((key) => availableColumnKeys.has(key)),
-        ...requestedVisibleColumns.filter(
+        ...Array.from(new Set(fixedColumnKeys.filter((key) => availableColumnKeys.has(key)))),
+        ...Array.from(new Set(requestedVisibleColumns.filter(
             (key) => !fixedColumnKeys.includes(key) && availableColumnKeys.has(key)
-        ),
+        )))
     ];
-    const columnsByKey = new Map(columns.map((column) => [getColumnKey(column), column]));
+    const columnsByKey = new Map(uniqueColumnsByKey(columns).map((column) => [getColumnKey(column), column]));
     const renderColumns = effectiveVisibleColumns
         .map((key) => columnsByKey.get(key))
         .filter((column): column is TableColumn<T> => Boolean(column));
@@ -256,8 +260,8 @@ export function TablaDynamic<T extends Record<string, any>>({
         return String(value);
     };
 
-    const renderCopyableCell = (column: TableColumn<T>, row: T, rowIndex: number, children: React.ReactNode) => {
-        const cellKey = `${row[rowIdKey]}-${column.key}`;
+    const renderCopyableCell = (column: TableColumn<T>, row: T, children: React.ReactNode) => {
+        const cellKey = `${String(row[rowIdKey])}-${String(column.key)}`;
         const textValue = getCellTextValue(column, row);
         const isCopied = copiedCellKey === cellKey;
 
@@ -837,6 +841,14 @@ export function TablaDynamic<T extends Record<string, any>>({
                                             }}
                                             onClick={(e) => onRowClick?.(row, getRowIndex(index), e)}
                                             onDoubleClick={(e) => onRowDoubleClick?.(row, getRowIndex(index), e)}
+                                            onMouseDown={(e) => {
+                                                if (e.button !== 2 || !onRowContextMenu) return;
+                                                e.preventDefault();
+                                                onRowContextMenu(row, getRowIndex(index), e);
+                                            }}
+                                            onContextMenu={(e) => {
+                                                if (onRowContextMenu) e.preventDefault();
+                                            }}
                                         >
                                             {renderColumns.length > 0 && (() => {
                                                 const [firstColumn] = renderColumns;
@@ -850,7 +862,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                             firstColumn.hideOnMobile && "hidden md:table-cell"
                                                         )}
                                                     >
-                                                        {renderCopyableCell(firstColumn, row, getRowIndex(index), renderCellContent(firstColumn, row, getRowIndex(index)))}
+                                                        {renderCopyableCell(firstColumn, row, renderCellContent(firstColumn, row, getRowIndex(index)))}
                                                     </TableCell>
                                                 );
                                             })()}
@@ -919,7 +931,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                         column.hideOnMobile && "hidden md:table-cell"
                                                     )}
                                                 >
-                                                    {renderCopyableCell(column, row, getRowIndex(index), renderCellContent(column, row, getRowIndex(index)))}
+                                                    {renderCopyableCell(column, row, renderCellContent(column, row, getRowIndex(index)))}
                                                 </TableCell>
                                             ))}
                                         </TableRow>
@@ -959,6 +971,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                         columns={effectiveAllColumns.map(col => ({ key: col.key as string, label: col.label }))}
                         visibleColumns={effectiveVisibleColumns}
                         onToggleColumn={handleToggleColumn}
+                        fixedColumnKeys={fixedColumnKeys}
                         additionalControls={additionalControls}
                     />
                 </div>

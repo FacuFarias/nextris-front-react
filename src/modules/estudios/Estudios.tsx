@@ -8,6 +8,7 @@ import { ShareStudyModal } from "./components/ShareStudyModal";
 import { StudyCard } from "./components/StudyCard";
 import { FileSearch, AlertCircle, BookPlus, Search, Calendar, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import type { Study } from "./types";
 
 export const Estudios = () => {
@@ -31,6 +32,8 @@ export const Estudios = () => {
         pageSize: studiesData.data.per_page,
         total: studiesData.data.total,
     };
+
+    const patient = studiesData?.data.data[0];
 
     const columns = createStudyColumns((study) => setShareStudy(study));
 
@@ -66,7 +69,14 @@ export const Estudios = () => {
                     <div className="bg-brand-purple p-2 sm:p-3 rounded-lg">
                         <BookPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">Mis estudios</h1>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-bold text-brand-purple">
+                            {patient?.patient_name || "Patient Name"}
+                        </h1>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Patient ID: {patient?.patient_id || "-"}
+                        </p>
+                    </div>
                 </div>
 
                 {/* Filtros */}
@@ -83,17 +93,15 @@ export const Estudios = () => {
                     </div>
                     <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 min-[420px]:grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto]">
                         <Calendar className="h-4 w-4 shrink-0 text-gray-400" />
-                        <input
-                            type="date"
+                        <DateInput
                             value={dateFrom}
-                            onChange={(e) => handleDateChange("from", e.target.value)}
+                            onChange={(value) => handleDateChange("from", value)}
                             className="px-2 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#1a1b24] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-purple/30 focus:border-brand-purple/50"
                         />
                         <span className="hidden text-xs text-gray-400 min-[420px]:inline">a</span>
-                        <input
-                            type="date"
+                        <DateInput
                             value={dateTo}
-                            onChange={(e) => handleDateChange("to", e.target.value)}
+                            onChange={(value) => handleDateChange("to", value)}
                             className="col-start-2 min-w-0 rounded-lg border border-gray-300 bg-white px-2 py-2 text-xs text-gray-900 focus:border-brand-purple/50 focus:outline-none focus:ring-2 focus:ring-brand-purple/30 dark:border-gray-600 dark:bg-[#1a1b24] dark:text-gray-100 min-[420px]:col-start-auto"
                         />
                         {hasActiveFilters && (
@@ -199,6 +207,7 @@ export const Estudios = () => {
                                     setPage(1);
                                 }}
                                 perPageOptions={[10, 20, 50, 100]}
+                                tableClassName="[&_tbody_td]:text-sm [&_tbody_td_.text-xs]:text-sm"
                             />
                         </div>
                     </>

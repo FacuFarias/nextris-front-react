@@ -660,6 +660,17 @@
   background-color: transparent;
 }
 
+/* Hallazgos y conclusión ocupan solamente el alto de su contenido. Cuando
+   Hallazgos crece, empuja la conclusión hacia abajo y el documento hace scroll. */
+.report-editor-body-section {
+  flex: none;
+  border-top: 1px solid rgba(229, 231, 235, 0.7);
+}
+
+.dark .report-editor-body-section {
+  border-top-color: rgba(55, 65, 81, 0.55);
+}
+
 /* Algunos módulos antiguos todavía declaran tamaños tipográficos en px en
    clases arbitrarias. Los alineamos con la misma densidad de la interfaz. */
 [class~="text-[9px]"] {

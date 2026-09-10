@@ -1,12 +1,12 @@
 import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
 import { InputSearch } from "@/components/InputSearch"
 import { MainLayout } from "@/layouts/layout"
-import { HandHelping, RefreshCcw, Loader2, AlertTriangle, SlidersHorizontal, X, UserCheck, Tags, Flag } from "lucide-react"
+import { HandHelping, RefreshCcw, Loader2, SlidersHorizontal, X, UserCheck, Tags, Flag, FileText } from "lucide-react"
 import { useMemo, useState, useEffect, useRef, useCallback } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useInformes, useBlockExam, useUnblockExam, useUpdateFlags, useUpdateTagIds, useAllTags, useUpdateGeneralNotes, useDeleteExaminationNote, useAssignExam, useAssignExamBatch, useAddTagsBatch, useAddFlagsBatch, useConfirmStudy } from "./hooks/use-informes"
 import { useCrossWindowSync } from "./redactar-informe/hooks/use-cross-windows"
-import { getInformesActions, getFlagsColumn, getTagsColumn, getGeneralNotesAction, getPatientNameColumn, getSelectionColumn, informeColumns } from "./components/columns"
+import { getInformesActions, getAdministrativeInformesActions, getFlagsColumn, getTagsColumn, getGeneralNotesAction, getPatientNameColumn, getSelectionColumn, informeColumns } from "./components/columns"
 import TablaDynamic from "@/components/TableDynamic"
 import type { Informes } from "./types/informes.types"
 import type { FilterPreset, FilterPresetFilters } from "./types/filter-preset.types"
@@ -21,19 +21,21 @@ import { AssignExamModal } from "./components/AssignExamModal"
 import { MultiSelectActionsModal } from "./components/MultiSelectActionsModal"
 import { ConfirmStudyModal } from "./components/ConfirmStudyModal"
 import { FilterPresetTabs } from "./components/FilterPresetTabs"
+import { AdministrativeShareModal } from "./components/AdministrativeShareModal"
 import { Autocomplete } from "@/components/autocomplete"
 import { useBodyParts } from "@/modules/configuracion/configuracion-tablas/examenes/partes-cuerpo"
 import { useModalidades } from "@/modules/configuracion/configuracion-tablas/examenes/modalidades"
 import { useGrupoEstudio } from "@/modules/configuracion/configuracion-tablas/examenes/grupos-estudio"
 import { useFilterPresets } from "./hooks/use-filter-presets"
 import { useAuth } from "@/context/AuthContext"
-import { useAppConfig } from "@/context/AppConfigContext"
 import { getDicomViewerUrl } from "@/services/dicomViewer"
 import { cancelPreparedViewer, openStudyInViewer, prepareViewerWindow } from "@/services/viewerWindow"
 import type { ViewerWindowTicket } from "@/services/viewerWindow"
-import type { ConfirmStudyPayload } from "./services/informes.service"
-import { api } from "@/lib/api"
-import { useQuery } from "@tanstack/react-query"
+import { putRedactarInforme, type ConfirmStudyPayload } from "./services/informes.service"
+import { openReportPdf } from "@/services/reportPdf"
+import { useTemplates } from "../informe-predefinidos/hooks/use-templates"
+import type { Template } from "../informe-predefinidos/types/informe-pred.types"
+import { TemplateModal } from "./components/modals"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -48,9 +50,9 @@ const FIXED_COLUMN_KEYS = ["_selection", "is_reported"] as const;
 const XRAY_MODALITY_CODES = ["DX", "CR", "RX"] as const;
 const DISPLAY_MODALITY_CODES: Record<string, string> = { RMN: "MR" };
 
-const normalizeVisibleColumns = (columnKeys: string[]) => [
-    ...FIXED_COLUMN_KEYS,
-    ...columnKeys.filter((key) => !FIXED_COLUMN_KEYS.includes(key as typeof FIXED_COLUMN_KEYS[number])),
+const normalizeVisibleColumns = (columnKeys: string[], fixedKeys: readonly string[] = FIXED_COLUMN_KEYS) => [
+    ...Array.from(new Set(fixedKeys)),
+    ...Array.from(new Set(columnKeys.filter((key) => !fixedKeys.includes(key)))),
 ];
 
 const showViewerError = (error: unknown) => {
@@ -68,17 +70,13 @@ const showViewerError = (error: unknown) => {
     }
 };
 
-export const Radiologia = () => {
+export const Radiologia = ({ administrativeView = false }: { administrativeView?: boolean }) => {
     const isMobile = useIsMobile();
+    const isAdministrativeView = administrativeView;
     // Hook para sincronizar entre ventanas
     useCrossWindowSync();
 
-    const { authData, refreshPermissions } = useAuth();
-    const { config } = useAppConfig();
-
-    useEffect(() => {
-        refreshPermissions();
-    }, []);
+    const { authData } = useAuth();
     const user = authData?.user;
     const isAdmin = Boolean(
         user?.permissions?.includes("*")
@@ -87,32 +85,16 @@ export const Radiologia = () => {
         || user?.username?.toLowerCase() === "sysadmin"
     );
 
-    const { data: facilityPlanData } = useQuery({
-        queryKey: ["facility-plan", config?.id?.toString() || "1", "radiologia"],
-        queryFn: async () => {
-            const response = await api.get(`/config/facilities/${config?.id?.toString() || "1"}/plan`);
-            return response.data?.data || null;
-        },
-        enabled: Boolean(authData && config?.id?.toString() || "1"),
-        staleTime: 60 * 1000,
-    });
-
-    const readMonthlyLimit: number | null = facilityPlanData?.plan?.max_read_monthly ?? null;
-    const readCount: number = facilityPlanData?.usage_monthly?.read_count ?? 0;
-    const isReadLimitReached =
-        typeof readMonthlyLimit === "number"
-        && readMonthlyLimit >= 0
-        && readCount >= readMonthlyLimit;
-
     const [studioTypeId, setStudioTypeId] = useState<string | undefined>(undefined);
     const [bodyPartId, setBodyPartId] = useState<string | undefined>(undefined);
     const [modalityId, setModalityId] = useState<string | undefined>(undefined);
     const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
-    const [verFinalizados, setVerFinalizados] = useState(false);
+    const [verFinalizados, setVerFinalizados] = useState(isAdministrativeView);
     const [asignadosAMi, setAsignadosAMi] = useState(false);
-    const [listoParaLeer, setListoParaLeer] = useState(true);
+    const [listoParaLeer, setListoParaLeer] = useState(!isAdministrativeView);
+    const [incluirSinFinalizar, setIncluirSinFinalizar] = useState(false);
     const [verSinImagenes, setVerSinImagenes] = useState(false);
     // Los estudios recibidos desde PACS pueden no tener todavía una orden CP.
     // Se muestran por defecto y el usuario puede ocultarlos desde el filtro.
@@ -130,12 +112,19 @@ export const Radiologia = () => {
     const [selectedInforme, setSelectedInforme] = useState<Informes | null>(null);
     const [isBlocking, setIsBlocking] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<string[]>(
-        normalizeVisibleColumns(["patient_name", "patient_dni", "assignto_name", "study_type", "accession_number", "created_on", "num_instances", "flags", "tag_ids"])
+        normalizeVisibleColumns(
+            isAdministrativeView
+                ? ["patient_name", "patient_id", "patient_dni", "study_type", "template_name", "status", "created_on", "flags"]
+                : ["patient_name", "patient_id", "patient_dni", "assignto_name", "study_type", "template_name", "accession_number", "created_on", "num_instances", "flags", "tag_ids"],
+            isAdministrativeView ? ["is_reported"] : FIXED_COLUMN_KEYS,
+        )
     );
     const [sortColumn, setSortColumn] = useState("");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
     const [activePresetId, setActivePresetId] = useState<string | null>(null);
     const presetsInitializedRef = useRef(false);
+    const [shareModal, setShareModal] = useState<{ kind: "images" | "study"; informe: Informes } | null>(null);
+    const fixedColumnKeys = isAdministrativeView ? ["is_reported"] : [...FIXED_COLUMN_KEYS];
 
     const useDebounceSearch = useDebounce(searchTerm, 500);
     const { mutateAsync: blockExam } = useBlockExam();
@@ -145,7 +134,7 @@ export const Radiologia = () => {
     const { allTags } = useAllTags();
     const { mutate: updateGeneralNotes, isPending: isUpdatingNotes } = useUpdateGeneralNotes();
     const { mutate: deleteExaminationNote, isPending: isDeletingNote } = useDeleteExaminationNote();
-    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: verFinalizados, show_ready: listoParaLeer, assigned_to_me: asignadosAMi, show_no_image: verSinImagenes, show_without_order: verSinOrden, show_only_with_notes: soloConNotas, bodypart_id: bodyPartId, modality_id: modalityId, study_group_id: studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField, sort_column: sortColumn, sort_direction: sortDirection, facility_id: config?.id?.toString() || "1" });
+    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: isAdministrativeView ? true : verFinalizados, show_ready: isAdministrativeView ? incluirSinFinalizar : listoParaLeer, assigned_to_me: isAdministrativeView ? false : asignadosAMi, show_no_image: verSinImagenes, show_without_order: verSinOrden, show_only_with_notes: soloConNotas, bodypart_id: isAdministrativeView ? "" : bodyPartId, modality_id: modalityId, study_group_id: isAdministrativeView ? "" : studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField, sort_column: sortColumn, sort_direction: sortDirection });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
@@ -159,13 +148,80 @@ export const Radiologia = () => {
     const { mutateAsync: addTagsBatch } = useAddTagsBatch();
     const { mutateAsync: addFlagsBatch } = useAddFlagsBatch();
 
-    const canAssign = authData?.user?.permissions?.includes('reports.assign') ?? false;
+    const canAssign = authData?.user?.permissions?.includes('*')
+        || authData?.user?.permissions?.includes('reports.assign')
+        || false;
+    const canWrite = authData?.user?.permissions?.includes('*')
+        || authData?.user?.permissions?.includes('reports.write')
+        || false;
+    const canConfirmExecute = authData?.user?.permissions?.includes('*')
+        || authData?.user?.permissions?.includes('worklist.confirm_execute')
+        || false;
     const canDeleteNotes = authData?.user?.permissions?.includes('*')
         || authData?.user?.permissions?.includes('reports.notes.delete')
         || false;
 
     const [selectedStudyIds, setSelectedStudyIds] = useState<Set<string>>(new Set());
     const [multiSelectAction, setMultiSelectAction] = useState<'assign' | 'tags' | 'flags' | null>(null);
+    const [contextMenu, setContextMenu] = useState<{ row: Informes; x: number; y: number } | null>(null);
+    const contextMenuRef = useRef<HTMLDivElement>(null);
+    const [isContextTemplateModalOpen, setIsContextTemplateModalOpen] = useState(false);
+    const [contextTemplateRow, setContextTemplateRow] = useState<Informes | null>(null);
+    const [contextTemplateSearchTerm, setContextTemplateSearchTerm] = useState("");
+    const [contextOnlyStudyType, setContextOnlyStudyType] = useState(false);
+    const [selectedContextTemplate, setSelectedContextTemplate] = useState<Template | null>(null);
+    const [pendingTemplateChange, setPendingTemplateChange] = useState<{ row: Informes; template: Template } | null>(null);
+    const [isChangingTemplate, setIsChangingTemplate] = useState(false);
+
+    const contextStudyTypeId = contextTemplateRow?.study_type_id || undefined;
+    const contextModalityId = contextTemplateRow?.modality_id || undefined;
+    const { data: contextTemplatesByStudyType } = useTemplates(
+        contextStudyTypeId,
+        undefined,
+        undefined,
+        'simple',
+        Boolean(contextTemplateRow && !isAdministrativeView),
+    );
+    const { data: contextTemplatesByModality } = useTemplates(
+        undefined,
+        contextModalityId,
+        undefined,
+        'simple',
+        Boolean(contextTemplateRow && !isAdministrativeView && contextModalityId),
+    );
+    const contextTemplateOptions = contextOnlyStudyType
+        ? contextTemplatesByStudyType?.data || []
+        : contextTemplatesByModality?.data?.length
+            ? contextTemplatesByModality.data
+            : contextTemplatesByStudyType?.data || [];
+    const filteredContextTemplates = contextTemplateOptions.filter((template) => {
+        const search = contextTemplateSearchTerm.trim().toLowerCase();
+        return !search
+            || template.title.toLowerCase().includes(search)
+            || template.study_type_description?.toLowerCase().includes(search);
+    });
+
+    useEffect(() => {
+        if (!contextMenu) return;
+
+        const closeContextMenu = (event: MouseEvent) => {
+            if (contextMenuRef.current && event.target instanceof Node && contextMenuRef.current.contains(event.target)) return;
+            setContextMenu(null);
+        };
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setContextMenu(null);
+        };
+        const closeOnScroll = () => setContextMenu(null);
+
+        document.addEventListener('mousedown', closeContextMenu);
+        document.addEventListener('keydown', closeOnEscape);
+        window.addEventListener('scroll', closeOnScroll, true);
+        return () => {
+            document.removeEventListener('mousedown', closeContextMenu);
+            document.removeEventListener('keydown', closeOnEscape);
+            window.removeEventListener('scroll', closeOnScroll, true);
+        };
+    }, [contextMenu]);
 
     const handleAssignExam = useCallback((informe: Informes) => {
         setSelectedExamForAssign(informe);
@@ -237,9 +293,68 @@ export const Radiologia = () => {
         setSelectedStudyIds(new Set());
     }, []);
 
+    const handleRowContextMenu = useCallback((row: Informes, _index: number, event: React.MouseEvent) => {
+        if (isAdministrativeView) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        setSelectedStudyIds(new Set([row.guid]));
+        setContextMenu({
+            row,
+            x: Math.min(event.clientX, Math.max(8, window.innerWidth - 236)),
+            y: Math.min(event.clientY, Math.max(8, window.innerHeight - 230)),
+        });
+    }, [isAdministrativeView]);
+
+    const handleContextAction = useCallback((action: 'assign' | 'tags' | 'flags' | 'template') => {
+        const row = contextMenu?.row;
+        if (!row) return;
+
+        setSelectedStudyIds(new Set([row.guid]));
+        setContextMenu(null);
+
+        if (action === 'assign') {
+            handleAssignExam(row);
+        } else if (action === 'template') {
+            setContextTemplateRow(row);
+            setContextTemplateSearchTerm('');
+            setContextOnlyStudyType(false);
+            setSelectedContextTemplate(null);
+            setIsContextTemplateModalOpen(true);
+        } else {
+            setMultiSelectAction(action);
+        }
+    }, [contextMenu, handleAssignExam]);
+
+    const handleApplyContextTemplate = useCallback(async () => {
+        if (!pendingTemplateChange) return;
+
+        const { row, template } = pendingTemplateChange;
+        setIsChangingTemplate(true);
+        try {
+            await putRedactarInforme(row.guid, {
+                study_reason: template.study_reason || '',
+                content: template.content || template.findings || '',
+                conclusion: template.conclusion || '',
+                template_id: template.guid,
+                mark_as_reported: false,
+            });
+            toast.success('Plantilla cambiada exitosamente');
+            await refetchInformes();
+        } catch (error) {
+            const requestError = error as { response?: { data?: { message?: string } } };
+            toast.error(requestError.response?.data?.message || 'No se pudo cambiar la plantilla');
+        } finally {
+            setIsChangingTemplate(false);
+            setPendingTemplateChange(null);
+            setContextTemplateRow(null);
+            setSelectedContextTemplate(null);
+        }
+    }, [pendingTemplateChange, refetchInformes]);
+
     // Función para toggle de columnas
     const toggleColumn = useCallback((columnKey: string) => {
-        if (FIXED_COLUMN_KEYS.includes(columnKey as typeof FIXED_COLUMN_KEYS[number])) return;
+        if (fixedColumnKeys.includes(columnKey)) return;
 
         setVisibleColumns(prev => {
             if (prev.includes(columnKey)) {
@@ -253,11 +368,11 @@ export const Radiologia = () => {
                 return [...prev, columnKey];
             }
         });
-    }, []);
+    }, [fixedColumnKeys]);
 
     const handleColumnOrderChange = useCallback((columnKeys: string[]) => {
-        setVisibleColumns(normalizeVisibleColumns(columnKeys));
-    }, []);
+        setVisibleColumns(normalizeVisibleColumns(columnKeys, fixedColumnKeys));
+    }, [fixedColumnKeys]);
 
     const handleUpdateFlags = useCallback((examId: string, flags: string[]) => {
         updateFlags({ examId, flags });
@@ -284,10 +399,9 @@ export const Radiologia = () => {
         }
     }, [unblockExam]);
 
-    // Columna de paciente con tooltip de bloqueo y opción de desbloqueo para admin
     const patientNameColumn = useMemo(
-        () => getPatientNameColumn(isAdmin ? handleAdminUnlock : null, isAdmin),
-        [handleAdminUnlock, isAdmin]
+        () => getPatientNameColumn(),
+        []
     );
 
     // Columna de banderas generada con el handler actual
@@ -309,7 +423,12 @@ export const Radiologia = () => {
     );
 
     // Todas las columnas disponibles (selección + paciente + estáticas + banderas + tags)
-    const allColumns = useMemo(() => [selectionColumn, patientNameColumn, ...informeColumns, flagsColumn, tagsColumn], [selectionColumn, patientNameColumn, flagsColumn, tagsColumn]);
+    const allColumns = useMemo(
+        () => isAdministrativeView
+            ? [patientNameColumn, ...informeColumns, flagsColumn, tagsColumn]
+            : [selectionColumn, patientNameColumn, ...informeColumns, flagsColumn, tagsColumn],
+        [isAdministrativeView, selectionColumn, patientNameColumn, flagsColumn, tagsColumn],
+    );
 
     // Columnas visibles (incluye banderas si está en la lista)
     const filteredColumns = useMemo(
@@ -320,14 +439,14 @@ export const Radiologia = () => {
     // Función para obtener los filtros actuales como objeto
     const getCurrentFilters = useCallback((): FilterPresetFilters => ({
         search: searchTerm,
-        listo_para_leer: listoParaLeer,
-        ver_finalizados: verFinalizados,
-        asignados_a_mi: asignadosAMi,
+        listo_para_leer: isAdministrativeView ? incluirSinFinalizar : listoParaLeer,
+        ver_finalizados: isAdministrativeView ? true : verFinalizados,
+        asignados_a_mi: isAdministrativeView ? false : asignadosAMi,
         ver_sin_imagenes: verSinImagenes,
         ver_sin_orden: verSinOrden,
-        study_group_id: studioTypeId || "",
+        study_group_id: isAdministrativeView ? "" : studioTypeId || "",
         modality_id: modalityId || "",
-        bodypart_id: bodyPartId || "",
+        bodypart_id: isAdministrativeView ? "" : bodyPartId || "",
         visible_columns: visibleColumns,
         per_page: perPage,
         sort_column: sortColumn,
@@ -336,7 +455,7 @@ export const Radiologia = () => {
         date_field: dateField,
         flag_filter: flagFilter.join(','),
         filters_visible: showFilters,
-    }), [searchTerm, listoParaLeer, verFinalizados, asignadosAMi, verSinImagenes, studioTypeId, modalityId, bodyPartId, visibleColumns, perPage, sortColumn, sortDirection, dateRange, dateField, flagFilter, showFilters]);
+    }), [isAdministrativeView, searchTerm, listoParaLeer, incluirSinFinalizar, verFinalizados, asignadosAMi, verSinImagenes, studioTypeId, modalityId, bodyPartId, visibleColumns, perPage, sortColumn, sortDirection, dateRange, dateField, flagFilter, showFilters]);
 
     // Función para aplicar filtros de un preset
     const applyPreset = useCallback((preset: FilterPreset | null) => {
@@ -351,7 +470,7 @@ export const Radiologia = () => {
             setStudioTypeId(undefined);
             setModalityId(undefined);
             setBodyPartId(undefined);
-            setVisibleColumns(normalizeVisibleColumns([...informeColumns.map(col => col.key as string), "flags", "tag_ids", "report_date"]));
+            setVisibleColumns(normalizeVisibleColumns([...informeColumns.map(col => col.key as string), "flags", "tag_ids"]));
             setPerPage(10);
             setSortColumn("");
             setSortDirection("asc");
@@ -374,7 +493,11 @@ export const Radiologia = () => {
             const cols = f.visible_columns?.length ? f.visible_columns : [...informeColumns.map(col => col.key as string), "flags"];
             const colsWithReportDate = cols.includes("report_date") ? cols : [...cols, "report_date"];
             const colsWithInstances = colsWithReportDate.includes("num_instances") ? colsWithReportDate : [...colsWithReportDate, "num_instances"];
-            setVisibleColumns(normalizeVisibleColumns(colsWithInstances.includes("assignto_name") ? colsWithInstances : [...colsWithInstances, "assignto_name"]));
+            const colsWithPatientId = colsWithInstances.includes("patient_id") ? colsWithInstances : [...colsWithInstances, "patient_id"];
+            const colsWithTemplate = colsWithPatientId.includes("template_name")
+                ? colsWithPatientId
+                : [...colsWithPatientId, "template_name"];
+            setVisibleColumns(normalizeVisibleColumns(colsWithTemplate.includes("assignto_name") ? colsWithTemplate : [...colsWithTemplate, "assignto_name"]));
             setPerPage(f.per_page || 10);
             setSortColumn(f.sort_column || "");
             setSortDirection(f.sort_direction || "asc");
@@ -389,14 +512,14 @@ export const Radiologia = () => {
 
     // Inicializar con el preset activo al cargar
     useEffect(() => {
-        if (!isLoadingPresets && !presetsInitializedRef.current) {
+        if (!isAdministrativeView && !isLoadingPresets && !presetsInitializedRef.current) {
             presetsInitializedRef.current = true;
             const activePreset = presets.find(p => p.is_active);
             if (activePreset) {
                 applyPreset(activePreset);
             }
         }
-    }, [isLoadingPresets, presets, applyPreset]);
+    }, [isAdministrativeView, isLoadingPresets, presets, applyPreset]);
 
     useEffect(() => {
         if (isMobile) setShowFilters(false);
@@ -455,11 +578,6 @@ export const Radiologia = () => {
     };
 
     const handleRedactarInforme = async (informe: Informes) => {
-        if (isReadLimitReached) {
-            toast.error(`Límite mensual de redacción alcanzado (${readCount}/${readMonthlyLimit}).`);
-            return;
-        }
-
         // Verificar si el informe está bloqueado por otro usuario
         if (informe.blocked_by) {
             const blockerLabel = informe.blocked_by_name || 'otro usuario';
@@ -531,7 +649,7 @@ export const Radiologia = () => {
         const studyPath = informe.study_instance_uid
             ? `/${encodeURIComponent(informe.study_instance_uid)}`
             : '';
-        const url = `/estudios/redaccion/redactar-informe/${encodeURIComponent(informe.guid)}${studyPath}?${params.toString()}`;
+        const url = `/worklist/redactar-informe/${encodeURIComponent(informe.guid)}${studyPath}?${params.toString()}`;
 
         localStorage.setItem(windowId, informe.guid);
 
@@ -597,17 +715,33 @@ export const Radiologia = () => {
             showViewerError(error);
         }
     };
-    const handleViewPdf = (informe: Informes) => {
-        if (!informe.pdf_path) {
+    const handleViewPdf = async (informe: Informes) => {
+        if (!informe.report_available) {
             toast.error('Este informe todavía no tiene un PDF generado');
             return;
         }
-        const baseURL = import.meta.env.VITE_API_URL || '/api';
-        window.open(
-            `${baseURL}/pdfs/by-exam/${encodeURIComponent(informe.guid)}`,
-            '_blank',
-        );
+        try {
+            await openReportPdf(informe.guid);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
+        }
     };
+
+    const handleShareImages = useCallback((informe: Informes) => {
+        if (!informe.is_image || !informe.study_instance_uid) {
+            toast.error('El estudio no tiene imágenes disponibles');
+            return;
+        }
+        setShareModal({ kind: "images", informe });
+    }, []);
+
+    const handleShareStudy = useCallback((informe: Informes) => {
+        if (!informe.study_instance_uid) {
+            toast.error('El estudio no tiene imágenes disponibles');
+            return;
+        }
+        setShareModal({ kind: "study", informe });
+    }, []);
 
     const gruposEstudioOptions = useMemo(() => {
         if (!Array.isArray(gruposEstudio?.data)) return [];
@@ -686,13 +820,13 @@ export const Radiologia = () => {
 
 
     const activeFilterCount = [
-        searchTerm.trim(), studioTypeId, modalityId, bodyPartId,
-        verFinalizados, asignadosAMi, verSinImagenes, verSinOrden, soloConNotas,
-        flagFilter.length > 0, dateRange !== "all", dateField !== "admision", !listoParaLeer,
+        searchTerm.trim(), isAdministrativeView ? false : studioTypeId, modalityId, isAdministrativeView ? false : bodyPartId,
+        isAdministrativeView ? incluirSinFinalizar : verFinalizados, isAdministrativeView ? false : asignadosAMi, verSinImagenes, verSinOrden, soloConNotas,
+        flagFilter.length > 0, dateRange !== "all", dateField !== "admision", isAdministrativeView ? false : !listoParaLeer,
     ].filter(Boolean).length;
 
     return (
-        <MainLayout mobileTitle="Redacción de reportes">
+        <MainLayout mobileTitle={isAdministrativeView ? "Vista administrativa" : "Lista de trabajo"}>
             <div className="page-dark-gradient min-h-0 flex-1 rounded-lg p-3 shadow-sm z-10 flex flex-col overflow-hidden">
                 {/* Breadcrumb */}
                 <div className="hidden md:block">
@@ -704,23 +838,14 @@ export const Radiologia = () => {
                     <div className="bg-brand-purple p-2  rounded-lg">
                         <HandHelping className="w-4 h-4 sm:w-6 sm:h-5 text-white" />
                     </div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400">Redacción de reportes</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400">{isAdministrativeView ? "Vista administrativa" : "Lista de trabajo"}</h1>
                 </div>
-
-                {isReadLimitReached && (
-                    <div className="mb-3 rounded-lg border border-red-500/70 bg-red-500/15 px-4 py-3 text-sm text-red-200 flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-                        <div>
-                            <strong className="font-semibold">Límite alcanzado:</strong> ya no tienes disponibilidad para redactar más estudios este mes ({readCount}/{readMonthlyLimit}).
-                        </div>
-                    </div>
-                )}
 
                 <div className="mb-2 space-y-2 md:hidden">
                     <div className="flex items-center gap-2">
                         <div className="rounded-lg bg-brand-purple p-2 text-white"><HandHelping className="h-5 w-5" /></div>
                         <div className="min-w-0">
-                            <h1 className="text-lg font-semibold text-foreground">Reportes</h1>
+                            <h1 className="text-lg font-semibold text-foreground">{isAdministrativeView ? "Vista administrativa" : "Lista de trabajo"}</h1>
                             <p className="text-xs text-muted-foreground">Solo visualización</p>
                         </div>
                     </div>
@@ -733,16 +858,18 @@ export const Radiologia = () => {
                 </div>
 
                 {/* Pestañas de presets de filtros */}
-                <div className="block">
-                    <FilterPresetTabs
-                        activePresetId={activePresetId}
-                        onPresetChange={handlePresetChange}
-                        currentFilters={getCurrentFilters()}
-                        filtersVisible={showFilters}
-                        onToggleFilters={() => setShowFilters(prev => !prev)}
-                        activeFilterCount={activeFilterCount}
-                    />
-                </div>
+                {!isAdministrativeView && (
+                    <div className="block">
+                        <FilterPresetTabs
+                            activePresetId={activePresetId}
+                            onPresetChange={handlePresetChange}
+                            currentFilters={getCurrentFilters()}
+                            filtersVisible={showFilters}
+                            onToggleFilters={() => setShowFilters(prev => !prev)}
+                            activeFilterCount={activeFilterCount}
+                        />
+                    </div>
+                )}
 
                 <div className="mb-1 flex items-center justify-between px-1 text-xs md:hidden">
                     <span className="font-semibold text-foreground">Listado de reportes</span>
@@ -772,18 +899,20 @@ export const Radiologia = () => {
                                             placeholder="Buscar paciente o historial..."
                                         />
                                     </div>
-                                    <Autocomplete
-                                        className="report-filters-panel__autocomplete"
-                                        options={gruposEstudioOptions}
-                                        value={studioTypeId}
-                                        onValueChange={(value) => {
-                                            setStudioTypeId(value);
-                                            setPage(1);
-                                        }}
-                                        placeholder="Grupo de estudio"
-                                        emptyMessage="No se encontraron grupos de estudio."
-                                        searchPlaceholder="Buscar grupo de estudio..."
-                                    />
+                                    {!isAdministrativeView && (
+                                        <Autocomplete
+                                            className="report-filters-panel__autocomplete"
+                                            options={gruposEstudioOptions}
+                                            value={studioTypeId}
+                                            onValueChange={(value) => {
+                                                setStudioTypeId(value);
+                                                setPage(1);
+                                            }}
+                                            placeholder="Grupo de estudio"
+                                            emptyMessage="No se encontraron grupos de estudio."
+                                            searchPlaceholder="Buscar grupo de estudio..."
+                                        />
+                                    )}
                                     <Autocomplete
                                         className="report-filters-panel__autocomplete"
                                         options={modalidadesOptions}
@@ -796,18 +925,20 @@ export const Radiologia = () => {
                                         emptyMessage="No se encontraron modalidades."
                                         searchPlaceholder="Buscar modalidad..."
                                     />
-                                    <Autocomplete
-                                        className="report-filters-panel__autocomplete"
-                                        options={bodyPartsOptions}
-                                        value={bodyPartId || ''}
-                                        onValueChange={(value) => {
-                                            setBodyPartId(value);
-                                            setPage(1);
-                                        }}
-                                        placeholder="Parte del cuerpo"
-                                        emptyMessage="No se encontraron partes del cuerpo."
-                                        searchPlaceholder="Buscar parte del cuerpo..."
-                                    />
+                                    {!isAdministrativeView && (
+                                        <Autocomplete
+                                            className="report-filters-panel__autocomplete"
+                                            options={bodyPartsOptions}
+                                            value={bodyPartId || ''}
+                                            onValueChange={(value) => {
+                                                setBodyPartId(value);
+                                                setPage(1);
+                                            }}
+                                            placeholder="Parte del cuerpo"
+                                            emptyMessage="No se encontraron partes del cuerpo."
+                                            searchPlaceholder="Buscar parte del cuerpo..."
+                                        />
+                                    )}
                                 </div>
                             </div>
 
@@ -819,7 +950,7 @@ export const Radiologia = () => {
                             <div className="flex flex-col gap-2 shrink-0">
                                 <span className="report-filters-panel__heading text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Opciones</span>
                                 <div className="grid grid-cols-1 gap-x-4 gap-y-2 min-[420px]:grid-cols-2">
-                                    <div className="flex items-center space-x-2">
+                                    {!isAdministrativeView && <div className="flex items-center space-x-2">
                                         <Checkbox
                                             id="listo-leer"
                                             checked={listoParaLeer}
@@ -832,8 +963,8 @@ export const Radiologia = () => {
                                         <Label htmlFor="listo-leer" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
                                             Listo para leer
                                         </Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
+                                    </div>}
+                                    {!isAdministrativeView && <div className="flex items-center space-x-2">
                                         <Checkbox
                                             id="finalizados"
                                             checked={verFinalizados}
@@ -846,8 +977,8 @@ export const Radiologia = () => {
                                         <Label htmlFor="finalizados" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
                                             Incluir finalizados
                                         </Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
+                                    </div>}
+                                    {!isAdministrativeView && <div className="flex items-center space-x-2">
                                         <Checkbox
                                             id="asignados"
                                             checked={asignadosAMi}
@@ -860,7 +991,23 @@ export const Radiologia = () => {
                                         <Label htmlFor="asignados" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
                                             Asignados a mí
                                         </Label>
-                                    </div>
+                                    </div>}
+                                    {isAdministrativeView && (
+                                        <div className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id="incluir-sin-finalizar"
+                                                checked={incluirSinFinalizar}
+                                                onCheckedChange={(checked) => {
+                                                    setIncluirSinFinalizar(Boolean(checked));
+                                                    setPage(1);
+                                                }}
+                                                className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple dark:data-[state=checked]:bg-purple-600 dark:data-[state=checked]:border-purple-600"
+                                            />
+                                            <Label htmlFor="incluir-sin-finalizar" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
+                                                Incluir sin finalizar
+                                            </Label>
+                                        </div>
+                                    )}
                                     <div className="flex items-center space-x-2">
                                         <Checkbox
                                             id="sin-imagenes"
@@ -875,7 +1022,7 @@ export const Radiologia = () => {
                                             Incluir sin imágenes
                                         </Label>
                                     </div>
-                                    <div className="flex items-center space-x-2">
+                                    {!isAdministrativeView && <div className="flex items-center space-x-2">
                                         <Checkbox
                                             id="sin-orden"
                                             checked={verSinOrden}
@@ -888,7 +1035,7 @@ export const Radiologia = () => {
                                         <Label htmlFor="sin-orden" className="text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-200">
                                             Incluir sin orden CP
                                         </Label>
-                                    </div>
+                                    </div>}
                                     <div className="flex items-center space-x-2">
                                         <Checkbox
                                             id="solo-con-notas"
@@ -1017,7 +1164,15 @@ export const Radiologia = () => {
                     columns={filteredColumns}
                     loading={isLoadingInformes}
                     pagination={pagination}
-                    actions={getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf, getGeneralNotesAction(handleUpdateGeneralNotes, handleDeleteNote, canDeleteNotes, isUpdatingNotes, isDeletingNote), isReadLimitReached, canAssign ? handleAssignExam : undefined, handleOpenConfirmStudy)}
+                    actions={isAdministrativeView
+                        ? getAdministrativeInformesActions(
+                            handleViewImagenes,
+                            handleViewPdf,
+                            handleShareImages,
+                            handleShareStudy,
+                            getGeneralNotesAction(handleUpdateGeneralNotes, handleDeleteNote, false, isUpdatingNotes, false),
+                        )
+                        : getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewPdf, getGeneralNotesAction(handleUpdateGeneralNotes, handleDeleteNote, canDeleteNotes, isUpdatingNotes, isDeletingNote), canWrite, canAssign ? handleAssignExam : undefined, canConfirmExecute ? handleOpenConfirmStudy : undefined, isAdmin ? handleAdminUnlock : undefined, isAdmin)}
                     onPaginationChange={(newPage) => {
                         setPage(newPage);
                     }}
@@ -1030,7 +1185,7 @@ export const Radiologia = () => {
                     allColumns={allColumns}
                     visibleColumns={visibleColumns}
                     onToggleColumn={toggleColumn}
-                    fixedColumnKeys={[...FIXED_COLUMN_KEYS]}
+                    fixedColumnKeys={fixedColumnKeys}
                     onColumnOrderChange={handleColumnOrderChange}
                     tableBackgroundImage={fondoImage}
                     tableBackgroundImageDark={backDarkImage}
@@ -1045,13 +1200,16 @@ export const Radiologia = () => {
                             setSelectedStudyIds(new Set([row.guid]));
                         }
                     }}
-                    onRowDoubleClick={(row) => handleRedactarInforme(row)}
+                    onRowContextMenu={handleRowContextMenu}
+                    onRowDoubleClick={(row) => {
+                        if (!isAdministrativeView && canWrite) handleRedactarInforme(row);
+                    }}
                     mobileMode="cards"
                     mobileActions="menu"
                     mobileStatusKey="status"
                     additionalControls={
                         <div className="flex items-center gap-4">
-                            {selectedStudyIds.size > 0 && (
+                            {!isAdministrativeView && selectedStudyIds.size > 0 && (
                                 <>
                                     <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">
                                         <span>{selectedStudyIds.size} seleccionado{selectedStudyIds.size !== 1 ? 's' : ''}</span>
@@ -1087,7 +1245,7 @@ export const Radiologia = () => {
                                     </DropdownMenu>
                                 </>
                             )}
-                            <div className="flex items-center gap-2">
+                            {!isAdministrativeView && <div className="flex items-center gap-2">
                                 <Label htmlFor="siguiente-paso-toggle" className="text-sm font-medium text-gray-700 dark:text-gray-200">
                                     Siguiente estudio:
                                 </Label>
@@ -1096,7 +1254,7 @@ export const Radiologia = () => {
                                     checked={siguientePaso}
                                     onCheckedChange={setSiguientePaso}
                                 />
-                            </div>
+                            </div>}
                             <button
                                 onClick={() => {
                                     refetchInformes();
@@ -1108,6 +1266,82 @@ export const Radiologia = () => {
                             </button>
                         </div>
                     }
+                />
+
+                {contextMenu && !isAdministrativeView && (
+                    <div
+                        ref={contextMenuRef}
+                        className="fixed z-[80] w-56 overflow-hidden rounded-lg border border-purple-200 bg-white py-1 shadow-xl dark:border-purple-800 dark:bg-[#1b1230]"
+                        style={{ left: contextMenu.x, top: contextMenu.y }}
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onContextMenu={(event) => event.preventDefault()}
+                    >
+                        <div className="border-b border-gray-100 px-3 py-2 text-xs font-semibold text-gray-500 dark:border-purple-900 dark:text-gray-400">
+                            Acciones del estudio
+                        </div>
+                        <button
+                            type="button"
+                            disabled={!canAssign}
+                            onClick={() => handleContextAction('assign')}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-200 dark:hover:bg-purple-900/40"
+                        >
+                            <UserCheck className="h-4 w-4 text-brand-purple" />
+                            Asignar a...
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleContextAction('tags')}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-purple-50 dark:text-gray-200 dark:hover:bg-purple-900/40"
+                        >
+                            <Tags className="h-4 w-4 text-brand-purple" />
+                            Agregar tag
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleContextAction('flags')}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-purple-50 dark:text-gray-200 dark:hover:bg-purple-900/40"
+                        >
+                            <Flag className="h-4 w-4 text-brand-purple" />
+                            Agregar banderas
+                        </button>
+                        <button
+                            type="button"
+                            disabled={!canWrite}
+                            onClick={() => handleContextAction('template')}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-200 dark:hover:bg-purple-900/40"
+                        >
+                            <FileText className="h-4 w-4 text-brand-purple" />
+                            Cambiar Plantilla
+                        </button>
+                    </div>
+                )}
+
+                <TemplateModal
+                    isOpen={isContextTemplateModalOpen}
+                    onClose={() => {
+                        setIsContextTemplateModalOpen(false);
+                        setContextTemplateRow(null);
+                        setContextTemplateSearchTerm('');
+                        setContextOnlyStudyType(false);
+                        setSelectedContextTemplate(null);
+                    }}
+                    searchTerm={contextTemplateSearchTerm}
+                    setSearchTerm={setContextTemplateSearchTerm}
+                    onlyStudyType={contextOnlyStudyType}
+                    setOnlyStudyType={setContextOnlyStudyType}
+                    filteredTemplates={filteredContextTemplates}
+                    selectedTemplate={selectedContextTemplate}
+                    setSelectedTemplate={setSelectedContextTemplate}
+                    onAccept={() => {
+                        if (!contextTemplateRow || !selectedContextTemplate) {
+                            toast.error('Por favor seleccione una plantilla');
+                            return;
+                        }
+
+                        setPendingTemplateChange({ row: contextTemplateRow, template: selectedContextTemplate });
+                        setIsContextTemplateModalOpen(false);
+                        setContextTemplateRow(null);
+                    }}
                 />
 
             </div>
@@ -1152,6 +1386,17 @@ export const Radiologia = () => {
                 cancelText="Cancelar"
                 variant="warning"
             />
+            <ConfirmationModal
+                isOpen={Boolean(pendingTemplateChange)}
+                onClose={() => setPendingTemplateChange(null)}
+                onConfirm={() => void handleApplyContextTemplate()}
+                title="Cambiar plantilla"
+                message="Se reemplazará el contenido actual del informe por el de la plantilla seleccionada. ¿Desea continuar?"
+                confirmText="Sí, cambiar plantilla"
+                cancelText="Cancelar"
+                variant="warning"
+                isLoading={isChangingTemplate}
+            />
 
             {/* Modal de Asignar Estudio */}
             <AssignExamModal
@@ -1169,6 +1414,7 @@ export const Radiologia = () => {
                 isOpen={isConfirmStudyModalOpen}
                 onClose={closeConfirmStudyModal}
                 patientName={selectedExamForConfirm?.patient_name}
+                isEditing={Boolean(selectedExamForConfirm?.w_order === 1 || selectedExamForConfirm?.is_executed)}
                 initialData={{
                     referring_physician_id: selectedExamForConfirm?.referring_physician_id || null,
                     requesting_physician_id: selectedExamForConfirm?.requesting_physician_id || null,
@@ -1178,6 +1424,7 @@ export const Radiologia = () => {
                     modality_id: selectedExamForConfirm?.modality_id || null,
                     modality_description: selectedExamForConfirm?.modality_description || "",
                     other_details: selectedExamForConfirm?.other_details || "",
+                    laterality_id: selectedExamForConfirm?.laterality_id || null,
                 }}
                 onConfirm={handleConfirmStudy}
             />
@@ -1193,6 +1440,17 @@ export const Radiologia = () => {
                 onAddFlags={handleMultiSelectAddFlags}
                 availableTags={allTags || []}
             />
+
+            {shareModal && (
+                <AdministrativeShareModal
+                    kind={shareModal.kind}
+                    examId={shareModal.informe.guid}
+                    studyIuid={shareModal.informe.study_instance_uid}
+                    patientName={shareModal.informe.patient_name}
+                    studyDescription={shareModal.informe.study_type}
+                    onClose={() => setShareModal(null)}
+                />
+            )}
 
             {/* Modal de carga mientras bloquea */}
             {isBlocking && (

@@ -23,6 +23,7 @@ import { createPatientSchema, type CreatePatientFormValues } from "../schemas/cr
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { useObraSocial } from "@/modules/configuracion/configuracion-tablas/examenes/obra-social/hooks/use-obra-social";
 import { Autocomplete, type AutocompleteOption } from "@/components/autocomplete";
+import { DateInput } from "@/components/ui/date-input";
 
 interface CreatePatientFormProps {
     onSubmit: (data: CreatePatientFormValues) => void;
@@ -166,7 +167,7 @@ export const CreatePatientForm = ({ onSubmit, isLoading, initialData }: CreatePa
                             <FormItem>
                                 <FormLabel>Fecha de Nacimiento *</FormLabel>
                                 <FormControl>
-                                    <Input type="date" {...field} disabled={isLoading} />
+                                    <DateInput {...field} disabled={isLoading} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

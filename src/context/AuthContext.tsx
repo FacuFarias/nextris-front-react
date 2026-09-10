@@ -41,16 +41,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        let isMounted = true;
         const storedAuthData = localStorage.getItem("authData");
-        if (storedAuthData) {
-            try {
-                setAuthData(JSON.parse(storedAuthData));
-            } catch (error) {
-                console.error("Error parsing stored auth data:", error);
-                localStorage.removeItem("authData");
-            }
+        if (!storedAuthData) {
+            setIsLoading(false);
+            return () => { isMounted = false; };
         }
-        setIsLoading(false);
+
+        const restoreSession = async () => {
+            try {
+                const stored = JSON.parse(storedAuthData) as AuthData;
+                const response = await api.post<{ success: boolean; data: { permissions: string[] } }>(
+                    "/auth/refresh-permissions"
+                );
+                const restored = {
+                    ...stored,
+                    user: {
+                        ...stored.user,
+                        permissions: response.data.data.permissions,
+                    },
+                };
+                if (isMounted) setAuthData(restored);
+                localStorage.setItem("authData", JSON.stringify(restored));
+            } catch {
+                try {
+                    const stored = JSON.parse(storedAuthData) as AuthData;
+                    if (isMounted) setAuthData(stored);
+                } catch (parseError) {
+                    console.error("Error parsing stored auth data:", parseError);
+                    localStorage.removeItem("authData");
+                }
+            } finally {
+                if (isMounted) setIsLoading(false);
+            }
+        };
+
+        void restoreSession();
+        return () => { isMounted = false; };
     }, []);
 
     const login = (data: AuthData) => {

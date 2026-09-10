@@ -50,30 +50,32 @@ export const SignModal = ({
                     </div>
                 </div>
 
-                {/* Input de contraseña */}
-                <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                        <Lock className="h-4 w-4 text-gray-500" />
-                        Contraseña {requirePassword && <span className="text-red-500">*</span>}
-                    </label>
-                    <div className="relative">
-                        <Input
-                            type="password"
-                            placeholder={requirePassword ? "Ingrese su contraseña" : "Contraseña no requerida"}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="pl-10 h-12 text-base border-gray-300 focus:border-brand-purple focus:ring-brand-purple"
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && (requirePassword ? password.trim() : true) && !isSigning) {
-                                    onVerifyCredentials();
-                                }
-                            }}
-                            autoFocus={requirePassword}
-                            disabled={!requirePassword}
-                        />
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                {/* Compatibilidad del modal: el campo solo existe si un flujo
+                    externo vuelve a habilitar explícitamente la verificación. */}
+                {requirePassword && (
+                    <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                            <Lock className="h-4 w-4 text-gray-500" />
+                            Contraseña <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                            <Input
+                                type="password"
+                                placeholder="Ingrese su contraseña"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="pl-10 h-12 text-base border-gray-300 focus:border-brand-purple focus:ring-brand-purple"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && password.trim() && !isSigning) {
+                                        onVerifyCredentials();
+                                    }
+                                }}
+                                autoFocus
+                            />
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Botones de acción */}
                 <div className="flex gap-3 pt-2 justify-end">

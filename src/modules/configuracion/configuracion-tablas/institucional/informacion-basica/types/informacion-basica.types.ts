@@ -5,10 +5,8 @@ export interface InformacionBasica {
     address: string;
     phone: string;
     logo_path?: string | null;
-    require_signature_password?: boolean;
 }
 
-export type InformacionBasicaFormData = Omit<InformacionBasica, 'guid' | 'logo_path' | 'require_signature_password'> & {
+export type InformacionBasicaFormData = Omit<InformacionBasica, 'guid' | 'logo_path'> & {
     logo?: File;
-    require_signature_password?: boolean;
 };

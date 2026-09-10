@@ -10,6 +10,7 @@ export type StudyNote = {
 export type Informes = {
     guid: string;
     patient_name: string;
+    patient_id: string;
     patient_dni: string;
     study_type: string;
     admission_number: string;
@@ -25,7 +26,7 @@ export type Informes = {
     study_instance_uid: string;
     num_instances: number;
     location: string;
-    pdf_path: string;
+    report_available: boolean;
     flags: string[];
     tag_ids: string[];
     report_date: string | null;
@@ -43,6 +44,10 @@ export type Informes = {
     clinical_question: string;
     study_type_id: string | null;
     other_details: string;
+    laterality_id: string | null;
+    applied_template_id: string | null;
+    template_name: string;
+    template_source?: string;
 }
 
 export type ExaminationNotesResponse = {
@@ -68,23 +73,34 @@ export type InformeDetalle = {
         patient_id: string;
         patientid?: string;
         national_code?: string;
+        nationalcode?: string;
         admission_number: string;
         accession_number?: string;
         study_description?: string;
         modality?: string;
         exam_date?: string;
-        findings: string;
-        impressions: string;
-        techniques: string;
-        conclusions: string;
+        study_reason: string;
+        content: string;
+        conclusion: string;
+        findings?: string;
+        impressions?: string;
+        techniques?: string;
+        conclusions?: string;
         was_saved: boolean;
         created_on: string;
         is_reported: boolean;
         sex: string;
-        pdf_path: string;
+        report_available: boolean;
         history: string;
+        clinical_question?: string;
+        clinicalquestion?: string;
         updated_on: string;
         patient_name: string;
+        modality_id?: string | null;
+        modality_description?: string;
+        applied_template_id?: string | null;
+        applied_template_name?: string | null;
+        applied_template_report_type?: string | null;
         flags?: string[];
         tag_ids?: string[];
     }

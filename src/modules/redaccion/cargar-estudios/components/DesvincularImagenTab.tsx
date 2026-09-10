@@ -11,13 +11,9 @@ import {
 } from "@/components/ui/dialog"
 import { useDesvincularEstudio, useEstudiosVinculados } from "../hooks/use-cargar-estudios"
 import type { LinkedStudyData } from "../types/cargar-estudios.types"
+import { formatDate as formatVisibleDate } from "@/lib/fechaYhora"
 
-const formatDate = (value?: string | null) => {
-    if (!value) return "N/A"
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return value
-    return date.toLocaleDateString()
-}
+const formatDate = (value?: string | null) => value ? formatVisibleDate(value) : "N/A"
 
 export const DesvincularImagenTab = () => {
     const [selectedLink, setSelectedLink] = useState<LinkedStudyData | null>(null)

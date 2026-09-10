@@ -8,10 +8,13 @@ export const RootRedirect = () => {
         .map((type) => type!.trim().toLowerCase());
     const isPatient = userTypes.includes("patient");
     const isDoctor = userTypes.some((type) => type === "medico" || type === "médico");
+    const isAdministrative = userTypes.includes("administrativo");
     const home = isPatient
         ? "/estudios"
         : isDoctor
-            ? "/estudios/redaccion"
+            ? "/worklist"
+            : isAdministrative
+                ? "/administrative_view"
             : "/inicio";
     return isAuthenticated ? <Navigate to={home} replace /> : <Navigate to="/login" replace />;
 };

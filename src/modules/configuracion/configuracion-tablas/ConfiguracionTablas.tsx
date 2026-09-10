@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { MainLayout } from "@/layouts/layout"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Building2, FlaskConical, Monitor, Users, Settings } from "lucide-react"
+import { Building2, FlaskConical, Monitor, Users, Settings, Workflow } from "lucide-react"
 
 // Institucional
 import { Locations } from "./institucional/locations"
@@ -25,11 +25,13 @@ import { MedicosSolicitantes } from "./usuarios-personal/medicos-solicitantes"
 import { AgendaMedicos } from "./usuarios-personal/agenda-medicos"
 import { GruposEstudio } from "./examenes/grupos-estudio/GruposEstudio"
 import { ObraSocial } from "./examenes/obra-social/ObraSocial"
+import { FlujoTrabajo } from "./institucional/flujo-trabajo"
 
 const mainTabs = [
     { value: "institucional", label: "Institucional", icon: Building2 },
     { value: "examenes", label: "Examenes", icon: FlaskConical },
     { value: "equipos", label: "Equipos", icon: Monitor },
+    { value: "flujo-trabajo", label: "Flujo de trabajo", icon: Workflow },
     { value: "usuarios", label: "Usuarios / Personal", icon: Users },
 ]
 
@@ -243,6 +245,13 @@ export const ConfiguracionTablas = () => {
                                 <AgendasMaquinas />
                             </TabsContent>
                         </AnimatedSubTabs>
+                    </TabsContent>
+
+                    {/* Tab Flujo de trabajo */}
+                    <TabsContent value="flujo-trabajo" className="flex-1 mt-0">
+                        <div className="p-4">
+                            <FlujoTrabajo />
+                        </div>
                     </TabsContent>
 
                     {/* Tab Usuarios/Personal */}

@@ -15,6 +15,7 @@ interface ConfirmStudyModalProps {
     isOpen: boolean;
     onClose: () => void;
     patientName?: string;
+    isEditing?: boolean;
     initialData: {
         referring_physician_id: string | null;
         requesting_physician_id: string | null;
@@ -24,6 +25,7 @@ interface ConfirmStudyModalProps {
         modality_id: string | null;
         modality_description: string;
         other_details: string;
+        laterality_id: string | null;
     };
     onConfirm: (data: ConfirmStudyPayload) => Promise<void>;
 }
@@ -32,6 +34,7 @@ export const ConfirmStudyModal = ({
     isOpen,
     onClose,
     patientName,
+    isEditing = false,
     initialData,
     onConfirm,
 }: ConfirmStudyModalProps) => {
@@ -43,6 +46,7 @@ export const ConfirmStudyModal = ({
     const [sameModality, setSameModality] = useState(true);
     const [clinicalQuestion, setClinicalQuestion] = useState("");
     const [otherDetails, setOtherDetails] = useState("");
+    const [lateralityId, setLateralityId] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const { data: medicos = [], isLoading: loadingMedicos } = useQuery({
@@ -76,6 +80,7 @@ export const ConfirmStudyModal = ({
         setSameModality(true);
         setClinicalQuestion(initialData.clinical_question || "");
         setOtherDetails(initialData.other_details || "");
+        setLateralityId(initialData.laterality_id || "");
     }, [isOpen, initialData]);
 
     const requestingPhysicians = requestingPhysiciansResponse?.data || [];
@@ -97,6 +102,7 @@ export const ConfirmStudyModal = ({
                 studytype_id: studytypeId,
                 clinical_question: clinicalQuestion,
                 other_details: otherDetails,
+                laterality_id: lateralityId || null,
             });
             onClose();
         } finally {
@@ -108,7 +114,7 @@ export const ConfirmStudyModal = ({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Confirmar estudio"
+            title={isEditing ? "Editar estudio" : "Confirmar estudio"}
             description={patientName ? `Paciente: ${patientName}` : "Complete los datos del estudio antes de confirmarlo."}
             size="full"
             className="w-[min(95vw,1100px)] sm:max-w-5xl"
@@ -193,7 +199,7 @@ export const ConfirmStudyModal = ({
                             />
                         </Field>
 
-                        <Field label="Tipo de estudio" required className="md:col-span-2">
+                        <Field label="Tipo de estudio" required>
                             <div className="space-y-3">
                                 <Autocomplete
                                     options={studyTypeOptions}
@@ -217,6 +223,19 @@ export const ConfirmStudyModal = ({
                                 </div>
                             </div>
                         </Field>
+
+                        <Field label="Lateralidad (opcional)">
+                            <select
+                                value={lateralityId}
+                                onChange={(event) => setLateralityId(event.target.value)}
+                                className={selectClassName}
+                            >
+                                <option value="">Sin lateralidad</option>
+                                {lateralityOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                            </select>
+                        </Field>
                     </div>
                 )}
 
@@ -227,9 +246,9 @@ export const ConfirmStudyModal = ({
                     </SecondaryButton>
                     <PrimaryButton onClick={handleSubmit} disabled={!studytypeId || loading || isSubmitting}>
                         {isSubmitting ? (
-                            <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Confirmando...</>
+                            <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{isEditing ? "Guardando..." : "Confirmando..."}</>
                         ) : (
-                            <><CheckCircle2 className="mr-2 h-5 w-5" />Confirmar estudio</>
+                            <><CheckCircle2 className="mr-2 h-5 w-5" />{isEditing ? "Guardar cambios" : "Confirmar estudio"}</>
                         )}
                     </PrimaryButton>
                 </div>
@@ -239,6 +258,12 @@ export const ConfirmStudyModal = ({
 };
 
 const selectClassName = "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20";
+
+const lateralityOptions = [
+    { value: "7b2f0a7e-4cb0-4c54-9e32-000000000001", label: "IZQUIERDA" },
+    { value: "7b2f0a7e-4cb0-4c54-9e32-000000000002", label: "DERECHA" },
+    { value: "7b2f0a7e-4cb0-4c54-9e32-000000000003", label: "BILATERAL" },
+];
 
 const Field = ({
     label,

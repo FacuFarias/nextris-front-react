@@ -6,6 +6,7 @@ import { Loader2, MessageSquare, MessageSquareDashed, Trash2 } from "lucide-reac
 import { cn } from "@/lib/utils";
 import { useExaminationNotes } from "../hooks/use-informes";
 import type { StudyNote } from "../types/informes.types";
+import { formatDateTime } from "@/lib/fechaYhora";
 
 interface GeneralNotesCellProps {
     examId: string;
@@ -22,10 +23,7 @@ const formatNoteDate = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
 
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: "short",
-        timeStyle: "short",
-    }).format(date);
+    return formatDateTime(date);
 };
 
 const NoteItem = ({ note, compact = false }: { note: StudyNote; compact?: boolean }) => (

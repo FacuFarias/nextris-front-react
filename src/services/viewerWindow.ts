@@ -377,6 +377,25 @@ export function cancelPreparedViewer(ticket: ViewerWindowTicket): void {
     readyViewerId = null;
 }
 
+/**
+ * Solicita el cierre del visor desde cualquier ventana de NextRIS. El visor
+ * vive en otra ventana y por eso no siempre existe una referencia directa.
+ */
+export function closeViewerWindow(): void {
+    supersedePendingRequest();
+    latestIntentId += 1;
+    getChannel().postMessage({ type: "CLOSE_VIEWER" });
+
+    if (viewerWindowRef && !viewerWindowRef.closed) {
+        viewerWindowRef.close();
+    }
+
+    viewerWindowRef = null;
+    readyViewerId = null;
+    acceptedStudyInCurrentWindow = false;
+    studyDispatchedToCurrentWindow = false;
+}
+
 function disposeChannel(): void {
     supersedePendingRequest();
     channel?.removeEventListener("message", handleChannelMessage);

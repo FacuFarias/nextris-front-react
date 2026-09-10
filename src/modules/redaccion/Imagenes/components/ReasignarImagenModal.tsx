@@ -8,6 +8,8 @@ import { Loader2, Search, UserPlus, ArrowLeft, Check } from "lucide-react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
 import type { PacsStudy } from "../hooks/use-studies-by-location"
+import { formatDate } from "@/lib/fechaYhora"
+import { DateInput } from "@/components/ui/date-input"
 
 interface PatientSearchResult {
   guid: string
@@ -229,7 +231,7 @@ export const ReasignarImagenModal = ({ open, onOpenChange, study, onSuccess }: R
                               <td className="px-3 py-2">{patient.name}</td>
                               <td className="px-3 py-2">{patient.nationalcode || "—"}</td>
                               <td className="px-3 py-2">{patient.gender === "M" ? "M" : patient.gender === "F" ? "F" : "—"}</td>
-                              <td className="px-3 py-2">{patient.birthdate || "—"}</td>
+                              <td className="px-3 py-2">{patient.birthdate ? formatDate(patient.birthdate) : "—"}</td>
                               <td className="px-3 py-2">
                                 <Check className="h-4 w-4 text-transparent group-hover:text-purple-500" />
                               </td>
@@ -323,11 +325,10 @@ export const ReasignarImagenModal = ({ open, onOpenChange, study, onSuccess }: R
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="new-fecha-nac">Fecha de nacimiento</Label>
-                    <Input
+                    <DateInput
                       id="new-fecha-nac"
-                      type="date"
                       value={newPatientFechaNac}
-                      onChange={(e) => setNewPatientFechaNac(e.target.value)}
+                      onChange={(value) => setNewPatientFechaNac(value)}
                     />
                   </div>
                 </div>
@@ -401,7 +402,7 @@ export const ReasignarImagenModal = ({ open, onOpenChange, study, onSuccess }: R
                 </div>
                 <div>
                   <span className="text-gray-500">Nacimiento:</span>
-                  <p className="font-medium">{selectedPatient.birthdate || "—"}</p>
+                  <p className="font-medium">{selectedPatient.birthdate ? formatDate(selectedPatient.birthdate) : "—"}</p>
                 </div>
               </div>
             </div>

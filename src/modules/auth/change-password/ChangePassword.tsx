@@ -9,8 +9,10 @@ import { toast } from "sonner";
 
 export const ChangePassword = () => {
     const navigate = useNavigate();
-    const { markPasswordChanged, logout } = useAuth();
+    const { authData, markPasswordChanged, logout } = useAuth();
 
+    const isPatient = authData?.user.user_type === "patient";
+    const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [isSaving, setIsSaving] = useState(false);
@@ -18,8 +20,13 @@ export const ChangePassword = () => {
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
 
-        if (newPassword.length < 6) {
-            toast.error("La contraseña debe tener al menos 6 caracteres");
+        if (isPatient && !currentPassword) {
+            toast.error("Ingrese su contraseña actual");
+            return;
+        }
+
+        if (newPassword.length < (isPatient ? 4 : 6)) {
+            toast.error(`La contraseña debe tener al menos ${isPatient ? 4 : 6} caracteres`);
             return;
         }
 
@@ -30,10 +37,18 @@ export const ChangePassword = () => {
 
         try {
             setIsSaving(true);
-            await api.post("/auth/change-password", { new_password: newPassword });
+            if (isPatient) {
+                await api.post("/patient-portal/change-password", {
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                    confirm_password: confirmPassword,
+                });
+            } else {
+                await api.post("/auth/change-password", { new_password: newPassword });
+            }
             markPasswordChanged();
             toast.success("Contraseña actualizada correctamente");
-            navigate("/inicio");
+            navigate(isPatient ? "/mis-datos" : "/inicio");
         } catch (error: any) {
             const message = error?.response?.data?.message || "No se pudo actualizar la contraseña";
             toast.error(message);
@@ -47,10 +62,25 @@ export const ChangePassword = () => {
             <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <h1 className="text-xl font-semibold text-brand-purple mb-1">Cambio de contraseña</h1>
                 <p className="text-sm text-muted-foreground mb-5">
-                    Por seguridad, antes de continuar debe cambiar su contraseña temporal.
+                    {isPatient
+                        ? "Ingrese su contraseña actual y defina una nueva contraseña."
+                        : "Por seguridad, antes de continuar debe cambiar su contraseña temporal."}
                 </p>
 
                 <form className="space-y-4" onSubmit={handleSubmit}>
+                    {isPatient && (
+                        <div className="space-y-1.5">
+                            <Label htmlFor="current_password">Contraseña actual</Label>
+                            <Input
+                                id="current_password"
+                                type="password"
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                placeholder="Ingrese su contraseña actual"
+                                required
+                            />
+                        </div>
+                    )}
                     <div className="space-y-1.5">
                         <Label htmlFor="new_password">Nueva contraseña</Label>
                         <Input
@@ -58,7 +88,7 @@ export const ChangePassword = () => {
                             type="password"
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="Mínimo 6 caracteres"
+                            placeholder={`Mínimo ${isPatient ? 4 : 6} caracteres`}
                             required
                         />
                     </div>

@@ -1,15 +1,13 @@
 import { useState } from "react";
 import { Loader2, Send } from "lucide-react";
 import { useExaminationNotes, useUpdateGeneralNotes } from "../../hooks/use-informes";
+import { formatDateTime } from "@/lib/fechaYhora";
 
 const formatNoteDate = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
 
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: "short",
-        timeStyle: "short",
-    }).format(date);
+    return formatDateTime(date);
 };
 
 export const ReportNotesPanel = ({ examId }: { examId: string }) => {

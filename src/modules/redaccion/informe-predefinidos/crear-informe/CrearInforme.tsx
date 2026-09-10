@@ -74,12 +74,15 @@ export const CrearInforme = () => {
     const [relatedCriteriaError, setRelatedCriteriaError] = useState<string>("");
     const [variablesSearchTerm, setVariablesSearchTerm] = useState("");
     const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([]);
+    // Evita montar los editores con valores vacíos mientras la plantilla se
+    // copia desde la respuesta de la API al estado del formulario.
+    const [hydratedTemplateId, setHydratedTemplateId] = useState<string | null>(null);
     const [locationsSearchTerm, setLocationsSearchTerm] = useState("");
     const [dragOverEditorField, setDragOverEditorField] = useState<(typeof editorFieldOrder)[number] | null>(null);
     const draggedChipRef = useRef<{ type: 'variable' | 'criterion'; value: string } | null>(null);
 
     // Hook para navegación de placeholders con F3
-    const editorFieldOrder = ['technique', 'findings', 'impression', 'conclusion'] as const;
+    const editorFieldOrder = ['technique', 'findings', 'conclusion'] as const;
     const { editorsRef } = usePlaceholderNavigation(editorFieldOrder as unknown as string[]);
     const [activeEditorField, setActiveEditorField] = useState<(typeof editorFieldOrder)[number] | null>(null);
     const currentFieldRef = useRef<(typeof editorFieldOrder)[number] | null>(null);
@@ -210,24 +213,25 @@ export const CrearInforme = () => {
         if (isEditMode && templateData?.data) {
             const template = templateData.data;
             setTitle(template.title || "");
-            setFindings(template.findings || "");
-            setImpression(template.impression || "");
+            setFindings(template.content || template.findings || "");
+            setImpression("");
             setConclusion(template.conclusion || "");
-            setTechnique(template.technique || "");
+            setTechnique(template.study_reason || "");
             setStudyTypeFilter(template.study_type_id || "");
             setReportType((template.report_type as ReportType) || 'simple');
             setIsDefaultReport(Boolean(template.is_system_default || template.is_user_default));
             setStructuredVariables((template as any).structured_variables || "");
             setCriteria((template as any).criteria || "");
             setSelectedLocationIds(Array.isArray((template as any).location_ids) ? (template as any).location_ids : []);
+            setHydratedTemplateId(id || null);
         }
-    }, [templateData, isEditMode]);
+    }, [templateData, isEditMode, id]);
 
     // Estado para controlar qué secciones están abiertas/cerradas
     const [openSections, setOpenSections] = useState({
         tecnica: true,
         hallazgos: true,
-        impresiones: true,
+        impresiones: false,
         conclusiones: true,
     });
 
@@ -388,9 +392,8 @@ export const CrearInforme = () => {
             const templatePayload = {
                 title: title.trim(),
                 study_type_id: studyTypeFilter,
-                findings: sanitizedFindings?.trim() || undefined,
-                technique: sanitizedTechnique?.trim() || undefined,
-                impression: sanitizedImpression?.trim() || undefined,
+                study_reason: sanitizedTechnique?.trim() || undefined,
+                content: [sanitizedFindings, sanitizedImpression].filter(Boolean).join('<p></p>').trim() || undefined,
                 conclusion: sanitizedConclusion?.trim() || undefined,
                 report_type: reportType,
                 location_ids: reportType === 'inteligente' ? selectedLocationIds : [],
@@ -417,13 +420,13 @@ export const CrearInforme = () => {
                 }
 
                 toast.success("Plantilla actualizada exitosamente");
-                navigate('/estudios/informes-predefinidos');
+                navigate('/gestion/informes-predefinidos');
             } else {
                 // Modo creación: crear nueva plantilla
                 await createTemplateMutation.mutateAsync(templatePayload);
                 toast.success("Plantilla creada exitosamente");
 
-                navigate('/estudios/informes-predefinidos');
+                navigate('/gestion/informes-predefinidos');
             }
         } catch (error: any) {
             const errorMessage = isEditMode
@@ -497,7 +500,9 @@ export const CrearInforme = () => {
     }, [showStructuredTabs, rightMetaTab]);
 
     // Mostrar loader mientras se cargan los datos en modo edición
-    if (isEditMode && isLoadingTemplate) {
+    const isTemplateFormReady = !isEditMode || hydratedTemplateId === id;
+
+    if (isEditMode && (isLoadingTemplate || !isTemplateFormReady)) {
         return (
             <MainLayout>
                 <div className="flex items-center justify-center min-h-[400px]">
@@ -589,13 +594,13 @@ export const CrearInforme = () => {
                             <button onClick={() => activeEditor?.chain().focus().redo().run()} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600" type="button" title="Rehacer" disabled={!activeEditor || !activeEditor?.can?.().redo()}><Redo className="w-4 h-4 dark:text-gray-200" /></button>
                         </div>
 
-                        {/* Técnica de examen */}
+                        {/* Razón del estudio */}
                         <Card className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden p-0">
                             <div
                                 className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
                                 onClick={() => toggleSection('tecnica')}
                             >
-                                <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Técnica de examen</h3>
+                                <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Razón del estudio</h3>
                                 {openSections.tecnica ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
                             </div>
 
@@ -604,7 +609,7 @@ export const CrearInforme = () => {
                                     <RichTextEditor
                                         value={technique}
                                         onChange={setTechnique}
-                                        placeholder="Escribe la técnica del examen..."
+                                        placeholder="Escribe la razón del estudio..."
                                         onEditorReady={(editor) => handleEditorReady(editor, 'technique')}
                                         dragOver={dragOverEditorField === 'technique'}
                                         onDragOver={(e) => handleEditorDragOver(e, 'technique')}
@@ -617,13 +622,13 @@ export const CrearInforme = () => {
                             </div>
                         </Card>
 
-                        {/* Hallazgos */}
+                        {/* Contenido */}
                         <Card className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden p-0">
                             <div
                                 className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
                                 onClick={() => toggleSection('hallazgos')}
                             >
-                                <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Hallazgos</h3>
+                                <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Contenido</h3>
                                 {openSections.hallazgos ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
                             </div>
 
@@ -645,41 +650,13 @@ export const CrearInforme = () => {
                             </div>
                         </Card>
 
-                        {/* Impresiones */}
-                        <Card className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden p-0">
-                            <div
-                                className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
-                                onClick={() => toggleSection('impresiones')}
-                            >
-                                <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Impresiones</h3>
-                                {openSections.impresiones ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
-                            </div>
-
-                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.impresiones ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                <div className="p-2 py-1">
-                                    <RichTextEditor
-                                        value={impression}
-                                        onChange={setImpression}
-                                        placeholder="Escribe las impresiones..."
-                                        onEditorReady={(editor) => handleEditorReady(editor, 'impression')}
-                                        dragOver={dragOverEditorField === 'impression'}
-                                        onDragOver={(e) => handleEditorDragOver(e, 'impression')}
-                                        onDragLeave={handleEditorDragLeave}
-                                        onDrop={(e) => handleVariableDropInEditor(e, 'impression')}
-                                        showToolbar={false}
-                                        variableChipTone='default'
-                                    />
-                                </div>
-                            </div>
-                        </Card>
-
-                        {/* Conclusiones */}
+                        {/* Conclusión */}
                         <Card className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden p-0">
                             <div
                                 className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
                                 onClick={() => toggleSection('conclusiones')}
                             >
-                                <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Conclusiones</h3>
+                                <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Conclusión</h3>
                                 {openSections.conclusiones ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
                             </div>
 

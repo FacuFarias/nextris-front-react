@@ -1,19 +1,11 @@
-import axios from "axios";
 import type { EstudiosNoVinculados, LinkedStudiesResponse, SearchExams, UnlinkStudyPayload } from "../types/cargar-estudios.types";
 import { api } from "@/lib/api";
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
-const apiNoAuth = axios.create({
-    baseURL: API_URL,
-    timeout: 300000,
-});
 
 export const uploadFiles = async (files: File) => {
     const formData = new FormData();
     formData.append('file', files);
     try {
-        const response = await apiNoAuth.post("/manual/upload", formData);
+        const response = await api.post("/manual/upload", formData, { timeout: 300000 });
         return response.data;
     } catch (error) {
         throw error;
@@ -29,7 +21,7 @@ export const getUnlinkedStudies = async ({
     include_pacs?: boolean,
 }) => {
     try {
-        const response = await apiNoAuth.get<EstudiosNoVinculados>("/manual/unlinked-studies", {
+        const response = await api.get<EstudiosNoVinculados>("/manual/unlinked-studies", {
             params: {
                 include_linked: include_linked ? 1 : 0,
                 include_pacs: include_pacs === false ? 0 : 1,

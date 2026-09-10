@@ -5,6 +5,7 @@ import { Search, ArrowLeft } from 'lucide-react';
 import { InputSearch } from '@/components/InputSearch';
 import { useMemo, useState } from 'react';
 import { TablaDynamic } from '@/components/TableDynamic';
+import { formatDateTime } from '@/lib/fechaYhora';
 import type { HistoryPatient } from '../types/BuscarPaciente';
 import { getHistoryPatientActions, historyColumns } from './components/columns';
 import { DynamicBreadcrumb } from '@/components/DynamicBreadcrumb';
@@ -18,6 +19,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
+import { openReportPdf } from "@/services/reportPdf"
 
 export const HistorialPaciente = () => {
     const location = useLocation()
@@ -124,12 +126,15 @@ export const HistorialPaciente = () => {
         viewImagenDicom({ imageId: patient.guid, userId: currentUserId });
     };
 
-    const onViewReport = (patient: HistoryPatient) => {
-        if (!patient.pdf_path) {
+    const onViewReport = async (patient: HistoryPatient) => {
+        if (!patient.report_available) {
             return;
         }
-        const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-        window.open(`${baseURL}/pdfs/${patient.pdf_path}`, '_blank');
+        try {
+            await openReportPdf(patient.guid);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
+        }
     };
 
     const onToggleVisibility = (patient: HistoryPatient) => {
@@ -266,7 +271,7 @@ export const HistorialPaciente = () => {
                                 <Label htmlFor="share-url">Enlace generado</Label>
                                 <Input id="share-url" value={shareUrl} readOnly />
                                 <p className="text-xs text-gray-600 dark:text-gray-300">
-                                    Expira: {shareExpiresAt ? new Date(shareExpiresAt).toLocaleString() : "-"}
+                                    Expira: {shareExpiresAt ? formatDateTime(shareExpiresAt) : "-"}
                                 </p>
                             </div>
                         ) : null}

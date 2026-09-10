@@ -24,7 +24,7 @@ export interface HistoryPatient {
     modalidad: string;
     con_imagen: string;
     isreported: number;
-    pdf_path: string | null;
+    report_available: boolean;
     hidden_in_portal: number;
     studyinstanceuid: string | null;
 }

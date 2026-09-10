@@ -97,7 +97,7 @@ export const TemplateList = ({
         const matchesSearch =
             template.title.toLowerCase().includes(searchLower) ||
             template.study_type_description?.toLowerCase().includes(searchLower) ||
-            template.findings.toLowerCase().includes(searchLower);
+            (template.content || template.findings || '').toLowerCase().includes(searchLower);
         const matchesMine = !onlyMine || template.owner_id !== 'nextris';
         return matchesSearch && matchesMine;
     }) || [];
@@ -186,7 +186,7 @@ export const TemplateList = ({
     const handleEdit = (template: Template) => {
         if (!template.can_edit) return;
         // Navegar a la página de edición con el ID de la plantilla
-        navigate(`/estudios/editar-informe/${template.guid}`);
+        navigate(`/gestion/editar-informe/${template.guid}`);
     };
 
     const handleDelete = async (template: Template) => {
@@ -279,7 +279,7 @@ export const TemplateList = ({
                 />
 
                 {/* Botón crear nueva plantilla */}
-                <PrimaryButton onClick={() => navigate("/estudios/crear-informe")}>
+                <PrimaryButton onClick={() => navigate("/gestion/crear-informe")}>
                     <Plus className="h-4 w-4 mr-2" />
                     Nueva Plantilla
                 </PrimaryButton>

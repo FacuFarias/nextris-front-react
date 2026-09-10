@@ -1,9 +1,9 @@
 import { useState } from "react";
 import type { Study } from "../types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Image, Calendar, Clock, User, Share2, Loader2, Stethoscope, Hash, Activity } from "lucide-react";
+import { Image, Calendar, Clock, Share2, Loader2, Activity } from "lucide-react";
 import { toast } from "sonner";
+import { formatDate } from "@/lib/fechaYhora";
 
 const ViewImagesButton = ({ study }: { study: Study }) => {
     const [loading, setLoading] = useState(false);
@@ -60,21 +60,16 @@ interface StudyCardProps {
 }
 
 export const StudyCard = ({ study, onShare }: StudyCardProps) => {
-    const isUrgent = study.urgency === "Urgente";
-
     return (
         <div className="bg-white dark:bg-[#1a1b24] rounded-lg border dark:border-[rgba(255,255,255,0.07)] p-4 space-y-3 shadow-sm">
-            {/* Header: Accession number + urgency badge */}
-            <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                    <Hash className="h-4 w-4 text-brand-purple shrink-0" />
-                    <span className="font-semibold text-sm text-blue-600 dark:text-blue-400 truncate">
-                        {study.accession_number}
-                    </span>
-                </div>
-                <Badge variant={isUrgent ? "destructive" : "outline"} className="shrink-0 text-xs">
-                    {study.urgency}
-                </Badge>
+            {/* Patient information */}
+            <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                    {study.patient_name || "-"}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Patient ID: {study.patient_id || "-"}
+                </p>
             </div>
 
             {/* Study type + modality */}
@@ -90,31 +85,11 @@ export const StudyCard = ({ study, onShare }: StudyCardProps) => {
             <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-gray-400 dark:text-gray-500 shrink-0" />
                 <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {study.study_date ? study.study_date.split("-").reverse().join("/") : ""}
+                    {formatDate(study.study_date)}
                 </span>
                 <Clock className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 shrink-0 ml-2" />
                 <span className="text-sm text-gray-700 dark:text-gray-300">{study.study_time}</span>
             </div>
-
-            {/* Referring physician */}
-            {study.requesting_physician && (
-                <div className="flex items-center gap-2">
-                    <Stethoscope className="h-4 w-4 text-gray-400 dark:text-gray-500 shrink-0" />
-                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                        {study.requesting_physician}
-                    </span>
-                </div>
-            )}
-
-            {/* Author physician */}
-            {study.author_physician && (
-                <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-400 dark:text-gray-500 shrink-0" />
-                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                        {study.author_physician}
-                    </span>
-                </div>
-            )}
 
             {/* Status */}
             <div className="flex items-center gap-2">

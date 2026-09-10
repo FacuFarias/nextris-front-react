@@ -5,12 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { informacionBasicaService } from './services/informacion-basica.service';
 import type { InformacionBasicaFormData } from './types/informacion-basica.types';
 
-const emptyValues: InformacionBasicaFormData = { name: '', address: '', phone: '', mail: '', require_signature_password: true };
+const emptyValues: InformacionBasicaFormData = { name: '', address: '', phone: '', mail: '' };
 
 export const InformacionBasica = () => {
     const [locationId, setLocationId] = useState('');
@@ -18,8 +17,7 @@ export const InformacionBasica = () => {
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const { register, handleSubmit, reset, setValue, watch, formState: { errors, isDirty } } = useForm<InformacionBasicaFormData>({ defaultValues: emptyValues });
-    const requireSignaturePassword = watch('require_signature_password');
+    const { register, handleSubmit, reset, setValue, formState: { errors, isDirty } } = useForm<InformacionBasicaFormData>({ defaultValues: emptyValues });
 
     useEffect(() => {
         const load = async () => {
@@ -28,7 +26,7 @@ export const InformacionBasica = () => {
                 if (data) {
                     setLocationId(data.guid);
                     setLogoPath(data.logo_path ?? null);
-                    reset({ name: data.name ?? '', address: data.address ?? '', phone: data.phone ?? '', mail: data.mail ?? '', require_signature_password: data.require_signature_password ?? true });
+                    reset({ name: data.name ?? '', address: data.address ?? '', phone: data.phone ?? '', mail: data.mail ?? '' });
                 }
             } catch { toast.error('No se pudieron cargar los datos institucionales'); }
             finally { setIsLoading(false); }
@@ -52,7 +50,7 @@ export const InformacionBasica = () => {
         try {
             const response = await informacionBasicaService.update(locationId, data);
             setLogoPath(response?.logo_path ?? logoPath);
-            reset({ name: data.name, address: data.address, phone: data.phone, mail: data.mail, require_signature_password: data.require_signature_password });
+            reset({ name: data.name, address: data.address, phone: data.phone, mail: data.mail });
             toast.success('Datos institucionales guardados correctamente');
         } catch { toast.error('No se pudieron guardar los datos institucionales'); }
         finally { setIsSaving(false); }
@@ -95,17 +93,6 @@ export const InformacionBasica = () => {
                             <div className="grid gap-5 sm:grid-cols-2">
                                 <div className="space-y-2"><Label htmlFor="institution-phone" className="text-sm font-medium">Teléfono</Label><div className="relative"><Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input id="institution-phone" {...register('phone')} className="h-10 pl-9" placeholder="+54 11 1234-5678" disabled={isLoading} /></div></div>
                                 <div className="space-y-2"><Label htmlFor="institution-mail" className="text-sm font-medium">Email</Label><div className="relative"><Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input id="institution-mail" type="email" {...register('mail')} className="h-10 pl-9" placeholder="contacto@institucion.com" disabled={isLoading} /></div></div>
-                            </div>
-                            <div className="flex items-center gap-3 pt-2">
-                                <Checkbox
-                                    id="require-signature-password"
-                                    checked={requireSignaturePassword ?? true}
-                                    onCheckedChange={(checked) => setValue('require_signature_password', Boolean(checked), { shouldDirty: true })}
-                                    disabled={isLoading}
-                                />
-                                <Label htmlFor="require-signature-password" className="text-sm font-medium cursor-pointer">
-                                    Solicitar contraseña al firmar reportes
-                                </Label>
                             </div>
                         </div>
 

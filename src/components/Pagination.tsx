@@ -32,6 +32,7 @@ interface TablePaginationProps {
     columns?: Array<{ key: string; label: string }>;
     visibleColumns?: string[];
     onToggleColumn?: (columnKey: string) => void;
+    fixedColumnKeys?: string[];
     additionalControls?: React.ReactNode;
 }
 
@@ -44,12 +45,27 @@ export function TablePagination({
     columns,
     visibleColumns,
     onToggleColumn,
+    fixedColumnKeys = [],
     additionalControls,
 }: TablePaginationProps) {
     const { page, pageSize, total } = pagination;
     const effectivePerPage = perPageValue ?? pageSize;
 
     const totalPages = Math.ceil(total / pageSize);
+    const fixedKeys = new Set(fixedColumnKeys);
+    const selectableColumns = columns
+        ? Array.from(
+            new Map(
+                columns
+                    .filter((column) => !fixedKeys.has(column.key))
+                    .map((column) => [column.key, column])
+            ).values()
+        )
+        : [];
+    const selectableKeys = new Set(selectableColumns.map((column) => column.key));
+    const selectableVisibleColumns = visibleColumns
+        ? Array.from(new Set(visibleColumns.filter((key) => selectableKeys.has(key))))
+        : [];
 
     const handlePageChange = (newPage: number) => {
         if (newPage >= 1 && newPage <= totalPages) {
@@ -121,7 +137,7 @@ export function TablePagination({
                 </div>
 
                 {/* Selector de columnas visibles - Multi-select */}
-                {columns && visibleColumns && onToggleColumn && (
+                {selectableColumns.length > 0 && visibleColumns && onToggleColumn && (
                     <div className="flex items-center gap-2">
                         <Label className="text-sm font-medium text-foreground">
                             Columnas:
@@ -130,9 +146,9 @@ export function TablePagination({
                             <PopoverTrigger asChild>
                                 <Button variant="outline" className="w-[min(220px,calc(100vw-2rem))] justify-between">
                                     <span className="truncate">
-                                        {visibleColumns.length === columns.length
+                                        {selectableVisibleColumns.length === selectableColumns.length
                                             ? 'Todas las columnas'
-                                            : `${visibleColumns.length} de ${columns.length} columnas`}
+                                            : `${selectableVisibleColumns.length} de ${selectableColumns.length} columnas`}
                                     </span>
                                     <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                                 </Button>
@@ -140,7 +156,7 @@ export function TablePagination({
                             <PopoverContent className="w-[220px] p-0" align="start">
                                 <div className="max-h-[300px] overflow-y-auto p-3">
                                     <div className="space-y-2">
-                                        {columns.map((column) => (
+                                        {selectableColumns.map((column) => (
                                             <div
                                                 key={column.key}
                                                 className="flex items-center space-x-2 hover:bg-accent p-1 rounded cursor-pointer"
@@ -148,7 +164,7 @@ export function TablePagination({
                                             >
                                                 <Checkbox
                                                     id={`column-${column.key}`}
-                                                    checked={visibleColumns.includes(column.key)}
+                                                    checked={selectableVisibleColumns.includes(column.key)}
                                                     onCheckedChange={() => onToggleColumn(column.key)}
                                                     className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
                                                 />

@@ -6,6 +6,7 @@ import type {
     DICOMViewerResponse
 } from '../types/distribucion.types';
 import type { ApiPaginatedResponse } from '@/types';
+import { downloadReportPdf, openReportPdf } from '@/services/reportPdf';
 
 export const distribucionService = {
     // GET /examinations/distribution
@@ -43,40 +44,15 @@ export const distribucionService = {
     /**
      * Visualiza el informe PDF en una nueva pestaña
      */
-    viewReport: (examinationId: string): void => {
-        const token = localStorage.getItem('authData');
-        const parsedToken = token ? JSON.parse(token) : null;
-        const accessToken = parsedToken?.access_token;
-
-        if (!accessToken) {
-            throw new Error('No se encontró el token de autenticación');
-        }
-
-        const url = `${api.defaults.baseURL}/examinations/${examinationId}/report/view`;
-        window.open(url, '_blank');
+    viewReport: async (examinationId: string): Promise<void> => {
+        await openReportPdf(examinationId);
     },
 
     /**
      * Descarga el informe PDF
      */
     downloadReport: async (examinationId: string): Promise<void> => {
-        const response = await api.get(
-            `/examinations/${examinationId}/report/view?download=true`,
-            {
-                responseType: 'blob',
-            }
-        );
-
-        // Crear un enlace temporal para descargar el archivo
-        const blob = new Blob([response.data], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `informe_${examinationId}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        await downloadReportPdf(examinationId);
     },
 
     /**

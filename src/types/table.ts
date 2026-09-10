@@ -62,6 +62,7 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     showIndex?: boolean;
     onRowClick?: (row: T, index: number, event: React.MouseEvent) => void;
     onRowDoubleClick?: (row: T, index: number, event: React.MouseEvent) => void;
+    onRowContextMenu?: (row: T, index: number, event: React.MouseEvent) => void;
     selectedRow?: T | null;
     selectedRowIds?: Set<string>;
     rowIdKey?: keyof T;

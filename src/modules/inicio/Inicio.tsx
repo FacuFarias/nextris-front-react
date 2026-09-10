@@ -7,7 +7,6 @@ import {
     CalendarCheck,
     UserPlus,
     UserCog,
-    MousePointer,
     FileText,
     FileEdit,
     Send,
@@ -24,6 +23,7 @@ import { useState, useEffect } from "react";
 import { useUserModules } from "@/hooks/use-user-modules";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { formatDate as formatVisibleDate } from "@/lib/fechaYhora";
 import agendaModuleImage from "@/assets/modules-images/agenda.png";
 import portalModuleImage from "@/assets/modules-images/portal.png";
 
@@ -99,15 +99,6 @@ const menuSections: MenuSection[] = [
                 allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrativo", "Administrador"],
                     requiredPermissions: ["tabs.patients.view", "patients.view"],
                 },
-            {
-                id: "unificacion",
-                title: "Unificación de Paciente",
-                description: "Consolida registros duplicados",
-                icon: <UserCheck className="w-5 h-5" />,
-                path: "/administracion/unificacion-paciente",
-                allowedRoles: ["Sysadmin", "Administrador"],
-                    requiredPermissions: ["tabs.gestion.view"],
-            },
         ],
     },
     {
@@ -161,49 +152,22 @@ const menuSections: MenuSection[] = [
         title: "Diagnóstico y Reportes",
         items: [
             {
-                id: "reasignacion",
-                title: "Reasignación de Exámenes",
-                description: "Redistribuye estudios entre usuarios",
-                path: "/administracion/reasignacion-examenes",
-                icon: <ClipboardList className="w-5 h-5" />,
-                allowedRoles: ["Sysadmin", "Administrador"],
-                requiredPermissions: ["tabs.gestion.view"],
-            },
-            {
-                id: "ejecucion",
-                title: "Ejecución",
-                description: "Gestiona flujo operativo de estudios",
-                icon: <MousePointer className="w-5 h-5" />,
-                path: "/ejecucion",
-                allowedRoles: ["Sysadmin", "Tecnico", "Administrador"],
-                requiredPermissions: ["tabs.execution.view", "execution.view_pending"],
-            },
-            {
-                id: "redaccion",
-                title: "Redacción Radiología",
-                path: "/estudios/redaccion",
-                description: "Redacta e interpreta informes",
+                id: "worklist",
+                title: "Lista de trabajo",
+                path: "/worklist",
+                description: "Consulta y gestiona el flujo de estudios",
                 icon: <FileText className="w-5 h-5" />,
-                allowedRoles: ["Sysadmin", "Medico", "Administrador", "Administrativo"],
-                requiredPermissions: ["tabs.reports.view", "reports.view_writing"],
+                allowedRoles: ["Sysadmin", "Medico", "Tecnico", "Administrador"],
+                requiredPermissions: ["tabs.worklist.view"],
             },
             {
-                id: "inf-predef",
-                title: "Inf. Predef",
-                description: "Usa plantillas para informes rápidos",
-                icon: <FileEdit className="w-5 h-5" />,
-                path: "/estudios/informes-predefinidos",
-                allowedRoles: ["Sysadmin", "Medico", "Administrador"],
-                requiredPermissions: ["tabs.reports.view", "reports.view_reports"],
-            },
-            {
-                id: "car-estudios",
-                title: "Carga Estudios",
-                description: "Carga estudios DICOM",
-                icon: <FileEdit className="w-5 h-5" />,
-                path: "/estudios/cargar-estudios",
-                allowedRoles: ["Sysadmin", "Medico", "Administrador"],
-                requiredPermissions: ["tabs.reports.view", "reports.view_writing"],
+                id: "administrative-view",
+                title: "Vista administrativa",
+                path: "/administrative_view",
+                description: "Consulta simplificada de estudios finalizados",
+                icon: <FileText className="w-5 h-5" />,
+                allowedRoles: ["Sysadmin", "Administrador", "Administrativo"],
+                requiredPermissions: ["tabs.worklist.view"],
             },
             {
                 id: "distribucion",
@@ -218,8 +182,44 @@ const menuSections: MenuSection[] = [
     },
     {
         id: "sistema",
-        title: "Sistema",
+        title: "Gestión y sistema",
         items: [
+            {
+                id: "unificacion",
+                title: "Unificación de Paciente",
+                description: "Consolida registros duplicados",
+                icon: <UserCheck className="w-5 h-5" />,
+                path: "/administracion/unificacion-paciente",
+                allowedRoles: ["Sysadmin", "Administrador"],
+                requiredPermissions: ["tabs.gestion.view"],
+            },
+            {
+                id: "reasignacion",
+                title: "Reasignación de Exámenes",
+                description: "Redistribuye estudios entre usuarios",
+                path: "/administracion/reasignacion-examenes",
+                icon: <ClipboardList className="w-5 h-5" />,
+                allowedRoles: ["Sysadmin", "Administrador"],
+                requiredPermissions: ["tabs.gestion.view"],
+            },
+            {
+                id: "inf-predef",
+                title: "Informes predefinidos",
+                description: "Administra plantillas para informes",
+                icon: <FileEdit className="w-5 h-5" />,
+                path: "/gestion/informes-predefinidos",
+                allowedRoles: ["Sysadmin", "Medico", "Administrador"],
+                requiredPermissions: ["templates.manage"],
+            },
+            {
+                id: "car-estudios",
+                title: "Cargar estudios",
+                description: "Carga y vincula estudios DICOM",
+                icon: <FileEdit className="w-5 h-5" />,
+                path: "/gestion/cargar-estudios",
+                allowedRoles: ["Sysadmin", "Medico", "Administrador"],
+                requiredPermissions: ["dicom.studies.manage"],
+            },
             {
                 id: "configuraciones",
                 title: "Configuraciones",
@@ -376,12 +376,7 @@ export const Inicio = () => {
     };
 
     const formatDate = () => {
-        return currentTime.toLocaleDateString('es-AR', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+        return formatVisibleDate(currentTime);
     };
 
     const handleItemClick = (item: MenuItem) => {

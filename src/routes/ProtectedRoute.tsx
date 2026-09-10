@@ -11,9 +11,10 @@ interface ProtectedRouteProps {
     requiredPermissions?: string[];
     requiredModule?: string;
     allowWithoutPermissions?: boolean;
+    deniedRedirect?: string;
 }
 
-export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions, requiredModule, allowWithoutPermissions = false }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions, requiredModule, allowWithoutPermissions = false, deniedRedirect = "/inicio" }: ProtectedRouteProps) => {
     const { isAuthenticated, isLoading, authData } = useAuth();
     const { moduleCodesSet, isLoading: isModulesLoading, hasError: hasModulesError } = useUserModules(isAuthenticated);
     const hasShownErrorRef = useRef(false);
@@ -64,7 +65,7 @@ export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions, re
     }
 
     if (!hasAccess || !hasModuleAccess) {
-        return <Navigate to="/inicio" replace />;
+        return <Navigate to={deniedRedirect} replace />;
     }
 
     const requiresPasswordChange = !!authData?.user?.requires_password_change;

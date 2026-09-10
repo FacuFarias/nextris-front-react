@@ -4,6 +4,7 @@ import { useReasignacionExamenesPacientes } from '../hooks/use-reasignacion-exam
 import TablaDynamic from '@/components/TableDynamic';
 import { pacienteEstudioColumns } from './columnsPacientes';
 import { Modal, PrimaryButton, SecondaryButton } from '@/components';
+import { formatDate } from '@/lib/fechaYhora';
 
 
 interface ReasingacionPacientesProps {
@@ -96,7 +97,7 @@ export const ReasingacionPacientes = ({ selectedEstudio, handleSubmit }: Reasing
                                 <div>
                                     <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Fecha de realizado</p>
                                     <p className="text-sm text-gray-900 dark:text-gray-100 font-semibold mt-1">
-                                        {selectedEstudio && selectedEstudio.createdon || 'N/A'}
+                                        {selectedEstudio ? formatDate(selectedEstudio.createdon) : 'N/A'}
                                     </p>
                                 </div>
                             </div>

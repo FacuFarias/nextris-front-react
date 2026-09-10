@@ -1,7 +1,6 @@
 import type { TableColumn, TableAction } from "@/types/table"
 import type { PacsStudy } from "../hooks/use-studies-by-location"
-import { fechaYhora } from "@/lib/fechaYhora"
-import { formatDate } from "@/lib/fechaYhora"
+import { fechaYhora, formatDate } from "@/lib/fechaYhora"
 import { Badge } from "@/components/ui/badge"
 import { Check, Eye, Pencil, Share2, UserPen, X } from "lucide-react"
 import { toast } from "sonner"
