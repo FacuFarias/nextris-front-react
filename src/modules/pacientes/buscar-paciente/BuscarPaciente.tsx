@@ -90,7 +90,7 @@ export const BuscarPaciente = () => {
         handleViewHistory,
         canManagePatients,
     );
-    const { patientsData, isLoading } = useBuscarPaciente({ page, per_page: perPage, search: useDebounceSearch, hide_without_studies: hideWithoutStudies, column_filters: JSON.stringify(columnFilters) });
+    const { patientsData, isLoading, isFetching, error: patientsError } = useBuscarPaciente({ page, per_page: perPage, search: useDebounceSearch, hide_without_studies: hideWithoutStudies, column_filters: JSON.stringify(columnFilters) });
 
 
     const pagination = patientsData && {
@@ -228,6 +228,10 @@ export const BuscarPaciente = () => {
                     columns={filteredColumns}
                     showIndex
                     loading={isLoading}
+                    refreshing={isFetching && !isLoading}
+                    refreshError={Boolean(patientsError)}
+                    refreshScopeKey={JSON.stringify([page, perPage, useDebounceSearch, hideWithoutStudies, columnFilters, sortDescending])}
+                    filterAnimationKey={JSON.stringify([useDebounceSearch, hideWithoutStudies, columnFilters])}
                     onRowDoubleClick={handleViewHistory}
                     actions={patientActions}
                     pagination={pagination}

@@ -8,6 +8,7 @@ import { ResetPasswordModal } from "./components/ResetPasswordModal";
 import type { User, UserFormData, UserMedicalSubmitData } from "./types/users.types";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { ImpersonationDialog } from "./components/ImpersonationDialog";
 
 export const GestionUsuarios = () => {
     const { authData, refreshPermissions } = useAuth();
@@ -16,6 +17,14 @@ export const GestionUsuarios = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [impersonationTarget, setImpersonationTarget] = useState<User | null>(null);
+    const canManageUsers = Boolean(
+        authData?.user?.permissions?.includes('*') || authData?.user?.permissions?.includes('users.manage'),
+    );
+    const canImpersonate = Boolean(
+        (authData?.user?.permissions?.includes('*') || authData?.user?.permissions?.includes('users.impersonate'))
+        && !authData?.user?.impersonation,
+    );
 
     const {
         users,
@@ -282,7 +291,12 @@ export const GestionUsuarios = () => {
     const userActions = getUserActions(
         handleOpenModal,
         handleOpenResetPasswordModal,
-        handleDelete
+        handleDelete,
+        canImpersonate ? (user) => {
+            if (user.guid !== authData?.user?.id) setImpersonationTarget(user);
+        } : undefined,
+        authData?.user?.id,
+        canManageUsers,
     );
 
     return (
@@ -292,12 +306,14 @@ export const GestionUsuarios = () => {
                     <h2 className="text-2xl font-bold">Gestión de Usuarios</h2>
                     <p className="text-muted-foreground">Administración de usuarios del sistema</p>
                 </div>
-                <button
-                    className="px-4 py-2 bg-brand-purple text-white rounded-md hover:bg-brand-purple/90"
-                    onClick={() => handleOpenModal()}
-                >
-                    Nuevo Usuario
-                </button>
+                {canManageUsers && (
+                    <button
+                        className="px-4 py-2 bg-brand-purple text-white rounded-md hover:bg-brand-purple/90"
+                        onClick={() => handleOpenModal()}
+                    >
+                        Nuevo Usuario
+                    </button>
+                )}
             </div>
 
             {isLoading ? (
@@ -346,7 +362,8 @@ export const GestionUsuarios = () => {
                 isLoading={false}
             />
 
+            <ImpersonationDialog target={impersonationTarget} onClose={() => setImpersonationTarget(null)} />
+
         </div>
     )
 }
-

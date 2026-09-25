@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type InformeDetalle, type Informes, type StudyNote, type ExaminationNotesResponse } from "../types/informes.types";
 import type { ApiPaginatedResponse } from "@/types/global.type";
-import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, updateExaminationFlags, updateExaminationTagIds, getAllTags, createGeneralNote, getExaminationNotes, deleteExaminationNote, getPatientHistory, assignExam, assignExamBatch, addTagsToExamsBatch, addFlagsToExamsBatch, confirmStudy, type ConfirmStudyPayload, type UpdateReportPayload } from "../services/informes.service";
+import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, updateExaminationFlags, updateExaminationTagIds, getAllTags, createGeneralNote, getExaminationNotes, deleteExaminationNote, getPatientHistory, assignExam, assignExamBatch, addTagsToExamsBatch, addFlagsToExamsBatch, confirmStudy, cancelStudy, markStudyAlreadyRead, getCancellationReasons, type ConfirmStudyPayload, type UpdateReportPayload } from "../services/informes.service";
 import { informesKeys } from "../constants/query-keys";
 import { toast } from "sonner";
 import { notifyInformeChange, useCrossWindowSync } from "../redactar-informe/hooks/use-cross-windows";
@@ -18,7 +18,8 @@ export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported
 
     return {
         informesData: data,
-        isLoading: isLoading || isFetching,
+        isLoading,
+        isFetching,
         error,
         refetchInformes: refetch,
     }
@@ -71,6 +72,54 @@ export const useConfirmStudy = () => {
         onError: (error: any) => {
             toast.error(error.response?.data?.message || 'Error al confirmar el estudio');
         },
+    });
+};
+
+export const useCancellationReasons = (enabled = true) => useQuery({
+    queryKey: ['cancellation-reasons'],
+    queryFn: getCancellationReasons,
+    enabled,
+    staleTime: 10 * 60 * 1000,
+});
+
+export const useCancelStudy = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ examId, reasonCode, detail }: { examId: string; reasonCode: string; detail?: string }) =>
+            cancelStudy(examId, reasonCode, detail),
+        onSuccess: (response, variables) => {
+            queryClient.setQueriesData({ queryKey: informesKeys.lists() }, (old: any) => {
+                if (!old?.data?.data) return old;
+                return { ...old, data: { ...old.data, data: old.data.data.map((item: Informes) =>
+                    item.guid === variables.examId
+                        ? { ...item, workflow_state: 'cancelled', status: 'Cancelled', workflow_state_at: new Date().toISOString(), workflow_state_source: 'nextris_ui', cancellation_reason_code: variables.reasonCode, cancellation_reason: response?.data?.reason || item.cancellation_reason }
+                        : item
+                ) } };
+            });
+            queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
+            toast.success(response.message || 'Estudio cancelado correctamente');
+        },
+        onError: (error: any) => toast.error(error.response?.data?.message || 'No se pudo cancelar el estudio'),
+    });
+};
+
+export const useMarkStudyAlreadyRead = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (examId: string) => markStudyAlreadyRead(examId),
+        onSuccess: (response, examId) => {
+            queryClient.setQueriesData({ queryKey: informesKeys.lists() }, (old: any) => {
+                if (!old?.data?.data) return old;
+                return { ...old, data: { ...old.data, data: old.data.data.map((item: Informes) =>
+                    item.guid === examId
+                        ? { ...item, workflow_state: 'already_read', is_reported: true, report_date: new Date().toISOString(), workflow_state_at: new Date().toISOString() }
+                        : item
+                ) } };
+            });
+            queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
+            toast.success(response.message || 'Estudio marcado como ya leído');
+        },
+        onError: (error: any) => toast.error(error.response?.data?.message || 'No se pudo marcar el estudio como leído'),
     });
 };
 

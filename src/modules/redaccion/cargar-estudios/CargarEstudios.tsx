@@ -12,6 +12,8 @@ import { useQuery } from "@tanstack/react-query"
 import { useAppConfig } from "@/context/AppConfigContext"
 import { toast } from "sonner"
 import { formatDate } from "@/lib/fechaYhora"
+import { TableRefreshStatus } from "@/components/TableRefreshStatus"
+import { useRowHighlights } from "@/hooks/use-row-highlights"
 
 export const CargarEstudios = () => {
     const [files, setFiles] = useState<File[]>([])
@@ -39,10 +41,18 @@ export const CargarEstudios = () => {
         typeof receiveMonthlyLimit === "number"
         && receiveMonthlyLimit >= 0
         && receivedCount >= receiveMonthlyLimit;
-    const { estudiosNoVinculadosData, isLoading, error, refetchEstudiosNoVinculados } = useEstudiosNoVinculados({
+    const { estudiosNoVinculadosData, isLoading, isFetching, error, refetchEstudiosNoVinculados } = useEstudiosNoVinculados({
         include_linked: true,
         include_pacs: false,
     });
+    const uploadedStudies = estudiosNoVinculadosData?.data?.data || [];
+    const changedUploadedStudies = useRowHighlights(
+        uploadedStudies,
+        "uploaded-studies",
+        !isLoading,
+        (study) => study.guid,
+        (study) => [study.patient_name, study.patient_id, study.study_description, study.file_size_mb, study.upload_date, study.modality, study.islinked, study.study_instance_uid, study.linked_order_accession, study.linked_examination_guid],
+    );
     const cargarEstudiosMutation = useCargarEstudios();
 
     // Estados para animación de tabs
@@ -330,7 +340,7 @@ export const CargarEstudios = () => {
                                         )}
 
                                         {/* Lista de Archivos DICOM Subidos */}
-                                        <div className="mt-8">
+                                        <div className="relative mt-8">
                                             <div className="flex items-center justify-between mb-6">
                                                 <div className="flex items-center gap-2">
                                                     <Archive className="w-5 h-5 text-gray-700 dark:text-gray-200" />
@@ -338,11 +348,11 @@ export const CargarEstudios = () => {
                                                 </div>
                                                 <Button
                                                     onClick={() => refetchEstudiosNoVinculados()}
-                                                    disabled={isLoading}
+                                                    disabled={isFetching}
                                                     variant="outline"
                                                     className="flex items-center gap-2 bg-brand-purple text-white hover:bg-brand-purple/90 hover:text-white"
                                                 >
-                                                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                                    <RefreshCw className="w-4 h-4" />
                                                     Actualizar
                                                 </Button>
                                             </div>
@@ -350,22 +360,20 @@ export const CargarEstudios = () => {
                                             {/* Lista de estudios */}
                                             <div className="space-y-3">
                                                 {isLoading ? (
-                                                    <div className="flex items-center justify-center py-12">
-                                                        <Loader2 className="w-8 h-8 animate-spin text-brand-purple dark:text-purple-400" />
-                                                    </div>
-                                                ) : error ? (
+                                                    <div className="py-12" />
+                                                ) : error && !estudiosNoVinculadosData ? (
                                                     <div className="text-center py-12 text-red-500 dark:text-red-400">
                                                         Error al cargar los archivos
                                                     </div>
-                                                ) : estudiosNoVinculadosData?.data?.data?.length === 0 ? (
+                                                ) : uploadedStudies.length === 0 ? (
                                                     <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                                                         No hay archivos DICOM subidos
                                                     </div>
                                                 ) : (
-                                                    estudiosNoVinculadosData?.data?.data?.map((estudio) => (
+                                                    uploadedStudies.map((estudio) => (
                                                         <div
                                                             key={estudio.guid}
-                                                            className="bg-transparent border border-gray-200/70 dark:border-gray-700/70 rounded-lg p-4 hover:bg-white/5 transition-colors"
+                                                            className={`bg-transparent border border-gray-200/70 dark:border-gray-700/70 rounded-lg p-4 hover:bg-white/5 transition-colors ${changedUploadedStudies.has(estudio.guid) ? 'row-change-highlight' : ''}`}
                                                         >
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-start gap-3 flex-1">
@@ -412,6 +420,7 @@ export const CargarEstudios = () => {
                                                     ))
                                                 )}
                                             </div>
+                                            <TableRefreshStatus refreshing={isFetching} error={Boolean(error && estudiosNoVinculadosData)} />
                                         </div>
                                     </>
 

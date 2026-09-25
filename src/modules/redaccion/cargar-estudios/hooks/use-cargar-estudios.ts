@@ -30,7 +30,7 @@ export const useEstudiosNoVinculados = ({
     include_pacs?: boolean,
 } = {}) => {
 
-    const { data, isLoading, error, refetch } = useQuery<EstudiosNoVinculados>({
+    const { data, isLoading, isFetching, error, refetch } = useQuery<EstudiosNoVinculados>({
         queryKey: cargarEstudiosKeys.listNoVinculados(include_linked, include_pacs),
         queryFn: () => getUnlinkedStudies({ include_linked, include_pacs }),
         refetchInterval: 120000,
@@ -39,13 +39,14 @@ export const useEstudiosNoVinculados = ({
     return {
         estudiosNoVinculadosData: data,
         isLoading,
+        isFetching,
         error,
         refetchEstudiosNoVinculados: refetch,
     }
 }
 
 export const useSearchExams = () => {
-    const { data, isLoading, error, refetch } = useQuery<SearchExams>({
+    const { data, isLoading, isFetching, error, refetch } = useQuery<SearchExams>({
         queryKey: cargarEstudiosKeys.searchExams(),
         queryFn: () => getSearchExams({}),
         refetchInterval: 120000,
@@ -54,6 +55,7 @@ export const useSearchExams = () => {
     return {
         ordenesSinImagenData: data,
         isLoading,
+        isFetching,
         error,
         refetchOrdenesSinImagen: refetch,
     }
@@ -78,7 +80,7 @@ export const useVincularEstudio = () => {
 }
 
 export const useEstudiosVinculados = () => {
-    const { data, isLoading, error, refetch } = useQuery<LinkedStudiesResponse>({
+    const { data, isLoading, isFetching, error, refetch } = useQuery<LinkedStudiesResponse>({
         queryKey: cargarEstudiosKeys.listLinkedStudies(),
         queryFn: () => getLinkedStudies(),
         refetchInterval: 120000,
@@ -88,6 +90,7 @@ export const useEstudiosVinculados = () => {
     return {
         estudiosVinculadosData: data,
         isLoading,
+        isFetching,
         error,
         refetchEstudiosVinculados: refetch,
     }

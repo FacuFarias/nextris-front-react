@@ -1,7 +1,8 @@
-import { createBrowserRouter, RouterProvider, Outlet, useLocation } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Outlet, Navigate, useLocation } from "react-router-dom";
 import { lazy, Suspense, useEffect, useRef } from "react";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { useAnalytics } from "@/context/AnalyticsContext";
+import { useAuth } from "@/context/AuthContext";
 
 // Rutas de autenticación — cargadas de forma eager (necesarias en el arranque)
 import { Login } from "@/modules/auth/login/Login";
@@ -61,6 +62,12 @@ const PageLoader = () => (
     </div>
 );
 
+function RequireSession() {
+    const { isAuthenticated, isLoading } = useAuth();
+    if (isLoading) return <PageLoader />;
+    return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+}
+
 const router = createBrowserRouter([
     {
         // RootLayout wraps every route so PageViewTracker has useLocation access
@@ -82,6 +89,9 @@ const router = createBrowserRouter([
         path: "/login/pacientes",
         element: <Login initialIsPatient={true} />,
     },
+    {
+        element: <RequireSession />,
+        children: [
     {
         path: "/inicio",
         element: (
@@ -317,8 +327,8 @@ const router = createBrowserRouter([
         path: "/configuraciones/tablas",
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
-                requiredPermissions={["tabs.config.view", "users.manage"]}
+                allowedRoles={["Sysadmin", "Admin", "Administrador"]}
+                requiredPermissions={["users.manage", "users.impersonate"]}
             >
                 <ConfiguracionTablas />
             </ProtectedRoute>
@@ -370,10 +380,6 @@ const router = createBrowserRouter([
         ),
     },
     {
-        path: "/case/:shortCode",
-        element: <CaseLink />,
-    },
-    {
         path: "/mis-datos",
         element: (
             <ProtectedRoute allowedRoles={["patient"]} requiredModule="patient_portal">
@@ -382,6 +388,12 @@ const router = createBrowserRouter([
         ),
     },
     {/*Nexi IA — deshabilitado temporalmente*/}
+        ],
+    },
+    {
+        path: "/case/:shortCode",
+        element: <CaseLink />,
+    },
         ], // end children of RootLayout
     },   // end root route
 ]);

@@ -24,6 +24,9 @@ export type Informes = {
     blocked_by: string;
     blocked_by_name: string;
     study_instance_uid: string;
+    study_date: string | null;
+    study_time: string | null;
+    arrival_time: string | null;
     num_instances: number;
     location: string;
     report_available: boolean;
@@ -48,6 +51,12 @@ export type Informes = {
     applied_template_id: string | null;
     template_name: string;
     template_source?: string;
+    workflow_state?: 'pending' | 'cancelled' | 'already_read';
+    workflow_state_at?: string | null;
+    workflow_state_source?: string | null;
+    workflow_state_user_id?: string | null;
+    cancellation_reason_code?: string | null;
+    cancellation_reason?: string | null;
 }
 
 export type ExaminationNotesResponse = {
@@ -103,6 +112,11 @@ export type InformeDetalle = {
         applied_template_report_type?: string | null;
         flags?: string[];
         tag_ids?: string[];
+        workflow_state?: 'pending' | 'cancelled' | 'already_read';
+        workflow_state_at?: string | null;
+        workflow_state_source?: string | null;
+        workflow_detail?: string;
+        report_read_only?: boolean;
     }
 
 }

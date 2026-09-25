@@ -13,7 +13,8 @@ export const useBuscarPaciente = ({ page = 1, per_page = 8, search = "", hide_wi
 
     return {
         patientsData: data,
-        isLoading: isLoading || isFetching,
+        isLoading,
+        isFetching,
         error,
         refetchPatients: refetch,
     }

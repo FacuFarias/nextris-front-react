@@ -199,6 +199,7 @@ export const AgendasMaquinas = () => {
                         />
                         <TablaDynamic<Equipment>
                             data={filteredEquipment}
+                            filterAnimationKey={searchTerm}
                             columns={equipmentColumns}
                             loading={isLoading}
                             selectedRow={selectedEquipment}

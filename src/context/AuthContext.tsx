@@ -15,6 +15,11 @@ interface User {
     surname: string;
     user_type: string;
     username: string;
+    impersonation?: {
+        actor_id: string;
+        actor_username: string;
+        session_id: string;
+    };
 }
 
 interface AuthData {
@@ -28,7 +33,8 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (data: AuthData) => void;
-    logout: () => void;
+    replaceSession: (data: AuthData) => void;
+    logout: () => Promise<void>;
     updateUser: (user: User) => void;
     markPasswordChanged: () => void;
     refreshPermissions: () => Promise<void>;
@@ -54,23 +60,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const response = await api.post<{ success: boolean; data: { permissions: string[] } }>(
                     "/auth/refresh-permissions"
                 );
+                const latestSession = JSON.parse(localStorage.getItem("authData") || "null") as AuthData | null;
                 const restored = {
-                    ...stored,
+                    ...(latestSession || stored),
                     user: {
-                        ...stored.user,
+                        ...(latestSession || stored).user,
                         permissions: response.data.data.permissions,
                     },
                 };
                 if (isMounted) setAuthData(restored);
                 localStorage.setItem("authData", JSON.stringify(restored));
-            } catch {
-                try {
-                    const stored = JSON.parse(storedAuthData) as AuthData;
-                    if (isMounted) setAuthData(stored);
-                } catch (parseError) {
-                    console.error("Error parsing stored auth data:", parseError);
-                    localStorage.removeItem("authData");
-                }
+            } catch (error) {
+                console.error("[AuthContext] No se pudo restaurar la sesión:", error);
+                localStorage.removeItem("authData");
+                localStorage.setItem("nextris_session_switch", crypto.randomUUID());
+                if (isMounted) setAuthData(null);
             } finally {
                 if (isMounted) setIsLoading(false);
             }
@@ -78,6 +82,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         void restoreSession();
         return () => { isMounted = false; };
+    }, []);
+
+    useEffect(() => {
+        const synchronizeSession = (event: StorageEvent) => {
+            if (event.key !== "nextris_session_switch") return;
+            queryClient.clear();
+            window.location.replace(localStorage.getItem("authData") ? "/inicio" : "/login");
+        };
+        const expireSession = () => {
+            setAuthData(null);
+            queryClient.clear();
+            localStorage.setItem("nextris_session_switch", crypto.randomUUID());
+            window.location.replace("/login");
+        };
+        window.addEventListener("storage", synchronizeSession);
+        window.addEventListener("nextris-auth-expired", expireSession);
+        return () => {
+            window.removeEventListener("storage", synchronizeSession);
+            window.removeEventListener("nextris-auth-expired", expireSession);
+        };
     }, []);
 
     const login = (data: AuthData) => {
@@ -97,7 +121,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const logout = () => {
+    const replaceSession = (data: AuthData) => {
+        queryClient.clear();
+        localStorage.removeItem("activeFacilityId");
+        sessionStorage.removeItem("nextris_session_id");
+        try {
+            posthog.reset();
+        } catch {
+            // silent
+        }
+        login(data);
+        localStorage.setItem("nextris_session_switch", crypto.randomUUID());
+    };
+
+    const logout = async () => {
+        if (authData?.user.impersonation) {
+            try {
+                await api.post("/auth/logout");
+            } catch (error) {
+                console.error("[AuthContext] No se pudo cerrar la sesión asumida:", error);
+                const status = (error as { response?: { status?: number } }).response?.status;
+                if (status !== 401 && status !== 422) throw error;
+            }
+        }
         try {
             posthog.capture("user_logout");
             posthog.reset();
@@ -106,6 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         setAuthData(null);
         localStorage.removeItem("authData");
+        localStorage.setItem("nextris_session_switch", crypto.randomUUID());
         localStorage.removeItem("activeFacilityId");
         queryClient.clear();
     };
@@ -171,6 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 isAuthenticated,
                 isLoading,
                 login,
+                replaceSession,
                 logout,
                 updateUser,
                 markPasswordChanged,

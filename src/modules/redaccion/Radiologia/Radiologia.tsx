@@ -4,9 +4,9 @@ import { MainLayout } from "@/layouts/layout"
 import { HandHelping, RefreshCcw, Loader2, SlidersHorizontal, X, UserCheck, Tags, Flag, FileText } from "lucide-react"
 import { useMemo, useState, useEffect, useRef, useCallback } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { useInformes, useBlockExam, useUnblockExam, useUpdateFlags, useUpdateTagIds, useAllTags, useUpdateGeneralNotes, useDeleteExaminationNote, useAssignExam, useAssignExamBatch, useAddTagsBatch, useAddFlagsBatch, useConfirmStudy } from "./hooks/use-informes"
+import { useInformes, useBlockExam, useUnblockExam, useUpdateFlags, useUpdateTagIds, useAllTags, useUpdateGeneralNotes, useDeleteExaminationNote, useAssignExam, useAssignExamBatch, useAddTagsBatch, useAddFlagsBatch, useConfirmStudy, useCancellationReasons, useCancelStudy, useMarkStudyAlreadyRead } from "./hooks/use-informes"
 import { useCrossWindowSync } from "./redactar-informe/hooks/use-cross-windows"
-import { getInformesActions, getAdministrativeInformesActions, getFlagsColumn, getTagsColumn, getGeneralNotesAction, getPatientNameColumn, getSelectionColumn, informeColumns } from "./components/columns"
+import { getInformesActions, getAdministrativeInformesActions, getFlagsColumn, getTagsColumn, getGeneralNotesAction, getPatientNameColumn, getSelectionColumn, getInformeColumns, informeColumns } from "./components/columns"
 import TablaDynamic from "@/components/TableDynamic"
 import type { Informes } from "./types/informes.types"
 import type { FilterPreset, FilterPresetFilters } from "./types/filter-preset.types"
@@ -20,6 +20,7 @@ import { ConfirmationModal } from "./components/ConfirmationModal"
 import { AssignExamModal } from "./components/AssignExamModal"
 import { MultiSelectActionsModal } from "./components/MultiSelectActionsModal"
 import { ConfirmStudyModal } from "./components/ConfirmStudyModal"
+import { CancelStudyModal } from "./components/CancelStudyModal"
 import { FilterPresetTabs } from "./components/FilterPresetTabs"
 import { AdministrativeShareModal } from "./components/AdministrativeShareModal"
 import { Autocomplete } from "@/components/autocomplete"
@@ -36,6 +37,7 @@ import { openReportPdf } from "@/services/reportPdf"
 import { useTemplates } from "../informe-predefinidos/hooks/use-templates"
 import type { Template } from "../informe-predefinidos/types/informe-pred.types"
 import { TemplateModal } from "./components/modals"
+import { MissingImageLinkModal } from "./components/MissingImageLinkModal"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -46,13 +48,17 @@ import { Button } from "@/components/ui/button"
 import fondoImage from "@/assets/redaccion.jpg"
 import backDarkImage from "@/assets/back-dark.jpg";
 
-const FIXED_COLUMN_KEYS = ["_selection", "is_reported"] as const;
+const FIXED_COLUMN_KEYS = ["_selection"] as const;
+const HIDDEN_COLUMN_KEYS = ["is_reported"] as const;
 const XRAY_MODALITY_CODES = ["DX", "CR", "RX"] as const;
 const DISPLAY_MODALITY_CODES: Record<string, string> = { RMN: "MR" };
 
 const normalizeVisibleColumns = (columnKeys: string[], fixedKeys: readonly string[] = FIXED_COLUMN_KEYS) => [
     ...Array.from(new Set(fixedKeys)),
-    ...Array.from(new Set(columnKeys.filter((key) => !fixedKeys.includes(key)))),
+    ...Array.from(new Set(columnKeys.filter((key) => (
+        !fixedKeys.includes(key)
+        && !HIDDEN_COLUMN_KEYS.includes(key as (typeof HIDDEN_COLUMN_KEYS)[number])
+    )))),
 ];
 
 const showViewerError = (error: unknown) => {
@@ -84,6 +90,12 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
         || user?.user_type?.toLowerCase() === "sysadmin"
         || user?.username?.toLowerCase() === "sysadmin"
     );
+    const isAdministrator = [user?.role_name, user?.user_type]
+        .some((role) => ["sysadmin", "admin", "administrador"].includes(role?.trim().toLowerCase() || ""));
+    const canLinkMissingImages = Boolean(
+        isAdministrator
+        && (user?.permissions?.includes("*") || user?.permissions?.includes("worklist.link_missing_images"))
+    );
 
     const [studioTypeId, setStudioTypeId] = useState<string | undefined>(undefined);
     const [bodyPartId, setBodyPartId] = useState<string | undefined>(undefined);
@@ -108,15 +120,18 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [isNoImageModalOpen, setIsNoImageModalOpen] = useState(false);
     const [isConfirmStudyModalOpen, setIsConfirmStudyModalOpen] = useState(false);
+    const [isCancelStudyModalOpen, setIsCancelStudyModalOpen] = useState(false);
+    const [isMarkAlreadyReadModalOpen, setIsMarkAlreadyReadModalOpen] = useState(false);
+    const [isReadOnlyInfoModalOpen, setIsReadOnlyInfoModalOpen] = useState(false);
     const [selectedExamForConfirm, setSelectedExamForConfirm] = useState<Informes | null>(null);
     const [selectedInforme, setSelectedInforme] = useState<Informes | null>(null);
     const [isBlocking, setIsBlocking] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<string[]>(
         normalizeVisibleColumns(
             isAdministrativeView
-                ? ["patient_name", "patient_id", "patient_dni", "study_type", "template_name", "status", "created_on", "flags"]
-                : ["patient_name", "patient_id", "patient_dni", "assignto_name", "study_type", "template_name", "accession_number", "created_on", "num_instances", "flags", "tag_ids"],
-            isAdministrativeView ? ["is_reported"] : FIXED_COLUMN_KEYS,
+                ? ["patient_name", "patient_id", "patient_dni", "study_type", "template_name", "status", "workflow_state", "created_on", "study_date", "arrival_time", "flags"]
+                : ["patient_name", "patient_id", "patient_dni", "assignto_name", "study_type", "template_name", "status", "accession_number", "workflow_state", "created_on", "study_date", "arrival_time", "num_instances", "flags", "tag_ids"],
+            isAdministrativeView ? [] : FIXED_COLUMN_KEYS,
         )
     );
     const [sortColumn, setSortColumn] = useState("");
@@ -124,7 +139,8 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const [activePresetId, setActivePresetId] = useState<string | null>(null);
     const presetsInitializedRef = useRef(false);
     const [shareModal, setShareModal] = useState<{ kind: "images" | "study"; informe: Informes } | null>(null);
-    const fixedColumnKeys = isAdministrativeView ? ["is_reported"] : [...FIXED_COLUMN_KEYS];
+    const [missingImageStudy, setMissingImageStudy] = useState<Informes | null>(null);
+    const fixedColumnKeys: string[] = isAdministrativeView ? [] : [...FIXED_COLUMN_KEYS];
 
     const useDebounceSearch = useDebounce(searchTerm, 500);
     const { mutateAsync: blockExam } = useBlockExam();
@@ -134,7 +150,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const { allTags } = useAllTags();
     const { mutate: updateGeneralNotes, isPending: isUpdatingNotes } = useUpdateGeneralNotes();
     const { mutate: deleteExaminationNote, isPending: isDeletingNote } = useDeleteExaminationNote();
-    const { informesData, isLoading: isLoadingInformes, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: isAdministrativeView ? true : verFinalizados, show_ready: isAdministrativeView ? incluirSinFinalizar : listoParaLeer, assigned_to_me: isAdministrativeView ? false : asignadosAMi, show_no_image: verSinImagenes, show_without_order: verSinOrden, show_only_with_notes: soloConNotas, bodypart_id: isAdministrativeView ? "" : bodyPartId, modality_id: modalityId, study_group_id: isAdministrativeView ? "" : studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField, sort_column: sortColumn, sort_direction: sortDirection });
+    const { informesData, isLoading: isLoadingInformes, isFetching: isFetchingInformes, error: informesError, refetchInformes } = useInformes({ page, per_page: perPage, search: useDebounceSearch, show_reported: isAdministrativeView ? true : verFinalizados, show_ready: isAdministrativeView ? incluirSinFinalizar : listoParaLeer, assigned_to_me: isAdministrativeView ? false : asignadosAMi, show_no_image: verSinImagenes, show_without_order: verSinOrden, show_only_with_notes: soloConNotas, bodypart_id: isAdministrativeView ? "" : bodyPartId, modality_id: modalityId, study_group_id: isAdministrativeView ? "" : studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField, sort_column: sortColumn, sort_direction: sortDirection });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
@@ -144,6 +160,9 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const [selectedExamForAssign, setSelectedExamForAssign] = useState<Informes | null>(null);
     const { mutateAsync: assignExam } = useAssignExam();
     const { mutateAsync: confirmStudy } = useConfirmStudy();
+    const { data: cancellationReasonsResponse } = useCancellationReasons(isConfirmStudyModalOpen || isCancelStudyModalOpen);
+    const { mutateAsync: cancelStudy, isPending: isCancellingStudy } = useCancelStudy();
+    const { mutateAsync: markStudyAlreadyRead, isPending: isMarkingAlreadyRead } = useMarkStudyAlreadyRead();
     const { mutateAsync: assignExamBatch } = useAssignExamBatch();
     const { mutateAsync: addTagsBatch } = useAddTagsBatch();
     const { mutateAsync: addFlagsBatch } = useAddFlagsBatch();
@@ -244,6 +263,30 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
         setIsConfirmStudyModalOpen(false);
         setSelectedExamForConfirm(null);
     }, [confirmStudy, selectedExamForConfirm]);
+
+    const handleOpenCancelStudy = useCallback(() => {
+        setIsConfirmStudyModalOpen(false);
+        setIsCancelStudyModalOpen(true);
+    }, []);
+
+    const handleCancelStudy = useCallback(async (reasonCode: string, detail?: string) => {
+        if (!selectedExamForConfirm) return;
+        await cancelStudy({ examId: selectedExamForConfirm.guid, reasonCode, detail });
+        setIsCancelStudyModalOpen(false);
+        setSelectedExamForConfirm(null);
+    }, [cancelStudy, selectedExamForConfirm]);
+
+    const handleOpenAlreadyRead = useCallback(() => {
+        setIsConfirmStudyModalOpen(false);
+        setIsMarkAlreadyReadModalOpen(true);
+    }, []);
+
+    const handleMarkAlreadyRead = useCallback(async () => {
+        if (!selectedExamForConfirm) return;
+        await markStudyAlreadyRead(selectedExamForConfirm.guid);
+        setIsMarkAlreadyReadModalOpen(false);
+        setSelectedExamForConfirm(null);
+    }, [markStudyAlreadyRead, selectedExamForConfirm]);
 
     const closeConfirmStudyModal = useCallback(() => {
         setIsConfirmStudyModalOpen(false);
@@ -422,12 +465,22 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
         [selectedStudyIds, toggleStudySelection, toggleSelectAll, informesData]
     );
 
+    const handleOpenMissingImageModal = useCallback((informe: Informes) => {
+        setMissingImageStudy(informe);
+    }, []);
+
+    const missingImageColumns = useMemo(
+        () => getInformeColumns(canLinkMissingImages ? handleOpenMissingImageModal : undefined),
+        [canLinkMissingImages, handleOpenMissingImageModal],
+    );
+
     // Todas las columnas disponibles (selección + paciente + estáticas + banderas + tags)
     const allColumns = useMemo(
-        () => isAdministrativeView
-            ? [patientNameColumn, ...informeColumns, flagsColumn, tagsColumn]
-            : [selectionColumn, patientNameColumn, ...informeColumns, flagsColumn, tagsColumn],
-        [isAdministrativeView, selectionColumn, patientNameColumn, flagsColumn, tagsColumn],
+        () => (isAdministrativeView
+            ? [patientNameColumn, ...missingImageColumns, flagsColumn, tagsColumn]
+            : [selectionColumn, patientNameColumn, ...missingImageColumns, flagsColumn, tagsColumn]
+        ).filter((column) => column.key !== "is_reported"),
+        [isAdministrativeView, selectionColumn, patientNameColumn, missingImageColumns, flagsColumn, tagsColumn],
     );
 
     // Columnas visibles (incluye banderas si está en la lista)
@@ -497,7 +550,10 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
             const colsWithTemplate = colsWithPatientId.includes("template_name")
                 ? colsWithPatientId
                 : [...colsWithPatientId, "template_name"];
-            setVisibleColumns(normalizeVisibleColumns(colsWithTemplate.includes("assignto_name") ? colsWithTemplate : [...colsWithTemplate, "assignto_name"]));
+            const colsWithArrivalTime = colsWithTemplate.includes("arrival_time")
+                ? colsWithTemplate
+                : [...colsWithTemplate, "arrival_time"];
+            setVisibleColumns(normalizeVisibleColumns(colsWithArrivalTime.includes("assignto_name") ? colsWithArrivalTime : [...colsWithArrivalTime, "assignto_name"]));
             setPerPage(f.per_page || 10);
             setSortColumn(f.sort_column || "");
             setSortDirection(f.sort_direction || "asc");
@@ -578,6 +634,15 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     };
 
     const handleRedactarInforme = async (informe: Informes) => {
+        if (informe.workflow_state === 'already_read') {
+            setSelectedInforme(informe);
+            setIsReadOnlyInfoModalOpen(true);
+            return;
+        }
+        if (informe.workflow_state === 'cancelled') {
+            toast.error('El estudio está cancelado y no puede redactarse');
+            return;
+        }
         // Verificar si el informe está bloqueado por otro usuario
         if (informe.blocked_by) {
             const blockerLabel = informe.blocked_by_name || 'otro usuario';
@@ -850,7 +915,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="min-w-0 flex-1"><InputSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Buscar paciente o historial..." /></div>
+                        <div className="min-w-0 flex-1"><InputSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} placeholder="Buscar paciente, Patient ID o historial..." /></div>
                         <button type="button" onClick={() => setShowFilters(true)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground" aria-label="Abrir filtros">
                             <SlidersHorizontal className="h-5 w-5" />
                         </button>
@@ -896,7 +961,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                                         <InputSearch
                                             searchTerm={searchTerm}
                                             setSearchTerm={setSearchTerm}
-                                            placeholder="Buscar paciente o historial..."
+                                            placeholder="Buscar paciente, Patient ID o historial..."
                                         />
                                     </div>
                                     {!isAdministrativeView && (
@@ -1163,6 +1228,11 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                     data={(informesData?.data?.data) || []}
                     columns={filteredColumns}
                     loading={isLoadingInformes}
+                    refreshing={isFetchingInformes && !isLoadingInformes}
+                    refreshError={Boolean(informesError)}
+                    refreshScopeKey={JSON.stringify([isAdministrativeView, page, perPage, useDebounceSearch, verFinalizados, listoParaLeer, asignadosAMi, verSinImagenes, verSinOrden, soloConNotas, bodyPartId, modalityId, studioTypeId, flagFilter, dateRange, dateField, sortColumn, sortDirection])}
+                    filterAnimationKey={JSON.stringify([isAdministrativeView, useDebounceSearch, verFinalizados, listoParaLeer, asignadosAMi, verSinImagenes, verSinOrden, soloConNotas, bodyPartId, modalityId, studioTypeId, flagFilter, dateRange, dateField])}
+                    additionalChangeValue={(row) => [row.notes_count, row.general_notes, row.report_available, row.blocked_by]}
                     pagination={pagination}
                     actions={isAdministrativeView
                         ? getAdministrativeInformesActions(
@@ -1427,6 +1497,56 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                     laterality_id: selectedExamForConfirm?.laterality_id || null,
                 }}
                 onConfirm={handleConfirmStudy}
+                onCancelStudy={canConfirmExecute && selectedExamForConfirm?.workflow_state === 'pending' && !selectedExamForConfirm?.is_reported
+                    ? handleOpenCancelStudy
+                    : undefined}
+                onAlreadyRead={canConfirmExecute && selectedExamForConfirm?.workflow_state === 'pending' && !selectedExamForConfirm?.is_reported
+                    ? handleOpenAlreadyRead
+                    : undefined}
+            />
+
+            <CancelStudyModal
+                key={selectedExamForConfirm?.guid || 'cancel-study-modal'}
+                isOpen={isCancelStudyModalOpen}
+                onClose={() => {
+                    setIsCancelStudyModalOpen(false);
+                    setSelectedExamForConfirm(null);
+                }}
+                reasons={cancellationReasonsResponse?.data || []}
+                isLoading={isCancellingStudy}
+                onConfirm={handleCancelStudy}
+            />
+
+            <ConfirmationModal
+                isOpen={isMarkAlreadyReadModalOpen}
+                onClose={() => {
+                    setIsMarkAlreadyReadModalOpen(false);
+                    setSelectedExamForConfirm(null);
+                }}
+                onConfirm={() => void handleMarkAlreadyRead()}
+                title="Marcar como ya leído"
+                message="El estudio ya fue leído en Info Parque. Al continuar no se podrá redactar ni modificar el reporte en NextRIS. ¿Desea continuar?"
+                confirmText="Sí, marcar ya leído"
+                cancelText="Volver"
+                variant="warning"
+                isLoading={isMarkingAlreadyRead}
+            />
+
+            <ConfirmationModal
+                isOpen={isReadOnlyInfoModalOpen}
+                onClose={() => {
+                    setIsReadOnlyInfoModalOpen(false);
+                    setSelectedInforme(null);
+                }}
+                onConfirm={() => {
+                    setIsReadOnlyInfoModalOpen(false);
+                    setSelectedInforme(null);
+                }}
+                title="Estudio ya leído en Info Parque"
+                message="Este estudio ya fue leído en Info Parque y no puede redactarse en NextRIS."
+                confirmText="Entendido"
+                cancelText="Cerrar"
+                variant="info"
             />
 
             {/* Modal de Acciones Múltiples */}
@@ -1449,6 +1569,17 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                     patientName={shareModal.informe.patient_name}
                     studyDescription={shareModal.informe.study_type}
                     onClose={() => setShareModal(null)}
+                />
+            )}
+
+            {missingImageStudy && (
+                <MissingImageLinkModal
+                    study={missingImageStudy}
+                    onClose={() => setMissingImageStudy(null)}
+                    onLinked={() => {
+                        setMissingImageStudy(null);
+                        void refetchInformes();
+                    }}
                 />
             )}
 

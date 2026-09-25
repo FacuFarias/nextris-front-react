@@ -139,6 +139,7 @@ export const UnificacionPaciente = () => {
 
                 <TablaDynamic<Patient>
                     data={patientsData?.data?.data || []}
+                    filterAnimationKey={useDebounceSearch}
                     columns={columnsWithCheckbox}
                     showIndex
                     rowIdKey="guid"

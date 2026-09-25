@@ -33,7 +33,8 @@ export const useDistribucion = (allReported: boolean = false, page: number = 1, 
 
     return {
         examenes,
-        isLoading: isLoading || isFetching,
+        isLoading,
+        isFetching,
         error,
         refetch,
         sendReport: sendReportMutation.mutate,

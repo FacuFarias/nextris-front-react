@@ -213,6 +213,7 @@ export const HistorialPaciente = () => {
 
                 <TablaDynamic<HistoryPatient>
                     data={paginatedData}
+                    filterAnimationKey={debouncedSearch}
                     columns={historyColumns}
                     showIndex
                     loading={isLoading}

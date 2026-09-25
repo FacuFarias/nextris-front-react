@@ -142,6 +142,7 @@ export const TiposEstudio = () => {
             ) : (
                 <TablaDynamic
                     data={filteredTiposEstudio}
+                    filterAnimationKey={JSON.stringify([filterModality, filterBodypart])}
                     columns={tipoEstudioColumns}
                     showIndex
                     actions={tipoEstudioActions}

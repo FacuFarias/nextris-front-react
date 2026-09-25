@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Loader2, X } from "lucide-react";
+import { CheckCircle2, Eye, Loader2, X } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { Autocomplete } from "@/components/autocomplete";
 import { getMedicosAll } from "@/services/api-global.service";
 import { api } from "@/lib/api";
@@ -28,6 +29,8 @@ interface ConfirmStudyModalProps {
         laterality_id: string | null;
     };
     onConfirm: (data: ConfirmStudyPayload) => Promise<void>;
+    onCancelStudy?: () => void;
+    onAlreadyRead?: () => void;
 }
 
 export const ConfirmStudyModal = ({
@@ -37,6 +40,8 @@ export const ConfirmStudyModal = ({
     isEditing = false,
     initialData,
     onConfirm,
+    onCancelStudy,
+    onAlreadyRead,
 }: ConfirmStudyModalProps) => {
     const [referringPhysicianId, setReferringPhysicianId] = useState("");
     const [requestingPhysicianId, setRequestingPhysicianId] = useState("");
@@ -242,8 +247,14 @@ export const ConfirmStudyModal = ({
                 <div className="flex flex-col-reverse justify-end gap-3 border-t pt-4 sm:flex-row">
                     <SecondaryButton onClick={onClose}>
                         <X className="mr-2 h-5 w-5" />
-                        Cancelar
+                        Cerrar
                     </SecondaryButton>
+                    {onCancelStudy && <Button className="border border-red-600 text-red-600 hover:bg-red-50" variant="outline" onClick={onCancelStudy} disabled={loading || isSubmitting}>
+                        Cancelar estudio
+                    </Button>}
+                    {onAlreadyRead && <Button className="border border-amber-600 text-amber-700 hover:bg-amber-50" variant="outline" onClick={onAlreadyRead} disabled={loading || isSubmitting}>
+                        <Eye className="mr-2 h-5 w-5" />Ya leído
+                    </Button>}
                     <PrimaryButton onClick={handleSubmit} disabled={!studytypeId || loading || isSubmitting}>
                         {isSubmitting ? (
                             <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{isEditing ? "Guardando..." : "Confirmando..."}</>

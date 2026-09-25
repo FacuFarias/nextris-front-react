@@ -112,6 +112,11 @@ export const RedactarInforme = () => {
 
     const { informeDetalle, isLoading } = useInformeDetalle(informeGuid);
     const reportData = (informeDetalle as any)?.data || {};
+    const reportReadOnly = Boolean(
+        reportData.report_read_only
+        || reportData.workflow_state === 'already_read'
+        || reportData.workflow_state === 'cancelled'
+    );
     const reportStudyTypeId = String(reportData.study_type_id || '').trim();
     const reportLocationId = String(reportData.location_id || '').trim();
     const structuredReportsEnabled = Boolean(reportData.structured_reports_enabled);
@@ -142,6 +147,15 @@ export const RedactarInforme = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [onlyStudyType, setOnlyStudyType] = useState(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+    const [isWorkflowInfoModalOpen, setIsWorkflowInfoModalOpen] = useState(false);
+    const workflowInfoShownRef = useRef<string | undefined>(undefined);
+
+    useEffect(() => {
+        if (!informeGuid || !reportData.workflow_state || reportData.workflow_state === 'pending') return;
+        if (workflowInfoShownRef.current === informeGuid) return;
+        workflowInfoShownRef.current = informeGuid;
+        setIsWorkflowInfoModalOpen(true);
+    }, [informeGuid, reportData.workflow_state]);
 
     // Hooks para plantillas
     const activeStudyTypeFilter = studyTypeFilter || reportStudyTypeId;
@@ -282,6 +296,7 @@ export const RedactarInforme = () => {
     }, [getExamMetaFromCachedLists, informeDetalle?.data, informeGuid]);
 
     const applyTemplateToReport = useCallback((template: Template) => {
+        if (reportReadOnly) return;
         const examinationReason = reportData.clinical_question || reportData.history || '';
         setAppliedTemplateId(template.guid);
         setFormData(prev => ({
@@ -290,13 +305,13 @@ export const RedactarInforme = () => {
             content: template.content || template.findings || '',
             conclusion: template.conclusion || '',
         }));
-    }, [reportData.clinical_question, reportData.history]);
+    }, [reportData.clinical_question, reportData.history, reportReadOnly]);
 
     // Algunos reportes antiguos llegan vacíos aunque exista un default asociado.
     // Aplicarlo desde el frontend evita que el redactor quede en blanco mientras
     // se mantiene la selección equivalente en el backend.
     useEffect(() => {
-        if (!informeGuid || !informeDetalle?.data || !defaultTemplate) return;
+        if (!informeGuid || !informeDetalle?.data || !defaultTemplate || reportReadOnly) return;
         if (defaultAppliedReportGuidRef.current === informeGuid) return;
 
         const reportAlreadyHasContent = [
@@ -317,7 +332,7 @@ export const RedactarInforme = () => {
 
         defaultAppliedReportGuidRef.current = informeGuid;
         applyTemplateToReport(defaultTemplate);
-    }, [applyTemplateToReport, defaultTemplate, formData, informeDetalle?.data, informeGuid]);
+    }, [applyTemplateToReport, defaultTemplate, formData, informeDetalle?.data, informeGuid, reportReadOnly]);
 
     useEffect(() => {
         const srDebug = (informeDetalle as any)?.debug_sr;
@@ -567,6 +582,12 @@ export const RedactarInforme = () => {
     }, [isResizingRightSidebar]);
 
     const handleChange = (field: string, value: string) => {
+        if (reportReadOnly) {
+            toast.info(reportData.workflow_state === 'already_read'
+                ? 'Este estudio ya fue leído en Info Parque y no puede redactarse en NextRIS.'
+                : 'Este estudio fue cancelado y no puede modificarse.');
+            return;
+        }
         const previousValue = formData[field as keyof typeof formData] || '';
         const parser = new DOMParser();
         const prevDoc = parser.parseFromString(previousValue, 'text/html');
@@ -1003,6 +1024,12 @@ export const RedactarInforme = () => {
 
 
     const handleGuardarInforme = () => {
+        if (reportReadOnly) {
+            toast.info(reportData.workflow_state === 'already_read'
+                ? 'Este estudio ya fue leído en Info Parque y no puede redactarse en NextRIS.'
+                : 'Este estudio fue cancelado y no puede modificarse.');
+            return;
+        }
         if (!informeGuid) {
             toast.error('No se encontró el ID del examen');
             return;
@@ -1244,6 +1271,12 @@ export const RedactarInforme = () => {
     };
 
     const handleSignAction = () => {
+        if (reportReadOnly) {
+            toast.info(reportData.workflow_state === 'already_read'
+                ? 'Este estudio ya fue leído en Info Parque y no puede redactarse en NextRIS.'
+                : 'Este estudio fue cancelado y no puede modificarse.');
+            return;
+        }
         if (isSigning || isSkipping || updateReportMutation.isPending) return;
 
         if (isSigned) {
@@ -1278,6 +1311,10 @@ export const RedactarInforme = () => {
         examData?: typeof nextExamData,
         options?: { releaseCurrentExam?: boolean },
     ) => {
+        if (reportReadOnly) {
+            toast.info('Este estudio está en modo solo lectura y no permite seleccionar el siguiente examen desde el redactor.');
+            return;
+        }
         const dataToUse = examData || nextExamData;
         if (!dataToUse) {
             toast.error('No se recibió información del siguiente estudio');
@@ -1389,6 +1426,7 @@ export const RedactarInforme = () => {
     };
 
     const handleSkipReport = () => {
+        if (reportReadOnly) return;
         if (isSkipping || isSigning || updateReportMutation.isPending) return;
         if (reportHasUnsavedChanges) {
             setIsSkipConfirmationOpen(true);
@@ -1882,6 +1920,16 @@ export const RedactarInforme = () => {
                                     {renderHeaderFields(studyHeaderFields)}
                                 </p>
                                 <div className="mt-2 flex flex-wrap items-center gap-3">
+                                    {reportData.workflow_state === 'already_read' && (
+                                        <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
+                                            Ya leído en Info Parque · Solo lectura
+                                        </span>
+                                    )}
+                                    {reportData.workflow_state === 'cancelled' && (
+                                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-800 dark:bg-red-900/40 dark:text-red-200">
+                                            Cancelado{reportData.workflow_detail ? ` · ${reportData.workflow_detail}` : ''}
+                                        </span>
+                                    )}
                                     <FlagsCell
                                         examId={examId}
                                         currentFlags={examFlags}
@@ -1933,23 +1981,23 @@ export const RedactarInforme = () => {
 
                             {/* Toolbar única global */}
                             <div className="sticky top-0 z-20 hidden flex-wrap items-center gap-0.5 rounded-md border border-gray-200 bg-gray-50 p-1.5 dark:border-gray-700 dark:bg-[#0f1218] md:flex">
-                                <button onClick={() => activeEditor?.chain().focus().toggleBold().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('bold') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Negrita" disabled={!activeEditor || isSigned}><Bold className="w-4 h-4 dark:text-gray-200" /></button>
-                                <button onClick={() => activeEditor?.chain().focus().toggleItalic().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('italic') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Cursiva" disabled={!activeEditor || isSigned}><Italic className="w-4 h-4 dark:text-gray-200" /></button>
-                                <button onClick={() => activeEditor?.chain().focus().toggleUnderline().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('underline') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Subrayado" disabled={!activeEditor || isSigned}><UnderlineIcon className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().toggleBold().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('bold') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Negrita" disabled={!activeEditor || isSigned || reportReadOnly}><Bold className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().toggleItalic().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('italic') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Cursiva" disabled={!activeEditor || isSigned || reportReadOnly}><Italic className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().toggleUnderline().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('underline') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Subrayado" disabled={!activeEditor || isSigned || reportReadOnly}><UnderlineIcon className="w-4 h-4 dark:text-gray-200" /></button>
                                 <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
-                                <button onClick={() => activeEditor?.chain().focus().toggleOrderedList().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('orderedList') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Lista numerada" disabled={!activeEditor || isSigned}><ListOrdered className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().toggleOrderedList().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('orderedList') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Lista numerada" disabled={!activeEditor || isSigned || reportReadOnly}><ListOrdered className="w-4 h-4 dark:text-gray-200" /></button>
                                 <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
-                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('left').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'left' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Alinear izquierda" disabled={!activeEditor || isSigned}><AlignLeft className="w-4 h-4 dark:text-gray-200" /></button>
-                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('center').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'center' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Centrar" disabled={!activeEditor || isSigned}><AlignCenter className="w-4 h-4 dark:text-gray-200" /></button>
-                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('right').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'right' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Alinear derecha" disabled={!activeEditor || isSigned}><AlignRight className="w-4 h-4 dark:text-gray-200" /></button>
-                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('justify').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'justify' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Justificar" disabled={!activeEditor || isSigned}><AlignJustify className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('left').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'left' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Alinear izquierda" disabled={!activeEditor || isSigned || reportReadOnly}><AlignLeft className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('center').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'center' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Centrar" disabled={!activeEditor || isSigned || reportReadOnly}><AlignCenter className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('right').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'right' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Alinear derecha" disabled={!activeEditor || isSigned || reportReadOnly}><AlignRight className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('justify').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'justify' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Justificar" disabled={!activeEditor || isSigned || reportReadOnly}><AlignJustify className="w-4 h-4 dark:text-gray-200" /></button>
                                 <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
-                                <button onClick={() => activeEditor?.chain().focus().undo().run()} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600" type="button" title="Deshacer" disabled={!activeEditor || !activeEditor?.can?.().undo() || isSigned}><Undo className="w-4 h-4 dark:text-gray-200" /></button>
-                                <button onClick={() => activeEditor?.chain().focus().redo().run()} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600" type="button" title="Rehacer" disabled={!activeEditor || !activeEditor?.can?.().redo() || isSigned}><Redo className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().undo().run()} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600" type="button" title="Deshacer" disabled={!activeEditor || !activeEditor?.can?.().undo() || isSigned || reportReadOnly}><Undo className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().redo().run()} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600" type="button" title="Rehacer" disabled={!activeEditor || !activeEditor?.can?.().redo() || isSigned || reportReadOnly}><Redo className="w-4 h-4 dark:text-gray-200" /></button>
                                 <button
                                     type="button"
                                     onClick={() => setIsTemplateModalOpen(true)}
-                                    disabled={isSigned}
+                                    disabled={isSigned || reportReadOnly}
                                     className="ml-auto flex h-8 items-center gap-2 rounded-md bg-brand-purple px-3 text-xs font-semibold text-white transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:opacity-50"
                                     title="Abrir informes predefinidos"
                                 >
@@ -1973,8 +2021,8 @@ export const RedactarInforme = () => {
                                         onDragLeave={handleDragLeave}
                                         onDrop={(e) => handleDrop(e, 'study_reason', editorsRef.current.study_reason)}
                                         onEditorReady={(editor) => handleEditorReady(editor, 'study_reason')}
-                                        readOnly={isSigned || isMobile}
-                                        readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
+                                        readOnly={isSigned || isMobile || reportReadOnly}
+                                        readOnlyLabel={reportReadOnly ? "Estudio en modo solo lectura" : (isMobile ? "Modo consulta móvil" : undefined)}
                                         showToolbar={false}
                                         autoGrow
                                         className="report-editor-rich-text h-10 min-h-0 resize-y overflow-auto"
@@ -1997,8 +2045,8 @@ export const RedactarInforme = () => {
                                         onDragLeave={handleDragLeave}
                                         onDrop={(e) => handleDrop(e, 'content', editorsRef.current.content)}
                                         onEditorReady={(editor) => handleEditorReady(editor, 'content')}
-                                        readOnly={isSigned || isMobile}
-                                        readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
+                                        readOnly={isSigned || isMobile || reportReadOnly}
+                                        readOnlyLabel={reportReadOnly ? "Estudio en modo solo lectura" : (isMobile ? "Modo consulta móvil" : undefined)}
                                         showToolbar={false}
                                         autoGrow
                                         className="report-editor-rich-text h-full min-h-0 flex-1 resize-y overflow-auto"
@@ -2021,8 +2069,8 @@ export const RedactarInforme = () => {
                                         onDragLeave={handleDragLeave}
                                         onDrop={(e) => handleDrop(e, 'conclusion', editorsRef.current.conclusion)}
                                         onEditorReady={(editor) => handleEditorReady(editor, 'conclusion')}
-                                        readOnly={isSigned || isMobile}
-                                        readOnlyLabel={isMobile ? "Modo consulta móvil" : undefined}
+                                        readOnly={isSigned || isMobile || reportReadOnly}
+                                        readOnlyLabel={reportReadOnly ? "Estudio en modo solo lectura" : (isMobile ? "Modo consulta móvil" : undefined)}
                                         showToolbar={false}
                                         autoGrow
                                         className="report-editor-rich-text h-full min-h-0 flex-1 resize-y overflow-auto"
@@ -2478,7 +2526,7 @@ export const RedactarInforme = () => {
                     <button
                         type="button"
                         onClick={handleSignAction}
-                        disabled={isSigning || isSkipping || updateReportMutation.isPending}
+                        disabled={isSigning || isSkipping || updateReportMutation.isPending || reportReadOnly}
                         aria-keyshortcuts="F1"
                         className="flex h-12 min-w-56 items-center justify-center gap-2 rounded-lg bg-brand-purple px-7 text-base font-bold text-white shadow-lg shadow-purple-900/20 transition hover:-translate-y-0.5 hover:bg-purple-800 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                     >
@@ -2490,7 +2538,7 @@ export const RedactarInforme = () => {
                     <button
                         type="button"
                         onClick={handleGuardarInforme}
-                        disabled={updateReportMutation.isPending || isSigned || isSigning || isSkipping}
+                        disabled={updateReportMutation.isPending || isSigned || isSigning || isSkipping || reportReadOnly}
                         aria-keyshortcuts="F2"
                         className="flex h-10 min-w-36 items-center justify-center gap-2 rounded-md border border-brand-purple bg-white px-4 text-sm font-semibold text-brand-purple transition hover:bg-brand-purple/10 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-transparent dark:text-purple-300"
                     >
@@ -2502,7 +2550,7 @@ export const RedactarInforme = () => {
                     <button
                         type="button"
                         onClick={handleSkipReport}
-                        disabled={isSkipping || isSigning || updateReportMutation.isPending}
+                        disabled={isSkipping || isSigning || updateReportMutation.isPending || reportReadOnly}
                         aria-keyshortcuts="F4"
                         className="flex h-10 min-w-36 items-center justify-center gap-2 rounded-md border border-amber-400 bg-amber-50 px-4 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-900/40"
                     >
@@ -2616,6 +2664,19 @@ export const RedactarInforme = () => {
                 cancelText="Continuar editando"
                 variant="warning"
                 isLoading={isSkipping}
+            />
+
+            <ConfirmationModal
+                isOpen={isWorkflowInfoModalOpen}
+                onClose={() => setIsWorkflowInfoModalOpen(false)}
+                onConfirm={() => setIsWorkflowInfoModalOpen(false)}
+                title={reportData.workflow_state === 'already_read' ? 'Estudio ya leído en Info Parque' : 'Estudio cancelado'}
+                message={reportData.workflow_state === 'already_read'
+                    ? 'Este estudio ya fue leído en Info Parque y no puede redactarse en NextRIS. El reporte recibido, si existe, sólo puede consultarse y generar PDF.'
+                    : 'Este estudio fue cancelado y no puede redactarse, guardarse ni firmarse en NextRIS.'}
+                confirmText="Entendido"
+                cancelText="Cerrar"
+                variant={reportData.workflow_state === 'already_read' ? 'info' : 'danger'}
             />
 
             <NextExamModal

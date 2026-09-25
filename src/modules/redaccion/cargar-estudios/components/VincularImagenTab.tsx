@@ -1,4 +1,4 @@
-import { Archive, Image, Link2, RefreshCw, Loader2, ChevronLeft, ChevronRight, Search, ArrowRight, CheckCircle2, ScanLine } from "lucide-react"
+import { Archive, Image, Link2, RefreshCw, ChevronLeft, ChevronRight, Search, ArrowRight, CheckCircle2, ScanLine } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PrimaryButton, SecondaryButton } from "@/components"
 import { useState, useMemo } from "react"
@@ -11,6 +11,8 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { formatDate } from "@/lib/fechaYhora"
+import { TableRefreshStatus } from "@/components/TableRefreshStatus"
+import { useRowHighlights } from "@/hooks/use-row-highlights"
 
 export const VincularImagenTab = () => {
     const [selectedEstudio, setSelectedEstudio] = useState<any>(null);
@@ -27,12 +29,27 @@ export const VincularImagenTab = () => {
     const [ordenesPagina, setOrdenesPagina] = useState(1);
     const [ordenesPerPage] = useState(10);
 
-    const { estudiosNoVinculadosData, isLoading, refetchEstudiosNoVinculados } = useEstudiosNoVinculados();
-    const { ordenesSinImagenData, isLoading: isLoadingOrdenes, refetchOrdenesSinImagen } = useSearchExams();
+    const { estudiosNoVinculadosData, isLoading, isFetching: isFetchingEstudios, error: estudiosError, refetchEstudiosNoVinculados } = useEstudiosNoVinculados();
+    const { ordenesSinImagenData, isLoading: isLoadingOrdenes, isFetching: isFetchingOrdenes, error: ordenesError, refetchOrdenesSinImagen } = useSearchExams();
     const { mutate: vincularEstudio } = useVincularEstudio();
 
     // Datos paginados para estudios
     const estudiosData = estudiosNoVinculadosData?.data?.data || [];
+    const changedEstudios = useRowHighlights(
+        estudiosData,
+        "unlinked-studies",
+        !isLoading,
+        (study) => study.guid,
+        (study) => [study.patient_name, study.modality, study.instance_count, study.study_date],
+    );
+    const ordenesData = ordenesSinImagenData?.data?.data || [];
+    const changedOrdenes = useRowHighlights(
+        ordenesData,
+        "orders-without-images",
+        !isLoadingOrdenes,
+        (order) => order.guid,
+        (order) => [order.patient_name, order.study_type, order.accession, order.date],
+    );
     const totalEstudios = estudiosData.length;
     const totalPaginasEstudios = Math.ceil(totalEstudios / estudiosPerPage);
     const estudiosActuales = useMemo(() => {
@@ -123,7 +140,7 @@ export const VincularImagenTab = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
                         {/* ── PANEL IZQUIERDO: Estudios Sin Vincular ── */}
-                        <div className="flex flex-col overflow-x-auto overflow-y-hidden rounded-xl border border-purple-200 shadow-sm dark:border-purple-900">
+                        <div className="relative flex flex-col overflow-x-auto overflow-y-hidden rounded-xl border border-purple-200 shadow-sm dark:border-purple-900">
                             {/* Header */}
                             <div className="min-w-[420px] bg-gradient-to-r from-brand-purple to-purple-700 px-5 py-4 text-white">
                                 <div className="flex items-center justify-between">
@@ -142,11 +159,11 @@ export const VincularImagenTab = () => {
                                         </span>
                                         <button
                                             onClick={() => refetchEstudiosNoVinculados()}
-                                            disabled={isLoading}
+                                            disabled={isFetchingEstudios}
                                             className="bg-white/15 hover:bg-white/25 p-1.5 rounded-lg transition-colors disabled:opacity-50"
                                             title="Actualizar"
                                         >
-                                            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                                            <RefreshCw className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 </div>
@@ -164,9 +181,9 @@ export const VincularImagenTab = () => {
                                 {/* Filas */}
                                 <div className="flex-1 overflow-y-auto" style={{ maxHeight: '360px' }}>
                                     {isLoading ? (
-                                        <div className="flex items-center justify-center py-16">
-                                            <Loader2 className="w-7 h-7 animate-spin text-brand-purple/60" />
-                                        </div>
+                                        <div className="py-16" />
+                                    ) : estudiosError && !estudiosNoVinculadosData ? (
+                                        <div className="py-16 text-center text-xs text-red-500">No se pudieron cargar los estudios</div>
                                     ) : totalEstudios === 0 ? (
                                         <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
                                             <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-full">
@@ -181,7 +198,7 @@ export const VincularImagenTab = () => {
                                                 <div
                                                     key={estudio.guid}
                                                     onClick={() => handleEstudioClick(estudio)}
-                                                    className={`grid grid-cols-3 px-4 py-3 cursor-pointer transition-all border-b border-gray-100 dark:border-gray-700/60 group
+                                                    className={`grid grid-cols-3 px-4 py-3 cursor-pointer transition-all border-b border-gray-100 dark:border-gray-700/60 group ${changedEstudios.has(estudio.guid) ? 'row-change-highlight' : ''}
                                                         ${isSelected
                                                             ? 'bg-brand-purple/10 dark:bg-purple-900/30 border-l-2 border-l-brand-purple'
                                                             : 'hover:bg-white/5 dark:hover:bg-white/5'
@@ -228,10 +245,11 @@ export const VincularImagenTab = () => {
                                     </div>
                                 )}
                             </div>
+                            <TableRefreshStatus refreshing={isFetchingEstudios} error={Boolean(estudiosError && estudiosNoVinculadosData)} />
                         </div>
 
                         {/* ── PANEL DERECHO: Órdenes Sin Imagen ── */}
-                        <div className="flex flex-col overflow-x-auto overflow-y-hidden rounded-xl border border-cyan-200 shadow-sm dark:border-cyan-900">
+                        <div className="relative flex flex-col overflow-x-auto overflow-y-hidden rounded-xl border border-cyan-200 shadow-sm dark:border-cyan-900">
                             {/* Header */}
                             <div className="min-w-[540px] bg-gradient-to-r from-cyan-600 to-cyan-500 px-5 py-4 text-white">
                                 <div className="flex items-center justify-between">
@@ -250,11 +268,11 @@ export const VincularImagenTab = () => {
                                         </span>
                                         <button
                                             onClick={() => refetchOrdenesSinImagen()}
-                                            disabled={isLoadingOrdenes}
+                                            disabled={isFetchingOrdenes}
                                             className="bg-white/15 hover:bg-white/25 p-1.5 rounded-lg transition-colors disabled:opacity-50"
                                             title="Actualizar"
                                         >
-                                            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingOrdenes ? 'animate-spin' : ''}`} />
+                                            <RefreshCw className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 </div>
@@ -294,9 +312,9 @@ export const VincularImagenTab = () => {
                                 {/* Filas */}
                                 <div className="flex-1 overflow-y-auto" style={{ maxHeight: '360px' }}>
                                     {isLoadingOrdenes ? (
-                                        <div className="flex items-center justify-center py-16">
-                                            <Loader2 className="w-7 h-7 animate-spin text-cyan-500/60" />
-                                        </div>
+                                        <div className="py-16" />
+                                    ) : ordenesError && !ordenesSinImagenData ? (
+                                        <div className="py-16 text-center text-xs text-red-500">No se pudieron cargar las órdenes</div>
                                     ) : totalOrdenes === 0 ? (
                                         <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
                                             <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-full">
@@ -311,7 +329,7 @@ export const VincularImagenTab = () => {
                                                 <div
                                                     key={orden.guid}
                                                     onClick={() => handleOrdenClick(orden)}
-                                                    className={`grid grid-cols-4 px-4 py-3 cursor-pointer transition-all border-b border-gray-100 dark:border-gray-700/60 group
+                                                    className={`grid grid-cols-4 px-4 py-3 cursor-pointer transition-all border-b border-gray-100 dark:border-gray-700/60 group ${changedOrdenes.has(orden.guid) ? 'row-change-highlight' : ''}
                                                         ${isSelected
                                                             ? 'bg-cyan-50 dark:bg-cyan-900/20 border-l-2 border-l-cyan-500'
                                                             : 'hover:bg-white/5 dark:hover:bg-white/5'
@@ -348,6 +366,7 @@ export const VincularImagenTab = () => {
                                     </div>
                                 )}
                             </div>
+                            <TableRefreshStatus refreshing={isFetchingOrdenes} error={Boolean(ordenesError && ordenesSinImagenData)} />
                         </div>
                     </div>
 

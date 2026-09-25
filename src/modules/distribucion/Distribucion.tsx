@@ -49,6 +49,8 @@ export const Distribucion = () => {
     const {
         examenes,
         isLoading,
+        isFetching,
+        error: distributionError,
         sendReportAsync,
     } = useDistribucion(allReported, page, pageSize, dateRange, dateField);
 
@@ -188,6 +190,10 @@ export const Distribucion = () => {
                     columns={distribucionColumns}
                     showIndex
                     loading={isLoading}
+                    refreshing={isFetching && !isLoading}
+                    refreshError={Boolean(distributionError)}
+                    refreshScopeKey={JSON.stringify([allReported, page, pageSize, dateRange, dateField])}
+                    filterAnimationKey={JSON.stringify([allReported, dateRange, dateField])}
                     preserveTableHeight
                     actions={actions}
                     pagination={pagination}

@@ -80,7 +80,7 @@ const DownloadImagesButton = ({ study }: { study: Study }) => {
                 <TooltipTrigger asChild>
                     <span className="inline-flex">{button}</span>
                 </TooltipTrigger>
-                <TooltipContent>No hay imágenes disponibles</TooltipContent>
+                <TooltipContent>No hay imagenes vinculadas a este estudio</TooltipContent>
             </Tooltip>
         </TooltipProvider>
     );
@@ -142,7 +142,7 @@ const ViewImagesButton = ({ study }: { study: Study }) => {
                 <TooltipTrigger asChild>
                     <span className="inline-flex">{button}</span>
                 </TooltipTrigger>
-                <TooltipContent>No hay imágenes disponibles</TooltipContent>
+                <TooltipContent>No hay imagenes vinculadas a este estudio</TooltipContent>
             </Tooltip>
         </TooltipProvider>
     );
@@ -188,7 +188,7 @@ export const createStudyColumns = (onShare: (study: Study) => void): TableColumn
                 <Button
                     size="sm"
                     variant="outline"
-                    disabled={!row.study_uid}
+                    disabled={!row.has_images || !row.study_uid}
                     className="gap-1 h-7 text-xs border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white dark:border-purple-400 dark:text-purple-400 dark:hover:bg-purple-600 dark:hover:text-white"
                     onClick={() => onShare(row)}
                 >
@@ -201,7 +201,7 @@ export const createStudyColumns = (onShare: (study: Study) => void): TableColumn
                 <div className="flex flex-wrap gap-2 items-center">
                     <ViewImagesButton study={row} />
                     <ReportButton study={row} />
-                    {row.study_uid ? shareButton : (
+                    {row.has_images && row.study_uid ? shareButton : (
                         <UnavailableReportAction>{shareButton}</UnavailableReportAction>
                     )}
                     <DownloadImagesButton study={row} />

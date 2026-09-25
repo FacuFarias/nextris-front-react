@@ -27,8 +27,16 @@ import { formatDateTime } from "@/lib/fechaYhora";
 
 const formatDate = (value: string | null) => {
     if (!value) return "-";
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? "-" : formatDateTime(date);
+    return formatDateTime(value) || "-";
+};
+
+const formatJson = (value: string | null) => {
+    if (!value) return "Sin contenido";
+    try {
+        return JSON.stringify(JSON.parse(value), null, 2);
+    } catch {
+        return value;
+    }
 };
 
 const ResultBadge = ({ log }: { log: ClinicaParqueLog }) => (
@@ -101,13 +109,13 @@ const MessageDetailDialog = ({
                             <div>
                                 <h3 className="mb-2 text-sm font-semibold">Mensaje recibido / enviado</h3>
                                 <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-md bg-slate-950 p-3 text-xs text-slate-100">
-                                    {detail.request_body || "Sin contenido"}
+                                    {formatJson(detail.request_body)}
                                 </pre>
                             </div>
                             <div>
                                 <h3 className="mb-2 text-sm font-semibold">Respuesta</h3>
                                 <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-md bg-slate-950 p-3 text-xs text-slate-100">
-                                    {detail.response_body || "Sin contenido"}
+                                    {formatJson(detail.response_body)}
                                 </pre>
                             </div>
                         </div>
@@ -248,6 +256,10 @@ export const IntegracionClinicaParque = () => {
 
                 <TablaDynamic
                     data={response?.items || []}
+                    filterAnimationKey={JSON.stringify([search, apiEndpoint, success])}
+                    refreshScopeKey={JSON.stringify([search, apiEndpoint, success, page, perPage])}
+                    refreshing={query.isFetching && !query.isLoading}
+                    refreshError={Boolean(query.error)}
                     columns={columns}
                     actions={actions}
                     showIndex

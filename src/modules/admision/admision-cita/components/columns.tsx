@@ -1,6 +1,7 @@
 import type { TableAction, TableColumn } from "@/types/table";
 import type { Admision } from "../types/admision.type";
 import { Check, Delete, Printer } from "lucide-react";
+import { formatPatientName } from "@/lib/formatPatientName";
 
 // Configuración de columnas para usuarios
 const admisionColumns: TableColumn<Admision>[] = [
@@ -11,6 +12,7 @@ const admisionColumns: TableColumn<Admision>[] = [
         sortable: true,
         filterable: true,
         mobile: { role: "title", order: 1 },
+        render: (value) => formatPatientName(value),
     },
     {
         key: "medref",

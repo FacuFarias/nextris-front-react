@@ -4,6 +4,7 @@ import { fechaYhora, formatDate } from "@/lib/fechaYhora"
 import { Badge } from "@/components/ui/badge"
 import { Check, Eye, Pencil, Share2, UserPen, X } from "lucide-react"
 import { toast } from "sonner"
+import { formatPatientName } from "@/lib/formatPatientName"
 
 const formatStudyTime = (timeValue: string | null) => {
   if (!timeValue) return "—"
@@ -26,7 +27,7 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
     filterable: true,
     mobile: { role: "title", order: 1 },
     render: (value: string | null) => {
-      const text = value || "—"
+      const text = formatPatientName(value)
       return <span className="truncate block" title={text}>{text}</span>
     },
   },

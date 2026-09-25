@@ -23,6 +23,7 @@ import { useState, useEffect } from "react";
 import { useUserModules } from "@/hooks/use-user-modules";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 import { formatDate as formatVisibleDate } from "@/lib/fechaYhora";
 import agendaModuleImage from "@/assets/modules-images/agenda.png";
 import portalModuleImage from "@/assets/modules-images/portal.png";
@@ -381,8 +382,9 @@ export const Inicio = () => {
 
     const handleItemClick = (item: MenuItem) => {
         if (item.id === "desconectar") {
-            logout();
-            navigate("/");
+            void logout().then(() => navigate("/")).catch(() => {
+                toast.error('No se pudo cerrar la sesión. Inténtalo nuevamente.');
+            });
         }
     };
 

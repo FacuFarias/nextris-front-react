@@ -69,6 +69,8 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+        (config as typeof config & { _authSessionSwitch?: string | null })._authSessionSwitch =
+            localStorage.getItem('nextris_session_switch');
 
         // Forward session ID to backend analytics middleware
         const sid = getSessionId();
@@ -93,6 +95,11 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+
+        // A request from a previous identity must never be retried with the new identity.
+        if (originalRequest?._authSessionSwitch !== localStorage.getItem('nextris_session_switch')) {
+            return Promise.reject(error);
+        }
 
         // Si el 401 viene del login, no intentar refresh — dejar que onError lo maneje
         if (originalRequest.url?.includes('/auth/login')) {
@@ -131,6 +138,7 @@ api.interceptors.response.use(
                 isRefreshing = false;
                 // No hay refresh token, redirigir al login
                 localStorage.removeItem('authData');
+                window.dispatchEvent(new Event('nextris-auth-expired'));
                 // Avoid redirect — prevent infinite reload loop
                 return Promise.reject(error);
             }
@@ -167,6 +175,7 @@ api.interceptors.response.use(
                 processQueue(refreshError, null);
                 isRefreshing = false;
                 localStorage.removeItem('authData');
+                window.dispatchEvent(new Event('nextris-auth-expired'));
                 // Avoid redirect — prevent infinite reload loop
                 return Promise.reject(refreshError);
             }

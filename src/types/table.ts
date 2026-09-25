@@ -5,6 +5,8 @@ export interface TableColumn<T = any> {
     sortable?: boolean;
     resizable?: boolean;
     render?: (value: any, row: T, index: number) => React.ReactNode;
+    changeValue?: (row: T) => unknown; // Dependencias visibles de una celda compuesta
+    trackChanges?: boolean; // Desactivar en controles que no muestran datos del servidor
     headerRender?: () => React.ReactNode;
     className?: string;
     headerClassName?: string;
@@ -57,6 +59,11 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     columns: TableColumn<T>[];
     actions?: TableAction<T>[];
     loading?: boolean;
+    refreshing?: boolean;
+    refreshError?: boolean;
+    refreshScopeKey?: string;
+    filterAnimationKey?: string;
+    additionalChangeValue?: (row: T) => unknown;
     emptyMessage?: string | React.ReactNode;
     className?: string;
     showIndex?: boolean;

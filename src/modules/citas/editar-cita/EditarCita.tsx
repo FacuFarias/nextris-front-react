@@ -118,6 +118,7 @@ export const EditarCita = () => {
 
                     <TablaDynamic<Cita>
                         data={citasData?.data?.data || []}
+                        filterAnimationKey={debouncedSearch}
                         columns={citaColumns}
                         showIndex
                         loading={isLoadingCitas}

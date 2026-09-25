@@ -1,13 +1,37 @@
 import type { TableAction, TableColumn } from "@/types/table";
 import type { Informes } from "../types/informes.types";
-import { fechaYhora, formatDate } from "@/lib/fechaYhora";
-import { CalendarDays, ClipboardPlus, FileText, Hash, Image, KeyRound, Lock, LockOpen, CircleCheck, Clock, CheckCircle2, HelpCircle, Pencil, UserCheck, Share2 } from "lucide-react";
+import { fechaYhora, formatDate, formatDateTime } from "@/lib/fechaYhora";
+import { CalendarDays, FileText, Hash, Image, KeyRound, Lock, LockOpen, CircleCheck, Clock, CheckCircle2, UserCheck, Share2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FlagsCell } from "./FlagsCell";
 import { TagsCell } from "./TagsCell";
 import { GeneralNotesCell } from "./GeneralNotesCell";
 import type { Tag } from "@/modules/configuracion/configuracion-tablas/institucional/tags";
 import { useRef } from "react";
+import { formatPatientName } from "@/lib/formatPatientName";
+
+const formatStudyTime = (timeValue: string | null | undefined) => {
+    if (!timeValue) return "—";
+    const digits = timeValue.replace(/\D/g, "");
+    if (digits.length < 4) return timeValue;
+
+    const hh = digits.slice(0, 2);
+    const mm = digits.slice(2, 4);
+    const ss = digits.length >= 6 ? digits.slice(4, 6) : "00";
+    return `${hh}:${mm}:${ss}`;
+};
+
+const DateTimeCell = ({ value }: { value: string | null | undefined }) => {
+    if (!value) return <span className="text-gray-400 text-xs">—</span>;
+
+    const [date, time] = fechaYhora(value).split(" ");
+    return (
+        <div>
+            <div>{date}</div>
+            <div className="text-xs text-muted-foreground">{time || "—"}</div>
+        </div>
+    );
+};
 
 const ImmediateSelectionCheckbox = ({
     checked,
@@ -47,6 +71,7 @@ export const getSelectionColumn = (
     totalCount: number,
 ): TableColumn<Informes> => ({
     key: "_selection",
+    trackChanges: false,
     label: "",
     headerClassName: "w-10",
     sortable: false,
@@ -81,13 +106,38 @@ export const getPatientNameColumn = (): TableColumn<Informes> => ({
     mobile: { role: "title", order: 1 },
     render: (value: string) => (
         <div className="flex items-center gap-2">
-            <span>{value}</span>
+            <span>{formatPatientName(value)}</span>
         </div>
     ),
 });
 
+const WorkflowStateBadge = ({ state }: { state?: Informes['workflow_state'] }) => {
+    if (!state || state === 'pending') return <span className="text-muted-foreground">Pendiente</span>;
+    const cancelled = state === 'cancelled';
+    return <span className={cancelled
+        ? "rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800 dark:bg-red-900/30 dark:text-red-300"
+        : "rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"}>
+        {cancelled ? 'Cancelado' : 'Ya leído'}
+    </span>;
+};
+
+const WorkflowStateDetails = ({ informe }: { informe: Informes }) => {
+    if (!informe.workflow_state || informe.workflow_state === 'pending') return null;
+    const timestamp = informe.workflow_state_at ? new Date(informe.workflow_state_at) : null;
+    const formattedTimestamp = informe.workflow_state_at ? formatDateTime(informe.workflow_state_at) : "";
+    return (
+        <div className="mt-0.5 space-y-0.5 text-[10px] font-normal text-muted-foreground">
+            {timestamp && !Number.isNaN(timestamp.getTime()) && formattedTimestamp && <div>{formattedTimestamp}</div>}
+            {informe.workflow_state_source && <div>{informe.workflow_state_source}</div>}
+            {informe.cancellation_reason && <div>{informe.cancellation_reason}</div>}
+        </div>
+    );
+};
+
 // Configuración de columnas para usuarios
-const informeColumns: TableColumn<Informes>[] = [
+export const getInformeColumns = (
+    onMissingImageClick?: (informe: Informes) => void,
+): TableColumn<Informes>[] => [
     {
         key: "patient_id",
         label: "PATIENT ID",
@@ -131,6 +181,7 @@ const informeColumns: TableColumn<Informes>[] = [
     },
     {
         key: "template_name",
+        changeValue: (informe) => [informe.template_name, informe.template_source],
         label: "PLANTILLA",
         className: "font-medium",
         headerClassName: "max-w-[220px]",
@@ -154,6 +205,7 @@ const informeColumns: TableColumn<Informes>[] = [
     },
     {
         key: "status",
+        changeValue: (informe) => [informe.status, informe.is_image, informe.workflow_state, informe.workflow_state_at, informe.workflow_state_source, informe.cancellation_reason],
         label: "ESTADO",
         className: "font-medium",
         headerClassName: "w-[68px]",
@@ -161,6 +213,47 @@ const informeColumns: TableColumn<Informes>[] = [
         mobile: { label: "Estado", order: 3, icon: <CircleCheck className="h-3.5 w-3.5" /> },
         sortable: true,
         filterable: true,
+        render: (value: string, informe: Informes) => {
+            const hasNoImages = !informe.is_image;
+            const statusLabel = hasNoImages ? "Sin imagenes" : (value || "—");
+
+            return (
+                <div className="flex flex-col gap-1">
+                    {hasNoImages && onMissingImageClick ? (
+                        <button
+                            type="button"
+                            className="w-fit cursor-pointer text-left font-medium text-amber-700 underline decoration-dotted underline-offset-2 hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100"
+                            title="Buscar estudios PACS para vincular"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                onMissingImageClick(informe);
+                            }}
+                        >
+                            {statusLabel}
+                        </button>
+                    ) : (
+                        <span>{statusLabel}</span>
+                    )}
+                    <WorkflowStateBadge state={informe.workflow_state} />
+                    <WorkflowStateDetails informe={informe} />
+                </div>
+            );
+        },
+    },
+    {
+        key: "workflow_state",
+        changeValue: (informe) => [informe.workflow_state, informe.workflow_state_at, informe.workflow_state_source, informe.cancellation_reason],
+        label: "ESTADO CP",
+        className: "font-medium",
+        hideOnMobile: true,
+        sortable: false,
+        filterable: false,
+        render: (value: Informes['workflow_state'], informe: Informes) => (
+            <div title={informe.cancellation_reason || undefined}>
+                <WorkflowStateBadge state={value} />
+                <WorkflowStateDetails informe={informe} />
+            </div>
+        ),
     },
     {
         key: "admission_number",
@@ -182,15 +275,41 @@ const informeColumns: TableColumn<Informes>[] = [
     },
     {
         key: "created_on",
-        label: "FECHA Y HORA DE ADMISION",
+        label: "FYH ADMISION",
         className: "font-medium",
         headerClassName: "w-[130px]",
         sortable: true,
         filterable: true,
         mobile: { label: "Admisión", order: 6, icon: <CalendarDays className="h-3.5 w-3.5" /> },
-        render: (value: string) => {
-            return fechaYhora(value);
-        }
+        render: (value: string) => <DateTimeCell value={value} />
+    },
+    {
+        key: "study_date",
+        changeValue: (informe) => [informe.study_date, informe.study_time],
+        label: "FYH ESTUDIO",
+        className: "font-medium",
+        headerClassName: "w-[130px]",
+        sortable: false,
+        filterable: false,
+        mobile: { label: "Estudio", order: 7, icon: <CalendarDays className="h-3.5 w-3.5" /> },
+        render: (value: string | null, informe: Informes) => (
+            <div>
+                <div>{value ? formatDate(value) : "—"}</div>
+                <div className="text-xs text-muted-foreground">
+                    {formatStudyTime(informe.study_time)}
+                </div>
+            </div>
+        ),
+    },
+    {
+        key: "arrival_time",
+        label: "FYH LLEGADA",
+        className: "font-medium",
+        headerClassName: "w-[130px]",
+        sortable: false,
+        filterable: false,
+        mobile: { label: "Llegada", order: 8, icon: <CalendarDays className="h-3.5 w-3.5" /> },
+        render: (value: string | null) => <DateTimeCell value={value} />,
     },
     {
         key: "num_instances",
@@ -316,7 +435,7 @@ export const getAdministrativeInformesActions = (
     },
     {
         label: "Ver reporte",
-        icon: <FileText className="h-4 w-4 text-red-900" />,
+        icon: <i className="fi fi-rr-document-signed text-[16px] text-red-900" aria-hidden="true" />,
         onClick: onViewPdf,
         hidden: (informe) => !informe.report_available,
     },
@@ -349,12 +468,14 @@ export const getInformesActions = (
 ): TableAction<Informes>[] => [
         {
             label: (informe: Informes) => {
+                if (informe.workflow_state === 'already_read') return "Estudio ya leído (solo lectura)";
+                if (informe.workflow_state === 'cancelled') return "Estudio cancelado";
                 if (!informe.blocked_by) return "Redactar Informe";
                 if (isAdmin) return `Desbloquear informe (${informe.blocked_by_name || 'otro usuario'})`;
                 return `Informe bloqueado por ${informe.blocked_by_name || 'otro usuario'}`;
             },
             icon: (informe: Informes) => {
-                if (!informe.blocked_by) return <ClipboardPlus className="h-4 w-4 text-blue-900" />;
+                if (!informe.blocked_by) return <i className="fi fi-rs-pencil text-[16px] text-blue-900" aria-hidden="true" />;
                 return isAdmin
                     ? <LockOpen className="h-4 w-4 text-yellow-600" />
                     : <Lock className="h-4 w-4 text-yellow-600" />;
@@ -377,18 +498,16 @@ export const getInformesActions = (
         },
         {
             label: "Ver Pdf",
-            icon: <FileText className="h-4 w-4 text-red-900" />,
+            icon: <i className="fi fi-rr-document-signed text-[16px] text-red-900" aria-hidden="true" />,
             onClick: onViewPdf,
             hidden: (informe) => !informe.report_available,
         },
         {
             label: (informe: Informes) => {
-                if (informe.w_order === 1 || informe.is_executed) return "Editar estudio";
+                if (informe.w_order === 1 || informe.is_executed) return "Editar confirmación";
                 return onConfirmStudy ? "Confirmar estudio" : "Estudio sin confirmar";
             },
-            icon: (informe: Informes) => (informe.w_order === 1 || informe.is_executed)
-                ? <Pencil className="h-4 w-4 text-green-600" />
-                : <HelpCircle className="h-4 w-4 text-amber-500" />,
+            icon: <i className="fi fi-rr-search-alt text-[16px] text-green-600" aria-hidden="true" />,
             onClick: (informe: Informes) => {
                 if (onConfirmStudy) {
                     onConfirmStudy(informe);
@@ -403,5 +522,7 @@ export const getInformesActions = (
         }] : []),
         ...(generalNotesAction ? [generalNotesAction] : []),
     ];
+
+const informeColumns = getInformeColumns();
 
 export { informeColumns };

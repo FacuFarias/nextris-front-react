@@ -31,6 +31,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useUserModules } from "@/hooks/use-user-modules";
 import { Modal } from "@/components/Modal";
+import { toast } from "sonner";
 
 interface MenuItem {
     icon: React.ElementType;
@@ -165,8 +166,8 @@ const menuItems: MenuItem[] = [
         icon: Settings,
         label: "Configuraciones",
         path: "/configuraciones/tablas",
-        allowedRoles: ["Sysadmin"],
-        requiredPermissions: ["tabs.config.view", "users.manage"],
+        allowedRoles: ["Sysadmin", "Admin", "Administrador"],
+        requiredPermissions: ["users.manage", "users.impersonate"],
     },
     // structured_reports — deshabilitado temporalmente
     // {
@@ -486,7 +487,12 @@ export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                                 <span className="text-white font-semibold text-xs">{authData?.user.username.charAt(0).toUpperCase()}{authData?.user.username.charAt(1).toUpperCase()}</span>
                             </div>
                             <div className={cn("flex-1 min-w-0", collapsed && "lg:hidden")}>
-                                <p className="text-xs font-medium text-white truncate">{authData?.user.username}</p>
+                                <p className="text-xs font-medium text-white truncate">{authData?.user.impersonation?.actor_username || authData?.user.username}</p>
+                                {authData?.user.impersonation && (
+                                    <p className="text-[10px] text-amber-200 truncate" title={`Conectado como ${authData.user.username}`}>
+                                        Conectado como {authData.user.username}
+                                    </p>
+                                )}
                                 <p className="text-[10px] text-purple-300">{authData?.user?.user_type}</p>
                             </div>
                         </div>
@@ -505,9 +511,13 @@ export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                         </button>
 
                         <button
-                            onClick={() => {
-                                logout();
-                                navigate('/');
+                            onClick={async () => {
+                                try {
+                                    await logout();
+                                    navigate('/');
+                                } catch {
+                                    toast.error('No se pudo cerrar la sesión. Inténtalo nuevamente.');
+                                }
                             }}
                             title={collapsed ? "Desconectarse" : undefined}
                             aria-label={collapsed ? "Desconectarse" : undefined}

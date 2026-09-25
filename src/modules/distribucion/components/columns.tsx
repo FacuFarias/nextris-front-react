@@ -2,6 +2,7 @@ import type { TableColumn } from "@/types/table";
 import type { Examen } from "../types/distribucion.types";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/fechaYhora";
+import { formatPatientName } from "@/lib/formatPatientName";
 
 export const distribucionColumns: TableColumn<Examen>[] = [
     {
@@ -18,6 +19,7 @@ export const distribucionColumns: TableColumn<Examen>[] = [
         className: "font-medium",
         sortable: true,
         mobile: { role: "title", order: 1 },
+        render: (value) => formatPatientName(value),
     },
     {
         key: "examen",

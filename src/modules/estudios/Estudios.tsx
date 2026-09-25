@@ -196,6 +196,8 @@ export const Estudios = () => {
                         <div className="hidden md:flex flex-col bg-white dark:bg-transparent rounded-lg shadow-sm border dark:border-[rgba(255,255,255,0.07)] flex-1 min-h-0 mt-5">
                             <TablaDynamic
                                 data={studiesData.data.data}
+                                rowIdKey="examination_id"
+                                filterAnimationKey={JSON.stringify([search, dateFrom, dateTo])}
                                 columns={columns}
                                 pagination={pagination}
                                 onPaginationChange={(newPage) => {

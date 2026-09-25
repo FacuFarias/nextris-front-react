@@ -3,7 +3,7 @@ import { InputSearch } from "@/components/InputSearch"
 import TablaDynamic from "@/components/TableDynamic"
 import { MainLayout } from "@/layouts/layout"
 import { useDebounce } from "@uidotdev/usehooks"
-import { Image as ImageIcon, Loader2, RefreshCcw, SlidersHorizontal, X } from "lucide-react"
+import { Image as ImageIcon, RefreshCcw, SlidersHorizontal, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -22,7 +22,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 
 const DEFAULT_VISIBLE_COLUMNS = imageColumns
     .map((col) => col.key as string)
-    .filter((key) => !["updated_time", "study_time", "study_datetime", "sending_aet"].includes(key))
+    .filter((key) => !["updated_time", "study_datetime", "sending_aet"].includes(key))
 
 export const Imagenes = () => {
   const isMobile = useIsMobile()
@@ -51,7 +51,7 @@ export const Imagenes = () => {
   const useDebounceSearch = useDebounce(searchTerm, 500)
   const { presets, isLoading: isLoadingPresets } = useImageFilterPresets()
 
-  const { studies, total, isLoading: isLoadingStudies, refetch } = useStudiesByLocation({
+  const { studies, total, isLoading: isLoadingStudies, isFetching: isFetchingStudies, error: studiesError, refetch } = useStudiesByLocation({
     locationId: undefined,
     page,
     perPage,
@@ -377,7 +377,7 @@ export const Imagenes = () => {
                     setSearchTerm(value)
                     setPage(1)
                   }}
-                  placeholder="Paciente, ACC. Nº, UID..."
+                  placeholder="Paciente, Patient ID, ACC. Nº, UID..."
                 />
               </div>
 
@@ -450,11 +450,11 @@ export const Imagenes = () => {
               <div className="flex items-end">
                 <button
                   onClick={() => refetch()}
-                  disabled={isLoading}
+                  disabled={isFetchingStudies}
                   className="flex h-11 w-full items-center justify-center rounded-lg bg-brand-purple p-2 text-white transition-all hover:bg-purple-700 disabled:opacity-50 lg:h-auto lg:w-auto"
                   title="Refrescar"
                 >
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+                  <RefreshCcw className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -464,6 +464,7 @@ export const Imagenes = () => {
 
         <TablaDynamic<PacsStudy>
             data={tableStudies}
+            rowIdKey="pk"
             columns={imageColumns}
             allColumns={imageColumns}
             actions={actions}
@@ -489,6 +490,10 @@ export const Imagenes = () => {
             }}
             sortDirection={sortDirection}
             loading={isLoading}
+            refreshing={isFetchingStudies && !isLoading}
+            refreshError={Boolean(studiesError)}
+            refreshScopeKey={JSON.stringify([page, perPage, useDebounceSearch, columnFilters, dateRange, dateField, sortColumn, sortDirection, selectedModality])}
+            filterAnimationKey={JSON.stringify([useDebounceSearch, columnFilters, dateRange, dateField, selectedModality])}
             serverSideFiltering
             onColumnFiltersChange={(filters) => {
               setColumnFilters(filters)

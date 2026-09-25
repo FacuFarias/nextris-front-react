@@ -55,7 +55,7 @@ export const useStudiesByLocation = ({
   sortColumn = "study_datetime",
   sortDirection = "desc",
 }: UseStudiesByLocationParams) => {
-  const { data, isLoading, error, refetch } = useQuery<StudiesByLocationResponse>({
+  const { data, isLoading, isFetching, error, refetch } = useQuery<StudiesByLocationResponse>({
     queryKey: ["studies-by-location", locationId || "all", page, perPage, search, sortColumn, sortDirection, columnFilters, dateRange, dateField],
     queryFn: async () => {
       const effectiveLocationId = locationId || "all"
@@ -96,6 +96,7 @@ export const useStudiesByLocation = ({
     studies: data?.data?.data || [],
     total: data?.data?.total || 0,
     isLoading,
+    isFetching,
     error,
     refetch,
   }

@@ -293,6 +293,10 @@ const SharedAccessTable = ({ type }: { type: SharedAccessType }) => {
 
             <TablaDynamic
                 data={response?.items || []}
+                filterAnimationKey={JSON.stringify([type, includeRevoked, search])}
+                refreshScopeKey={JSON.stringify([type, includeRevoked, search, page, perPage])}
+                refreshing={query.isFetching && !query.isLoading}
+                refreshError={Boolean(query.error)}
                 columns={columns}
                 actions={actions}
                 showIndex

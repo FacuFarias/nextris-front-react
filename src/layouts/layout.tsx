@@ -59,6 +59,12 @@ export const MainLayout = ({ children, isOverflow = true, mobileTitle = "NextRIS
 
                 {/* Main Content */}
                 <main className={`relative flex min-h-0 min-w-0 flex-1 flex-col transition-[margin] duration-300 ${sidebarCollapsed ? "lg:ml-16" : "lg:ml-52"}`}>
+                    {authData?.user?.impersonation && (
+                        <div className="z-30 border-b border-amber-300 bg-amber-100 px-4 py-2 text-center text-sm font-medium text-amber-950">
+                            {authData.user.impersonation.actor_username} conectado como {authData.user.username}
+                            <span className="ml-2 font-normal">Para volver a tu cuenta, desconéctate e inicia sesión nuevamente.</span>
+                        </div>
+                    )}
                     {isPatientPortal && (
                         <img
                             src={clinicaParqueLogo}

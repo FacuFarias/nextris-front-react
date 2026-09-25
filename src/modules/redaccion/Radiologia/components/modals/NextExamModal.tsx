@@ -2,6 +2,7 @@ import { Modal } from "@/components/Modal";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components";
 import { AlertCircle, ChevronRight, X } from "lucide-react";
+import { formatPatientName } from "@/lib/formatPatientName";
 
 interface NextExamModalProps {
     isOpen: boolean;
@@ -46,7 +47,7 @@ export const NextExamModal = ({
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                                 <span className="text-gray-600">Paciente:</span>
-                                <span className="font-medium text-gray-900">{nextExamData.patient_name}</span>
+                                <span className="font-medium text-gray-900">{formatPatientName(nextExamData.patient_name)}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-gray-600">N° Registro:</span>

@@ -243,6 +243,29 @@ export const confirmStudy = async (exam_id: string, data: ConfirmStudyPayload) =
     return response.data;
 };
 
+export type CancellationReason = {
+    guid: string;
+    code: string;
+    description: string;
+    sort_order: number;
+    active: boolean;
+};
+
+export const getCancellationReasons = async () => {
+    const response = await api.get<{ success: boolean; data: CancellationReason[] }>('/config/cancellation-reasons');
+    return response.data;
+};
+
+export const cancelStudy = async (exam_id: string, reason_code: string, detail?: string) => {
+    const response = await api.post(`/examinations/${exam_id}/cancel`, { reason_code, detail });
+    return response.data;
+};
+
+export const markStudyAlreadyRead = async (exam_id: string) => {
+    const response = await api.post(`/examinations/${exam_id}/already-read`);
+    return response.data;
+};
+
 // Versión para desbloquear al cerrar la ventana - usa fetch con keepalive
 export const unblockExamOnUnload = (exam_id: string): void => {
     // Obtener baseURL de manera más confiable

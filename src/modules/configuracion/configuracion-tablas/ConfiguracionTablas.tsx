@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { MainLayout } from "@/layouts/layout"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Building2, FlaskConical, Monitor, Users, Settings, Workflow } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
 
 // Institucional
 import { Locations } from "./institucional/locations"
@@ -104,7 +105,16 @@ const AnimatedSubTabs = ({
 }
 
 export const ConfiguracionTablas = () => {
-    const [activeTab, setActiveTab] = useState("institucional")
+    const { authData } = useAuth()
+    const permissions = authData?.user?.permissions || []
+    const isSysadmin = authData?.user?.user_type === "Sysadmin"
+    const canManageUsers = permissions.includes("*") || permissions.includes("users.manage")
+    const canImpersonateUsers = permissions.includes("*") || permissions.includes("users.impersonate")
+    const onlyUserManagement = !isSysadmin && canImpersonateUsers && !canManageUsers
+    const visibleMainTabs = onlyUserManagement
+        ? mainTabs.filter((tab) => tab.value === "usuarios")
+        : mainTabs
+    const [activeTab, setActiveTab] = useState(onlyUserManagement ? "usuarios" : "institucional")
     const tabsListRef = useRef<HTMLDivElement>(null)
     const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
     const [indicator, setIndicator] = useState({ left: 0, width: 0 })
@@ -131,6 +141,10 @@ export const ConfiguracionTablas = () => {
         return () => window.removeEventListener("resize", updateIndicator)
     }, [updateIndicator])
 
+    useEffect(() => {
+        if (onlyUserManagement) setActiveTab("usuarios")
+    }, [onlyUserManagement])
+
     return (
         <MainLayout>
             <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-auto">
@@ -152,7 +166,7 @@ export const ConfiguracionTablas = () => {
                             ref={tabsListRef}
                             className="bg-transparent border-b border-gray-200 dark:border-gray-700 rounded-none h-auto p-0 justify-start gap-0 w-full"
                         >
-                            {mainTabs.map((tab) => (
+                            {visibleMainTabs.map((tab) => (
                                 <TabsTrigger
                                     key={tab.value}
                                     value={tab.value}
@@ -258,7 +272,9 @@ export const ConfiguracionTablas = () => {
                     <TabsContent value="usuarios" className="flex-1 mt-0">
                         <AnimatedSubTabs
                             defaultValue="gestion-usuarios"
-                            tabs={[
+                            tabs={onlyUserManagement ? [
+                                { value: "gestion-usuarios", label: "Gestion de Usuarios" },
+                            ] : [
                                 { value: "gestion-usuarios", label: "Gestion de Usuarios" },
                                 { value: "gestion-pacientes", label: "Gestion de Pacientes" },
                                 { value: "medicos-solicitantes", label: "Medicos Solicitantes" },

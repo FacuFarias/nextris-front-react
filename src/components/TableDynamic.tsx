@@ -23,13 +23,23 @@ import { cn } from "@/lib/utils";
 //types
 import { TablePagination } from "./Pagination";
 import type { DynamicTableProps, TableColumn } from "@/types/table";
+import { TableRefreshStatus } from "./TableRefreshStatus";
+import { useRowHighlights } from "@/hooks/use-row-highlights";
 //components
+
+const getNestedValue = (obj: any, path: string): any =>
+    path.split(".").reduce((current, key) => current?.[key], obj);
 
 export function TablaDynamic<T extends Record<string, any>>({
     data,
     columns,
     actions = [],
     loading = false,
+    refreshing = false,
+    refreshError = false,
+    refreshScopeKey = "",
+    filterAnimationKey = "",
+    additionalChangeValue,
     emptyMessage = "No hay datos disponibles",
     className,
     showIndex = false,
@@ -119,6 +129,49 @@ export function TablaDynamic<T extends Record<string, any>>({
     const renderColumns = effectiveVisibleColumns
         .map((key) => columnsByKey.get(key))
         .filter((column): column is TableColumn<T> => Boolean(column));
+    const getStableRowId = (row: T): string | null => {
+        const id = row[rowIdKey] ?? row.id ?? row.uuid ?? row.exam_guid ?? row.examination_id ?? row.pk;
+        return id === null || id === undefined || id === "" ? null : String(id);
+    };
+    const comparisonScope = JSON.stringify([
+        refreshScopeKey,
+        pagination?.page,
+        pagination?.pageSize,
+        sortConfig?.key,
+        sortConfig?.direction,
+        columnFilters,
+        effectiveVisibleColumns,
+    ]);
+    const animationScope = JSON.stringify([filterAnimationKey, columnFilters]);
+    const [entrance, setEntrance] = useState({ scope: animationScope, active: true });
+    const hasVisibleRows = data.length > 0;
+    const firstRowEntrance = hasVisibleRows && (entrance.scope !== animationScope || entrance.active);
+    useEffect(() => {
+        let active = true;
+        queueMicrotask(() => {
+            if (active) setEntrance((current) => current.scope === animationScope ? current : { scope: animationScope, active: true });
+        });
+        return () => { active = false; };
+    }, [animationScope]);
+    useEffect(() => {
+        if (!hasVisibleRows) return;
+        const timeout = setTimeout(() => {
+            setEntrance((current) => current.scope === animationScope ? { scope: animationScope, active: false } : current);
+        }, 1200);
+        return () => clearTimeout(timeout);
+    }, [animationScope, hasVisibleRows]);
+    const changedRowIds = useRowHighlights(
+        data,
+        comparisonScope,
+        !loading || data.length > 0,
+        getStableRowId,
+        (row) => [
+            ...renderColumns
+                .filter((column) => column.trackChanges !== false && !String(column.key).startsWith("_"))
+                .map((column) => [String(column.key), column.changeValue ? column.changeValue(row) : getNestedValue(row, String(column.key))]),
+            additionalChangeValue?.(row),
+        ],
+    );
 
     useEffect(() => {
         if (tableBackgroundImage) {
@@ -126,11 +179,6 @@ export function TablaDynamic<T extends Record<string, any>>({
             return () => clearTimeout(timer);
         }
     }, [tableBackgroundImage]);
-
-    // Función para obtener el valor anidado de un objeto
-    const getNestedValue = (obj: any, path: string): any => {
-        return path.split(".").reduce((current, key) => current?.[key], obj);
-    };
 
     const handleCopyCell = (cellKey: string, text: string) => {
         navigator.clipboard.writeText(text);
@@ -261,7 +309,7 @@ export function TablaDynamic<T extends Record<string, any>>({
     };
 
     const renderCopyableCell = (column: TableColumn<T>, row: T, children: React.ReactNode) => {
-        const cellKey = `${String(row[rowIdKey])}-${String(column.key)}`;
+        const cellKey = `${getStableRowId(row) ?? "unknown"}-${String(column.key)}`;
         const textValue = getCellTextValue(column, row);
         const isCopied = copiedCellKey === cellKey;
 
@@ -770,7 +818,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {loading ? (
+                        {loading && data.length === 0 ? (
                             <TableRow>
                                 <TableCell
                                     colSpan={
@@ -780,9 +828,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                     }
                                     className="h-40"
                                 >
-                                    <div className="flex justify-center items-center">
-                                        <span className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500 dark:border-purple-400"></span>
-                                    </div>
+                                    &nbsp;
                                 </TableCell>
                             </TableRow>
                         ) : paginatedData.length === 0 ? (
@@ -796,7 +842,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                         }
                                         className="h-10 text-center text-muted-foreground "
                                     >
-                                        {emptyMessage}
+                                        {refreshError ? "No se pudo cargar la tabla" : emptyMessage}
                                     </TableCell>
                                 </TableRow>
                                 {preserveTableHeight && pagination && fillerRowsWhenEmpty > 0 &&
@@ -818,11 +864,12 @@ export function TablaDynamic<T extends Record<string, any>>({
                         ) : (
                             <>
                                 {paginatedData.map((row, index) => {
-                                    const isSelected = selectedRow && row[rowIdKey] === selectedRow[rowIdKey];
-                                    const isInSelectedSet = selectedRowIds?.has(String(row[rowIdKey]));
+                                    const stableId = getStableRowId(row);
+                                    const isSelected = selectedRow && stableId !== null && stableId === getStableRowId(selectedRow);
+                                    const isInSelectedSet = stableId !== null && selectedRowIds?.has(stableId);
                                     return (
                                         <TableRow
-                                            key={getRowIndex(index)}
+                                            key={`${animationScope}:${stableId ?? `row-${getRowIndex(index)}`}`}
                                             data-row-kind="measure"
                                             className={cn(
                                                 "transition-colors duration-150",
@@ -833,12 +880,13 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                 (onRowClick || onRowDoubleClick) && !hasBgImage && "cursor-pointer hover:bg-purple-100/40 dark:hover:bg-[#2a1848]/75",
                                                 isSelected && "bg-purple-100/85 dark:bg-[#3a2060]/78 hover:bg-purple-100/90 dark:hover:bg-[#472676]/85 border-l-4 border-l-brand-purple dark:border-l-purple-300 dark:shadow-[inset_4px_0_12px_rgba(168,85,247,0.28)]",
                                                 isInSelectedSet && !isSelected && "bg-purple-100/50 dark:bg-purple-900/30 hover:bg-purple-100/60 dark:hover:bg-purple-900/40",
-                                                "animate-in fade-in duration-300 ease-out"
+                                                stableId !== null && changedRowIds.has(stableId) && "row-change-highlight",
+                                                firstRowEntrance && "animate-in fade-in duration-300 ease-out motion-reduce:animate-none"
                                             )}
-                                            style={{
-                                                animationDelay: `${index * 40}ms`,
+                                            style={firstRowEntrance ? {
+                                                animationDelay: `${Math.min(index, 20) * 40}ms`,
                                                 animationFillMode: 'both'
-                                            }}
+                                            } : undefined}
                                             onClick={(e) => onRowClick?.(row, getRowIndex(index), e)}
                                             onDoubleClick={(e) => onRowDoubleClick?.(row, getRowIndex(index), e)}
                                             onMouseDown={(e) => {
@@ -957,6 +1005,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                     </TableBody>
                 </Table>
                 </div>{/* fin contenedor scroll interno */}
+                <TableRefreshStatus refreshing={loading || refreshing} error={refreshError && !loading && !refreshing} />
             </div>{/* fin contenedor fondo fijo */}
             {pagination && onPaginationChange && (
                 <div className={cn(
