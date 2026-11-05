@@ -1,15 +1,16 @@
 import { MainLayout } from '@/layouts/layout';
-import { Eye, FileText, HelpCircle, MoveHorizontal, AlertCircle, Camera, ClipboardList, Play, ArrowLeft } from 'lucide-react';
+import { Eye, FileText, HelpCircle, MoveHorizontal, AlertCircle, Camera, ClipboardList, Play, ArrowLeft, Search } from 'lucide-react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useDetalleEjecucion, useDetalleEjecucionAllTags, useDetalleEjecucionPost, useDetalleEjecucionUpdateFlags, useDetalleEjecucionUpdateTagIds } from './hooks/use-detalle-ejecucion';
+import { useDetalleEjecucion, useDetalleEjecucionAllTags, useDetalleEjecucionPost, useDetalleEjecucionUpdateFlags, useDetalleEjecucionUpdateTagIds, useStudyTypes, useUpdateStudyType } from './hooks/use-detalle-ejecucion';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState } from 'react';
 import { PrimaryButton } from '@/components';
-import type { DetalleEjecucionRequest } from './types/detalle-ejecucion.type';
+import type { DetalleEjecucionRequest, StudyType } from './types/detalle-ejecucion.type';
 import { Button } from '@/components/ui/button';
 import { FlagsCell } from '@/modules/redaccion/Radiologia/components/FlagsCell';
 import { TagsCell } from '@/modules/redaccion/Radiologia/components/TagsCell';
+import { StudyTypeModal } from './components/StudyTypeModal';
 
 export const DetalleEjecucion = () => {
     const { guid } = useParams<{ guid: string }>();
@@ -17,6 +18,8 @@ export const DetalleEjecucion = () => {
     const navigate = useNavigate();
     const { detalleData, isLoading } = useDetalleEjecucion(guid!);
     const { allTags } = useDetalleEjecucionAllTags();
+    const { studyTypes, isLoading: isLoadingStudyTypes } = useStudyTypes();
+    const { mutate: updateStudyType, isPending: isUpdatingStudyType } = useUpdateStudyType(guid!);
     const { mutate: updateFlags, isPending: isUpdatingFlags } = useDetalleEjecucionUpdateFlags(guid!);
     const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useDetalleEjecucionUpdateTagIds(guid!);
     const flagsParam = searchParams.get('flags');
@@ -36,6 +39,9 @@ export const DetalleEjecucion = () => {
     const [otrosDetalles, setOtrosDetalles] = useState(detalleData?.data?.other_details || '');
     const [examFlags, setExamFlags] = useState<string[]>(initialFlagsFromParams);
     const [examTagIds, setExamTagIds] = useState<string[]>(initialTagIdsFromParams);
+    const [selectedStudyTypeId, setSelectedStudyTypeId] = useState<string>(detalleData?.data?.study_type_id || '');
+    const [selectedStudyTypeName, setSelectedStudyTypeName] = useState<string>(detalleData?.data?.study_type || '');
+    const [isStudyTypeModalOpen, setIsStudyTypeModalOpen] = useState(false);
 
     const isRX = detalleData?.data?.study_type?.toUpperCase().startsWith('RX');
     const { postDetalleEjecucion } = useDetalleEjecucionPost(guid!, () => {
@@ -51,6 +57,8 @@ export const DetalleEjecucion = () => {
         setStat(detalleData.data.stat ? 'Si' : 'No');
         setNumeroVistas(detalleData.data.number_of_views?.toString() || '');
         setOtrosDetalles(detalleData.data.other_details || '');
+        setSelectedStudyTypeId(detalleData.data.study_type_id || '');
+        setSelectedStudyTypeName(detalleData.data.study_type || '');
 
         if (Array.isArray(detalleData.data.flags)) {
             setExamFlags(detalleData.data.flags);
@@ -79,6 +87,13 @@ export const DetalleEjecucion = () => {
         updateTagIds(tagIds, {
             onError: () => setExamTagIds(previousTagIds),
         });
+    };
+
+    const handleStudyTypeChange = (studyType: StudyType) => {
+        setSelectedStudyTypeId(studyType.guid);
+        setSelectedStudyTypeName(studyType.description);
+        updateStudyType({ studyTypeId: studyType.guid });
+        setIsStudyTypeModalOpen(false);
     };
 
     const handleEjecutarOrden = () => {
@@ -164,7 +179,29 @@ export const DetalleEjecucion = () => {
                         </div>
 
                         {/* Fila 2: Lateralidad, STAT y Número de Vistas */}
-                        <div className={`grid grid-cols-1 gap-6 ${isRX ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+                        <div className={`grid grid-cols-1 gap-6 ${isRX ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+                            {/* Tipo de Estudio */}
+                            <div className="space-y-2">
+                                <Label className="flex items-center gap-2 text-brand-purple font-semibold text-base dark:text-purple-400">
+                                    <ClipboardList className="w-5 h-5" />
+                                    Tipo de Estudio
+                                </Label>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full justify-start text-left font-normal border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                    onClick={() => setIsStudyTypeModalOpen(true)}
+                                    disabled={isLoadingStudyTypes || isUpdatingStudyType}
+                                >
+                                    <Search className="mr-2 h-4 w-4" />
+                                    {selectedStudyTypeName || (
+                                        <span className="text-muted-foreground">
+                                            {isLoadingStudyTypes ? "Cargando..." : "Seleccionar tipo de estudio"}
+                                        </span>
+                                    )}
+                                </Button>
+                            </div>
+
                             {/* Lateralidad */}
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2 text-brand-purple font-semibold text-base dark:text-purple-400">
@@ -271,6 +308,16 @@ export const DetalleEjecucion = () => {
                         </div>
                     </div>
                 )}
+
+                {/* Modal para seleccionar tipo de estudio */}
+                <StudyTypeModal
+                    isOpen={isStudyTypeModalOpen}
+                    onClose={() => setIsStudyTypeModalOpen(false)}
+                    onSelect={handleStudyTypeChange}
+                    studyTypes={studyTypes}
+                    isLoading={isLoadingStudyTypes}
+                    currentStudyTypeId={selectedStudyTypeId}
+                />
             </div>
         </MainLayout>
     );

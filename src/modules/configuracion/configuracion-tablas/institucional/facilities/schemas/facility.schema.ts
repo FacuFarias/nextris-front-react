@@ -30,6 +30,12 @@ export const facilityFormSchema = z.object({
     whatsapp_business_account_id: z.string().optional(),
     whatsapp_webhook_verify_token: z.string().optional(),
     whatsapp_is_active: z.boolean().optional(),
+
+    // HL7 Config
+    hl7_enable_orm: z.boolean().optional(),
+    hl7_bearer_token_orm: z.string().optional(),
+    hl7_enable_report_sending: z.boolean().optional(),
+    hl7_report_send_mode: z.enum(["pdf", "plain_text"]).optional(),
 });
 
 export type FacilityFormValues = z.infer<typeof facilityFormSchema>;

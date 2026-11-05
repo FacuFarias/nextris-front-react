@@ -20,7 +20,7 @@ import { PrimaryButton, SecondaryButton } from "@/components";
 import { facilityFormSchema } from "../schemas/facility.schema";
 import type { FacilityFormData } from "../types/facilities.types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Database, MessageSquare } from "lucide-react";
+import { Mail, Database, MessageSquare, FileText } from "lucide-react";
 import { useDominioPacientes } from "../../dominio-pacientes/hooks/use-dominio-pacientes";
 import type { FacilityPlan, FacilityPlanChangeLog, FacilityUsageMonthly } from "../types/facilities.types";
 
@@ -77,6 +77,12 @@ export const FacilityForm = ({
             whatsapp_business_account_id: initialData?.whatsapp_business_account_id || "",
             whatsapp_webhook_verify_token: initialData?.whatsapp_webhook_verify_token || "",
             whatsapp_is_active: initialData?.whatsapp_is_active ?? false,
+
+            // HL7
+            hl7_enable_orm: initialData?.hl7_enable_orm ?? false,
+            hl7_bearer_token_orm: initialData?.hl7_bearer_token_orm || "",
+            hl7_enable_report_sending: initialData?.hl7_enable_report_sending ?? false,
+            hl7_report_send_mode: initialData?.hl7_report_send_mode || "pdf",
         },
     });
 
@@ -228,7 +234,7 @@ export const FacilityForm = ({
 
                 {/* Tabs para las configuraciones */}
                 <Tabs defaultValue="smtp" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
+                    <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="smtp">
                             <Mail className="w-4 h-4 mr-2" />
                             SMTP
@@ -240,6 +246,10 @@ export const FacilityForm = ({
                         <TabsTrigger value="whatsapp">
                             <MessageSquare className="w-4 h-4 mr-2" />
                             WhatsApp
+                        </TabsTrigger>
+                        <TabsTrigger value="hl7">
+                            <FileText className="w-4 h-4 mr-2" />
+                            HL7
                         </TabsTrigger>
                     </TabsList>
 
@@ -625,6 +635,96 @@ export const FacilityForm = ({
                                     <FormLabel className="font-normal">
                                         WhatsApp Activo
                                     </FormLabel>
+                                </FormItem>
+                            )}
+                        />
+                    </TabsContent>
+
+                    {/* Tab HL7 */}
+                    <TabsContent value="hl7" className="space-y-4 mt-4">
+                        <FormField
+                            control={form.control}
+                            name="hl7_enable_orm"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                        <input
+                                            type="checkbox"
+                                            checked={field.value}
+                                            onChange={field.onChange}
+                                            disabled={isLoading}
+                                            className="h-4 w-4 rounded border-gray-300"
+                                        />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                        Habilitar recibo de órdenes ORM
+                                    </FormLabel>
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="hl7_bearer_token_orm"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Bearer Token para ORM</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="password"
+                                            placeholder="••••••••"
+                                            {...field}
+                                            disabled={isLoading}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="hl7_enable_report_sending"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                        <input
+                                            type="checkbox"
+                                            checked={field.value}
+                                            onChange={field.onChange}
+                                            disabled={isLoading}
+                                            className="h-4 w-4 rounded border-gray-300"
+                                        />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                        Habilitar envío de reportes
+                                    </FormLabel>
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="hl7_report_send_mode"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Modo de envío de reportes</FormLabel>
+                                    <Select
+                                        onValueChange={field.onChange}
+                                        defaultValue={field.value || "pdf"}
+                                        disabled={isLoading}
+                                    >
+                                        <FormControl className="w-full">
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Seleccione modo de envío" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="pdf">PDF</SelectItem>
+                                            <SelectItem value="plain_text">Plain Text</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
                                 </FormItem>
                             )}
                         />

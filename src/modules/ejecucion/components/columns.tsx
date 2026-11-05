@@ -35,6 +35,14 @@ const ejecucionColumns: TableColumn<Ejecucion>[] = [
         className: "font-medium",
         sortable: true,
         filterable: true,
+        render: (value: string) => {
+            if (!value) {
+                return (
+                    <span className="text-orange-500 italic">No asignado</span>
+                );
+            }
+            return value;
+        }
     },
     {
         key: "status",

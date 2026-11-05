@@ -37,6 +37,12 @@ export interface Facility {
         whatsapp_webhook_verify_token: string;
         whatsapp_is_active: boolean;
     };
+    hl7_config?: {
+        hl7_enable_orm: boolean;
+        hl7_bearer_token_orm: string;
+        hl7_enable_report_sending: boolean;
+        hl7_report_send_mode: 'pdf' | 'plain_text';
+    };
     plan?: {
         code?: string;
         name?: string;
@@ -88,6 +94,12 @@ export interface FacilityFormData {
     whatsapp_business_account_id?: string;
     whatsapp_webhook_verify_token?: string;
     whatsapp_is_active?: boolean;
+
+    // HL7 Config
+    hl7_enable_orm?: boolean;
+    hl7_bearer_token_orm?: string;
+    hl7_enable_report_sending?: boolean;
+    hl7_report_send_mode?: 'pdf' | 'plain_text';
 }
 
 export interface FacilityPlan {

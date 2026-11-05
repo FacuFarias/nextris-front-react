@@ -173,3 +173,7 @@ sudo systemctl start nextris-frontend
 
 - [Backend API](https://github.com/TU_USUARIO/nextris-dev-react)
 - [Documentación completa](./DESARROLLO_FRONTEND.md)
+
+## Recuperación de esta versión
+
+Los cambios de la VPS se conservan en la rama `ui2`. Clonar con `git clone --branch ui2 https://github.com/FacuFarias/nextris-front-react.git`, configurar `.env` desde `.env.example`, ejecutar `npm ci` y luego `npm run build`. El despliegue estático sirve la carpeta `dist/`.

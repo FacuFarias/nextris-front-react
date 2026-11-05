@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getDetalleEjecucion, getExecutionAllTags, postDetalleEjecucion, updateExecutionFlags, updateExecutionTagIds } from '../services/detalle-ejecucion.service';
+import { getDetalleEjecucion, getExecutionAllTags, postDetalleEjecucion, updateExecutionFlags, updateExecutionTagIds, getStudyTypes, updateExaminationStudyType } from '../services/detalle-ejecucion.service';
 import { ejecucionKeys } from '../../constants/query-keys';
-import type { DetalleEjecucionRequest, DetalleEjecucionResponse } from '../types/detalle-ejecucion.type';
+import type { DetalleEjecucionRequest, DetalleEjecucionResponse, StudyTypeResponse } from '../types/detalle-ejecucion.type';
 import { toast } from 'sonner';
 
 export const useDetalleEjecucion = (guid: string) => {
@@ -133,4 +133,53 @@ export const useDetalleEjecucionAllTags = () => {
         allTags: data?.data ?? [],
         isLoading,
     };
+};
+
+export const useStudyTypes = () => {
+    const { data, isLoading } = useQuery<StudyTypeResponse>({
+        queryKey: ['study-types'],
+        queryFn: getStudyTypes,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    return {
+        studyTypes: data?.data ?? [],
+        isLoading,
+    };
+};
+
+export const useUpdateStudyType = (guid: string) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ studyTypeId }: { studyTypeId: string }) => updateExaminationStudyType(guid, studyTypeId),
+        onMutate: async ({ studyTypeId }) => {
+            await queryClient.cancelQueries({ queryKey: ejecucionKeys.detail(guid) });
+            const previousDetail = queryClient.getQueryData(ejecucionKeys.detail(guid));
+
+            queryClient.setQueryData(ejecucionKeys.detail(guid), (old: any) => {
+                if (!old?.data) return old;
+                return {
+                    ...old,
+                    data: {
+                        ...old.data,
+                        study_type_id: studyTypeId,
+                    },
+                };
+            });
+
+            return { previousDetail };
+        },
+        onError: (error: any, _variables, context: any) => {
+            if (context?.previousDetail) {
+                queryClient.setQueryData(ejecucionKeys.detail(guid), context.previousDetail);
+            }
+            toast.error(error.response?.data?.message || 'Error al actualizar tipo de estudio');
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ejecucionKeys.detail(guid) });
+            queryClient.invalidateQueries({ queryKey: ejecucionKeys.lists() });
+            toast.success('Tipo de estudio actualizado exitosamente');
+        },
+    });
 };

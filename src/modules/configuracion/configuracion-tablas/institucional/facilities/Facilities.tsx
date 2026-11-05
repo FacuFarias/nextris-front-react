@@ -231,6 +231,11 @@ export const Facilities = () => {
                     whatsapp_business_account_id: selectedFacility.whatsapp_config?.whatsapp_business_account_id ?? selectedFacility.whatsapp_config?.business_account_id,
                     whatsapp_webhook_verify_token: selectedFacility.whatsapp_config?.whatsapp_webhook_verify_token ?? selectedFacility.whatsapp_config?.webhook_verify_token,
                     whatsapp_is_active: selectedFacility.whatsapp_config?.whatsapp_is_active ?? selectedFacility.whatsapp_config?.is_active,
+                    // HL7 Config
+                    hl7_enable_orm: selectedFacility.hl7_config?.hl7_enable_orm ?? false,
+                    hl7_bearer_token_orm: selectedFacility.hl7_config?.hl7_bearer_token_orm ?? "",
+                    hl7_enable_report_sending: selectedFacility.hl7_config?.hl7_enable_report_sending ?? false,
+                    hl7_report_send_mode: selectedFacility.hl7_config?.hl7_report_send_mode ?? "pdf",
                 } : undefined}
                 plans={plans?.data || []}
                 usageHistory={usageHistoryResponse?.data || []}

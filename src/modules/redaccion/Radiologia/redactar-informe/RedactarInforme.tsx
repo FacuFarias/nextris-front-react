@@ -23,6 +23,8 @@ import { clearWindowStorage, notifyGuidChange, notifyViewerUpdate } from "./hook
 import { FlagsCell } from "../components/FlagsCell";
 import { TagsCell } from "../components/TagsCell";
 import { useFacility } from "@/context/FacilityContext";
+import { useAuth } from "@/context/AuthContext";
+import { useUserMedicalData } from "@/modules/configuracion/configuracion-tablas/usuarios-personal/gestion-usuarios/hooks/useUsers";
 import { api } from "@/lib/api";
 
 const normalizeVariableKey = (value: string | null | undefined): string =>
@@ -62,6 +64,10 @@ export const RedactarInforme = () => {
     const { mutate: updateFlags, isPending: isUpdatingFlags } = useUpdateFlags();
     const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useUpdateTagIds();
     const { allTags } = useAllTags();
+    const { authData } = useAuth();
+    const currentUserId = authData?.user?.id || null;
+    const { medicalData } = useUserMedicalData(currentUserId);
+    const firmaHabilitada = medicalData?.data?.firma_habilitada ?? false;
     const [formData, setFormData] = useState({
         history: '',
         techniques: '',
@@ -83,15 +89,25 @@ export const RedactarInforme = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
 
-    // Hooks para plantillas
+    // Hooks para plantillas - buscar por study type, y si no hay resultados, por modalidad
     const activeStudyTypeFilter = studyTypeFilter || reportStudyTypeId;
     const reportTypeFilter = structuredReportsEnabled ? undefined : 'simple';
-    const { data: templatesData } = useTemplates(
+    const { data: templatesByStudyType } = useTemplates(
         activeStudyTypeFilter || undefined,
         undefined,
         undefined,
         reportTypeFilter,
     );
+    const { data: templatesByModality } = useTemplates(
+        undefined,
+        modalityId || undefined,
+        undefined,
+        reportTypeFilter,
+    );
+    // Usar templates del study type si existen, sino fallback a los de la modalidad
+    const templatesData = (templatesByStudyType?.data && templatesByStudyType.data.length > 0)
+        ? templatesByStudyType
+        : templatesByModality;
     // En tu componente
     const { mutateAsync: verifyCredentials } = useVerifyCredentials();
     const { mutateAsync: signReport } = useSignReport();
@@ -1441,7 +1457,8 @@ export const RedactarInforme = () => {
                             </PrimaryButton>
                             <PrimaryButton
                                 onClick={() => setIsSignModalOpen(true)}
-
+                                disabled={!isSigned && !firmaHabilitada}
+                                title={!isSigned && !firmaHabilitada ? 'Su firma digital no está habilitada. Habilite su firma en Configuración > Datos Médicos.' : undefined}
                             >
                                 <Signature />
                                 {isSigned ? 'QUITAR FIRMA' : 'FIRMAR'}

@@ -15,6 +15,7 @@ interface ModalProps {
     description?: string;
     size?: "sm" | "md" | "lg" | "xl" | "full" | "xxl";
     className?: string;
+    contentClassName?: string;
     showCloseButton?: boolean;
     closeOnOutsideClick?: boolean;
 }
@@ -36,6 +37,7 @@ export const Modal = ({
     description,
     size = "md",
     className,
+    contentClassName,
     showCloseButton = true,
     closeOnOutsideClick = true,
 }: ModalProps) => {
@@ -60,7 +62,7 @@ export const Modal = ({
                         )}
                     </DialogHeader>
                 )}
-                <div>{children}</div>
+                <div className={contentClassName}>{children}</div>
             </DialogContent>
         </Dialog>
     );

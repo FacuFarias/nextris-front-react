@@ -4,6 +4,7 @@ export type Ejecucion = {
     patient_surname: string;
     patient_name: string;
     study_type: string;
+    study_type_id: string | null;
     status: string;
     equipment: string;
     admission_number: string;
@@ -14,6 +15,17 @@ export type Ejecucion = {
 
 export type EjecucionResponse = {
     data: Ejecucion[];
+    success: boolean;
+}
+
+export type StudyType = {
+    guid: string;
+    description: string;
+    code?: string;
+}
+
+export type StudyTypeResponse = {
+    data: StudyType[];
     success: boolean;
 }
 

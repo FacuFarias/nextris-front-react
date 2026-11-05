@@ -3,6 +3,7 @@
 export type DetalleEjecucion = {
     guid: string;
     study_type: string;
+    study_type_id: string | null;
     patient_name: string;
     status: string;
     created_on: string;
@@ -32,3 +33,16 @@ export type DetalleEjecucionRequest = {
     number_of_views: number;
     other_details: string;
 };
+
+export type StudyType = {
+    guid: string;
+    description: string;
+    code?: string;
+    modality?: string;
+    bodypart?: string;
+}
+
+export type StudyTypeResponse = {
+    data: StudyType[];
+    success: boolean;
+}
