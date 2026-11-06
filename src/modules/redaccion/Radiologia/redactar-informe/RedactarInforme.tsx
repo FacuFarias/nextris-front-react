@@ -12,7 +12,7 @@ import { useAllTags, useInformeDetalle, useUpdateFlags, useUpdateReport, useUpda
 import { putRedactarInforme } from "../services/informes.service";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronRight, FileMinus, FileX, Image as ImageIcon, Save, Signature, User, Mars, Venus, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces, Search, SkipForward, Share2 } from "lucide-react";
+import { Cat, Dog, PawPrint, ChevronDown, ChevronRight, FileMinus, FileX, Image as ImageIcon, Save, Signature, User, Mars, Venus, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces, Search, SkipForward, Share2 } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -1997,21 +1997,33 @@ export const RedactarInforme = () => {
     const dateLabel = formatDate(reportData.exam_date || reportData.created_on || reportData.date || reportData.study_date);
     const statLabel = reportData.stat || reportData.priority;
     const normalizedSex = String(reportData.sex ?? '').trim().toUpperCase();
-    const SexIcon = normalizedSex === 'M' || normalizedSex === 'MASCULINO'
-        ? Mars
-        : normalizedSex === 'F' || normalizedSex === 'FEMENINO'
-            ? Venus
-            : User;
+    const veterinaryContext = reportData.veterinary_context;
+    const speciesName = String(veterinaryContext?.species_name ?? '').trim().toLowerCase();
+    const SubjectIcon = veterinaryContext
+        ? /felin|gat[oa]/.test(speciesName) ? Cat : /canin|perr[oa]/.test(speciesName) ? Dog : PawPrint
+        : normalizedSex === 'M' || normalizedSex === 'MASCULINO'
+            ? Mars
+            : normalizedSex === 'F' || normalizedSex === 'FEMENINO'
+                ? Venus
+                : User;
     const headerValue = (value: unknown) => {
         const normalized = String(value ?? '').trim();
         return normalized && normalized !== '-' ? normalized : 'N/D';
     };
     const patientHeaderFields = [
-        { label: 'Paciente', value: patientName },
-        { label: 'Patient ID', value: patientIdentifier },
+        { label: veterinaryContext ? 'Animal' : 'Paciente', value: patientName },
+        { label: veterinaryContext ? 'ID del animal' : 'Patient ID', value: patientIdentifier },
         { label: 'Sexo', value: sexLabel },
-        { label: 'National Code', value: nationalCodeLabel },
+        ...(veterinaryContext ? [] : [{ label: 'National Code', value: nationalCodeLabel }]),
     ];
+    const responsibleNames = (veterinaryContext?.responsibles || []).map((r: { name: string }) => r.name).join(', ');
+    const veterinaryHeaderFields = veterinaryContext ? [
+        { label: 'Especie', value: veterinaryContext.species_name || 'Especie pendiente' },
+        { label: 'Raza', value: veterinaryContext.breed_name || 'Raza desconocida' },
+        { label: 'Peso registrado', value: veterinaryContext.weight_kg != null ? `${veterinaryContext.weight_kg} kg` : 'Peso sin registrar' },
+        { label: 'Fecha de nacimiento', value: veterinaryContext.birthdate ? `${veterinaryContext.birthdate_estimated ? 'Nacimiento estimado' : 'Nacimiento'}: ${veterinaryContext.birthdate}` : 'Nacimiento no informado' },
+        { label: 'Responsables al realizar el estudio', value: `${(veterinaryContext.responsibles || []).length > 1 ? 'Responsables' : 'Responsable'}: ${responsibleNames || 'Pendiente'}` },
+    ] : [];
     const studyHeaderFields = [
         { label: 'Estudio', value: studyLabel },
         { label: 'Modalidad', value: modalityLabel },
@@ -2031,18 +2043,20 @@ export const RedactarInforme = () => {
     return (
         <LayoutSinSidebar disableDefaultBackground>
             <div className="flex h-[calc(100dvh-5rem)] flex-col overflow-hidden rounded-xl bg-gray-50 p-2 dark:bg-[#0f1218] dark:text-gray-100 lg:h-[calc(100dvh-24px)]">
-                {reportData.veterinary_context && <div className="mb-2 rounded border bg-background px-3 py-2 text-sm"><strong>Paciente veterinario</strong> · {reportData.veterinary_context.species_name || 'Especie pendiente'} · {reportData.veterinary_context.breed_name || 'Raza desconocida'} · Peso registrado: {reportData.veterinary_context.weight_kg ?? '—'} kg · {reportData.veterinary_context.birthdate_estimated ? 'Nacimiento estimado: ' : 'Nacimiento: '}{reportData.veterinary_context.birthdate || 'No informado'} · Responsables al realizar el estudio: {(reportData.veterinary_context.responsibles || []).map((r: {name:string}) => r.name).join(', ') || 'Pendiente'}</div>}
                 {/* Encabezado del estudio y notas */}
                 <div className="mb-3 flex shrink-0 items-center justify-between">
                     <div className="relative flex w-full flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-[#151922] md:flex-row md:items-start md:justify-between">
                         <div className="flex min-w-0 flex-1 items-start gap-3 md:items-center">
                             <div className="bg-gray-100 dark:bg-[#1e2430] rounded-full p-2.5">
-                                <SexIcon className="w-6 h-6 text-gray-600 dark:text-gray-300" aria-hidden="true" />
+                                <SubjectIcon className="w-6 h-6 text-gray-600 dark:text-gray-300" aria-hidden="true" />
                             </div>
                             <div className="min-w-0 flex-1">
                                 <h1 className="mb-1 break-words text-base font-semibold text-gray-800 dark:text-gray-100 sm:text-lg md:text-xl">
                                     {renderHeaderFields(patientHeaderFields)}
                                 </h1>
+                                {veterinaryContext && <p className="mb-1 break-words text-xs text-gray-600 dark:text-gray-300 md:text-sm">
+                                    {renderHeaderFields(veterinaryHeaderFields)}
+                                </p>}
                                 <p className="break-words text-xs text-gray-600 dark:text-gray-300 md:text-sm">
                                     {renderHeaderFields(studyHeaderFields)}
                                 </p>
