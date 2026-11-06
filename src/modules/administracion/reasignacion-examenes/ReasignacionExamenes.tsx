@@ -22,12 +22,8 @@ export const ReasignacionExamenes = () => {
     const [selectedEstudio, setSelectedEstudio] = useState<reasignacioType | null>(null);
     const { estudios, isLoading } = useReasignacionExamenes();
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(8);
+    const [perPage, setPerPage] = useState(10);
     const mutation = usePostReasignacionExamenes();
-    const handlePaginationChange = (newPage: number, newPageSize: number) => {
-        setPage(newPage);
-        setPageSize(newPageSize);
-    };
     const handleSubmit = ({ estudio_id, paciente_id }: { estudio_id: string, paciente_id: string }) => {
         const data = { estudio_id, paciente_id };
         mutation.createMutation.mutate(data, {
@@ -45,18 +41,17 @@ export const ReasignacionExamenes = () => {
     }
     return (
         <MainLayout>
-            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10">
-                {/* Header con Tabs integrados */}
-                <div className="mb-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="bg-brand-purple p-2.5 rounded-lg">
-                            <Calendar className="w-6 h-6 text-white" />
-                        </div>
-                        <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400">Reasignacion de Examenes</h1>
+            <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm border border-border dark:border-[rgba(255,255,255,0.06)] dark:shadow-[0_8px_48px_rgba(0,0,0,0.5),0_0_0_1px_rgba(139,92,246,0.08)] z-10 h-full flex flex-col overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="bg-brand-purple dark:bg-gradient-to-br dark:from-purple-600 dark:to-purple-900 p-2 rounded-lg dark:shadow-[0_0_16px_rgba(139,92,246,0.5),0_2px_8px_rgba(0,0,0,0.4)]">
+                        <Calendar className="w-6 h-6 text-white" />
                     </div>
+                    <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400 dark:drop-shadow-[0_0_8px_rgba(167,139,250,0.3)]">Reasignación de Exámenes</h1>
+                </div>
 
                     {/* Tabs modernos */}
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full min-h-0 flex-1 flex flex-col">
                         <TabsList className="grid w-full grid-cols-2 h-auto bg-purple-50/50 dark:bg-purple-950/50 p-1 rounded-xl gap-2">
                             <TabsTrigger
                                 value="estudios"
@@ -78,55 +73,48 @@ export const ReasignacionExamenes = () => {
 
                         </TabsList>
 
-                        {/* Tab Content - Paciente */}
-                        <TabsContent value="estudios" className="mt-6 space-y-4">
-                            {/* Tabla de pacientes */}
-                            <div className="bg-white dark:bg-[#2a2e32] rounded-lg border border-purple-100 dark:border-gray-700 p-4">
-                                <div className="w-full flex justify-between">
-                                    <h2 className="text-lg font-semibold text-gray-700 dark:text-foreground mb-4">
-                                        Seleccione un estudio
-                                    </h2>
-                                </div>
+                        {/* Tab Content - Estudios */}
+                        <TabsContent value="estudios" className="mt-6 space-y-4 min-h-0 flex-1 flex flex-col">
+                            <TablaDynamic<reasignacioType>
+                                data={(estudios?.data || [])}
+                                columns={reasignacionColumns}
+                                showIndex
+                                loading={isLoading}
+                                selectedRow={selectedEstudio}
+                                rowIdKey="guid"
+                                onRowClick={(estudio) => {
+                                    setSelectedEstudio(estudio);
+                                }}
+                                onRowDoubleClick={(estudio) => {
+                                    setSelectedEstudio(estudio);
+                                    setActiveTab("pacientes");
+                                }}
+                                emptyMessage="Seleccione un estudio para pasar a los pacientes."
 
-                                {isLoading ? (
-                                    <div className='flex justify-center items-center h-40'>
-                                        <span className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500'></span>
-                                    </div>
-                                ) : (
-                                    <TablaDynamic<reasignacioType>
-                                        data={(estudios?.data || [])}
-                                        columns={reasignacionColumns}
-                                        showIndex
-                                        selectedRow={selectedEstudio}
-                                        rowIdKey="guid"
-                                        onRowClick={(estudio) => {
-                                            setSelectedEstudio(estudio);
-                                        }}
-                                        onRowDoubleClick={(estudio) => {
-                                            setSelectedEstudio(estudio);
-                                            setActiveTab("pacientes");
-                                        }}
-                                        emptyMessage="Seleccione un estudio para pasar a los pacientes."
-
-                                        pagination={{
-                                            page,
-                                            pageSize,
-                                            serverSide: false,
-                                            total: Array.isArray(estudios?.data) ? estudios.data.length : 0,
-                                        }}
-                                        onPaginationChange={handlePaginationChange}
-                                    />
-                                )}
-                            </div>
+                                pagination={{
+                                    page,
+                                    pageSize: perPage,
+                                    serverSide: false,
+                                    total: Array.isArray(estudios?.data) ? estudios.data.length : 0,
+                                }}
+                                onPaginationChange={(newPage) => {
+                                    setPage(newPage);
+                                }}
+                                perPageValue={perPage}
+                                onPerPageChange={(value) => {
+                                    setPerPage(value);
+                                    setPage(1);
+                                }}
+                                perPageOptions={[10, 20, 50, 100]}
+                            />
                         </TabsContent>
 
-                        {/* Tab Content - Examen */}
-                        <TabsContent value="pacientes" className="mt-6">
+                        {/* Tab Content - Pacientes */}
+                        <TabsContent value="pacientes" className="mt-6 min-h-0 flex-1 flex flex-col">
                             <ReasingacionPacientes selectedEstudio={selectedEstudio} handleSubmit={handleSubmit} />
                         </TabsContent>
 
                     </Tabs>
-                </div>
 
 
             </div>

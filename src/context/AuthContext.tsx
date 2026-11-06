@@ -1,11 +1,10 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
 import posthog from "posthog-js";
+import { api } from "@/lib/api";
+import { queryClient } from "@/lib/queryClient";
 
 interface User {
     email: string;
-    email_verification_required?: boolean;
-    email_verified?: boolean;
-    facility_id?: string | null;
     id: string;
     location_id?: string | null;
     name: string;
@@ -16,6 +15,11 @@ interface User {
     surname: string;
     user_type: string;
     username: string;
+    impersonation?: {
+        actor_id: string;
+        actor_username: string;
+        session_id: string;
+    };
 }
 
 interface AuthData {
@@ -29,9 +33,11 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (data: AuthData) => void;
-    logout: () => void;
+    replaceSession: (data: AuthData) => void;
+    logout: () => Promise<void>;
     updateUser: (user: User) => void;
     markPasswordChanged: () => void;
+    refreshPermissions: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,23 +47,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        let isMounted = true;
         const storedAuthData = localStorage.getItem("authData");
-        if (storedAuthData) {
-            try {
-                setAuthData(JSON.parse(storedAuthData));
-            } catch (error) {
-                console.error("Error parsing stored auth data:", error);
-                localStorage.removeItem("authData");
-            }
+        if (!storedAuthData) {
+            setIsLoading(false);
+            return () => { isMounted = false; };
         }
-        setIsLoading(false);
+
+        const restoreSession = async () => {
+            try {
+                const response = await api.get<{ success: boolean; data: Partial<User> & { id: string } }>(
+                    "/auth/me"
+                );
+                const latestSession = JSON.parse(localStorage.getItem("authData") || "null") as AuthData | null;
+                if (!latestSession) {
+                    if (isMounted) setAuthData(null);
+                    return;
+                }
+                if (response.data.data.id !== latestSession.user.id) {
+                    if (isMounted) setAuthData(latestSession);
+                    return;
+                }
+                const restored = {
+                    ...latestSession,
+                    user: {
+                        ...latestSession.user,
+                        ...response.data.data,
+                    },
+                };
+                if (isMounted) setAuthData(restored);
+                localStorage.setItem("authData", JSON.stringify(restored));
+            } catch (error) {
+                console.error("[AuthContext] No se pudo restaurar la sesión:", error);
+                localStorage.removeItem("authData");
+                localStorage.setItem("nextris_session_switch", crypto.randomUUID());
+                if (isMounted) setAuthData(null);
+            } finally {
+                if (isMounted) setIsLoading(false);
+            }
+        };
+
+        void restoreSession();
+        return () => { isMounted = false; };
+    }, []);
+
+    useEffect(() => {
+        const synchronizeSession = (event: StorageEvent) => {
+            if (event.key !== "nextris_session_switch") return;
+            queryClient.clear();
+            window.location.replace(localStorage.getItem("authData") ? "/inicio" : "/login");
+        };
+        const expireSession = () => {
+            setAuthData(null);
+            queryClient.clear();
+            localStorage.setItem("nextris_session_switch", crypto.randomUUID());
+            window.location.replace("/login");
+        };
+        window.addEventListener("storage", synchronizeSession);
+        window.addEventListener("nextris-auth-expired", expireSession);
+        return () => {
+            window.removeEventListener("storage", synchronizeSession);
+            window.removeEventListener("nextris-auth-expired", expireSession);
+        };
     }, []);
 
     const login = (data: AuthData) => {
         setAuthData(data);
-        // Guardar en localStorage
         localStorage.setItem("authData", JSON.stringify(data));
-        // Identify user in PostHog
         try {
             posthog.identify(data.user.id, {
                 username: data.user.username,
@@ -65,16 +121,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 email: data.user.email,
                 role_id: data.user.role_id,
                 user_type: data.user.user_type,
-                facility_id: data.user.facility_id ?? null,
             });
             posthog.capture("user_login", { user_type: data.user.user_type });
         } catch {
-            // silent — analytics must never break auth
+            // silent
         }
     };
 
-    const logout = () => {
-        // Capture before clearing state
+    const replaceSession = (data: AuthData) => {
+        queryClient.clear();
+        localStorage.removeItem("activeFacilityId");
+        sessionStorage.removeItem("nextris_session_id");
+        try {
+            posthog.reset();
+        } catch {
+            // silent
+        }
+        login(data);
+        localStorage.setItem("nextris_session_switch", crypto.randomUUID());
+    };
+
+    const logout = async () => {
+        if (authData?.user.impersonation) {
+            try {
+                await api.post("/auth/logout");
+            } catch (error) {
+                console.error("[AuthContext] No se pudo cerrar la sesión asumida:", error);
+                const status = (error as { response?: { status?: number } }).response?.status;
+                if (status !== 401 && status !== 422) throw error;
+            }
+        }
         try {
             posthog.capture("user_logout");
             posthog.reset();
@@ -82,9 +158,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // silent
         }
         setAuthData(null);
-        // Limpiar localStorage
         localStorage.removeItem("authData");
+        localStorage.setItem("nextris_session_switch", crypto.randomUUID());
         localStorage.removeItem("activeFacilityId");
+        queryClient.clear();
     };
 
     const updateUser = (user: User) => {
@@ -112,7 +189,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem("authData", JSON.stringify(updatedAuthData));
     };
 
+    const currentUserId = authData?.user?.id;
+    const refreshPermissions = useCallback(async () => {
+        if (!currentUserId) {
+            return;
+        }
 
+        try {
+            const response = await api.get<{ success: boolean; data: Partial<User> & { id: string } }>(
+                "/auth/me"
+            );
+            const latestSession = JSON.parse(localStorage.getItem("authData") || "null") as AuthData | null;
+            if (!latestSession || response.data.data.id !== latestSession.user.id) {
+                return;
+            }
+            const updatedAuthData = {
+                ...latestSession,
+                user: {
+                    ...latestSession.user,
+                    ...response.data.data,
+                },
+            };
+            setAuthData(updatedAuthData);
+            localStorage.setItem("authData", JSON.stringify(updatedAuthData));
+        } catch (error) {
+            console.error("[AuthContext] Error refreshing permissions:", error);
+            throw error;
+        }
+    }, [currentUserId]);
+
+    useEffect(() => {
+        if (!currentUserId) return;
+        const refresh = () => {
+            if (document.visibilityState === 'visible') void refreshPermissions().catch(() => undefined);
+        };
+        window.addEventListener('focus', refresh);
+        document.addEventListener('visibilitychange', refresh);
+        const interval = window.setInterval(refresh, 60_000);
+        return () => {
+            window.removeEventListener('focus', refresh);
+            document.removeEventListener('visibilitychange', refresh);
+            window.clearInterval(interval);
+        };
+    }, [currentUserId, refreshPermissions]);
 
     const isAuthenticated = !!authData;
 
@@ -123,9 +242,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 isAuthenticated,
                 isLoading,
                 login,
+                replaceSession,
                 logout,
                 updateUser,
                 markPasswordChanged,
+                refreshPermissions,
             }}
         >
             {children}

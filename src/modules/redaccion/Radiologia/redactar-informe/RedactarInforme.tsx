@@ -1,9 +1,17 @@
+import { useAuth } from "@/context/AuthContext";
+import { hasAnyPermission } from "@/lib/permissions";
+import { LocalReportDialog } from '@/components/LocalReportDialog';
+import type { CombinedHistoryEntry, LocalReport } from '@/types/patientHistory';
 import { useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { onAssistantCommandAcknowledged, registerAssistantHandler } from "@/assistant/commands"
+import type { AssistantResult } from "@/assistant/commands"
+import { applyReportEdits, readReportBlocks, reportSnapshot, REPORT_FIELDS } from "@/assistant/reportEditing"
+import type { ReportEdit } from "@/assistant/reportEditing"
 import { useAllTags, useInformeDetalle, useUpdateFlags, useUpdateReport, useUpdateTagIds, useUnblockExam, useBlockExam, usePatientHistory } from "../hooks/use-informes";
 import { putRedactarInforme } from "../services/informes.service";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ChevronDown, ChevronRight, ChevronUp, FileMinus, Image as ImageIcon, Save, Signature, User, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, FileMinus, FileX, Image as ImageIcon, Save, Signature, User, Mars, Venus, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces, Search, SkipForward, Share2 } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
 import { useImagenesPorEstudio } from "@/hooks/use-global";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -12,20 +20,23 @@ import { criteriaService, type ParserVariableTreeNode, type StructuredCriterion,
 import { useTemplates } from "@/modules/redaccion/informe-predefinidos/hooks/use-templates";
 import type { Template } from "@/modules/redaccion/informe-predefinidos/types/informe-pred.types";
 import { ConfirmationModal } from "../components/ConfirmationModal";
-import { useVerifyCredentials } from "./hooks/use-verify-credentials";
 import { useSignReport } from "./hooks/use-sing-report";
 import { useQuitarFirma } from "./hooks/use-quitar-firma";
 import { useNextExam } from "./hooks/use-next-exam";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { informesKeys } from "../constants/query-keys";
 import { CloseTabModal, NextExamModal, SignModal, TemplateModal } from "../components/modals";
 import { clearWindowStorage, notifyGuidChange, notifyViewerUpdate } from "./hooks/use-cross-windows";
 import { FlagsCell } from "../components/FlagsCell";
 import { TagsCell } from "../components/TagsCell";
-import { useFacility } from "@/context/FacilityContext";
-import { useAuth } from "@/context/AuthContext";
-import { useUserMedicalData } from "@/modules/configuracion/configuracion-tablas/usuarios-personal/gestion-usuarios/hooks/useUsers";
-import { api } from "@/lib/api";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ReportNotesPanel } from "./components/ReportNotesPanel";
+import { getReportView } from '@/services/reportView';
+import { closeViewerWindow } from "@/services/viewerWindow";
+import { formatDate } from "@/lib/fechaYhora";
+import { AdministrativeShareModal } from "../components/AdministrativeShareModal";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { mergeTemplateStudyReason } from "./reportTemplate";
 
 const normalizeVariableKey = (value: string | null | undefined): string =>
     String(value || "")
@@ -34,9 +45,48 @@ const normalizeVariableKey = (value: string | null | undefined): string =>
         .replace(/[^a-z0-9]+/g, "_")
         .replace(/^_+|_+$/g, "");
 
+const parseBooleanParam = (value: string | null, fallback: boolean): boolean => {
+    if (value === null) return fallback;
+    return ['true', '1', 'on', 'yes'].includes(value.trim().toLowerCase());
+};
+
+
+
+type ReportFormData = {
+    study_reason: string;
+    content: string;
+    conclusion: string;
+};
+
+type BracketMatch = {
+    text: string;
+    index: number;
+    contentStart: number;
+    contentEnd: number;
+};
+
+const EMPTY_REPORT_FORM: ReportFormData = {
+    study_reason: '',
+    content: '',
+    conclusion: '',
+};
+
+const hasReportContent = (value: string | null | undefined) => {
+    const document = new DOMParser().parseFromString(value || '', 'text/html');
+    const text = (document.body.textContent || '').replace(/\u200B/g, '').trim();
+
+    return Boolean(
+        text || document.body.querySelector('img, [data-variable-chip="true"], [data-criterion-chip="true"]'),
+    );
+};
+
 export const RedactarInforme = () => {
+    const navigate = useNavigate();
+    const isMobile = useIsMobile();
     const { informeGuid, studyInstanceUID } = useParams();
     const [searchParams] = useSearchParams();
+    const assistantMode = searchParams.get('assistant') === '1';
+    const closeEditorWindow = () => assistantMode ? navigate('/worklist') : window.close();
 
     // Obtener los parámetros
     const modalityId = searchParams.get('modality_id');
@@ -44,8 +94,20 @@ export const RedactarInforme = () => {
     const studyGroupId = searchParams.get('study_group_id');
     const windowId = searchParams.get('windowId');
     const siguientePaso = searchParams.get('siguiente_paso');
+    const shouldOpenNextExam = ['true', '1', 'on', 'yes'].includes(
+        String(siguientePaso || '').trim().toLowerCase()
+    );
     const flagsParam = searchParams.get('flags');
     const tagIdsParam = searchParams.get('tag_ids');
+    const nextExamFilters = {
+        show_ready: parseBooleanParam(searchParams.get('show_ready'), true),
+        show_reported: parseBooleanParam(searchParams.get('show_reported'), false),
+        assigned_to_me: parseBooleanParam(searchParams.get('assigned_to_me'), false),
+        show_no_image: parseBooleanParam(searchParams.get('show_no_image'), false),
+        show_without_order: parseBooleanParam(searchParams.get('show_without_order'), false),
+        sort_column: searchParams.get('sort_column') || '',
+        sort_direction: searchParams.get('sort_direction') === 'desc' ? 'desc' as const : 'asc' as const,
+    };
 
     const initialFlagsFromParams = flagsParam
         ? flagsParam.split(',').map((value) => value.trim()).filter(Boolean)
@@ -56,6 +118,10 @@ export const RedactarInforme = () => {
 
     const { informeDetalle, isLoading } = useInformeDetalle(informeGuid);
     const reportData = (informeDetalle as any)?.data || {};
+    const reportReadOnly = Boolean(
+        reportData.report_read_only
+        || reportData.workflow_state === 'cancelled'
+    );
     const reportStudyTypeId = String(reportData.study_type_id || '').trim();
     const reportLocationId = String(reportData.location_id || '').trim();
     const structuredReportsEnabled = Boolean(reportData.structured_reports_enabled);
@@ -64,89 +130,79 @@ export const RedactarInforme = () => {
     const { mutate: updateFlags, isPending: isUpdatingFlags } = useUpdateFlags();
     const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useUpdateTagIds();
     const { allTags } = useAllTags();
-    const { authData } = useAuth();
-    const currentUserId = authData?.user?.id || null;
-    const { medicalData } = useUserMedicalData(currentUserId);
-    const firmaHabilitada = medicalData?.data?.firma_habilitada ?? false;
-    const [formData, setFormData] = useState({
-        history: '',
-        techniques: '',
-        findings: '',
-        impressions: '',
-        conclusions: ''
-    });
+    const [formData, setFormData] = useState<ReportFormData>(EMPTY_REPORT_FORM);
+    const initialReportDataRef = useRef<ReportFormData>(EMPTY_REPORT_FORM);
+    const initializedReportGuidRef = useRef<string | undefined>(undefined);
+    const defaultAppliedReportGuidRef = useRef<string | undefined>(undefined);
+    const [appliedTemplateId, setAppliedTemplateId] = useState<string | null>(null);
     const [examFlags, setExamFlags] = useState<string[]>(initialFlagsFromParams);
     const [examTagIds, setExamTagIds] = useState<string[]>(initialTagIdsFromParams);
     const [isSignModalOpen, setIsSignModalOpen] = useState(false);
     const [password, setPassword] = useState('');
     const [isSigning, setIsSigning] = useState(false);
     const [isSigned, setIsSigned] = useState(false);
+    const { authData } = useAuth();
+    const canShare = hasAnyPermission(authData?.user?.permissions, ['worklist.share']);
+    const [shareKind, setShareKind] = useState<'study' | 'images' | null>(null);
+    const shareStudyUid = String(reportData.study_instance_uid || studyInstanceUID || '').trim();
+    useEffect(() => { setShareKind(null); }, [informeGuid]);
+    const canSign = hasAnyPermission(authData?.user?.permissions, ['reports.sign']);
+    const canUnsign = hasAnyPermission(authData?.user?.permissions, ['reports.unsign']);
+    const canToggleReportSignature = isSigned ? canUnsign : canSign;
+
+    // La firma se autoriza por permiso de usuario; no requiere reingresar contraseña.
+    const requirePasswordForSigning = false;
 
     // Estados para el modal de plantillas
     const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-    const [studyTypeFilter, setStudyTypeFilter] = useState<string>("");
     const [searchTerm, setSearchTerm] = useState("");
+    const [onlyStudyType, setOnlyStudyType] = useState(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+    const [isWorkflowInfoModalOpen, setIsWorkflowInfoModalOpen] = useState(false);
+    const workflowInfoShownRef = useRef<string | undefined>(undefined);
 
-    // Hooks para plantillas - buscar por study type, y si no hay resultados, por modalidad
-    const activeStudyTypeFilter = studyTypeFilter || reportStudyTypeId;
+    useEffect(() => {
+        if (!informeGuid || !reportData.workflow_state || reportData.workflow_state === 'pending') return;
+        if (workflowInfoShownRef.current === informeGuid) return;
+        workflowInfoShownRef.current = informeGuid;
+        setIsWorkflowInfoModalOpen(true);
+    }, [informeGuid, reportData.workflow_state]);
+
+    // Hooks para plantillas
     const reportTypeFilter = structuredReportsEnabled ? undefined : 'simple';
     const { data: templatesByStudyType } = useTemplates(
-        activeStudyTypeFilter || undefined,
+        reportStudyTypeId || undefined,
         undefined,
         undefined,
         reportTypeFilter,
+        Boolean(reportStudyTypeId),
     );
-    const { data: templatesByModality } = useTemplates(
+    const { data: modalTemplates, isLoading: isLoadingTemplates, isError: templatesError } = useTemplates(
+        onlyStudyType && reportStudyTypeId ? reportStudyTypeId : undefined,
         undefined,
-        modalityId || undefined,
         undefined,
         reportTypeFilter,
+        isTemplateModalOpen,
     );
-    // Usar templates del study type si existen, sino fallback a los de la modalidad
-    const templatesData = (templatesByStudyType?.data && templatesByStudyType.data.length > 0)
-        ? templatesByStudyType
-        : templatesByModality;
+    const studyTypeDefaultTemplate = reportStudyTypeId
+        ? templatesByStudyType?.data?.find((template) => template.is_user_default)
+            || templatesByStudyType?.data?.find((template) => template.is_system_default)
+        : undefined;
+    const hasStudyTypeDefault = Boolean(studyTypeDefaultTemplate);
+    const templateOptions = modalTemplates?.data || [];
     // En tu componente
-    const { mutateAsync: verifyCredentials } = useVerifyCredentials();
     const { mutateAsync: signReport } = useSignReport();
     const { mutateAsync: quitarFirma } = useQuitarFirma();
     const { mutateAsync: getNextExam } = useNextExam();
     const { mutateAsync: unblockExam } = useUnblockExam();
     const { mutateAsync: blockExam } = useBlockExam();
-    const { selectedFacilityId } = useFacility();
-
-    const { data: facilityPlanData } = useQuery({
-        queryKey: ["facility-plan", selectedFacilityId, "redactar-informe", informeGuid],
-        queryFn: async () => {
-            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
-            return response.data?.data || null;
-        },
-        enabled: Boolean(selectedFacilityId && informeGuid),
-        staleTime: 60 * 1000,
-    });
-
     const queryClient = useQueryClient();
     const [isNextExamModalOpen, setIsNextExamModalOpen] = useState(false);
     const [nextExamData, setNextExamData] = useState<any>(null);
     const [isCloseTabModalOpen, setIsCloseTabModalOpen] = useState(false);
-    const navigate = useNavigate();
-
-    const readMonthlyLimit: number | null = facilityPlanData?.plan?.max_read_monthly ?? null;
-    const readCount: number = facilityPlanData?.usage_monthly?.read_count ?? 0;
-    const isReadLimitReached =
-        typeof readMonthlyLimit === "number"
-        && readMonthlyLimit >= 0
-        && readCount >= readMonthlyLimit;
-
-    useEffect(() => {
-        if (!informeGuid) return;
-        if (!isReadLimitReached) return;
-        toast.error(`Límite mensual de redacción alcanzado (${readCount}/${readMonthlyLimit}). No puedes abrir el redactor.`);
-        navigate('/estudios/redaccion');
-    }, [informeGuid, isReadLimitReached, navigate, readCount, readMonthlyLimit]);
-
+    const [isSkipConfirmationOpen, setIsSkipConfirmationOpen] = useState(false);
+    const [isSkipping, setIsSkipping] = useState(false);
     // Ref para mantener el informeGuid actual actualizado en el listener
     const currentInformeGuidRef = useRef(informeGuid);
 
@@ -171,7 +227,7 @@ export const RedactarInforme = () => {
 
 
     // Filtrar plantillas por búsqueda local y priorizar segun modulo/facility.
-    const searchMatchedTemplates = templatesData?.data?.filter((template) => {
+    const searchMatchedTemplates = templateOptions.filter((template) => {
         const searchLower = searchTerm.toLowerCase();
         return (
             template.title.toLowerCase().includes(searchLower) ||
@@ -197,6 +253,7 @@ export const RedactarInforme = () => {
         : [];
 
     const filteredTemplates = [...preferredTemplates, ...fallbackTemplates];
+    const defaultTemplate = hasStudyTypeDefault ? studyTypeDefaultTemplate : undefined;
 
     const getExamMetaFromCachedLists = useCallback(() => {
         const cachedQueries = queryClient.getQueriesData({ queryKey: informesKeys.lists() });
@@ -220,15 +277,20 @@ export const RedactarInforme = () => {
     // Actualizar formData cuando informeDetalle cambie
     useEffect(() => {
         if (informeDetalle?.data) {
+            if (initializedReportGuidRef.current === informeGuid) return;
+
+            initializedReportGuidRef.current = informeGuid;
             const cachedExamMeta = getExamMetaFromCachedLists();
 
-            setFormData({
-                history: informeDetalle.data.history || '',
-                techniques: informeDetalle.data.techniques || '',
-                findings: informeDetalle.data.findings || '',
-                impressions: informeDetalle.data.impressions || '',
-                conclusions: informeDetalle.data.conclusions || ''
-            });
+            const detailData = informeDetalle.data as any;
+            const nextFormData: ReportFormData = {
+                study_reason: detailData.study_reason || detailData.clinical_question || detailData.history || '',
+                content: detailData.content || detailData.findings || '',
+                conclusion: detailData.conclusion || detailData.conclusions || '',
+            };
+            initialReportDataRef.current = nextFormData;
+            setFormData(nextFormData);
+            setAppliedTemplateId(detailData.applied_template_id || null);
             setExamFlags((prev) => {
                 if (Array.isArray(informeDetalle.data.flags)) return informeDetalle.data.flags;
                 if (cachedExamMeta) return cachedExamMeta.flags;
@@ -241,7 +303,46 @@ export const RedactarInforme = () => {
             });
             setIsSigned(informeDetalle.data.is_reported || false);
         }
-    }, [getExamMetaFromCachedLists, informeDetalle?.data]);
+    }, [getExamMetaFromCachedLists, informeDetalle?.data, informeGuid]);
+
+    const applyTemplateToReport = useCallback((template: Template) => {
+        if (reportReadOnly) return;
+        const examinationReason = reportData.clinical_question || reportData.history || '';
+        setAppliedTemplateId(template.guid);
+        setFormData(prev => ({
+            ...prev,
+            study_reason: mergeTemplateStudyReason(template.study_reason, examinationReason),
+            content: template.content || template.findings || '',
+            conclusion: template.conclusion || '',
+        }));
+    }, [reportData.clinical_question, reportData.history, reportReadOnly]);
+
+    // Algunos reportes antiguos llegan vacíos aunque exista un default asociado.
+    // Aplicarlo desde el frontend evita que el redactor quede en blanco mientras
+    // se mantiene la selección equivalente en el backend.
+    useEffect(() => {
+        if (!informeGuid || !informeDetalle?.data || !defaultTemplate || reportReadOnly) return;
+        if (defaultAppliedReportGuidRef.current === informeGuid) return;
+
+        const reportAlreadyHasContent = [
+            informeDetalle.data.study_reason,
+            informeDetalle.data.content,
+            informeDetalle.data.conclusion,
+        ].some(hasReportContent);
+        const localReportAlreadyHasContent = [
+            formData.study_reason,
+            formData.content,
+            formData.conclusion,
+        ].some(hasReportContent);
+
+        if (reportAlreadyHasContent || localReportAlreadyHasContent) {
+            defaultAppliedReportGuidRef.current = informeGuid;
+            return;
+        }
+
+        defaultAppliedReportGuidRef.current = informeGuid;
+        applyTemplateToReport(defaultTemplate);
+    }, [applyTemplateToReport, defaultTemplate, formData, informeDetalle?.data, informeGuid, reportReadOnly]);
 
     useEffect(() => {
         const srDebug = (informeDetalle as any)?.debug_sr;
@@ -265,13 +366,37 @@ export const RedactarInforme = () => {
 
     const patientId = informeDetalle?.data?.patient_id;
     const { historyData } = usePatientHistory(patientId);
-    const patientStudies = historyData?.data || [];
+    const currentHistoryGuid = String(informeDetalle?.data?.exam_id || informeGuid || '').trim().toLowerCase();
+    const currentHistoryStudyUid = String(
+        studyInstanceUID || reportData?.study_instance_uid || ''
+    ).trim().toLowerCase();
+    const currentHistoryAccession = String(reportData.accession_number || reportData.localacc || '').trim();
+    const patientStudies = (historyData?.data || []).filter((study) => {
+        const studyGuid = String(study.guid || '').trim().toLowerCase();
+        const studyUid = String(study.studyinstanceuid || '').trim().toLowerCase();
 
-    const [historyPdfUrl, setHistoryPdfUrl] = useState<string | null>(null);
+        if (currentHistoryAccession && study.accession_number === currentHistoryAccession) return false;
+        if (currentHistoryGuid && studyGuid === currentHistoryGuid) return false;
+        if (currentHistoryStudyUid && studyUid === currentHistoryStudyUid) return false;
+        return true;
+    });
 
-    const handleOpenHistoryPdf = (pdfPath: string) => {
-        const baseURL = import.meta.env.VITE_API_URL || '/api';
-        setHistoryPdfUrl(`${baseURL}/pdfs/${pdfPath}`);
+    const [externalHistoryReport, setExternalHistoryReport] = useState<LocalReport | null>(null);
+
+    const handleOpenHistoryReport = async (study: CombinedHistoryEntry) => {
+        const examId = study.local_exam_id;
+        if ((study.source === 'nextris' && !patientId) || (study.source === 'nextris' && !examId)) {
+            toast.error('No se encontró el ID del estudio para consultar NextRIS');
+            return;
+        }
+        try {
+            // The external report ID remains authoritative even when linked to a local exam.
+            if (!examId) return;
+            const result = await getReportView(examId);
+            setExternalHistoryReport(result.report);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe previo');
+        }
     };
 
     const examId = informeDetalle?.data?.exam_id || informeGuid || '';
@@ -307,16 +432,20 @@ export const RedactarInforme = () => {
 
     // Referencias a los editores usando useRef
     const editorsRef = useRef<{
-        techniques: any;
-        findings: any;
-        impressions: any;
-        conclusions: any;
+        study_reason: any;
+        content: any;
+        conclusion: any;
     }>({
-        techniques: null,
-        findings: null,
-        impressions: null,
-        conclusions: null
+        study_reason: null,
+        content: null,
+        conclusion: null
     });
+    const assistantRevision = useRef(crypto.randomUUID());
+    const assistantSnapshot = useRef<ReturnType<typeof reportSnapshot> | null>(null);
+    const assistantSnapshotSequence = useRef(0);
+    const assistantEditSequence = useRef(0);
+    const assistantMutation = useRef(false);
+    const assistantUndo = useRef<{ before: ReturnType<typeof reportSnapshot>; after: ReturnType<typeof reportSnapshot>; sequence: number } | null>(null);
 
     // Ref para rastrear imágenes ya cargadas (evita reemplazar las arrastradas al campo)
     const loadedImageNamesRef = useRef<Set<string>>(new Set());
@@ -332,24 +461,10 @@ export const RedactarInforme = () => {
     } | null>(null);
     const [dragOverField, setDragOverField] = useState<string | null>(null);
 
-    // Estado para controlar qué secciones están abiertas/cerradas
-    const [openSections, setOpenSections] = useState({
-        datosExamen: true,
-        datosTecnicos: true,
-        informesPredefinidos: true,
-        historiaClinicaSidebar: true,
-        historiaClinica: true,
-        tecnica: true,
-        hallazgos: true,
-        impresiones: true,
-        conclusiones: true,
-        imagenes: true
-    });
-
     // Estados para controlar la visibilidad de los sidebars
     const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
     const [rightSidebarTab, setRightSidebarTab] = useState<'history' | 'images' | 'variables' | 'ai'>('history');
-    const [rightSidebarWidth, setRightSidebarWidth] = useState(380);
+    const [rightSidebarWidth, setRightSidebarWidth] = useState(285);
     const [srVariableTree, setSrVariableTree] = useState<ParserVariableTreeNode[]>([]);
     const [expandedSrNodeIds, setExpandedSrNodeIds] = useState<Record<string, boolean>>({});
     const [isLoadingSrTree, setIsLoadingSrTree] = useState(false);
@@ -361,7 +476,8 @@ export const RedactarInforme = () => {
     const [isResizingRightSidebar, setIsResizingRightSidebar] = useState(false);
     const [activeEditorField, setActiveEditorField] = useState<keyof typeof editorsRef.current | null>(null);
     const rightSidebarResizeStartXRef = useRef(0);
-    const rightSidebarResizeStartWidthRef = useRef(380);
+    const rightSidebarResizeStartWidthRef = useRef(285);
+    const rightSidebarResizeMovedRef = useRef(false);
 
     const getApiOrigin = useCallback(() => {
         try {
@@ -436,17 +552,29 @@ export const RedactarInforme = () => {
 
     const handleRightSidebarResizeStart = (e: React.MouseEvent) => {
         e.preventDefault();
+        rightSidebarResizeMovedRef.current = false;
         rightSidebarResizeStartXRef.current = e.clientX;
         rightSidebarResizeStartWidthRef.current = rightSidebarWidth;
         setIsResizingRightSidebar(true);
+    };
+
+    const handleRightSidebarToggle = () => {
+        const wasResized = rightSidebarResizeMovedRef.current;
+        rightSidebarResizeMovedRef.current = false;
+
+        if (wasResized && rightSidebarOpen) return;
+        setRightSidebarOpen((isOpen) => !isOpen);
     };
 
     useEffect(() => {
         if (!isResizingRightSidebar) return;
 
         const handleMouseMove = (e: MouseEvent) => {
+            if (Math.abs(e.clientX - rightSidebarResizeStartXRef.current) > 4) {
+                rightSidebarResizeMovedRef.current = true;
+            }
             const delta = rightSidebarResizeStartXRef.current - e.clientX;
-            const nextWidth = Math.max(320, Math.min(560, rightSidebarResizeStartWidthRef.current + delta));
+            const nextWidth = Math.max(240, Math.min(420, rightSidebarResizeStartWidthRef.current + delta));
             setRightSidebarWidth(nextWidth);
         };
 
@@ -467,11 +595,11 @@ export const RedactarInforme = () => {
         };
     }, [isResizingRightSidebar]);
 
-    const toggleSection = (section: keyof typeof openSections) => {
-        setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
-    };
-
     const handleChange = (field: string, value: string) => {
+        if (reportReadOnly) {
+            toast.info('Este estudio fue cancelado y no puede modificarse.');
+            return;
+        }
         const previousValue = formData[field as keyof typeof formData] || '';
         const parser = new DOMParser();
         const prevDoc = parser.parseFromString(previousValue, 'text/html');
@@ -497,6 +625,7 @@ export const RedactarInforme = () => {
             return;
         }
 
+        if (!assistantMutation.current) assistantEditSequence.current += 1;
         setFormData(prev => ({ ...prev, [field]: value }));
 
         const imgElements = newDoc.querySelectorAll('img');
@@ -628,88 +757,154 @@ export const RedactarInforme = () => {
 
     const activeEditor = activeEditorField ? editorsRef.current[activeEditorField] : null;
 
-    const findNextPlaceholder = useCallback(() => {
-        const fieldOrder: Array<keyof typeof editorsRef.current> = ['techniques', 'findings', 'impressions', 'conclusions'];
+    const handleEditorContainerClick = useCallback((
+        event: React.MouseEvent<HTMLDivElement>,
+        fieldName: 'content' | 'conclusion',
+    ) => {
+        const target = event.target;
+        if (target instanceof HTMLElement && target.closest('[contenteditable="true"]')) {
+            // El editor editable ya sabe ubicar el cursor donde se hizo click.
+            return;
+        }
 
-        // Encontrar el índice del campo actual
+        const editor = editorsRef.current[fieldName];
+        if (!editor || editor.isDestroyed) return;
+
+        const editorElement = editor.view.dom as HTMLElement;
+        const bounds = editorElement.getBoundingClientRect();
+        if (bounds.width <= 0 || bounds.height <= 0) return;
+
+        // posAtCoords necesita coordenadas dentro del área editable. Si el
+        // click ocurrió en el espacio muerto del contenedor, lo aproximamos al
+        // borde más cercano del editor para obtener la posición más próxima.
+        const left = Math.max(bounds.left + 1, Math.min(event.clientX, bounds.right - 1));
+        const top = Math.max(bounds.top + 1, Math.min(event.clientY, bounds.bottom - 1));
+        const position = editor.view.posAtCoords({ left, top });
+
+        if (position) {
+            editor.commands.focus(position.pos);
+        } else {
+            editor.commands.focus('end');
+        }
+    }, []);
+
+    const getBracketMatches = (editor: any): BracketMatch[] => {
+        // Aceptar tanto campos con corchetes simples ([campo]) como el formato
+        // anterior con dobles corchetes ([[campo]]). El primer alternador evita
+        // que un campo doble se interprete como uno simple.
+        const text = editor.getText({ blockSeparator: '\n' });
+        const regex = /\[\[([^\]]*)\]\]|\[([^[]*)\]/g;
+        const matches: BracketMatch[] = [];
+        let match: RegExpExecArray | null;
+
+        while ((match = regex.exec(text)) !== null) {
+            const fieldText = match[1] ?? match[2] ?? '';
+            const openingLength = match[1] !== undefined ? 2 : 1;
+            const contentStart = match.index + openingLength;
+
+            matches.push({
+                text: fieldText,
+                index: match.index,
+                contentStart,
+                contentEnd: contentStart + fieldText.length,
+            });
+        }
+
+        return matches;
+    };
+
+    // Convierte un índice del texto serializado por TipTap en una posición de
+    // ProseMirror. Esto mantiene la selección correcta aun cuando el informe
+    // tiene varios párrafos o texto con formato.
+    const getEditorPositionAtTextOffset = (editor: any, textOffset: number): number | null => {
+        const doc = editor.state.doc;
+        let position: number | null = null;
+
+        doc.descendants((node: any, pos: number) => {
+            if (!node.isText || position !== null) return;
+
+            const textBeforeNode = doc.textBetween(0, pos, '\n');
+            const nodeStart = textBeforeNode.length;
+            const nodeEnd = nodeStart + node.text.length;
+
+            if (textOffset >= nodeStart && textOffset <= nodeEnd) {
+                position = pos + (textOffset - nodeStart);
+            }
+        });
+
+        return position;
+    };
+
+    const findPlaceholder = useCallback((direction: 'next' | 'previous') => {
+        const fieldOrder: Array<keyof typeof editorsRef.current> = ['study_reason', 'content', 'conclusion'];
         let currentFieldIndex = fieldOrder.indexOf(currentFieldRef.current as keyof typeof editorsRef.current);
         if (currentFieldIndex === -1) currentFieldIndex = 0;
 
-        // Obtener el editor actual y la posición del cursor
-        const currentEditor = editorsRef.current[currentFieldRef.current as keyof typeof editorsRef.current];
-        let currentCursorPos = 0;
-
-        if (currentEditor && !currentEditor.isDestroyed) {
-            // Obtener la posición actual del cursor
-            const { from } = currentEditor.state.selection;
-            currentCursorPos = from;
-        }
-
-        // Buscar en todos los campos empezando por el actual
-        for (let i = 0; i < fieldOrder.length; i++) {
-            const fieldIndex = (currentFieldIndex + i) % fieldOrder.length;
+        for (let offset = 0; offset < fieldOrder.length; offset++) {
+            const fieldIndex = direction === 'next'
+                ? (currentFieldIndex + offset) % fieldOrder.length
+                : (currentFieldIndex - offset + fieldOrder.length) % fieldOrder.length;
             const fieldName = fieldOrder[fieldIndex];
             const editor = editorsRef.current[fieldName];
 
-            if (!editor) continue;
+            if (!editor || editor.isDestroyed) continue;
 
-            const text = editor.getText();
-            const regex = /\[\[([^\]]+)\]\]/g;
-            let match;
-            const matches = [];
+            const positionedMatches = getBracketMatches(editor)
+                .map((match) => ({
+                    match,
+                    from: getEditorPositionAtTextOffset(editor, match.contentStart),
+                    to: getEditorPositionAtTextOffset(editor, match.contentEnd),
+                }))
+                .filter((item): item is { match: BracketMatch; from: number; to: number } =>
+                    item.from !== null && item.to !== null
+                );
 
-            // Recopilar todos los matches con sus posiciones
-            while ((match = regex.exec(text)) !== null) {
-                matches.push({
-                    text: match[1],
-                    index: match.index,
-                    fullMatch: match[0]
-                });
-            }
+            if (positionedMatches.length === 0) continue;
 
-            if (matches.length === 0) continue;
+            if (offset === 0 && fieldName === currentFieldRef.current) {
+                const { from, to } = editor.state.selection;
+                const currentMatch = direction === 'next'
+                    ? positionedMatches.find((item) => item.from >= to)
+                    : [...positionedMatches].reverse().find((item) => item.to <= from);
 
-            // Si estamos en el mismo campo, buscar desde la posición del cursor
-            if (i === 0 && fieldName === currentFieldRef.current) {
-                // Buscar el primer placeholder después de la posición del cursor
-                const nextMatch = matches.find(m => m.index >= currentCursorPos);
-
-                if (nextMatch) {
-                    // Encontramos un placeholder después del cursor en el mismo campo
-                    selectPlaceholder(editor, nextMatch, fieldName);
+                if (currentMatch) {
+                    selectPlaceholder(editor, currentMatch.match, fieldName);
                     return true;
                 }
-                // Si no hay más placeholders después del cursor, continuar al siguiente campo
                 continue;
-            } else {
-                // En campos diferentes, seleccionar el primer placeholder
-                if (matches.length > 0) {
-                    selectPlaceholder(editor, matches[0], fieldName);
-                    return true;
-                }
             }
+
+            const target = direction === 'next'
+                ? positionedMatches[0]
+                : positionedMatches[positionedMatches.length - 1];
+            selectPlaceholder(editor, target.match, fieldName);
+            return true;
         }
 
-        // No se encontraron más placeholders
         lastPlaceholderIndexRef.current = -1;
-        toast.info('No se encontraron más placeholders [[texto]]');
+        toast.info('No se encontraron más campos entre corchetes');
         return false;
     }, []);
 
-    // Función auxiliar para seleccionar un placeholder
-    const selectPlaceholder = (editor: any, match: { text: string; index: number }, fieldName: string) => {
-        currentFieldRef.current = fieldName;
+    const findNextPlaceholder = useCallback(() => findPlaceholder('next'), [findPlaceholder]);
+    const findPreviousPlaceholder = useCallback(() => findPlaceholder('previous'), [findPlaceholder]);
 
-        const startPos = match.index + 2; // Después de [[
-        const endPos = startPos + match.text.length;
+    // Selecciona únicamente el contenido, dejando los corchetes fuera de la selección.
+    const selectPlaceholder = (editor: any, match: BracketMatch, fieldName: string) => {
+        currentFieldRef.current = fieldName;
+        setActiveEditorField(fieldName as keyof typeof editorsRef.current);
 
         editor.commands.focus();
 
         setTimeout(() => {
             if (editor && !editor.isDestroyed) {
+                const from = getEditorPositionAtTextOffset(editor, match.contentStart);
+                const to = getEditorPositionAtTextOffset(editor, match.contentEnd);
+                if (from === null || to === null) return;
+
                 editor.commands.setTextSelection({
-                    from: startPos + 1,
-                    to: endPos + 1
+                    from,
+                    to,
                 });
 
                 const editorElement = editor.view.dom;
@@ -802,18 +997,6 @@ export const RedactarInforme = () => {
 
 
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'F3') {
-                e.preventDefault();
-                findNextPlaceholder();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [findNextPlaceholder]);
-
-    useEffect(() => {
         const handleVoiceCommand = (text: string) => {
             const lowerText = text.toLowerCase().trim();
 
@@ -836,48 +1019,78 @@ export const RedactarInforme = () => {
         };
     }, [findNextPlaceholder]);
 
-    const handleOpenPdf = () => {
+    const handleOpenReport = async () => {
         if (!informeGuid) {
             toast.error('No se encontró el ID del examen');
             return;
         }
-        window.open(
-            `http://148.230.72.8:5001/api/pdfs/${informeDetalle?.data?.pdf_path}`,
-            '_blank',
-        );
+        try {
+            const result = await getReportView(informeGuid);
+            setExternalHistoryReport(result.report);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
+        }
     };
 
 
     const handleGuardarInforme = () => {
+        if (reportReadOnly) {
+            toast.info('Este estudio fue cancelado y no puede modificarse.');
+            return;
+        }
         if (!informeGuid) {
             toast.error('No se encontró el ID del examen');
             return;
         }
 
         const dataToSave = {
-            history: formData.history,
-            techniques: formData.techniques,
-            findings: formData.findings,
-            impressions: formData.impressions,
-            conclusions: formData.conclusions,
+            study_reason: formData.study_reason,
+            content: formData.content,
+            conclusion: formData.conclusion,
+            template_id: appliedTemplateId || undefined,
             mark_as_reported: false
         };
 
-        updateReportMutation.mutate(dataToSave);
+        updateReportMutation.mutate(dataToSave, {
+            onSuccess: () => {
+                initialReportDataRef.current = { ...formData };
+            },
+        });
+    };
+
+    const reportHasUnsavedChanges = useMemo(
+        () => (Object.keys(formData) as Array<keyof ReportFormData>)
+            .some((field) => formData[field] !== initialReportDataRef.current[field]),
+        [formData],
+    );
+
+    const validateReportBeforeSigning = () => {
+        const fields = [formData.study_reason, formData.content, formData.conclusion];
+        const requiredFields = fields;
+        const emptyBracketPattern = /\[\s*\[\s*\]\s*\]/;
+
+        if (fields.some((field) => emptyBracketPattern.test(field))) {
+            toast.error('No se puede firmar un informe con campos vacíos o brackets vacíos [[]]');
+            return false;
+        }
+
+        if (requiredFields.some((field) => !hasReportContent(field))) {
+            toast.error('No se puede firmar un informe con campos vacíos');
+            return false;
+        }
+
+        return true;
     };
 
     const handleVerifyCredentials = async () => {
-        if (!password.trim()) {
-            toast.error('Por favor ingrese su contraseña');
+        if (!canToggleReportSignature) return;
+        if (!isSigned && !validateReportBeforeSigning()) {
             return;
         }
 
         setIsSigning(true);
 
         try {
-            // 1. Verificar credenciales
-            await verifyCredentials({ password });
-
             // Si el informe ya está firmado, quitar la firma
             if (isSigned) {
                 // Quitar firma del informe
@@ -900,10 +1113,10 @@ export const RedactarInforme = () => {
             } else {
                 // 2. Guardar siempre el contenido actual antes de firmar.
                 await putRedactarInforme(informeGuid || '', {
-                    techniques: formData.techniques,
-                    findings: formData.findings,
-                    impressions: formData.impressions,
-                    conclusions: formData.conclusions,
+                    study_reason: formData.study_reason,
+                    content: formData.content,
+                    conclusion: formData.conclusion,
+                    template_id: appliedTemplateId || undefined,
                     mark_as_reported: false,
                 });
 
@@ -922,11 +1135,6 @@ export const RedactarInforme = () => {
                     payload.study_group_id = studyGroupId;
                 }
 
-                const preferredFacilityId = String((reportData as any)?.facility_id || selectedFacilityId || '').trim();
-                if (preferredFacilityId) {
-                    payload.facility_id = preferredFacilityId;
-                }
-
                 // 3. Firmar reporte
                 await signReport({
                     informeGuid: informeGuid || '',
@@ -934,7 +1142,11 @@ export const RedactarInforme = () => {
                 });
 
                 // 4. Obtener siguiente examen
-                const nextExam = await getNextExam(payload);
+                const nextExam = await getNextExam({
+                    ...payload,
+                    current_exam_id: informeGuid || '',
+                    ...nextExamFilters,
+                });
 
                 // 5. Actualizar estados locales
                 setIsSigned(true);
@@ -951,31 +1163,267 @@ export const RedactarInforme = () => {
                     queryKey: informesKeys.lists()
                 });
 
-                // 8. Si hay siguiente examen Y siguientePaso está activado, mostrar modal
-                if (nextExam?.data && siguientePaso === 'true') {
-                    setNextExamData(nextExam.data);
-                    setIsNextExamModalOpen(true);
+                // 8. Si hay siguiente examen Y siguientePaso está activado, abrirlo automáticamente.
+                if (nextExam?.data && shouldOpenNextExam) {
+                    toast.info('Abriendo siguiente estudio...');
+                    await handleOpenNextExam(nextExam.data);
                 } else {
-                    // 9. Si NO hay siguiente examen O siguientePaso es false, mostrar modal de cerrar pestaña
-                    setIsCloseTabModalOpen(true);
+                    // Cerrar inmediatamente
+                    toast.success('Informe firmado exitosamente');
+                    if (windowId) {
+                        clearWindowStorage(windowId);
+                    }
+                    setTimeout(closeEditorWindow, 300);
                 }
             }
         } catch (error) {
             console.error('Error en el proceso de firma:', error);
+            const requestError = error as any;
+            toast.error(
+                requestError?.response?.data?.message ||
+                'No se pudo verificar la contraseña o firmar el informe.'
+            );
         } finally {
             setIsSigning(false);
         }
     };
+
+    const handleSignWithoutPassword = async (assistantCommandId?: string): Promise<AssistantResult> => {
+        if (!canSign) return { status: "forbidden" };
+        if (!informeGuid) {
+            toast.error('No se encontró el ID del informe');
+            return { status: 'unavailable' };
+        }
+
+        if (!validateReportBeforeSigning()) {
+            return { status: 'validation_failed' };
+        }
+
+        setIsSigning(true);
+
+        try {
+            // 1. Guardar siempre el contenido actual antes de firmar.
+            await putRedactarInforme(informeGuid, {
+                study_reason: formData.study_reason,
+                content: formData.content,
+                conclusion: formData.conclusion,
+                template_id: appliedTemplateId || undefined,
+                mark_as_reported: false,
+            });
+
+            // 2. Preparar payload para firmar
+            const payload: Record<string, string> = {};
+
+            if (modalityId && modalityId !== 'undefined') {
+                payload.modality_id = modalityId;
+            }
+
+            if (bodypartId && bodypartId !== 'undefined') {
+                payload.body_part_id = bodypartId;
+            }
+
+            if (studyGroupId && studyGroupId !== 'undefined') {
+                payload.study_group_id = studyGroupId;
+            }
+
+            // 3. Firmar reporte
+            await signReport({
+                informeGuid: informeGuid,
+                ...payload
+            });
+            initialReportDataRef.current = { ...formData };
+            assistantUndo.current = null;
+
+            // 4. La firma ya se confirmó en el servidor.
+            setIsSigned(true);
+            try { await unblockExam(informeGuid); }
+            catch (error) { console.error('No se pudo liberar el bloqueo tras firmar:', error); }
+            queryClient.invalidateQueries({
+                queryKey: informesKeys.lists()
+            });
+            let nextExam: Awaited<ReturnType<typeof getNextExam>> | null = null;
+            try {
+                nextExam = await getNextExam({
+                    ...payload,
+                    current_exam_id: informeGuid,
+                    ...nextExamFilters,
+                });
+            } catch (error) { console.error('No se pudo consultar el siguiente estudio:', error); }
+
+            // 8. Si hay siguiente examen Y siguientePaso está activado, abrir siguiente examen directamente
+            const finish = () => {
+                if (nextExam?.data && shouldOpenNextExam) {
+                    toast.info('Abriendo siguiente estudio...');
+                    void handleOpenNextExam(nextExam.data);
+                } else {
+                    if (!nextExam?.data) toast.info('No hay siguiente estudio disponible');
+                    else toast.success('Informe firmado exitosamente');
+                    if (windowId) clearWindowStorage(windowId);
+                    setTimeout(closeEditorWindow, 300);
+                }
+            };
+            if (assistantCommandId) onAssistantCommandAcknowledged(assistantCommandId, finish);
+            else finish();
+            return { status: 'ok', signed: true, view: 'editor', hasUnsavedChanges: false };
+        } catch (error) {
+            console.error('Error al firmar:', error);
+            const requestError = error as any;
+            toast.error(
+                requestError?.response?.data?.message ||
+                'No se pudo firmar el informe.'
+            );
+            return { status: 'error' };
+        } finally {
+            setIsSigning(false);
+        }
+    };
+
+    useEffect(() => {
+        return registerAssistantHandler('editor', async (command): Promise<AssistantResult> => {
+            const snapshot = reportSnapshot(editorsRef.current);
+            if (command.kind === 'context') return {
+                status: 'ok', view: 'editor', hasUnsavedChanges: reportHasUnsavedChanges,
+                signed: isSigned, readOnly: reportReadOnly || isMobile,
+            };
+            if (command.kind === 'worklist') {
+                if (reportHasUnsavedChanges && !window.confirm('Hay cambios sin guardar en el informe. ¿Descartarlos e ir a la worklist?')) {
+                    return { status: 'cancelled', view: 'editor', hasUnsavedChanges: true };
+                }
+                try {
+                    if (informeGuid) await unblockExam(informeGuid);
+                    onAssistantCommandAcknowledged(command.id, () => {
+                        if (sessionStorage.getItem('nextris-assistant-child')) closeEditorWindow();
+                        else navigate('/worklist');
+                    });
+                    return { status: 'ok', view: 'worklist' };
+                } catch { return { status: 'error' }; }
+            }
+            if (command.kind === 'report_header') {
+                if (isLoading || initializedReportGuidRef.current !== informeGuid || !informeDetalle?.data)
+                    return { status: 'loading' };
+                // This explicit command shares only the fields rendered in the header.
+                const display = (value: unknown) => String(value ?? '').trim();
+                const header = {
+                    patientName: display(reportData.patient_name),
+                    patientId: display(reportData.patientid || reportData.patientit || reportData.patient?.patientit || reportData.patient?.patientid),
+                    nationalCode: display(reportData.national_code || reportData.nationalcode || reportData.nationalCode || reportData.patient?.national_code || reportData.patient?.nationalcode),
+                    sex: display(reportData.sex === 'M' ? 'Masculino' : reportData.sex === 'F' ? 'Femenino' : reportData.sex),
+                    study: display(reportData.study_description || reportData.study_type_description || reportData.study_name),
+                    modality: display(reportData.modality || reportData.modality_name || reportData.modality_description),
+                    accession: display(reportData.accession_number || reportData.localacc || reportData.admission_number),
+                    date: display(formatDate(reportData.exam_date || reportData.created_on || reportData.date || reportData.study_date)),
+                    priority: display(reportData.stat || reportData.priority),
+                };
+                return { status: 'ok', view: 'editor', header };
+            }
+            if (command.kind === 'report_context') {
+                if (isLoading || initializedReportGuidRef.current !== informeGuid
+                    || REPORT_FIELDS.some(field => !editorsRef.current[field])) return { status: 'loading' };
+                const identity = [reportData.patient_name, reportData.patientid, reportData.patientit,
+                    reportData.national_code, reportData.nationalcode, reportData.nationalCode,
+                    reportData.accession_number, reportData.localacc, reportData.admission_number,
+                    reportData.study_instance_uid, reportData.exam_id, informeGuid,
+                    reportData.patient?.patientid, reportData.patient?.patientit,
+                    reportData.patient?.national_code];
+                const fields = readReportBlocks(editorsRef.current, identity);
+                if (!fields) return { status: 'unsafe_context' };
+                if (!assistantSnapshot.current || assistantSnapshotSequence.current !== assistantEditSequence.current
+                    || REPORT_FIELDS.some(field => assistantSnapshot.current?.[field] !== snapshot[field])) {
+                    assistantRevision.current = crypto.randomUUID();
+                    assistantSnapshot.current = snapshot;
+                    assistantSnapshotSequence.current = assistantEditSequence.current;
+                }
+                return { status: 'ok', view: 'editor', fields, revision: assistantRevision.current,
+                    signed: isSigned, readOnly: reportReadOnly || isMobile,
+                    hasUnsavedChanges: reportHasUnsavedChanges };
+            }
+            if (command.kind === 'report_edit') {
+                if (isLoading || initializedReportGuidRef.current !== informeGuid) return { status: 'loading' };
+                if (isSigned || reportReadOnly || isMobile || isSigning || updateReportMutation.isPending) return { status: 'read_only' };
+                if (command.args.expectedRevision !== assistantRevision.current || !assistantSnapshot.current
+                    || assistantSnapshotSequence.current !== assistantEditSequence.current
+                    || REPORT_FIELDS.some(field => assistantSnapshot.current?.[field] !== snapshot[field])) return { status: 'conflict' };
+                if (!Array.isArray(command.args.edits)) return { status: 'invalid_edit' };
+                assistantMutation.current = true;
+                let applied;
+                try { applied = applyReportEdits(editorsRef.current, command.args.edits as ReportEdit[]); }
+                finally { assistantMutation.current = false; }
+                if (applied.status !== 'ok') return applied;
+                const after = reportSnapshot(editorsRef.current);
+                assistantUndo.current = { before: snapshot, after, sequence: assistantEditSequence.current };
+                assistantSnapshot.current = after;
+                assistantSnapshotSequence.current = assistantEditSequence.current;
+                assistantRevision.current = crypto.randomUUID();
+                return { status: 'ok', revision: assistantRevision.current, editCount: applied.editCount, hasUnsavedChanges: true };
+            }
+            if (command.kind === 'report_undo') {
+                if (isSigned || reportReadOnly || isMobile) return { status: 'read_only' };
+                const undo = assistantUndo.current;
+                if (!undo || undo.sequence !== assistantEditSequence.current
+                    || REPORT_FIELDS.some(field => undo.after[field] !== snapshot[field])) return { status: 'conflict' };
+                assistantMutation.current = true;
+                try { for (const field of REPORT_FIELDS) editorsRef.current[field]?.commands.setContent(undo.before[field]); }
+                finally { assistantMutation.current = false; }
+                assistantUndo.current = null;
+                assistantSnapshot.current = reportSnapshot(editorsRef.current);
+                assistantSnapshotSequence.current = assistantEditSequence.current;
+                assistantRevision.current = crypto.randomUUID();
+                return { status: 'ok', revision: assistantRevision.current };
+            }
+            if (command.kind === 'report_save') {
+                if (isLoading || initializedReportGuidRef.current !== informeGuid) return { status: 'loading' };
+                if (isSigned || reportReadOnly || isMobile || isSigning) return { status: 'read_only' };
+                if (!informeGuid) return { status: 'unavailable' };
+                try {
+                    await updateReportMutation.mutateAsync({
+                        study_reason: snapshot.study_reason, content: snapshot.content, conclusion: snapshot.conclusion,
+                        template_id: appliedTemplateId || undefined, mark_as_reported: false,
+                    });
+                    initialReportDataRef.current = snapshot;
+                    assistantUndo.current = null;
+                    return { status: 'ok', hasUnsavedChanges: false };
+                } catch { return { status: 'save_failed' }; }
+            }
+            if (command.kind === 'report_sign') {
+                if (isLoading || initializedReportGuidRef.current !== informeGuid) return { status: 'loading' };
+                if (isSigned || reportReadOnly || isMobile || isSigning || isSkipping || updateReportMutation.isPending) return { status: 'read_only' };
+                return handleSignWithoutPassword(command.id);
+            }
+            return { status: 'unsupported' };
+        });
+    }, [reportHasUnsavedChanges, isSigned, reportReadOnly, isMobile, isLoading, isSigning, isSkipping,
+        updateReportMutation, appliedTemplateId, informeGuid, informeDetalle, unblockExam, reportData, closeEditorWindow, navigate, canSign]);
+
+    const handleSignAction = () => {
+        if (!canToggleReportSignature) return;
+        if (reportReadOnly) {
+            toast.info('Este estudio fue cancelado y no puede modificarse.');
+            return;
+        }
+        if (isSigning || isSkipping || updateReportMutation.isPending) return;
+
+        if (isSigned) {
+            setIsSignModalOpen(true);
+            return;
+        }
+        if (!requirePasswordForSigning) {
+            void handleSignWithoutPassword();
+            return;
+        }
+        setIsSignModalOpen(true);
+    };
+
     const handleCloseTab = () => {
+        if (assistantMode && reportHasUnsavedChanges && !window.confirm('Hay cambios sin guardar en el informe. ¿Descartarlos y volver a la worklist?')) return;
         unblockExam(informeGuid || '').finally(() => {
             // Limpiar localStorage antes de cerrar
             if (windowId) {
                 localStorage.removeItem(windowId);
             }
-            window.close();
+            closeEditorWindow();
         });
         // redirigir a una página de confirmación o al dashboard
-        setTimeout(() => {
+        if (!assistantMode) setTimeout(() => {
             toast.info('Por favor cierra la pestaña manualmente');
         }, 100);
     };
@@ -983,27 +1431,47 @@ export const RedactarInforme = () => {
     const handleStayOnPage = () => {
         setIsCloseTabModalOpen(false);
     };
-    const handleOpenNextExam = async () => {
-        if (nextExamData) {
-            try {
+    const handleOpenNextExam = async (
+        examData?: typeof nextExamData,
+        options?: { releaseCurrentExam?: boolean },
+    ) => {
+        if (reportReadOnly) {
+            toast.info('Este estudio está en modo solo lectura y no permite seleccionar el siguiente examen desde el redactor.');
+            return;
+        }
+        const dataToUse = examData || nextExamData;
+        if (!dataToUse) {
+            toast.error('No se recibió información del siguiente estudio');
+            return;
+        }
+
+        try {
                 // 1. PRIMERO: Actualizar localStorage localmente
                 if (windowId) {
-                    localStorage.setItem(windowId, nextExamData.guid);
+                    localStorage.setItem(windowId, dataToUse.guid);
                 }
                 // 2. SEGUNDO: Notificar a todas las ventanas (incluyendo la padre)
                 if (windowId) {
-                    notifyGuidChange(windowId, nextExamData.guid);
+                    notifyGuidChange(windowId, dataToUse.guid);
                 }
 
                 // 3. TERCERO: Bloquear el nuevo examen
-                await blockExam(nextExamData.guid);
+                await blockExam(dataToUse.guid);
+
+                if (
+                    options?.releaseCurrentExam
+                    && currentInformeGuidRef.current
+                    && currentInformeGuidRef.current !== dataToUse.guid
+                ) {
+                    await unblockExam(currentInformeGuidRef.current);
+                }
 
                 // 4. CUARTO: Esperar un poco para que el servidor procese
                 await new Promise(resolve => setTimeout(resolve, 300));
 
                 // 5. QUINTO: Notificar actualización del visor con el nuevo study_instance_uid
-                if (windowId && nextExamData.study_instance_uid) {
-                    notifyViewerUpdate(windowId, nextExamData.study_instance_uid, nextExamData.guid);
+                if (windowId && dataToUse.study_instance_uid) {
+                    notifyViewerUpdate(windowId, dataToUse.study_instance_uid, dataToUse.guid);
                 }
 
                 // 6. SEXTO: Construir la URL
@@ -1013,23 +1481,31 @@ export const RedactarInforme = () => {
                 if (studyGroupId) params.set('study_group_id', studyGroupId);
                 if (windowId) params.set('windowId', windowId);
                 if (siguientePaso) params.set('siguiente_paso', siguientePaso);
-                if (Array.isArray(nextExamData.flags) && nextExamData.flags.length > 0) {
-                    params.set('flags', nextExamData.flags.join(','));
+                if (Array.isArray(dataToUse.flags) && dataToUse.flags.length > 0) {
+                    params.set('flags', dataToUse.flags.join(','));
                 }
-                if (Array.isArray(nextExamData.tag_ids) && nextExamData.tag_ids.length > 0) {
-                    params.set('tag_ids', nextExamData.tag_ids.join(','));
+                if (Array.isArray(dataToUse.tag_ids) && dataToUse.tag_ids.length > 0) {
+                    params.set('tag_ids', dataToUse.tag_ids.join(','));
                 }
 
-                const newUrl = `/estudios/redaccion/redactar-informe/${nextExamData.guid}/${nextExamData.study_instance_uid}?${params.toString()}`;
+                const studyPath = dataToUse.study_instance_uid
+                    ? `/${encodeURIComponent(dataToUse.study_instance_uid)}`
+                    : '';
+                const newUrl = `/worklist/redactar-informe/${encodeURIComponent(dataToUse.guid)}${studyPath}?${params.toString()}`;
 
 
-                // 7. SÉPTIMO: Navegar
-                navigate(newUrl);
+                // 7. SÉPTIMO: Recargar la ventana con el nuevo examen.
+                // Esto garantiza que se reinicien los datos del redactor abierto en una ventana secundaria.
+                window.location.assign(newUrl);
 
                 setIsNextExamModalOpen(false);
-            } catch (error) {
-                toast.error('Error al abrir el siguiente examen');
-            }
+        } catch (error) {
+            console.error('Error al abrir el siguiente examen:', error);
+            const requestError = error as any;
+            toast.error(
+                requestError?.response?.data?.message ||
+                'Error al abrir el siguiente examen'
+            );
         }
     };
 
@@ -1039,9 +1515,58 @@ export const RedactarInforme = () => {
         toast.success('Informe firmado exitosamente');
     };
 
+    const executeSkipReport = async () => {
+        if (!informeGuid || isSkipping || isSigning || updateReportMutation.isPending) return;
+
+        setIsSkipConfirmationOpen(false);
+        setIsSkipping(true);
+
+        const payload: Record<string, string> = {};
+        if (modalityId && modalityId !== 'undefined') payload.modality_id = modalityId;
+        if (bodypartId && bodypartId !== 'undefined') payload.body_part_id = bodypartId;
+        if (studyGroupId && studyGroupId !== 'undefined') payload.study_group_id = studyGroupId;
+
+        try {
+            const nextExam = await getNextExam({
+                ...payload,
+                current_exam_id: informeGuid,
+                ...nextExamFilters,
+            });
+
+            if (!nextExam?.data) {
+                toast.info('No hay siguiente estudio disponible');
+                return;
+            }
+
+            toast.info('Abriendo siguiente estudio...');
+            await handleOpenNextExam(nextExam.data, { releaseCurrentExam: true });
+        } catch (error) {
+            console.error('Error al saltar el estudio:', error);
+            const requestError = error as { response?: { data?: { message?: string } } };
+            toast.error(requestError?.response?.data?.message || 'No se pudo abrir el siguiente estudio');
+        } finally {
+            setIsSkipping(false);
+        }
+    };
+
+    const handleSkipReport = () => {
+        if (reportReadOnly) return;
+        if (isSkipping || isSigning || updateReportMutation.isPending) return;
+        if (reportHasUnsavedChanges) {
+            setIsSkipConfirmationOpen(true);
+            return;
+        }
+        void executeSkipReport();
+    };
+
     // Función para cerrar la ventana de forma segura (desbloqueando primero)
     // Al cerrar la ventana
     const handleCloseWindow = async () => {
+        if (assistantMode && reportHasUnsavedChanges && !window.confirm('Hay cambios sin guardar en el informe. ¿Descartarlos y volver a la worklist?')) return;
+        // El visor se abre desde la ventana de la lista de trabajo, por lo
+        // que se cierra mediante BroadcastChannel antes de cerrar el redactor.
+        closeViewerWindow();
+
         if (currentInformeGuidRef.current) {
             try {
                 await unblockExam(currentInformeGuidRef.current);
@@ -1054,21 +1579,73 @@ export const RedactarInforme = () => {
                     clearWindowStorage(windowId); // Usa la función helper
                 }
 
-                setTimeout(() => window.close(), 300);
+                setTimeout(closeEditorWindow, 300);
             } catch (error) {
                 console.error('Error al desbloquear:', error);
                 if (windowId) {
                     clearWindowStorage(windowId);
                 }
-                window.close();
+                closeEditorWindow();
             }
         } else {
             if (windowId) {
                 clearWindowStorage(windowId);
             }
-            window.close();
+            closeEditorWindow();
         }
     };
+
+    useEffect(() => {
+        const handleActionShortcut = (event: KeyboardEvent) => {
+            const supportedKeys = ['F1', 'F2', 'F3', 'F4', 'F8'];
+            const isNextPlaceholderKey = event.key === 'PageDown' || event.code === 'PageDown';
+            const isPreviousPlaceholderKey = event.key === 'PageUp' || event.code === 'PageUp';
+            if (!supportedKeys.includes(event.key) && !isNextPlaceholderKey && !isPreviousPlaceholderKey) return;
+
+            // PageUp/PageDown siguen navegando el documento cuando el foco no
+            // está dentro de uno de los editores del informe.
+            if (isNextPlaceholderKey || isPreviousPlaceholderKey) {
+                const editorHasFocus = Object.values(editorsRef.current).some((editor) =>
+                    editor && !editor.isDestroyed && editor.view.dom.contains(document.activeElement)
+                );
+                if (!editorHasFocus) return;
+            }
+
+            event.preventDefault();
+            if (event.repeat) return;
+
+            const hasOpenModal = Boolean(
+                isSignModalOpen
+                || isTemplateModalOpen
+                || isConfirmationModalOpen
+                || isSkipConfirmationOpen
+                || isNextExamModalOpen
+                || isCloseTabModalOpen
+                || document.querySelector('[role="dialog"][data-state="open"]')
+            );
+            const actionIsPending = isSigning || isSkipping || updateReportMutation.isPending;
+            if (hasOpenModal || actionIsPending) return;
+
+            if (event.key === 'F1') {
+                handleSignAction();
+            } else if (event.key === 'F2') {
+                if (!isSigned) handleGuardarInforme();
+            } else if (event.key === 'F3') {
+                findNextPlaceholder();
+            } else if (event.key === 'F4') {
+                handleSkipReport();
+            } else if (event.key === 'F8') {
+                void handleCloseWindow();
+            } else if (isNextPlaceholderKey) {
+                findNextPlaceholder();
+            } else if (isPreviousPlaceholderKey) {
+                findPreviousPlaceholder();
+            }
+        };
+
+        window.addEventListener('keydown', handleActionShortcut);
+        return () => window.removeEventListener('keydown', handleActionShortcut);
+    });
 
     const srVariables = useMemo<Array<{ key?: string; name?: string; value?: string }>>(
         () => (Array.isArray(reportData.sr_variables) ? reportData.sr_variables : []),
@@ -1394,7 +1971,13 @@ export const RedactarInforme = () => {
         });
     };
 
-    if (isLoading) {
+    // Esperar a que el efecto de inicialización copie el informe al estado antes
+    // de montar TipTap. Si los editores se crean con cadenas vacías y reciben la
+    // plantilla inmediatamente después, pueden conservar el documento inicial
+    // vacío aunque el formulario ya tenga el contenido del predefinido.
+    const isReportFormInitialized = initializedReportGuidRef.current === informeGuid;
+
+    if (isLoading || !informeDetalle?.data || !isReportFormInitialized) {
         return <LayoutSinSidebar>
             <div className="flex justify-center items-center h-40">
                 <Loader2 className="animate-spin w-8 h-8 text-brand-purple" />
@@ -1402,251 +1985,297 @@ export const RedactarInforme = () => {
         </LayoutSinSidebar>;
     }
 
-    const patientName = reportData.patient_name || 'Carlos Fernández';
-    const patientIdentifier = reportData.patientid || reportData.patientit || reportData.patient?.patientit || reportData.patient?.patientid || '-';
-    const nationalCodeLabel = reportData.national_code || reportData.nationalcode || reportData.nationalCode || reportData.patient?.national_code || reportData.patient?.nationalcode || '-';
-    const sexLabel = reportData.sex === 'M' ? 'Masculino' : reportData.sex === 'F' ? 'Femenino' : (reportData.sex || '-');
-    const studyLabel = reportData.study_description || reportData.study_type_description || reportData.study_name || 'ANGIOTOMOGRAFÍA PELVIANA O VASOS ILÍACOS';
-    const modalityLabel = reportData.modality || reportData.modality_name || 'CT';
-    const accessionLabel = reportData.accession_number || reportData.localacc || reportData.admission_number || '-';
-    const dateLabel = reportData.exam_date || reportData.date || reportData.study_date || '13/12/2025';
-    const statLabel = reportData.stat || reportData.priority || 'A';
+    const patientName = reportData.patient_name || 'Paciente sin nombre';
+    const patientIdentifier = reportData.patientid || reportData.patientit || reportData.patient?.patientit || reportData.patient?.patientid;
+    const nationalCodeLabel = reportData.national_code || reportData.nationalcode || reportData.nationalCode || reportData.patient?.national_code || reportData.patient?.nationalcode;
+    const sexLabel = reportData.sex === 'M' ? 'Masculino' : reportData.sex === 'F' ? 'Femenino' : reportData.sex;
+    const studyLabel = reportData.study_description || reportData.study_type_description || reportData.study_name;
+    const modalityLabel = reportData.modality || reportData.modality_name || reportData.modality_description;
+    const accessionLabel = reportData.accession_number || reportData.localacc || reportData.admission_number;
+    const dateLabel = formatDate(reportData.exam_date || reportData.created_on || reportData.date || reportData.study_date);
+    const statLabel = reportData.stat || reportData.priority;
+    const normalizedSex = String(reportData.sex ?? '').trim().toUpperCase();
+    const SexIcon = normalizedSex === 'M' || normalizedSex === 'MASCULINO'
+        ? Mars
+        : normalizedSex === 'F' || normalizedSex === 'FEMENINO'
+            ? Venus
+            : User;
+    const headerValue = (value: unknown) => {
+        const normalized = String(value ?? '').trim();
+        return normalized && normalized !== '-' ? normalized : 'N/D';
+    };
+    const patientHeaderFields = [
+        { label: 'Paciente', value: patientName },
+        { label: 'Patient ID', value: patientIdentifier },
+        { label: 'Sexo', value: sexLabel },
+        { label: 'National Code', value: nationalCodeLabel },
+    ];
+    const studyHeaderFields = [
+        { label: 'Estudio', value: studyLabel },
+        { label: 'Modalidad', value: modalityLabel },
+        { label: 'Accession', value: accessionLabel },
+        { label: 'Fecha', value: dateLabel },
+        { label: 'Estado', value: statLabel },
+    ];
+    const renderHeaderFields = (fields: typeof patientHeaderFields) => fields.map((field, index) => (
+        <span key={field.label}>
+            {index > 0 && <span aria-hidden="true"> - </span>}
+            <span title={field.label} className="cursor-help">
+                {headerValue(field.value)}
+            </span>
+        </span>
+    ));
+    const hasAvailableReport = Boolean(reportData.report_available);
     return (
         <LayoutSinSidebar disableDefaultBackground>
-            <div className="h-[calc(100vh-24px)] bg-gray-50 dark:bg-[#0f1218] rounded-xl p-2 dark:text-gray-100 flex flex-col overflow-hidden">
-                {/* Header con botones de acción */}
-                <div className="flex justify-between items-center mb-3 shrink-0">
-                    <div className="relative bg-white dark:bg-[#151922] rounded-lg p-3 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 w-full">
-                        <div className="flex items-center gap-3">
+            <div className="flex h-[calc(100dvh-5rem)] flex-col overflow-hidden rounded-xl bg-gray-50 p-2 dark:bg-[#0f1218] dark:text-gray-100 lg:h-[calc(100dvh-24px)]">
+                {/* Encabezado del estudio y notas */}
+                <div className="mb-3 flex shrink-0 items-center justify-between">
+                    <div className="relative flex w-full flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-[#151922] md:flex-row md:items-start md:justify-between">
+                        <div className="flex min-w-0 flex-1 items-start gap-3 md:items-center">
                             <div className="bg-gray-100 dark:bg-[#1e2430] rounded-full p-2.5">
-                                <User className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                                <SexIcon className="w-6 h-6 text-gray-600 dark:text-gray-300" aria-hidden="true" />
                             </div>
-                            <div className="flex-1">
-                                <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-1">
-                                    {patientName} - {patientIdentifier} - {sexLabel} - {nationalCodeLabel}
+                            <div className="min-w-0 flex-1">
+                                <h1 className="mb-1 break-words text-base font-semibold text-gray-800 dark:text-gray-100 sm:text-lg md:text-xl">
+                                    {renderHeaderFields(patientHeaderFields)}
                                 </h1>
-                                <p className="text-sm text-gray-600 dark:text-gray-300">
-                                    {studyLabel} - {modalityLabel} - {accessionLabel} - {dateLabel} - {statLabel}
+                                <p className="break-words text-xs text-gray-600 dark:text-gray-300 md:text-sm">
+                                    {renderHeaderFields(studyHeaderFields)}
                                 </p>
                                 <div className="mt-2 flex flex-wrap items-center gap-3">
+                                    {reportData.workflow_state === 'cancelled' && (
+                                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-800 dark:bg-red-900/40 dark:text-red-200">
+                                            Cancelado{reportData.workflow_detail ? ` · ${reportData.workflow_detail}` : ''}
+                                        </span>
+                                    )}
                                     <FlagsCell
                                         examId={examId}
                                         currentFlags={examFlags}
                                         onUpdate={handleUpdateExamFlags}
-                                        isUpdating={isUpdatingFlags || isSigned || !examId}
+                                        isUpdating={isUpdatingFlags || isSigned || isMobile || !examId}
                                     />
                                     <TagsCell
                                         examId={examId}
                                         currentTagIds={examTagIds}
                                         availableTags={allTags}
                                         onUpdate={handleUpdateExamTags}
-                                        isUpdating={isUpdatingTagIds || isSigned || !examId}
+                                        isUpdating={isUpdatingTagIds || isSigned || isMobile || !examId}
                                     />
+                                    {hasAvailableReport && (
+                                        <button
+                                            type="button"
+                                            onClick={handleOpenReport}
+                                            className="flex h-9 items-center gap-2 rounded-md bg-brand-purple px-3 text-xs font-semibold text-white transition hover:bg-purple-800"
+                                        >
+                                            <FileMinus className="h-4 w-4" />
+                                            Ver informe
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex gap-2">
-                            <PrimaryButton onClick={handleOpenPdf}>
-                                <FileMinus />
-                                PDF
-                            </PrimaryButton>
-                            <PrimaryButton onClick={() => setIsTemplateModalOpen(true)}>
-                                <FileText />
-                                INFORMES PREDEFINIDOS
-                            </PrimaryButton>
-                            <PrimaryButton
-                                onClick={() => setIsSignModalOpen(true)}
-                                disabled={!isSigned && !firmaHabilitada}
-                                title={!isSigned && !firmaHabilitada ? 'Su firma digital no está habilitada. Habilite su firma en Configuración > Datos Médicos.' : undefined}
-                            >
-                                <Signature />
-                                {isSigned ? 'QUITAR FIRMA' : 'FIRMAR'}
-                            </PrimaryButton>
-                            <PrimaryButton
-                                onClick={handleGuardarInforme}
-                                disabled={updateReportMutation.isPending || isSigned}
-                            >
-                                <Save />
-                                {updateReportMutation.isPending ? 'GUARDANDO...' : 'GUARDAR'}
-                            </PrimaryButton>
-                            <PrimaryButton
-                                onClick={handleCloseWindow}
-                            >
-                                <X />
-                                CERRAR
-                            </PrimaryButton>
+                        <ReportNotesPanel key={examId} examId={examId} />
 
+                        <div className="grid gap-2 md:hidden">
+                            <PrimaryButton onClick={handleCloseWindow}>
+                                <X className="h-4 w-4" />
+                                CANCELAR
+                            </PrimaryButton>
                         </div>
                     </div>
 
+                </div>
+
+                <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 md:hidden">
+                    Modo consulta móvil. Para editar, guardar o firmar este informe utiliza una tablet o una computadora.
                 </div>
 
                 {/* Layout de tres columnas con sidebars colapsables */}
                 <div className="flex-1 min-h-0 relative">
                     <div className="flex gap-1 h-full">
                         {/* Columna central */}
-                        <div className="flex-1 space-y-2.5 p-2.5 transition-all ease-in-out min-w-0 bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-y-auto h-full table-scrollbar-purple">
+                        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 overflow-y-auto rounded-lg border border-gray-200 bg-white p-2.5 transition-all ease-in-out table-scrollbar-purple dark:border-gray-700 dark:bg-[#151922]">
 
                             {/* Toolbar única global */}
-                            <div className="sticky top-0 z-20 bg-gray-50 dark:bg-[#0f1218] rounded-md border border-gray-200 dark:border-gray-700 p-1.5 flex items-center gap-0.5 flex-wrap">
-                                <button onClick={() => activeEditor?.chain().focus().toggleBold().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('bold') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Negrita" disabled={!activeEditor || isSigned}><Bold className="w-4 h-4 dark:text-gray-200" /></button>
-                                <button onClick={() => activeEditor?.chain().focus().toggleItalic().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('italic') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Cursiva" disabled={!activeEditor || isSigned}><Italic className="w-4 h-4 dark:text-gray-200" /></button>
-                                <button onClick={() => activeEditor?.chain().focus().toggleUnderline().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('underline') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Subrayado" disabled={!activeEditor || isSigned}><UnderlineIcon className="w-4 h-4 dark:text-gray-200" /></button>
+                            <div className="sticky top-0 z-20 hidden flex-wrap items-center gap-0.5 rounded-md border border-gray-200 bg-gray-50 p-1.5 dark:border-gray-700 dark:bg-[#0f1218] md:flex">
+                                <button onClick={() => activeEditor?.chain().focus().toggleBold().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('bold') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Negrita" disabled={!activeEditor || isSigned || reportReadOnly}><Bold className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().toggleItalic().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('italic') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Cursiva" disabled={!activeEditor || isSigned || reportReadOnly}><Italic className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().toggleUnderline().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('underline') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Subrayado" disabled={!activeEditor || isSigned || reportReadOnly}><UnderlineIcon className="w-4 h-4 dark:text-gray-200" /></button>
                                 <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
-                                <button onClick={() => activeEditor?.chain().focus().toggleOrderedList().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('orderedList') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Lista numerada" disabled={!activeEditor || isSigned}><ListOrdered className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().toggleOrderedList().run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.('orderedList') ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Lista numerada" disabled={!activeEditor || isSigned || reportReadOnly}><ListOrdered className="w-4 h-4 dark:text-gray-200" /></button>
                                 <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
-                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('left').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'left' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Alinear izquierda" disabled={!activeEditor || isSigned}><AlignLeft className="w-4 h-4 dark:text-gray-200" /></button>
-                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('center').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'center' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Centrar" disabled={!activeEditor || isSigned}><AlignCenter className="w-4 h-4 dark:text-gray-200" /></button>
-                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('right').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'right' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Alinear derecha" disabled={!activeEditor || isSigned}><AlignRight className="w-4 h-4 dark:text-gray-200" /></button>
-                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('justify').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'justify' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Justificar" disabled={!activeEditor || isSigned}><AlignJustify className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('left').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'left' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Alinear izquierda" disabled={!activeEditor || isSigned || reportReadOnly}><AlignLeft className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('center').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'center' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Centrar" disabled={!activeEditor || isSigned || reportReadOnly}><AlignCenter className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('right').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'right' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Alinear derecha" disabled={!activeEditor || isSigned || reportReadOnly}><AlignRight className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().setTextAlign('justify').run()} className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${activeEditor?.isActive?.({ textAlign: 'justify' }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`} type="button" title="Justificar" disabled={!activeEditor || isSigned || reportReadOnly}><AlignJustify className="w-4 h-4 dark:text-gray-200" /></button>
                                 <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
-                                <button onClick={() => activeEditor?.chain().focus().undo().run()} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600" type="button" title="Deshacer" disabled={!activeEditor || !activeEditor?.can?.().undo() || isSigned}><Undo className="w-4 h-4 dark:text-gray-200" /></button>
-                                <button onClick={() => activeEditor?.chain().focus().redo().run()} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600" type="button" title="Rehacer" disabled={!activeEditor || !activeEditor?.can?.().redo() || isSigned}><Redo className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().undo().run()} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600" type="button" title="Deshacer" disabled={!activeEditor || !activeEditor?.can?.().undo() || isSigned || reportReadOnly}><Undo className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button onClick={() => activeEditor?.chain().focus().redo().run()} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600" type="button" title="Rehacer" disabled={!activeEditor || !activeEditor?.can?.().redo() || isSigned || reportReadOnly}><Redo className="w-4 h-4 dark:text-gray-200" /></button>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsTemplateModalOpen(true)}
+                                    disabled={isSigned || reportReadOnly}
+                                    className="ml-auto flex h-8 items-center gap-2 rounded-md bg-brand-purple px-3 text-xs font-semibold text-white transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    title="Abrir informes predefinidos"
+                                >
+                                    <FileText className="h-4 w-4" />
+                                    INFORMES PREDEFINIDOS
+                                </button>
                             </div>
 
-                            {/* Historia Clínica */}
-                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden relative">
-                                <div
-                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
-                                    onClick={() => toggleSection('historiaClinica')}
-                                >
-                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Historia Clínica</h3>
-                                    {openSections.historiaClinica ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
-                                </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.historiaClinica ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                    <div className="p-2">
-                                        <textarea
-                                            className="w-full h-20 p-3 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-[#1e2430] text-gray-800 dark:text-gray-200 resize-y focus:outline-none focus:ring-2 focus:ring-brand-purple/40"
-                                            placeholder="Historia clínica..."
-                                            disabled={isSigned}
-                                            value={formData.history}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, history: e.target.value }))}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Técnica de examen */}
-                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                                <div
-                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
-                                    onClick={() => toggleSection('tecnica')}
-                                >
-                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Técnica de examen</h3>
-                                    {openSections.tecnica ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
-                                </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.tecnica ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                    <div className="p-2 space-y-2">
-                                        <RichTextEditor
-                                            value={formData.techniques}
-                                            onChange={(value) => handleChange('techniques', value)}
-                                            placeholder="Descripción de la técnica utilizada... (Arrastra imágenes aquí)"
-                                            dragOver={dragOverField === 'techniques'}
-                                            onDragOver={(e) => handleDragOver(e, 'techniques')}
-                                            onDragLeave={handleDragLeave}
-                                            onDrop={(e) => handleDrop(e, 'techniques', editorsRef.current.techniques)}
-                                            onEditorReady={(editor) => handleEditorReady(editor, 'techniques')}
-                                            readOnly={isSigned}
-                                            showToolbar={false}
-                                            className="resize-y overflow-auto"
-                                        />
-                                    </div>
+                            <div
+                                className="report-editor-sections table-scrollbar-purple flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto overflow-x-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-[#151922]"
+                            >
+                            {/* Razón del estudio */}
+                            <div className="flex min-h-0 shrink-0 flex-col p-1">
+                                <div className="px-1">
+                                    <RichTextEditor
+                                        value={formData.study_reason}
+                                        onChange={(value) => handleChange('study_reason', value)}
+                                        placeholder="Razón del estudio..."
+                                        dragOver={dragOverField === 'study_reason'}
+                                        onDragOver={(e) => handleDragOver(e, 'study_reason')}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={(e) => handleDrop(e, 'study_reason', editorsRef.current.study_reason)}
+                                        onEditorReady={(editor) => handleEditorReady(editor, 'study_reason')}
+                                        readOnly={isSigned || isMobile || reportReadOnly}
+                                        readOnlyLabel={reportReadOnly ? "Estudio en modo solo lectura" : (isMobile ? "Modo consulta móvil" : undefined)}
+                                        showToolbar={false}
+                                        autoGrow
+                                        className="report-editor-rich-text h-10 min-h-0 resize-y overflow-auto"
+                                    />
                                 </div>
                             </div>
 
-                            {/* Hallazgos */}
-                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                                <div
-                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
-                                    onClick={() => toggleSection('hallazgos')}
-                                >
-                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Hallazgos</h3>
-                                    {openSections.hallazgos ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
-                                </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.hallazgos ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                    <div className="p-2 space-y-2">
-                                        <RichTextEditor
-                                            value={formData.findings}
-                                            onChange={(value) => handleChange('findings', value)}
-                                            placeholder="Descripción de hallazgos... (Arrastra imágenes aquí)"
-                                            dragOver={dragOverField === 'findings'}
-                                            onDragOver={(e) => handleDragOver(e, 'findings')}
-                                            onDragLeave={handleDragLeave}
-                                            onDrop={(e) => handleDrop(e, 'findings', editorsRef.current.findings)}
-                                            onEditorReady={(editor) => handleEditorReady(editor, 'findings')}
-                                            readOnly={isSigned}
-                                            showToolbar={false}
-                                            className="resize-y overflow-auto"
-                                        />
-                                    </div>
+                            {/* Contenido */}
+                            <div
+                                className="report-editor-body-section flex min-h-0 flex-col p-1"
+                                onClick={(event) => handleEditorContainerClick(event, 'content')}
+                            >
+                                <div className="flex min-h-0 flex-1 px-1">
+                                    <RichTextEditor
+                                        value={formData.content}
+                                        onChange={(value) => handleChange('content', value)}
+                                        placeholder="Contenido del estudio..."
+                                        dragOver={dragOverField === 'content'}
+                                        onDragOver={(e) => handleDragOver(e, 'content')}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={(e) => handleDrop(e, 'content', editorsRef.current.content)}
+                                        onEditorReady={(editor) => handleEditorReady(editor, 'content')}
+                                        readOnly={isSigned || isMobile || reportReadOnly}
+                                        readOnlyLabel={reportReadOnly ? "Estudio en modo solo lectura" : (isMobile ? "Modo consulta móvil" : undefined)}
+                                        showToolbar={false}
+                                        autoGrow
+                                        className="report-editor-rich-text h-full min-h-0 flex-1 resize-y overflow-auto"
+                                    />
                                 </div>
                             </div>
 
-                            {/* Impresiones */}
-                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                                <div
-                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
-                                    onClick={() => toggleSection('impresiones')}
-                                >
-                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Impresiones</h3>
-                                    {openSections.impresiones ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
-                                </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.impresiones ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                    <div className="p-2 space-y-2">
-                                        <RichTextEditor
-                                            value={formData.impressions}
-                                            onChange={(value) => handleChange('impressions', value)}
-                                            placeholder="Impresiones del estudio... (Arrastra imágenes aquí)"
-                                            dragOver={dragOverField === 'impressions'}
-                                            onDragOver={(e) => handleDragOver(e, 'impressions')}
-                                            onDragLeave={handleDragLeave}
-                                            onDrop={(e) => handleDrop(e, 'impressions', editorsRef.current.impressions)}
-                                            onEditorReady={(editor) => handleEditorReady(editor, 'impressions')}
-                                            readOnly={isSigned}
-                                            showToolbar={false}
-                                            className="resize-y overflow-auto"
-                                        />
-                                    </div>
+                            {/* Conclusión */}
+                            <div
+                                className="report-editor-body-section flex min-h-0 flex-col p-1"
+                                onClick={(event) => handleEditorContainerClick(event, 'conclusion')}
+                            >
+                                <div className="flex min-h-0 flex-1 px-1">
+                                    <RichTextEditor
+                                        value={formData.conclusion}
+                                        onChange={(value) => handleChange('conclusion', value)}
+                                        placeholder="Conclusión del estudio..."
+                                        dragOver={dragOverField === 'conclusion'}
+                                        onDragOver={(e) => handleDragOver(e, 'conclusion')}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={(e) => handleDrop(e, 'conclusion', editorsRef.current.conclusion)}
+                                        onEditorReady={(editor) => handleEditorReady(editor, 'conclusion')}
+                                        readOnly={isSigned || isMobile || reportReadOnly}
+                                        readOnlyLabel={reportReadOnly ? "Estudio en modo solo lectura" : (isMobile ? "Modo consulta móvil" : undefined)}
+                                        showToolbar={false}
+                                        autoGrow
+                                        className="report-editor-rich-text h-full min-h-0 flex-1 resize-y overflow-auto"
+                                    />
                                 </div>
                             </div>
-
-                            {/* Conclusiones */}
-                            <div className="bg-white dark:bg-[#151922] rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                                <div
-                                    className="cursor-pointer bg-gray-100 dark:bg-[#1e2430] px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
-                                    onClick={() => toggleSection('conclusiones')}
-                                >
-                                    <h3 className="text-gray-800 dark:text-gray-100 font-semibold">Conclusiones</h3>
-                                    {openSections.conclusiones ? <ChevronUp className="w-4 h-4 text-gray-700 dark:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300" />}
-                                </div>
-                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openSections.conclusiones ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                    <div className="p-2 space-y-2">
-                                        <RichTextEditor
-                                            value={formData.conclusions}
-                                            onChange={(value) => handleChange('conclusions', value)}
-                                            placeholder="Conclusiones del estudio... (Arrastra imágenes aquí)"
-                                            dragOver={dragOverField === 'conclusions'}
-                                            onDragOver={(e) => handleDragOver(e, 'conclusions')}
-                                            onDragLeave={handleDragLeave}
-                                            onDrop={(e) => handleDrop(e, 'conclusions', editorsRef.current.conclusions)}
-                                            onEditorReady={(editor) => handleEditorReady(editor, 'conclusions')}
-                                            readOnly={isSigned}
-                                            showToolbar={false}
-                                            className="resize-y overflow-auto"
-                                        />
-                                    </div>
-                                </div>
                             </div>
+                            <details className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-[#1e2430] md:hidden">
+                                <summary className="min-h-11 cursor-pointer font-semibold text-gray-800 dark:text-gray-100">
+                                    Información auxiliar
+                                </summary>
+                                <div className="mt-2 space-y-3 text-sm">
+                                    <details className="rounded-md border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-[#151922]">
+                                        <summary className="flex min-h-11 cursor-pointer items-center justify-between font-medium">
+                                            <span>Estudios previos</span>
+                                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-[#28303d]">{patientStudies.length}</span>
+                                        </summary>
+                                        <div className="mt-2 space-y-2">
+                                            {patientStudies.length === 0 ? (
+                                                <p className="py-2 text-center text-xs text-muted-foreground">Sin estudios previos</p>
+                                            ) : patientStudies.map((study) => (
+                                                <div key={study.id} className="flex min-w-0 items-center justify-between gap-2 rounded-md border border-gray-200 px-3 py-2 dark:border-gray-700">
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="break-words text-xs font-medium">{study.estudio}</p>
+                                                        <p className="text-xs text-muted-foreground">{'NextRIS'} · {study.modalidad} · {formatDate(study.fecha)}</p>
+                                                    </div>
+                                            {study.report_available ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => void handleOpenHistoryReport(study)}
+                                                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-brand-purple hover:bg-brand-purple/10"
+                                                            aria-label={`Ver informe previo de ${study.estudio}`}
+                                                        >
+                                                            <FileIcon className="h-5 w-5" />
+                                                        </button>
+                                                    ) : (
+                                                        <span
+                                                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-600 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
+                                                            title="No hay informe"
+                                                            aria-label="No hay informe"
+                                                        >
+                                                            <FileX className="h-5 w-5" strokeWidth={2.5} />
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </details>
+                                    <details className="rounded-md border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-[#151922]">
+                                        <summary className="flex min-h-11 cursor-pointer items-center justify-between font-medium">
+                                            <span>Imágenes adjuntas</span>
+                                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-[#28303d]">{images.length}</span>
+                                        </summary>
+                                        {images.length === 0 ? (
+                                            <p className="py-2 text-center text-xs text-muted-foreground">Sin imágenes adjuntas</p>
+                                        ) : (
+                                            <div className="mt-2 grid grid-cols-2 gap-2">
+                                                {images.map((image) => (
+                                                    <figure key={image.id} className="min-w-0 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
+                                                        <img
+                                                            src={image.url}
+                                                            alt={image.name}
+                                                            className="h-auto w-full object-cover"
+                                                            onError={(event) => {
+                                                                const fallbackUrl = getImageUrlByFilename(image.name);
+                                                                if (event.currentTarget.src !== fallbackUrl) event.currentTarget.src = fallbackUrl;
+                                                            }}
+                                                        />
+                                                        <figcaption className="break-words p-1.5 text-center text-[11px] text-muted-foreground">{image.name}</figcaption>
+                                                    </figure>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </details>
+                                </div>
+                            </details>
                         </div>
 
                         {/* Botón toggle derecho con animación */}
-                        <div className="self-stretch">
+                        <div className="hidden self-stretch md:block">
                             {rightSidebarOpen ? (
                                 <button
-                                    onClick={() => setRightSidebarOpen(false)}
-                                    className="bg-gray-200 dark:bg-[#1f2937] h-full hover:bg-gray-300 dark:hover:bg-[#2a3444] text-gray-700 dark:text-gray-200 p-1.5 rounded-md border border-gray-300 dark:border-gray-700 transition-colors"
-                                    title={`Ocultar panel lateral (${rightSidebarTabLabel})`}
+                                    onMouseDown={handleRightSidebarResizeStart}
+                                    onClick={handleRightSidebarToggle}
+                                    className="h-full cursor-col-resize rounded-md border border-gray-300 bg-gray-200 p-1.5 text-gray-700 transition-colors hover:bg-gray-300 dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-200 dark:hover:bg-[#2a3444]"
+                                    title={`Clic para ocultar o mantén presionado y arrastra para ajustar el ancho (${rightSidebarTabLabel})`}
                                 >
                                     <RightSidebarTabIcon className="w-4 h-4" />
                                 </button>
@@ -1663,7 +2292,7 @@ export const RedactarInforme = () => {
 
                         {/* Columna derecha - Imágenes */}
                         <div
-                            className={`relative shrink-0 h-full origin-right overflow-hidden ${isResizingRightSidebar ? '' : 'transition-opacity duration-200 ease-out'} ${rightSidebarOpen ? 'opacity-100' : 'opacity-0'}`}
+                            className={`relative hidden shrink-0 h-full origin-right overflow-hidden md:block ${isResizingRightSidebar ? '' : 'transition-opacity duration-200 ease-out'} ${rightSidebarOpen ? 'opacity-100' : 'opacity-0'}`}
                             style={{ width: rightSidebarOpen ? `${rightSidebarWidth}px` : '0px' }}
                         >
                             {rightSidebarOpen && (
@@ -1731,20 +2360,30 @@ export const RedactarInforme = () => {
                                                 <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-4">Sin estudios previos</p>
                                             ) : (
                                                 <div className="space-y-2">
-                                                    {patientStudies.map((study: any) => (
-                                                        <div key={study.guid} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e2430] px-3 py-2">
+                                                    {patientStudies.map((study) => (
+                                                        <div key={study.id} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e2430] px-3 py-2">
                                                             <div className="flex-1 min-w-0">
                                                                 <p className="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{study.estudio}</p>
-                                                                <p className="text-xs text-gray-500 dark:text-gray-400">{study.modalidad} · {study.fecha}</p>
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400">{'NextRIS'} · {study.modalidad} · {formatDate(study.fecha)}</p>
                                                             </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleOpenHistoryPdf(study.pdf_path)}
-                                                                className="shrink-0 p-1 rounded hover:bg-brand-purple/10 dark:hover:bg-purple-800/30"
-                                                                title="Ver PDF"
-                                                            >
-                                                                <FileIcon className="w-4 h-4 text-brand-purple dark:text-purple-400" />
-                                                            </button>
+                                                            {study.report_available ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => void handleOpenHistoryReport(study)}
+                                                                    className="shrink-0 p-1 rounded hover:bg-brand-purple/10 dark:hover:bg-purple-800/30"
+                                                                    title="Ver informe previo"
+                                                                >
+                                                                    <FileIcon className="w-4 h-4 text-brand-purple dark:text-purple-400" />
+                                                                </button>
+                                                            ) : (
+                                                                <span
+                                                                    className="inline-flex shrink-0 items-center justify-center rounded-md border border-red-200 bg-red-50 p-1 text-red-600 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
+                                                                    title="No hay informe"
+                                                                    aria-label="No hay informe"
+                                                                >
+                                                                    <FileX className="h-5 w-5" strokeWidth={2.5} />
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -2001,7 +2640,96 @@ export const RedactarInforme = () => {
                         </div>
                     </div>
                 </div>
+
+                <div className="mt-3 hidden shrink-0 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-[0_-4px_16px_rgba(15,23,42,0.08)] dark:border-gray-700 dark:bg-[#151922] md:grid">
+                    {canShare && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    aria-label="Compartir"
+                                    title="Compartir"
+                                    disabled={isLoading || !examId || isSigning || isSkipping}
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-brand-purple bg-white text-brand-purple transition hover:bg-brand-purple/10 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-transparent dark:text-purple-300"
+                                >
+                                    <Share2 className="h-5 w-5" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" side="top">
+                                <DropdownMenuItem disabled={!shareStudyUid} onSelect={() => setShareKind('study')} className="gap-2">
+                                    <FileText className="h-4 w-4" />
+                                    Estudio
+                                </DropdownMenuItem>
+                                <DropdownMenuItem disabled={!shareStudyUid || reportData.is_image === false} onSelect={() => setShareKind('images')} className="gap-2">
+                                    <ImageIcon className="h-4 w-4" />
+                                    Imágenes
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                    <div className="col-start-2 row-start-1 flex flex-wrap items-center justify-center gap-3">
+                        {canToggleReportSignature && <button
+                            type="button"
+                            onClick={handleSignAction}
+                            disabled={isSigning || isSkipping || updateReportMutation.isPending || reportReadOnly}
+                            aria-keyshortcuts="F1"
+                            className="flex h-12 min-w-56 items-center justify-center gap-2 rounded-lg bg-brand-purple px-7 text-base font-bold text-white shadow-lg shadow-purple-900/20 transition hover:-translate-y-0.5 hover:bg-purple-800 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                        >
+                            {isSigning ? <Loader2 className="h-5 w-5 animate-spin" /> : <Signature className="h-5 w-5" />}
+                            {isSigning ? 'FIRMANDO...' : (isSigned ? 'QUITAR FIRMA' : 'FIRMAR')}
+                            <kbd className="rounded border border-white/30 bg-white/15 px-2 py-0.5 text-xs">F1</kbd>
+                        </button>}
+
+                        <button
+                            type="button"
+                            onClick={handleGuardarInforme}
+                            disabled={updateReportMutation.isPending || isSigned || isSigning || isSkipping || reportReadOnly}
+                            aria-keyshortcuts="F2"
+                            className="flex h-10 min-w-36 items-center justify-center gap-2 rounded-md border border-brand-purple bg-white px-4 text-sm font-semibold text-brand-purple transition hover:bg-brand-purple/10 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-transparent dark:text-purple-300"
+                        >
+                            {updateReportMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            {updateReportMutation.isPending ? 'GUARDANDO...' : 'GUARDAR'}
+                            <kbd className="rounded border border-current/20 px-1.5 py-0.5 text-[10px]">F2</kbd>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={handleSkipReport}
+                            disabled={isSkipping || isSigning || updateReportMutation.isPending || reportReadOnly}
+                            aria-keyshortcuts="F4"
+                            className="flex h-10 min-w-36 items-center justify-center gap-2 rounded-md border border-amber-400 bg-amber-50 px-4 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-900/40"
+                        >
+                            {isSkipping ? <Loader2 className="h-4 w-4 animate-spin" /> : <SkipForward className="h-4 w-4" />}
+                            {isSkipping ? 'SALTANDO...' : 'SALTAR'}
+                            <kbd className="rounded border border-current/20 bg-white/60 px-1.5 py-0.5 text-[10px] dark:bg-black/20">F4</kbd>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => void handleCloseWindow()}
+                            disabled={isSkipping || isSigning}
+                            aria-keyshortcuts="F8"
+                            className="flex h-10 min-w-36 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-transparent dark:text-gray-200 dark:hover:border-red-800 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                        >
+                            <X className="h-4 w-4" />
+                            CANCELAR
+                            <kbd className="rounded border border-current/20 px-1.5 py-0.5 text-[10px]">F8</kbd>
+                        </button>
+                    </div>
+                </div>
             </div>
+
+            {canShare && shareKind && (
+                <AdministrativeShareModal
+                    key={`${examId}-${shareKind}`}
+                    kind={shareKind}
+                    examId={examId}
+                    studyIuid={shareStudyUid}
+                    patientName={patientName}
+                    studyDescription={studyLabel}
+                    onClose={() => setShareKind(null)}
+                />
+            )}
 
             {/* Modal de Firma */}
             <SignModal
@@ -2015,6 +2743,7 @@ export const RedactarInforme = () => {
                 setPassword={setPassword}
                 isSigning={isSigning}
                 onVerifyCredentials={handleVerifyCredentials}
+                requirePassword={requirePasswordForSigning}
             />
 
             {/* Modal de Selección de Plantilla */}
@@ -2023,29 +2752,46 @@ export const RedactarInforme = () => {
                 onClose={() => {
                     setIsTemplateModalOpen(false);
                     setSearchTerm('');
-                    setStudyTypeFilter('');
+                    setOnlyStudyType(false);
+                    setSelectedTemplate(null);
                 }}
                 searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
+                setSearchTerm={(term) => {
+                    setSearchTerm(term);
+                    setSelectedTemplate(null);
+                }}
+                hasStudyType={Boolean(reportStudyTypeId)}
+                onlyStudyType={onlyStudyType && Boolean(reportStudyTypeId)}
+                setOnlyStudyType={(value) => {
+                    setOnlyStudyType(value);
+                    setSelectedTemplate(null);
+                }}
+                isLoading={isLoadingTemplates}
+                hasError={templatesError}
                 filteredTemplates={filteredTemplates}
                 selectedTemplate={selectedTemplate}
                 setSelectedTemplate={setSelectedTemplate}
                 onAccept={() => {
                     if (selectedTemplate) {
-                        const hasChanges = formData.techniques || formData.findings ||
-                            formData.impressions || formData.conclusions;
+                        const templateHasContent = [
+                            selectedTemplate.study_reason,
+                            selectedTemplate.content,
+                            selectedTemplate.conclusion,
+                        ].some(hasReportContent);
+
+                        if (!templateHasContent) {
+                            toast.warning('La plantilla seleccionada no contiene contenido para insertar');
+                            return;
+                        }
+
+                        const hasChanges = formData.study_reason || formData.content || formData.conclusion;
 
                         if (hasChanges) {
                             setIsConfirmationModalOpen(true);
                         } else {
-                            setFormData(prev => ({
-                                ...prev,
-                                techniques: selectedTemplate.technique || '',
-                                findings: selectedTemplate.findings || '',
-                                impressions: selectedTemplate.impression || '',
-                                conclusions: selectedTemplate.conclusion || ''
-                            }));
+                            applyTemplateToReport(selectedTemplate);
                             setIsTemplateModalOpen(false);
+                            setSelectedTemplate(null);
                             toast.success('Plantilla aplicada exitosamente');
                         }
                     } else {
@@ -2060,15 +2806,10 @@ export const RedactarInforme = () => {
                 onClose={() => setIsConfirmationModalOpen(false)}
                 onConfirm={() => {
                     if (selectedTemplate) {
-                        setFormData(prev => ({
-                            ...prev,
-                            techniques: selectedTemplate.technique || '',
-                            findings: selectedTemplate.findings || '',
-                            impressions: selectedTemplate.impression || '',
-                            conclusions: selectedTemplate.conclusion || ''
-                        }));
+                        applyTemplateToReport(selectedTemplate);
                         setIsConfirmationModalOpen(false);
                         setIsTemplateModalOpen(false);
+                        setSelectedTemplate(null);
                         toast.success('Plantilla aplicada exitosamente');
                     }
                 }}
@@ -2077,6 +2818,29 @@ export const RedactarInforme = () => {
                 confirmText="Sí, cambiar plantilla"
                 cancelText="No, mantener cambios"
                 variant="warning"
+            />
+
+            <ConfirmationModal
+                isOpen={isSkipConfirmationOpen}
+                onClose={() => setIsSkipConfirmationOpen(false)}
+                onConfirm={() => void executeSkipReport()}
+                title="Saltar estudio"
+                message="Hay cambios sin guardar en el informe. Si continúas, se descartarán y se abrirá el siguiente estudio disponible."
+                confirmText="Sí, descartar y saltar"
+                cancelText="Continuar editando"
+                variant="warning"
+                isLoading={isSkipping}
+            />
+
+            <ConfirmationModal
+                isOpen={isWorkflowInfoModalOpen}
+                onClose={() => setIsWorkflowInfoModalOpen(false)}
+                onConfirm={() => setIsWorkflowInfoModalOpen(false)}
+                title="Estudio cancelado"
+                message="Este estudio fue cancelado y no puede redactarse, guardarse ni firmarse."
+                confirmText="Entendido"
+                cancelText="Cerrar"
+                variant="danger"
             />
 
             <NextExamModal
@@ -2096,24 +2860,8 @@ export const RedactarInforme = () => {
                 onStay={handleStayOnPage}
             />
 
-            {/* Modal PDF historial */}
-            {historyPdfUrl && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setHistoryPdfUrl(null)}>
-                    <div className="relative bg-white dark:bg-[#151922] rounded-lg shadow-2xl w-[80vw] h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 shrink-0">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Informe previo</span>
-                            <button
-                                type="button"
-                                onClick={() => setHistoryPdfUrl(null)}
-                                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                            >
-                                <X className="w-4 h-4 text-gray-500 dark:text-gray-300" />
-                            </button>
-                        </div>
-                        <iframe src={historyPdfUrl} className="flex-1 w-full rounded-b-lg" title="Informe previo" />
-                    </div>
-                </div>
-            )}
+            <LocalReportDialog report={externalHistoryReport} onClose={() => setExternalHistoryReport(null)} />
+
         </LayoutSinSidebar>
     )
 }

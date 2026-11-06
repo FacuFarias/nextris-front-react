@@ -1,5 +1,6 @@
 import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPaciente";
 import type { TableColumn } from "@/types/table";
+import { formatDate } from "@/lib/fechaYhora";
 
 
 // Configuración de columnas para usuarios
@@ -8,29 +9,35 @@ const admisionColumns: TableColumn<Patient>[] = [
         key: "name",
         label: "NOMBRE",
         className: "font-medium",
+        mobile: { role: "title", order: 1 },
     },
     {
         key: "surname",
         label: "APELLIDO",
         className: "font-medium",
+        mobile: { label: "Apellido", order: 2 },
     },
     {
         key: "gender",
         label: "GENERO",
         className: "font-medium",
         hideOnMobile: true,
+        mobile: { label: "Género", order: 4 },
     },
     {
         key: "birthdate",
         label: "FECHA DE NACIMIENTO",
         className: "font-medium",
         hideOnMobile: true,
+        mobile: { role: "hidden" },
+        render: (value) => formatDate(value),
     },
     {
         key: "nationalcode",
         label: "DNI",
         className: "font-medium",
         hideOnMobile: true,
+        mobile: { label: "DNI", order: 3 },
     },
 ];
 

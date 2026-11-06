@@ -23,6 +23,7 @@ import {
 /* import { useAuth } from "@/context/AuthContext"; */
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { createPatientFastSchema, type CreatePatientFormFast } from "../schemas/create-patient-fast.schema";
+import { DateInput } from "@/components/ui/date-input";
 
 interface CreatePatientFormProps {
     onSubmit: (data: CreatePatientFormFast) => void;
@@ -128,7 +129,7 @@ export const AgregarPacienteRapido = ({ onSubmit, isLoading }: CreatePatientForm
                             <FormItem>
                                 <FormLabel>Fecha de Nacimiento *</FormLabel>
                                 <FormControl>
-                                    <Input type="date" {...field} disabled={isLoading} />
+                                    <DateInput {...field} disabled={isLoading} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

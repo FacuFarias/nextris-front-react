@@ -25,7 +25,7 @@ export const SendReportModal = ({
             isOpen={isOpen}
             onClose={onClose}
             title="Enviar Informe por Email"
-            description="Envíe el informe médico en formato PDF al paciente"
+            description="Envíe al paciente el informe médico consultado en NextRIS"
             size="md"
         >
             <SendReportForm

@@ -6,10 +6,21 @@ import { PatientModal } from "./components/PatientModal";
 import { ResetPasswordModal } from "./components/ResetPasswordModal";
 import type { Patient, PatientFormData } from "./types/patients.types";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { ImpersonationDialog } from "../gestion-usuarios/components/ImpersonationDialog";
 
 export const GestionPacientes = () => {
+    const { authData } = useAuth();
+    const [impersonationTarget, setImpersonationTarget] = useState<Patient | null>(null);
+    const canImpersonate = Boolean(
+        authData?.user.permissions?.some(code => code === '*' || code === 'users.impersonate')
+        && !authData?.user.impersonation,
+    );
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(8);
+    const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+    const [sortColumn, setSortColumn] = useState('');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -41,11 +52,19 @@ export const GestionPacientes = () => {
     const {
         patients,
         isLoading,
+        isPlaceholderData,
+        error,
         createPatient,
         updatePatient,
         deletePatient,
         resetPassword
-    } = usePatients();
+    } = usePatients({
+        page,
+        per_page: pageSize,
+        column_filters: columnFilters,
+        sort_column: sortColumn,
+        sort_direction: sortDirection,
+    });
 
     const handlePaginationChange = (newPage: number, newPageSize: number) => {
         setPage(newPage);
@@ -134,7 +153,8 @@ export const GestionPacientes = () => {
     const patientActions = getPatientActions(
         handleOpenModal,
         handleOpenResetPasswordModal,
-        handleDelete
+        handleDelete,
+        canImpersonate ? setImpersonationTarget : undefined,
     );
 
     return (
@@ -152,17 +172,31 @@ export const GestionPacientes = () => {
                 </button>
             </div>
 
+            {error && <p role="alert" className="text-destructive">No se pudo cargar la lista de pacientes.</p>}
             <TablaDynamic
-                data={Array.isArray(patients?.data) ? patients.data : []}
+                data={!error && Array.isArray(patients?.data) ? patients.data : []}
                 columns={filteredColumns}
                 showIndex
                 loading={isLoading}
                 actions={patientActions}
                 pagination={{
-                    page,
+                    // El servidor ajusta la página si se elimina su último registro.
+                    page: !isPlaceholderData && patients ? patients.page : page,
                     pageSize,
-                    serverSide: false,
-                    total: Array.isArray(patients?.data) ? patients.data.length : 0,
+                    serverSide: true,
+                    total: patients?.total ?? 0,
+                }}
+                serverSideFiltering
+                onColumnFiltersChange={(filters) => {
+                    setColumnFilters(filters);
+                    setPage(1);
+                }}
+                sortColumn={sortColumn}
+                sortDirection={sortDirection}
+                onSortChange={(column, direction) => {
+                    setSortColumn(column);
+                    setSortDirection(direction);
+                    setPage(1);
                 }}
                 onPaginationChange={handlePaginationChange}
                 perPageValue={pageSize}
@@ -201,6 +235,11 @@ export const GestionPacientes = () => {
                 onSubmit={handleResetPassword}
                 patientName={selectedPatient ? `${selectedPatient.name} ${selectedPatient.surname}` : ""}
                 isLoading={false}
+            />
+            <ImpersonationDialog
+                target={impersonationTarget}
+                targetType="patient"
+                onClose={() => setImpersonationTarget(null)}
             />
         </div>
     )

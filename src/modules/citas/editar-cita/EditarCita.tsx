@@ -118,6 +118,7 @@ export const EditarCita = () => {
 
                     <TablaDynamic<Cita>
                         data={citasData?.data?.data || []}
+                        filterAnimationKey={debouncedSearch}
                         columns={citaColumns}
                         showIndex
                         loading={isLoadingCitas}
@@ -137,6 +138,7 @@ export const EditarCita = () => {
                         actions={citasActions}
                         tableBackgroundImage={fondoImage}
                         tableBackgroundImageDark={backDarkImage}
+                        mobileMode="cards"
                         stickyPagination
                     />
                 </div>

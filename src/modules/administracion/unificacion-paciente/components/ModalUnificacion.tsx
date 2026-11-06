@@ -3,6 +3,7 @@ import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPa
 import { Button } from "@/components/ui/button";
 import { Modal, PrimaryButton } from "@/components";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { formatDate } from "@/lib/fechaYhora";
 
 interface ModalUnificacionProps {
     isOpen: boolean;
@@ -40,7 +41,7 @@ export const ModalUnificacion = ({ isOpen, onClose, patients, handleSubmitUnific
                     <div className="space-y-3 flex justify-between flex-wrap">
                         <DataRow label="Nombre" value={patient1.name} color="green" />
                         <DataRow label="Apellido" value={patient1.surname} color="green" />
-                        <DataRow label="Fecha de Nacimiento" value={patient1.birthdate} color="green" />
+                        <DataRow label="Fecha de Nacimiento" value={formatDate(patient1.birthdate)} color="green" />
                         <DataRow label="DNI" value={patient1.nationalcode} color="green" />
                     </div>
                 </div>
@@ -56,7 +57,7 @@ export const ModalUnificacion = ({ isOpen, onClose, patients, handleSubmitUnific
                     <div className="space-y-3 flex justify-between flex-wrap">
                         <DataRow label="Nombre" value={patient2.name} color="red" />
                         <DataRow label="Apellido" value={patient2.surname} color="red" />
-                        <DataRow label="Fecha de Nacimiento" value={patient2.birthdate} color="red" />
+                        <DataRow label="Fecha de Nacimiento" value={formatDate(patient2.birthdate)} color="red" />
                         <DataRow label="DNI" value={patient2.nationalcode} color="red" />
                     </div>
                 </div>

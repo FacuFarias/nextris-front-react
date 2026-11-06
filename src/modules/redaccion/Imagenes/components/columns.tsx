@@ -1,10 +1,10 @@
 import type { TableColumn, TableAction } from "@/types/table"
 import type { PacsStudy } from "../hooks/use-studies-by-location"
-import { fechaYhora } from "@/lib/fechaYhora"
-import { formatDate } from "@/lib/fechaYhora"
+import { fechaYhora, formatDate } from "@/lib/fechaYhora"
 import { Badge } from "@/components/ui/badge"
-import { Check, Eye, Share2, X } from "lucide-react"
+import { Check, Eye, Pencil, Share2, Trash2, UserPen, X } from "lucide-react"
 import { toast } from "sonner"
+import { formatPatientName } from "@/lib/formatPatientName"
 
 const formatStudyTime = (timeValue: string | null) => {
   if (!timeValue) return "—"
@@ -25,16 +25,35 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
     headerClassName: "w-[200px]",
     sortable: true,
     filterable: true,
+    mobile: { role: "title", order: 1 },
+    render: (value: string | null) => {
+      const text = formatPatientName(value)
+      return <span className="truncate block" title={text}>{text}</span>
+    },
+  },
+  {
+    key: "patient_id",
+    label: "PATIENT ID",
+    className: "font-medium",
+    headerClassName: "w-[110px]",
+    sortable: true,
+    filterable: true,
+    mobile: { label: "Patient ID", order: 4 },
+    render: (value: string | null) => {
+      const text = value || "—"
+      return <span className="truncate block" title={text}>{text}</span>
+    },
   },
   {
     key: "study_desc",
     label: "DESCRIPCIÓN",
     className: "font-medium",
-    headerClassName: "max-w-[300px]",
     sortable: true,
     filterable: true,
+    mobile: { label: "Descripción", order: 2 },
     render: (value: string | null) => {
-      return <span className="truncate">{value || "—"}</span>
+      const text = value || "—"
+      return <span className="truncate block" title={text}>{text}</span>
     },
   },
   {
@@ -44,17 +63,39 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
     headerClassName: "w-[100px]",
     sortable: true,
     filterable: true,
+    mobile: { label: "Acceso", order: 3 },
     render: (value: string | null) => value || "—",
   },
   {
     key: "is_linked",
-    label: "VINCULADA",
+    label: "V",
+    headerTitle: "VINCULADA",
     className: "font-medium text-center",
-    headerClassName: "w-[95px]",
+    headerClassName: "w-[45px]",
     sortable: true,
     filterable: false,
+    mobile: { role: "hidden" },
     render: (value: boolean) => (
-      <div className="flex justify-center">
+      <div className="flex justify-center" title={value ? "Vinculada" : "No vinculada"}>
+        {value ? (
+          <Check className="h-4 w-4 text-emerald-500" />
+        ) : (
+          <X className="h-4 w-4 text-red-500" />
+        )}
+      </div>
+    ),
+  },
+  {
+    key: "has_studytype",
+    label: "ST",
+    headerTitle: "STUDY TYPE ASIGNADO",
+    className: "font-medium text-center",
+    headerClassName: "w-[45px]",
+    sortable: true,
+    filterable: false,
+    mobile: { role: "hidden" },
+    render: (value: boolean) => (
+      <div className="flex justify-center" title={value ? "Study type asignado" : "Sin study type"}>
         {value ? (
           <Check className="h-4 w-4 text-emerald-500" />
         ) : (
@@ -65,11 +106,12 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
   },
   {
     key: "has_active_share_link",
-    label: "LINK ACTIVO",
+    label: "LINK",
     className: "font-medium text-center",
-    headerClassName: "w-[110px]",
+    headerClassName: "w-[65px]",
     sortable: true,
     filterable: false,
+    mobile: { role: "hidden" },
     render: (value: boolean | undefined, row: PacsStudy) => {
       const isActive = Boolean(value && row.active_share_url)
 
@@ -110,6 +152,7 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
     headerClassName: "w-[90px]",
     sortable: true,
     filterable: true,
+    mobile: { label: "Modalidad", order: 5 },
     render: (value: string | null) => value || "—",
   },
   {
@@ -119,6 +162,7 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
     headerClassName: "w-[100px]",
     sortable: false,
     filterable: false,
+    mobile: { role: "hidden" },
     render: (value: string | null) => value || "—",
   },
   {
@@ -128,6 +172,7 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
     headerClassName: "w-[70px]",
     sortable: true,
     filterable: false,
+    mobile: { role: "hidden" },
     render: (value: number) => (
       <div className="flex justify-center">
         <Badge variant="secondary">{value}</Badge>
@@ -136,11 +181,12 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
   },
   {
     key: "num_instances",
-    label: "INSTANCIAS",
+    label: "INS",
     className: "font-medium text-center",
     headerClassName: "w-[100px]",
     sortable: false,
     filterable: false,
+    mobile: { role: "hidden" },
     render: (value: number) => (
       <div className="flex justify-center">
         <Badge>{value}</Badge>
@@ -153,6 +199,7 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
     className: "font-medium",
     sortable: true,
     filterable: false,
+    mobile: { label: "Llegada", order: 6 },
     render: (value: string | null) => {
       if (!value) return <span className="text-gray-400 text-xs">—</span>
       return fechaYhora(value)
@@ -164,6 +211,7 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
     className: "font-medium",
     sortable: true,
     filterable: false,
+    mobile: { role: "hidden" },
     render: (value: string | null) => {
       if (!value) return <span className="text-gray-400 text-xs">—</span>
       return formatDate(value)
@@ -175,6 +223,7 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
     className: "font-medium",
     sortable: true,
     filterable: false,
+    mobile: { role: "hidden" },
     render: (value: string | null) => formatStudyTime(value),
   },
   {
@@ -183,6 +232,7 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
     className: "font-medium",
     sortable: true,
     filterable: false,
+    mobile: { role: "hidden" },
     render: (value: string | null) => {
       if (!value) return <span className="text-gray-400 text-xs">—</span>
       return fechaYhora(value)
@@ -192,7 +242,10 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
 
 export const getImageActions = (
   onView?: (study: PacsStudy) => void,
-  onShare?: (study: PacsStudy) => void
+  onShare?: (study: PacsStudy) => void,
+  onReassign?: (study: PacsStudy) => void,
+  onEdit?: (study: PacsStudy) => void,
+  onDelete?: (study: PacsStudy) => void
 ): TableAction<PacsStudy>[] => {
   const actions: TableAction<PacsStudy>[] = []
 
@@ -202,6 +255,16 @@ export const getImageActions = (
       label: "Ver imágenes",
       onClick: (study) => onView(study),
       variant: "default",
+      mobilePrimary: true,
+    })
+  }
+
+  if (onEdit) {
+    actions.push({
+      icon: <Pencil className="h-4 w-4" />,
+      label: "Editar",
+      onClick: (study) => onEdit(study),
+      variant: "secondary",
     })
   }
 
@@ -214,5 +277,17 @@ export const getImageActions = (
     })
   }
 
+  if (onReassign) {
+    actions.push({
+      icon: <UserPen className="h-4 w-4" />,
+      label: "Reasignar a otro paciente",
+      onClick: (study) => onReassign(study),
+      variant: "secondary",
+    })
+  }
+
+  if (onDelete) {
+    actions.push({ icon: <Trash2 className="h-4 w-4 text-destructive" />, label: "Eliminar imágenes", onClick: onDelete, variant: "secondary" })
+  }
   return actions
 }

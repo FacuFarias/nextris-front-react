@@ -184,6 +184,7 @@ export const Demograficos = () => {
                 {/* Tabla */}
                 <TablaDynamic<Examinacion>
                     data={filteredData}
+                    filterAnimationKey={JSON.stringify([searchTerm, studyGroupId, modalityId, bodyPartId, dateRange])}
                     columns={demograficosColumns}
                     showIndex
                     loading={isLoading}

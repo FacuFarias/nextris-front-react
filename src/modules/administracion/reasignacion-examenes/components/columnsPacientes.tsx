@@ -1,5 +1,6 @@
 import type { TableColumn } from "@/types/table";
 import type { ReasignacionExamenesPacientes } from "../types/reasignacion-examenes.type";
+import { formatDate } from "@/lib/fechaYhora";
 
 
 // Configuración de columnas para usuarios
@@ -32,6 +33,7 @@ const pacienteEstudioColumns: TableColumn<ReasignacionExamenesPacientes>[] = [
         label: "Fecha de nacimiento",
         className: "font-medium",
         hideOnMobile: true,
+        render: (value) => formatDate(value),
     },
     {
         key: "phone",

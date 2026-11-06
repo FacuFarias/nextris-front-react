@@ -1,16 +1,18 @@
+import { hasAnyPermission } from "@/lib/permissions";
+import { useUserModules } from "@/hooks/use-user-modules";
 import { useState, useRef, useEffect, useCallback } from "react"
 import { MainLayout } from "@/layouts/layout"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Building2, FlaskConical, Monitor, Users, Settings } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+
+import { InstitutionSettings } from "./institucional/InstitutionSettings"
 
 // Institucional
-import { Facilities } from "./institucional/facilities"
 import { Locations } from "./institucional/locations"
+import { InformacionBasica } from "./institucional/informacion-basica"
 import { ObrasSociales } from "./institucional/obras-sociales"
-import { DominioPacientes } from "./institucional/dominio-pacientes"
 import { Tags } from "./institucional/tags"
-import { RelParserFacility } from "./institucional/rel-parser-facility/RelParserFacility"
-import { Modulos } from "./institucional/modulos"
 
 // Exámenes
 import { TiposEstudio } from "./examenes/tipos-estudio"
@@ -105,7 +107,16 @@ const AnimatedSubTabs = ({
 }
 
 export const ConfiguracionTablas = () => {
-    const [activeTab, setActiveTab] = useState("institucional")
+    const { authData } = useAuth()
+    const permissions = authData?.user?.permissions || []
+    const { disabledModulesSet } = useUserModules(Boolean(authData))
+    const appointmentsEnabled = !disabledModulesSet.has("appointments")
+    const canAccessUsers = hasAnyPermission(permissions, ["users.manage", "users.permissions.manage", "users.impersonate"])
+    const onlyUserManagement = !(permissions.includes("*") || permissions.includes("tabs.config.view"))
+    const visibleMainTabs = onlyUserManagement
+        ? mainTabs.filter((tab) => tab.value === "usuarios")
+        : mainTabs
+    const [activeTab, setActiveTab] = useState(onlyUserManagement ? "usuarios" : "institucional")
     const tabsListRef = useRef<HTMLDivElement>(null)
     const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
     const [indicator, setIndicator] = useState({ left: 0, width: 0 })
@@ -132,6 +143,10 @@ export const ConfiguracionTablas = () => {
         return () => window.removeEventListener("resize", updateIndicator)
     }, [updateIndicator])
 
+    useEffect(() => {
+        if (onlyUserManagement) setActiveTab("usuarios")
+    }, [onlyUserManagement])
+
     return (
         <MainLayout>
             <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm z-10 h-full flex flex-col overflow-auto">
@@ -153,7 +168,7 @@ export const ConfiguracionTablas = () => {
                             ref={tabsListRef}
                             className="bg-transparent border-b border-gray-200 dark:border-gray-700 rounded-none h-auto p-0 justify-start gap-0 w-full"
                         >
-                            {mainTabs.map((tab) => (
+                            {visibleMainTabs.map((tab) => (
                                 <TabsTrigger
                                     key={tab.value}
                                     value={tab.value}
@@ -177,19 +192,16 @@ export const ConfiguracionTablas = () => {
                     {/* Tab Institucional */}
                     <TabsContent value="institucional" className="flex-1 mt-0">
                         <AnimatedSubTabs
-                            defaultValue="facilities"
+                            defaultValue="datos-institucionales"
                             tabs={[
-                                { value: "facilities", label: "Instituciones" },
+                                { value: "datos-institucionales", label: "Datos Institucionales" },
                                 { value: "locations", label: "Ubicaciones" },
                                 { value: "obras-sociales", label: "Obras Sociales" },
-                                { value: "dominio-pacientes", label: "Dominio de Pacientes" },
-                                { value: "modulos", label: "Módulos" },
                                 { value: "tags", label: "Tags" },
-                                { value: "rel-parser-facility", label: "Rel Parser Facility" },
                             ]}
                         >
-                            <TabsContent value="facilities" className="p-4">
-                                <Facilities />
+                            <TabsContent value="datos-institucionales" className="p-4">
+                                <div className="space-y-6"><InstitutionSettings /><InformacionBasica /></div>
                             </TabsContent>
                             <TabsContent value="locations" className="p-4">
                                 <Locations />
@@ -197,17 +209,8 @@ export const ConfiguracionTablas = () => {
                             <TabsContent value="obras-sociales" className="p-4">
                                 <ObrasSociales />
                             </TabsContent>
-                            <TabsContent value="dominio-pacientes" className="p-4">
-                                <DominioPacientes />
-                            </TabsContent>
-                            <TabsContent value="modulos" className="p-4">
-                                <Modulos />
-                            </TabsContent>
                             <TabsContent value="tags" className="p-4">
                                 <Tags />
-                            </TabsContent>
-                            <TabsContent value="rel-parser-facility" className="p-4">
-                                <RelParserFacility />
                             </TabsContent>
                         </AnimatedSubTabs>
                     </TabsContent>
@@ -248,7 +251,7 @@ export const ConfiguracionTablas = () => {
                             defaultValue="maquinas"
                             tabs={[
                                 { value: "maquinas", label: "Maquinas" },
-                                { value: "agendas-maquinas", label: "Agendas de Maquinas" },
+                                ...(appointmentsEnabled ? [{ value: "agendas-maquinas", label: "Agendas de Maquinas" }] : []),
                             ]}
                         >
                             <TabsContent value="maquinas" className="p-4">
@@ -260,20 +263,25 @@ export const ConfiguracionTablas = () => {
                         </AnimatedSubTabs>
                     </TabsContent>
 
+                    {/* Tab Flujo de trabajo */}
+
                     {/* Tab Usuarios/Personal */}
                     <TabsContent value="usuarios" className="flex-1 mt-0">
                         <AnimatedSubTabs
-                            defaultValue="gestion-usuarios"
-                            tabs={[
+                            key={canAccessUsers ? "with-user-management" : "configuration-only"}
+                            defaultValue={canAccessUsers ? "gestion-usuarios" : "gestion-pacientes"}
+                            tabs={onlyUserManagement ? [
                                 { value: "gestion-usuarios", label: "Gestion de Usuarios" },
+                            ] : [
+                                ...(canAccessUsers ? [{ value: "gestion-usuarios", label: "Gestion de Usuarios" }] : []),
                                 { value: "gestion-pacientes", label: "Gestion de Pacientes" },
                                 { value: "medicos-solicitantes", label: "Medicos Solicitantes" },
-                                { value: "agenda-medicos", label: "Agenda de Medicos" },
+                                ...(appointmentsEnabled ? [{ value: "agenda-medicos", label: "Agenda de Medicos" }] : []),
                             ]}
                         >
-                            <TabsContent value="gestion-usuarios" className="p-4">
+                            {canAccessUsers && <TabsContent value="gestion-usuarios" className="p-4">
                                 <GestionUsuarios />
-                            </TabsContent>
+                            </TabsContent>}
                             <TabsContent value="gestion-pacientes" className="p-4">
                                 <GestionPacientes />
                             </TabsContent>

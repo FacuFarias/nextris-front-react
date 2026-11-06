@@ -56,7 +56,7 @@ export const SendReportForm = ({
                     required
                 />
                 <p className="text-xs text-gray-500">
-                    El informe en PDF será enviado a este correo electrónico
+                    El informe de NextRIS será enviado a este correo electrónico
                 </p>
             </div>
 

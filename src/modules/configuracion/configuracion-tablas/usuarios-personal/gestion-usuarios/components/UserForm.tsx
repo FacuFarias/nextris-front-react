@@ -1,3 +1,5 @@
+import { permissionModuleLabels, hasAnyPermission } from "@/lib/permissions";
+import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,86 +13,6 @@ import { useLocations } from "../../../institucional/locations/hooks/useLocation
 import { Loader2, MapPin, Search } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { userService } from "../services/users.service";
-
-const ROLE_PERMISSION_SUGGESTIONS: Record<string, string[]> = {
-    sysadmin: [
-        "tabs.patients.view",
-        "patients.view",
-        "patients.manage",
-        "tabs.appointments.view",
-        "appointments.view",
-        "appointments.create",
-        "tabs.admissions.view",
-        "admissions.view",
-        "admissions.admit_appointments",
-        "admissions.create_spontaneous",
-        "tabs.execution.view",
-        "execution.view_pending",
-        "execution.execute",
-        "tabs.reports.view",
-        "reports.view_writing",
-        "reports.view_reports",
-        "reports.sign",
-        "reports.unsign",
-        "tabs.images.view",
-        "images.view",
-        "images.share_link",
-        "tabs.distribution.view",
-        "distribution.view",
-        "distribution.perform",
-        "distribution.send_report",
-        "distribution.send_report_whatsapp",
-        "distribution.update_email",
-        "tabs.config.view",
-        "users.manage",
-        "users.permissions.manage",
-        "tabs.gestion.view",
-        "tabs.structured_reports.view",
-        "tabs.nexi.view",
-    ],
-    tecnico: [
-        "tabs.patients.view",
-        "patients.view",
-        "tabs.execution.view",
-        "execution.view_pending",
-        "execution.execute",
-        "tabs.images.view",
-        "images.view",
-    ],
-    medico: [
-        "tabs.patients.view",
-        "patients.view",
-        "tabs.reports.view",
-        "reports.view_writing",
-        "reports.view_reports",
-        "reports.sign",
-        "tabs.images.view",
-        "images.view",
-        "images.share_link",
-        "tabs.distribution.view",
-        "distribution.view",
-    ],
-    administrativo: [
-        "tabs.patients.view",
-        "patients.view",
-        "tabs.appointments.view",
-        "appointments.view",
-        "appointments.create",
-        "tabs.admissions.view",
-        "admissions.view",
-        "admissions.admit_appointments",
-        "admissions.create_spontaneous",
-        "tabs.distribution.view",
-        "distribution.view",
-        "distribution.perform",
-    ],
-};
-
-const normalizeRoleName = (value?: string) => (value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
 
 interface UserFormProps {
     onSubmit: (data: UserFormData, locationIds?: string[], medicalData?: UserMedicalSubmitData, permissionCodes?: string[]) => void;
@@ -109,17 +31,6 @@ export const UserForm = ({
     isLoading = false,
     isEditing = false,
 }: UserFormProps) => {
-    const emptyFormData: UserFormData = {
-        username: "",
-        role_id: "",
-        name: "",
-        surname: "",
-        national_number: "",
-        email: "",
-        phone: "",
-        is_active: true,
-    };
-
     const [formData, setFormData] = useState<UserFormData>({
         username: initialData?.username || "",
         role_id: initialData?.role_id || "",
@@ -131,7 +42,10 @@ export const UserForm = ({
         is_active: initialData?.is_active ?? true,
     });
 
-    const { roles } = useRoles();
+    const { authData } = useAuth();
+    const canManagePermissions = hasAnyPermission(authData?.user?.permissions, ['users.permissions.manage']);
+    const { roles, isLoading: isRolesLoading, error: rolesError, refetch: refetchRoles } = useRoles();
+    const areRoleTemplatesLoaded = Boolean(roles?.data?.length && roles.data.every((role) => Array.isArray(role.default_permissions)));
     const { locations, isLoading: isLoadingLocations } = useLocations();
     const { assignedLocations, isLoading: isLoadingAssignedLocations } = useUserLocations(isEditing ? userId || null : null);
     const { medicalData: fetchedMedicalData, isLoading: isLoadingMedicalData } = useUserMedicalData(isEditing ? userId || null : null);
@@ -140,12 +54,16 @@ export const UserForm = ({
     const [medicalFormData, setMedicalFormData] = useState({
         matricula_nacional: "",
         aclaracion_firma: "",
+        integration_id_1: "",
         firma_digital: undefined as File | undefined,
+        sello_digital: undefined as File | undefined,
     });
     const [activeRightTab, setActiveRightTab] = useState<"locations" | "permissions">("locations");
     const [permissionCatalog, setPermissionCatalog] = useState<PermissionItem[]>([]);
     const [selectedPermissionCodes, setSelectedPermissionCodes] = useState<Set<string>>(new Set());
-    const [isPermissionsLoading, setIsPermissionsLoading] = useState(false);
+    const [isPermissionsLoading, setIsPermissionsLoading] = useState(true);
+    const [permissionsError, setPermissionsError] = useState(false);
+    const [permissionReload, setPermissionReload] = useState(0);
     const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
 
     const allLocations = Array.isArray(locations?.data) ? locations.data : [];
@@ -175,38 +93,7 @@ export const UserForm = ({
         .trim()
         .toLowerCase();
     const isMedicalRole = normalizedRoleDescription === "medico";
-
-    useEffect(() => {
-        setFormData((prev) => {
-            const next = initialData
-                ? {
-                    username: initialData.username || "",
-                    role_id: initialData.role_id || "",
-                    name: initialData.name || "",
-                    surname: initialData.surname || "",
-                    national_number: initialData.national_number || "",
-                    email: initialData.email || "",
-                    phone: initialData.phone || "",
-                    is_active: initialData.is_active ?? true,
-                }
-                : emptyFormData;
-
-            if (
-                prev.username === next.username &&
-                prev.role_id === next.role_id &&
-                prev.name === next.name &&
-                prev.surname === next.surname &&
-                prev.national_number === next.national_number &&
-                prev.email === next.email &&
-                prev.phone === next.phone &&
-                prev.is_active === next.is_active
-            ) {
-                return prev;
-            }
-
-            return next;
-        });
-    }, [initialData]);
+    const isSysadminRole = selectedRole?.default_permissions?.includes("*") ?? false;
 
     useEffect(() => {
         if (assignedLocations?.data) {
@@ -240,7 +127,9 @@ export const UserForm = ({
             setMedicalFormData({
                 matricula_nacional: "",
                 aclaracion_firma: "",
+                integration_id_1: "",
                 firma_digital: undefined,
+                sello_digital: undefined,
             });
         }
     }, [isEditing, userId]);
@@ -250,6 +139,7 @@ export const UserForm = ({
 
         const loadPermissions = async () => {
             setIsPermissionsLoading(true);
+            setPermissionsError(false);
             try {
                 const [catalogResponse, userPermissionsResponse] = await Promise.all([
                     userService.getPermissionsCatalog(),
@@ -276,6 +166,7 @@ export const UserForm = ({
                 setSelectedPermissionCodes(new Set(filteredCodes));
             } catch {
                 if (!isCancelled) {
+                    setPermissionsError(true);
                     setPermissionCatalog([]);
                     setSelectedPermissionCodes(new Set());
                 }
@@ -291,45 +182,19 @@ export const UserForm = ({
         return () => {
             isCancelled = true;
         };
-    }, [isEditing, userId]);
-
-    useEffect(() => {
-        setExpandedModules((prev) => {
-            const next: Record<string, boolean> = {};
-            for (const [moduleName] of permissionsByModule) {
-                next[moduleName] = prev[moduleName] ?? true;
-            }
-            return next;
-        });
-    }, [permissionsByModule]);
-
-    useEffect(() => {
-        if (isEditing) {
-            return;
-        }
-
-        if (!formData.role_id || permissionCatalog.length === 0 || selectedPermissionCodes.size > 0) {
-            return;
-        }
-
-        const role = roles?.data?.find((item) => item.guid === formData.role_id);
-        const normalizedRole = normalizeRoleName(role?.description);
-        const suggestedCodes = ROLE_PERMISSION_SUGGESTIONS[normalizedRole] || [];
-        const validCodes = new Set(permissionCatalog.map((permission) => permission.code));
-        const filteredSuggestedCodes = suggestedCodes.filter((code) => validCodes.has(code));
-
-        setSelectedPermissionCodes(new Set(filteredSuggestedCodes));
-    }, [formData.role_id, isEditing, permissionCatalog, roles?.data, selectedPermissionCodes.size]);
+    }, [isEditing, userId, permissionReload]);
 
     useEffect(() => {
         if (fetchedMedicalData?.data) {
             setMedicalFormData((prev) => {
                 const nextMatricula = fetchedMedicalData.data.matricula_nacional || "";
                 const nextAclaracion = fetchedMedicalData.data.aclaracion_firma || "";
+                const nextIntegrationId = fetchedMedicalData.data.integration_id_1 || "";
 
                 if (
                     prev.matricula_nacional === nextMatricula &&
-                    prev.aclaracion_firma === nextAclaracion
+                    prev.aclaracion_firma === nextAclaracion &&
+                    prev.integration_id_1 === nextIntegrationId
                 ) {
                     return prev;
                 }
@@ -338,6 +203,7 @@ export const UserForm = ({
                     ...prev,
                     matricula_nacional: nextMatricula,
                     aclaracion_firma: nextAclaracion,
+                    integration_id_1: nextIntegrationId,
                 };
             });
         }
@@ -345,6 +211,7 @@ export const UserForm = ({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (isPermissionsLoading || permissionsError || isRolesLoading || rolesError || !areRoleTemplatesLoaded) return;
 
         const dataToSubmit = { ...formData };
 
@@ -352,25 +219,27 @@ export const UserForm = ({
             ? {
                 matricula_nacional: medicalFormData.matricula_nacional,
                 aclaracion_firma: medicalFormData.aclaracion_firma,
+                integration_id_1: medicalFormData.integration_id_1.trim(),
                 firma_digital: medicalFormData.firma_digital,
+                sello_digital: medicalFormData.sello_digital,
             }
             : undefined;
 
-        onSubmit(dataToSubmit, Array.from(selectedLocationIds), medicalData, Array.from(selectedPermissionCodes));
+        onSubmit(dataToSubmit, Array.from(selectedLocationIds), medicalData,
+            canManagePermissions ? Array.from(selectedPermissionCodes) : undefined);
     };
 
     const getSuggestedPermissionsForRole = (roleId: string) => {
         const role = roles?.data?.find((item) => item.guid === roleId);
-        const normalizedRole = normalizeRoleName(role?.description);
-        const suggestedCodes = ROLE_PERMISSION_SUGGESTIONS[normalizedRole] || [];
+        const suggestedCodes = role?.default_permissions || [];
         const validCodes = new Set(permissionCatalog.map((permission) => permission.code));
         return suggestedCodes.filter((code) => validCodes.has(code));
     };
 
-    const handleChange = (field: keyof UserFormData, value: any) => {
+    const handleChange = <K extends keyof UserFormData>(field: K, value: UserFormData[K]) => {
         setFormData(prev => ({ ...prev, [field]: value }));
 
-        if (field === "role_id") {
+        if (field === "role_id" && value !== formData.role_id) {
             const suggestedPermissions = getSuggestedPermissionsForRole(String(value));
             setSelectedPermissionCodes(new Set(suggestedPermissions));
         }
@@ -397,7 +266,7 @@ export const UserForm = ({
         setSelectedLocationIds(new Set());
     };
 
-    const handleMedicalChange = (field: "matricula_nacional" | "aclaracion_firma", value: string) => {
+    const handleMedicalChange = (field: "matricula_nacional" | "aclaracion_firma" | "integration_id_1", value: string) => {
         setMedicalFormData((prev) => ({ ...prev, [field]: value }));
     };
 
@@ -496,6 +365,7 @@ export const UserForm = ({
                                 Rol <span className="text-red-500">*</span>
                             </Label>
                             <Select
+                                disabled={!canManagePermissions || isPermissionsLoading || isRolesLoading || permissionsError || !areRoleTemplatesLoaded || isLoading}
                                 value={formData.role_id}
                                 onValueChange={(value) => handleChange("role_id", value)}
                                 required
@@ -534,16 +404,13 @@ export const UserForm = ({
                         </div>
 
                         <div className="sm:col-span-2 space-y-1.5">
-                            <Label htmlFor="email">
-                                Email <span className="text-red-500">*</span>
-                            </Label>
+                            <Label htmlFor="email">Email</Label>
                             <Input
                                 id="email"
                                 type="email"
                                 value={formData.email}
                                 onChange={(e) => handleChange("email", e.target.value)}
                                 placeholder="Ej: jperez@hospital.com"
-                                required
                             />
                         </div>
                     </div>
@@ -553,7 +420,7 @@ export const UserForm = ({
                             <div>
                                 <h4 className="text-sm font-semibold">Datos médicos</h4>
                                 <p className="text-xs text-muted-foreground">
-                                    Complete matrícula, aclaración y firma digital
+                                    Complete matrícula, aclaración, firma y sello
                                 </p>
                             </div>
 
@@ -590,11 +457,29 @@ export const UserForm = ({
                                     </div>
 
                                     <div className="sm:col-span-2 space-y-1.5">
+                                        <Label htmlFor="integration_id_1">Rad ID NextRIS</Label>
+                                        <Input
+                                            id="integration_id_1"
+                                            value={medicalFormData.integration_id_1}
+                                            onChange={(e) => handleMedicalChange("integration_id_1", e.target.value)}
+                                            inputMode="numeric"
+                                            pattern="[0-9]*[1-9][0-9]*"
+                                            maxLength={100}
+                                            title="Ingrese un identificador numérico mayor que cero"
+                                            placeholder="Ej: 987"
+                                            aria-describedby="integration_id_1_help"
+                                        />
+                                        <p id="integration_id_1_help" className="text-xs text-muted-foreground">
+                                            Identificador del médico en NextRIS. Necesario para enviar sus informes.
+                                        </p>
+                                    </div>
+
+                                    <div className="sm:col-span-2 space-y-1.5">
                                         <Label htmlFor="firma_digital">Imagen de firma</Label>
                                         <Input
                                             id="firma_digital"
                                             type="file"
-                                            accept="image/png,image/jpeg,image/jpg"
+                                            accept="image/png,image/jpeg,image/gif"
                                             onChange={(e) => {
                                                 const file = e.target.files?.[0];
                                                 setMedicalFormData((prev) => ({
@@ -608,6 +493,25 @@ export const UserForm = ({
                                                 Firma actual: {fetchedMedicalData.data.firma_digital}
                                             </p>
                                         )}
+                                    </div>
+
+                                    <div className="sm:col-span-2 space-y-1.5">
+                                        <Label htmlFor="sello_digital">Imagen de sello</Label>
+                                        <Input
+                                            id="sello_digital"
+                                            type="file"
+                                            accept="image/png,image/jpeg,image/gif"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                setMedicalFormData((prev) => ({ ...prev, sello_digital: file }));
+                                            }}
+                                        />
+                                        {fetchedMedicalData?.data?.sello_digital && !medicalFormData.sello_digital && (
+                                            <p className="text-xs text-muted-foreground">
+                                                Sello actual: {fetchedMedicalData.data.sello_digital}
+                                            </p>
+                                        )}
+                                        <p className="text-xs text-muted-foreground">Opcional. PNG, JPEG o GIF, hasta 5 MB.</p>
                                     </div>
                                 </div>
                             )}
@@ -711,17 +615,24 @@ export const UserForm = ({
                         <TabsContent value="permissions" className="space-y-2 mt-3">
                             <div>
                                 <h3 className="text-base font-semibold">Permisos</h3>
-                                <p className="text-sm text-muted-foreground">Defina permisos personalizados del usuario</p>
+                                <p className="text-sm text-muted-foreground">El rol propone una plantilla; los permisos seleccionados determinan el acceso</p>
                             </div>
 
-                            {isPermissionsLoading ? (
+                            {permissionsError || rolesError || (!isRolesLoading && !areRoleTemplatesLoaded) ? (
+                                <div role="alert" className="text-sm space-y-2">
+                                    <p>No se pudieron cargar los permisos o roles. Reintente antes de guardar.</p>
+                                    <SecondaryButton type="button" onClick={() => { if (permissionsError) setPermissionReload((value) => value + 1); void refetchRoles(); }}>Reintentar</SecondaryButton>
+                                </div>
+                            ) : isSysadminRole ? (
+                                <p className="text-sm py-4">Sysadmin tiene acceso total al sistema.</p>
+                            ) : isPermissionsLoading ? (
                                 <div className="flex justify-center items-center h-24">
                                     <Loader2 className="h-6 w-6 animate-spin text-brand-purple" />
                                 </div>
                             ) : permissionsByModule.length === 0 ? (
                                 <p className="text-sm text-muted-foreground text-center py-4">No hay permisos disponibles.</p>
                             ) : (
-                                <div className="max-h-[320px] overflow-y-auto space-y-3 pr-1">
+                                <fieldset disabled={!canManagePermissions || isLoading} className="max-h-[320px] overflow-y-auto space-y-3 pr-1">
                                     {permissionsByModule.map(([moduleName, modulePermissions]) => {
                                         const checkedCount = modulePermissions.reduce(
                                             (count, permission) => count + (selectedPermissionCodes.has(permission.code) ? 1 : 0),
@@ -746,8 +657,8 @@ export const UserForm = ({
                                                                 });
                                                             }}
                                                         />
-                                                        <Label htmlFor={moduleCheckboxId} className="cursor-pointer text-sm font-semibold capitalize truncate">
-                                                            {moduleName}
+                                                        <Label htmlFor={moduleCheckboxId} className="cursor-pointer text-sm font-semibold truncate">
+                                                            {permissionModuleLabels[moduleName] || moduleName}
                                                         </Label>
                                                     </div>
                                                     <button
@@ -777,7 +688,6 @@ export const UserForm = ({
                                                                     />
                                                                     <Label htmlFor={checkboxId} className="cursor-pointer leading-snug">
                                                                         <span className="block text-sm font-medium">{permission.description}</span>
-                                                                        <span className="block text-xs text-muted-foreground">{permission.code}</span>
                                                                     </Label>
                                                                 </div>
                                                             );
@@ -787,7 +697,7 @@ export const UserForm = ({
                                             </div>
                                         );
                                     })}
-                                </div>
+                                </fieldset>
                             )}
                         </TabsContent>
                     </Tabs>
@@ -798,7 +708,7 @@ export const UserForm = ({
                 <SecondaryButton type="button" onClick={onCancel} disabled={isLoading}>
                     Cancelar
                 </SecondaryButton>
-                <PrimaryButton type="submit" disabled={isLoading}>
+                <PrimaryButton type="submit" disabled={isLoading || isPermissionsLoading || permissionsError || isRolesLoading || Boolean(rolesError) || !areRoleTemplatesLoaded}>
                     {isLoading ? "Guardando..." : "Guardar"}
                 </PrimaryButton>
             </div>

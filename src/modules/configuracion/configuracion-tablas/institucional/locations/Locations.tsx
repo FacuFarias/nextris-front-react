@@ -168,7 +168,6 @@ export const Locations = () => {
                     gateway_ip: selectedLocation.gateway_ip,
                     transmission_type: selectedLocation.transmission_type,
                     retention_days: selectedLocation.retention_days,
-                    require_execution_before_reporting: selectedLocation.require_execution_before_reporting,
                 } : undefined}
                 isLoading={false}
             />

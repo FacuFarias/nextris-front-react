@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { toast } from 'sonner'
 import { useCalendarEventos } from '../hooks/use-calendar-eventos'
+import { DateInput } from '@/components/ui/date-input'
 
 interface AgendaProps {
     selectedPatient: any;
@@ -428,10 +429,9 @@ export const Agenda: React.FC<AgendaProps & { onGoNext?: () => void; isGoNextDis
                                 <Calendar className="w-4 h-4 text-brand-purple dark:text-purple-400" />
                                 Fecha deseada
                             </label>
-                            <input
-                                type="date"
+                            <DateInput
                                 value={selectedDate}
-                                onChange={(e) => handleDateChange(e.target.value)}
+                                onChange={handleDateChange}
                                 className="w-full h-11 px-4 border-2 border-gray-300 dark:border-[rgba(255,255,255,0.1)] rounded-lg focus:border-brand-purple dark:focus:border-purple-500 focus:ring-2 focus:ring-brand-purple focus:outline-none bg-white dark:bg-[#252636] text-gray-700 dark:text-gray-100 dark:[color-scheme:dark] text-base"
                             />
                         </div>

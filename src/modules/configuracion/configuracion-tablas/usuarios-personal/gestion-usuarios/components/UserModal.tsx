@@ -29,14 +29,15 @@ export const UserModal = ({
             size="full"
             className="sm:max-w-[70vw]"
         >
-            <UserForm
+            {isOpen && <UserForm
+                key={userId || "new"}
                 onSubmit={onSubmit}
                 onCancel={onClose}
                 initialData={initialData}
                 userId={userId}
                 isLoading={isLoading}
                 isEditing={isEditing}
-            />
+            />}
         </Modal>
     );
 };

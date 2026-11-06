@@ -4,9 +4,18 @@ import { FileText } from "lucide-react"
 import { TemplateList } from "./components/TemplateList"
 import type { Template } from "./types/informe-pred.types"
 
+const getStoredRelationFilter = (key: "modalityId" | "bodypartId") => {
+    try {
+        const filters = JSON.parse(sessionStorage.getItem("informe-predefinidos-filters") || "{}");
+        return filters[key] || undefined;
+    } catch {
+        return undefined;
+    }
+};
+
 export const InformePredefinidos = () => {
-    const [modalityId, setModalityId] = useState<string | undefined>(undefined);
-    const [bodypartId, setBodypartId] = useState<string | undefined>(undefined);
+    const [modalityId, setModalityId] = useState<string | undefined>(() => getStoredRelationFilter("modalityId"));
+    const [bodypartId, setBodypartId] = useState<string | undefined>(() => getStoredRelationFilter("bodypartId"));
 
     // Handlers
     const handleSelectTemplate = (template: Template) => {
@@ -50,12 +59,12 @@ export const InformePredefinidos = () => {
         <MainLayout isOverflow={false}>
             <div className="page-dark-gradient rounded-lg p-3 sm:p-6 shadow-sm h-full flex flex-col">
                 {/* Header */}
-                <div className="mb-6">
+                <div className="mb-4 sm:mb-6">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="bg-brand-purple p-2.5 rounded-lg">
                             <FileText className="w-6 h-6 text-white" />
                         </div>
-                        <h1 className="text-2xl font-bold text-brand-purple dark:text-purple-400">Plantillas de Informes</h1>
+                        <h1 className="text-xl font-bold text-brand-purple dark:text-purple-400 sm:text-2xl">Plantillas de Informes</h1>
                     </div>
                     <p className="text-gray-600 dark:text-gray-400">
                         Gestiona las plantillas predefinidas para agilizar la redacción de informes médicos
@@ -63,7 +72,7 @@ export const InformePredefinidos = () => {
                 </div>
 
                 {/* Lista de plantillas */}
-                <div className="flex-1 min-h-screen">
+                <div className="min-h-0 flex-1">
                     <TemplateList
                         onSelect={handleSelectTemplate}
                         onEdit={handleEditTemplate}

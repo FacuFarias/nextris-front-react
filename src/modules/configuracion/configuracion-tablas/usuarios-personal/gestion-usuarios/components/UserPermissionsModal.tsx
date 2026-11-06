@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { permissionModuleLabels } from "@/lib/permissions";
+import { useMemo, useState } from "react";
 import { Modal, PrimaryButton, SecondaryButton } from "@/components";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -27,6 +28,7 @@ export const UserPermissionsModal = ({
     onToggleCode,
     onSave,
 }: UserPermissionsModalProps) => {
+    const isSysadmin = user?.role?.trim().toLowerCase() === "sysadmin";
     const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
 
     const permissionsByModule = useMemo(() => {
@@ -40,16 +42,6 @@ export const UserPermissionsModal = ({
 
         return Array.from(map.entries()).sort(([moduleA], [moduleB]) => moduleA.localeCompare(moduleB));
     }, [catalog]);
-
-    useEffect(() => {
-        setExpandedModules((prev) => {
-            const next: Record<string, boolean> = {};
-            for (const [moduleName] of permissionsByModule) {
-                next[moduleName] = prev[moduleName] ?? true;
-            }
-            return next;
-        });
-    }, [permissionsByModule]);
 
     const toggleModuleExpanded = (moduleName: string) => {
         setExpandedModules((prev) => ({
@@ -70,7 +62,7 @@ export const UserPermissionsModal = ({
                 <div className="py-8 text-center text-sm text-muted-foreground">Cargando permisos...</div>
             ) : (
                 <div className="space-y-4">
-                    {permissionsByModule.length === 0 ? (
+                    {isSysadmin ? <p>Sysadmin tiene acceso total al sistema.</p> : permissionsByModule.length === 0 ? (
                         <p className="text-sm text-muted-foreground">No hay permisos disponibles.</p>
                     ) : (
                         <div className="max-h-[60vh] overflow-y-auto space-y-4 pr-1">
@@ -98,8 +90,8 @@ export const UserPermissionsModal = ({
                                                         });
                                                     }}
                                                 />
-                                                <Label htmlFor={moduleCheckboxId} className="cursor-pointer text-sm font-semibold capitalize truncate">
-                                                    {moduleName}
+                                                <Label htmlFor={moduleCheckboxId} className="cursor-pointer text-sm font-semibold truncate">
+                                                    {permissionModuleLabels[moduleName] || moduleName}
                                                 </Label>
                                             </div>
                                             <button
@@ -127,7 +119,6 @@ export const UserPermissionsModal = ({
                                                             />
                                                             <Label htmlFor={checkboxId} className="cursor-pointer leading-snug">
                                                                 <span className="block text-sm font-medium">{permission.description}</span>
-                                                                <span className="block text-xs text-muted-foreground">{permission.code}</span>
                                                             </Label>
                                                         </div>
                                                     );
@@ -144,7 +135,7 @@ export const UserPermissionsModal = ({
                         <SecondaryButton type="button" onClick={onClose} disabled={isSaving}>
                             Cancelar
                         </SecondaryButton>
-                        <PrimaryButton type="button" onClick={onSave} disabled={isSaving || isLoading}>
+                        <PrimaryButton type="button" onClick={onSave} disabled={isSaving || isLoading || isSysadmin}>
                             {isSaving ? "Guardando..." : "Guardar permisos"}
                         </PrimaryButton>
                     </div>

@@ -14,6 +14,9 @@ export interface PatientProfile {
     sex: string;
     phone: string;
     email: string;
+    email_verified: boolean;
+    email_verification_enabled: boolean;
+    can_change_password: boolean;
     address: string;
     city: string;
     state: string;

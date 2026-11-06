@@ -1,6 +1,7 @@
 import type { TableColumn, TableAction } from "@/types/table";
 import type { Patient } from "../types/patients.types";
-import { Edit, Lock, Trash2 } from "lucide-react";
+import { Edit, Lock, LogIn, Trash2 } from "lucide-react";
+import { formatDate } from "@/lib/fechaYhora";
 
 export const getPatientColumns = (): TableColumn<Patient>[] => [
     {
@@ -48,7 +49,7 @@ export const getPatientColumns = (): TableColumn<Patient>[] => [
         sortable: true,
         render: (value) => {
             if (!value) return "-";
-            return new Date(value.toString()).toLocaleDateString();
+            return formatDate(value.toString());
         },
     },
     {
@@ -82,7 +83,14 @@ export const getPatientActions = (
     onEditar: (patient: Patient) => void,
     onResetPassword: (patient: Patient) => void,
     onEliminar: (patient: Patient) => void,
+    onImpersonate?: (patient: Patient) => void,
 ): TableAction<Patient>[] => [
+        ...(onImpersonate ? [{
+            label: "Conectarse como paciente",
+            icon: <LogIn className="h-4 w-4 text-emerald-700" />,
+            onClick: onImpersonate,
+            disabled: (patient: Patient) => !patient.is_active,
+        }] : []),
         {
             label: "Editar",
             icon: <Edit className="h-4 w-4 text-blue-900" />,

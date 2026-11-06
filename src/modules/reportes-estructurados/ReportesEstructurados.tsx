@@ -21,6 +21,7 @@ import {
 } from "@/services/parser-facility-rel.service";
 import { Loader2, MapPin, Search } from "lucide-react";
 import type { TableAction, TableColumn } from "@/types/table";
+import { formatDateTime } from "@/lib/fechaYhora";
 
 type TabKey = "lista-parser" | "mapeo-variables" | "conceptos-criterios" | "plantillas-inteligentes";
 
@@ -293,7 +294,7 @@ export const ReportesEstructurados = () => {
         label: "ACTUALIZADO",
         sortable: true,
         filterable: true,
-        render: (value: string | null) => (value ? new Date(value).toLocaleString() : "-"),
+        render: (value: string | null) => (value ? formatDateTime(value) : "-"),
       },
     ],
     []

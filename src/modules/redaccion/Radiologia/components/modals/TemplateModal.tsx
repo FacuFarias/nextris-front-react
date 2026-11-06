@@ -10,6 +10,11 @@ interface TemplateModalProps {
     onClose: () => void;
     searchTerm: string;
     setSearchTerm: (term: string) => void;
+    hasStudyType: boolean;
+    onlyStudyType: boolean;
+    setOnlyStudyType: (value: boolean) => void;
+    isLoading: boolean;
+    hasError: boolean;
     filteredTemplates: Template[];
     selectedTemplate: Template | null;
     setSelectedTemplate: (template: Template) => void;
@@ -21,6 +26,11 @@ export const TemplateModal = ({
     onClose,
     searchTerm,
     setSearchTerm,
+    hasStudyType,
+    onlyStudyType,
+    setOnlyStudyType,
+    isLoading,
+    hasError,
     filteredTemplates,
     selectedTemplate,
     setSelectedTemplate,
@@ -35,31 +45,59 @@ export const TemplateModal = ({
         >
             <div className="space-y-4">
                 {/* Filtros */}
-                <div className="flex gap-4 items-center">
-                    <div className="flex-1 relative">
+                <div className="flex flex-col gap-3">
+                    <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
                             type="text"
-                            placeholder="Buscar por tipo de estudio..."
+                            placeholder="Buscar por título o tipo de estudio..."
+                            aria-label="Buscar informes predefinidos"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-10"
                         />
                     </div>
-                    <div className="w-64">
-                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                            <input
-                                type="checkbox"
-                                className="rounded"
-                            />
-                            Mi tipo de estudio
-                        </label>
+                    <div role="group" aria-label="Filtrar informes predefinidos" className="flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+                        <button
+                            type="button"
+                            aria-pressed={!onlyStudyType}
+                            onClick={() => setOnlyStudyType(false)}
+                            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple ${!onlyStudyType
+                                ? 'bg-brand-purple text-white shadow-sm'
+                                : 'text-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}
+                        >
+                            Mostrar todo
+                        </button>
+                        <button
+                            type="button"
+                            aria-pressed={onlyStudyType}
+                            disabled={!hasStudyType}
+                            onClick={() => setOnlyStudyType(true)}
+                            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple disabled:cursor-not-allowed disabled:opacity-50 ${onlyStudyType
+                                ? 'bg-brand-purple text-white shadow-sm'
+                                : 'text-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}
+                        >
+                            Solo este tipo de estudio
+                        </button>
                     </div>
+                    {!hasStudyType && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Este estudio no tiene un tipo asignado. Se muestran todos los informes predefinidos.
+                        </p>
+                    )}
                 </div>
 
                 {/* Lista de plantillas */}
-                <div className="border rounded-lg max-h-[400px] overflow-y-auto">
-                    {filteredTemplates.length === 0 ? (
+                <div className="border rounded-lg max-h-[400px] overflow-y-auto" aria-busy={isLoading}>
+                    {isLoading ? (
+                        <div role="status" className="p-8 text-center text-gray-500">
+                            Cargando informes predefinidos...
+                        </div>
+                    ) : hasError ? (
+                        <div role="alert" className="p-8 text-center text-red-600">
+                            No se pudieron cargar los informes predefinidos. Intente nuevamente.
+                        </div>
+                    ) : filteredTemplates.length === 0 ? (
                         <div className="p-8 text-center text-gray-500">
                             No se encontraron plantillas
                         </div>
@@ -68,7 +106,7 @@ export const TemplateModal = ({
                             {filteredTemplates.map((template) => (
                                 <div
                                     key={template.guid}
-                                    className={`p-4 cursor-pointer transition-all grid grid-cols-2 gap-4 relative ${selectedTemplate?.guid === template.guid
+                                    className={`relative grid cursor-pointer grid-cols-1 gap-4 p-4 transition-all sm:grid-cols-2 ${selectedTemplate?.guid === template.guid
                                         ? 'bg-purple-100 border-2 border-brand-purple shadow-md'
                                         : 'hover:bg-gray-50 border-2 border-transparent'
                                         }`}
@@ -98,7 +136,7 @@ export const TemplateModal = ({
                     </SecondaryButton>
                     <PrimaryButton
                         onClick={onAccept}
-                        disabled={!selectedTemplate}
+                        disabled={isLoading || hasError || !selectedTemplate || !filteredTemplates.some((template) => template.guid === selectedTemplate.guid)}
                     >
                         ACEPTAR
                     </PrimaryButton>

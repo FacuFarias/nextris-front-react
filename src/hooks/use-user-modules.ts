@@ -1,8 +1,11 @@
+import { DEFAULT_DISABLED_MODULES } from '@/lib/permissions';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
 interface UserModulesData {
   module_codes: string[];
+  disabled_modules: string[];
   facility_ids: string[];
   user_facilities_count: number;
   total_facilities: number;
@@ -15,12 +18,15 @@ interface UserModulesResponse {
 }
 
 const userModulesKeys = {
-  me: ['user-modules'] as const,
+  me: (userId: string) => ['user-modules', userId] as const,
 };
 
 export const useUserModules = (enabled = true) => {
+  const { authData } = useAuth();
+  const userId = authData?.user?.id ?? 'anonymous';
+
   const { data, isLoading, error } = useQuery({
-    queryKey: userModulesKeys.me,
+    queryKey: userModulesKeys.me(userId),
     queryFn: async (): Promise<UserModulesData> => {
       const response = await api.get<UserModulesResponse>('/config/me/modules');
       return response.data.data;
@@ -29,9 +35,12 @@ export const useUserModules = (enabled = true) => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const moduleCodes = data?.module_codes ?? [];
+  const disabledModules = data?.disabled_modules ?? DEFAULT_DISABLED_MODULES;
+  const moduleCodes = (data?.module_codes ?? []).filter((code) => !disabledModules.includes(code));
 
   return {
+    disabledModules,
+    disabledModulesSet: new Set(disabledModules),
     moduleCodes,
     moduleCodesSet: new Set(moduleCodes),
     facilityIds: data?.facility_ids ?? [],

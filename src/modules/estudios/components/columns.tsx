@@ -1,46 +1,183 @@
-import { useState } from "react";
+import { PatientReportDialog } from './PatientReportDialog';
+import type { PatientReportView } from '../types/patientReport';
+import { useRef, useState, type ReactNode } from "react";
 import type { TableColumn } from "@/types/table";
+import { formatDate } from "@/lib/fechaYhora";
 import type { Study } from "../types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Image, Calendar, Clock, User, MapPin, Share2, Loader2 } from "lucide-react";
+import { FileText, Image, Calendar, Clock, Share2, Loader2, Download } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { estudiosService } from "../services/estudios.service";
+import { toast } from "sonner";
 
-const ReportButton = ({ study }: { study: Study }) => {
+export const ReportButton = ({ study }: { study: Study }) => {
     const [loading, setLoading] = useState(false);
+    const [report, setReport] = useState<PatientReportView | null>(null);
+    const requestVersion = useRef(0);
 
     const handleOpen = async () => {
+        const version = ++requestVersion.current;
         setLoading(true);
         try {
-            await estudiosService.openReport(study.examination_id);
+            const view = await estudiosService.getReport(study.examination_id);
+            if (version !== requestVersion.current) return;
+            setReport(view);
+        } catch (error) {
+            if (version !== requestVersion.current) return;
+            toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
+        } finally {
+            if (version === requestVersion.current) setLoading(false);
+        }
+    };
+
+    const button = (
+        <Button
+            size="sm"
+            variant="outline"
+            className="gap-1 h-7 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+            onClick={() => void handleOpen()}
+            disabled={loading}
+        >
+            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+            Reporte
+        </Button>
+    );
+
+    return <>
+        {button}
+        <PatientReportDialog view={report} onClose={() => setReport(null)} />
+    </>;
+};
+
+const UnavailableReportAction = ({ children }: { children: ReactNode }) => (
+    <TooltipProvider>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="inline-flex">{children}</span>
+            </TooltipTrigger>
+            <TooltipContent>No hay imágenes disponibles para compartir</TooltipContent>
+        </Tooltip>
+    </TooltipProvider>
+);
+
+const DownloadImagesButton = ({ study }: { study: Study }) => {
+    const [loading, setLoading] = useState(false);
+
+    const handleDownload = async () => {
+        setLoading(true);
+        try {
+            await estudiosService.downloadImages(study.examination_id);
         } finally {
             setLoading(false);
         }
     };
 
-    return (
+    const button = (
         <Button
             size="sm"
             variant="outline"
             className="gap-1 h-7 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-            onClick={handleOpen}
-            disabled={loading}
+            onClick={handleDownload}
+            disabled={!study.has_images || !study.study_uid || loading}
         >
-            {loading ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-                <FileText className="h-3 w-3" />
-            )}
-            Informe
+            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+            Descargar
         </Button>
+    );
+
+    return study.has_images && study.study_uid ? button : (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className="inline-flex">{button}</span>
+                </TooltipTrigger>
+                <TooltipContent>No hay imagenes vinculadas a este estudio</TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
+};
+
+const ViewImagesButton = ({ study }: { study: Study }) => {
+    const [loading, setLoading] = useState(false);
+
+    const handleViewDicom = () => {
+        if (!study.study_uid) {
+            toast.error("El estudio no tiene Study Instance UID");
+            return;
+        }
+
+        setLoading(true);
+
+        const authDataRaw = localStorage.getItem("authData");
+        const token = authDataRaw ? JSON.parse(authDataRaw).access_token : null;
+
+        fetch("/api/general/viewer-url-by-iuid", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ study_iuid: study.study_uid }),
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                setLoading(false);
+                if (data.success && data.data?.viewer_url) {
+                    window.open(data.data.viewer_url, "_blank");
+                } else {
+                    toast.error(data.message || "No se pudo obtener la URL del visor");
+                }
+            })
+            .catch(() => {
+                setLoading(false);
+                toast.error("No se pudo abrir el visor DICOM");
+            });
+    };
+
+    const button = (
+        <Button
+            size="sm"
+            variant="outline"
+            className="gap-1 h-7 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+            onClick={handleViewDicom}
+            disabled={!study.has_images || !study.study_uid || loading}
+        >
+            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Image className="h-3 w-3" />}
+            Imágenes
+        </Button>
+    );
+
+    return study.has_images && study.study_uid ? button : (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className="inline-flex">{button}</span>
+                </TooltipTrigger>
+                <TooltipContent>No hay imagenes vinculadas a este estudio</TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     );
 };
 
 export const createStudyColumns = (onShare: (study: Study) => void): TableColumn<Study>[] => [
     {
-        key: "accession_number",
-        label: "N° ACCESO",
-        className: "font-medium text-blue-600 dark:text-blue-400",
+        key: "study_date",
+        label: "FECHA",
+        render: (value, row) => (
+            <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                <div>
+                    <div className="font-medium">
+                        {formatDate(value)}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {row.study_time}
+                    </div>
+                </div>
+            </div>
+        ),
+        hideOnMobile: true,
     },
     {
         key: "study_type",
@@ -55,93 +192,32 @@ export const createStudyColumns = (onShare: (study: Study) => void): TableColumn
         ),
     },
     {
-        key: "study_date",
-        label: "FECHA",
-        render: (value, row) => (
-            <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                <div>
-                    <div className="text-sm font-medium">
-                        {new Date(value).toLocaleDateString("es-AR")}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {row.study_time}
-                    </div>
-                </div>
-            </div>
-        ),
-        hideOnMobile: true,
-    },
-    {
-        key: "urgency",
-        label: "URGENCIA",
-        render: (value) => {
-            const isUrgent = value === "Urgente";
-            return (
-                <Badge variant={isUrgent ? "destructive" : "outline"}>
-                    {value}
-                </Badge>
-            );
-        },
-        hideOnMobile: true,
-    },
-    {
-        key: "referring_physician",
-        label: "MÉDICO",
-        render: (value) => (
-            <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                <span className="text-sm">{value}</span>
-            </div>
-        ),
-        hideOnMobile: true,
-    },
-    {
-        key: "location",
-        label: "UBICACIÓN",
-        render: (value) => (
-            <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                <span className="text-sm">{value}</span>
-            </div>
-        ),
-        hideOnMobile: true,
-    },
-    {
         key: "has_report",
         label: "RECURSOS",
-        render: (_, row) => (
-            <div className="flex flex-wrap gap-2 items-center">
-                {row.has_report && <ReportButton study={row} />}
-                {row.has_images && row.study_uid && (
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1 h-7 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-                        onClick={() =>
-                            window.open(
-                                `https://viewer.nextris.cloud/viewer?StudyInstanceUIDs=${row.study_uid}`,
-                                "_blank"
-                            )
-                        }
-                    >
-                        <Image className="h-3 w-3" />
-                        Imágenes
-                    </Button>
-                )}
-                {row.has_report && (
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1 h-7 text-xs border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white dark:border-purple-400 dark:text-purple-400 dark:hover:bg-purple-600 dark:hover:text-white"
-                        onClick={() => onShare(row)}
-                    >
-                        <Share2 className="h-3 w-3" />
-                        Compartir
-                    </Button>
-                )}
-            </div>
-        ),
+        render: (_, row) => {
+            const shareButton = (
+                <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!row.has_images || !row.study_uid}
+                    className="gap-1 h-7 text-xs border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white dark:border-purple-400 dark:text-purple-400 dark:hover:bg-purple-600 dark:hover:text-white"
+                    onClick={() => onShare(row)}
+                >
+                    <Share2 className="h-3 w-3" />
+                    Compartir
+                </Button>
+            );
+
+            return (
+                <div className="flex flex-wrap gap-2 items-center">
+                    <ViewImagesButton study={row} />
+                    <ReportButton study={row} />
+                    {row.has_images && row.study_uid ? shareButton : (
+                        <UnavailableReportAction>{shareButton}</UnavailableReportAction>
+                    )}
+                    <DownloadImagesButton study={row} />
+                </div>
+            );
+        },
     },
 ];

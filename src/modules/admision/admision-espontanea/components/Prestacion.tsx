@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { useCrearOrdenParaPaciente } from "../hooks/use-paciente-direccion";
+import { formatDate } from "@/lib/fechaYhora";
 
 
 interface PrestacionProps {
@@ -175,7 +176,7 @@ export const Prestacion = ({
                             </div>
                             <div>
                                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1">Fecha de Nacimiento</p>
-                                <p className="text-sm text-gray-800 dark:text-gray-100">{selectedPatient?.birthdate}</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-100">{selectedPatient?.birthdate ? formatDate(selectedPatient.birthdate) : "-"}</p>
                             </div>
                             <div>
                                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1">Género</p>

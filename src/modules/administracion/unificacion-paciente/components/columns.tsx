@@ -1,11 +1,17 @@
 import type { Patient } from "@/modules/pacientes/buscar-paciente/types/BuscarPaciente";
 import type { TableColumn } from "@/types/table";
+import { formatDate } from "@/lib/fechaYhora";
 
 
 // Configuración de columnas para usuarios
 const unificacionColumns: TableColumn<Patient>[] = [
 
 
+    {
+        key: "patientid",
+        label: "PATIENT ID",
+        className: "font-medium",
+    },
     {
         key: "name",
         label: "NOMBRE",
@@ -27,6 +33,7 @@ const unificacionColumns: TableColumn<Patient>[] = [
         label: "FECHA DE NACIMIENTO",
         className: "font-medium",
         hideOnMobile: true,
+        render: (value) => formatDate(value),
     },
     {
         key: "nationalcode",

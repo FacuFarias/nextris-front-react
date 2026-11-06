@@ -1,7 +1,7 @@
-import { Navigate } from "react-router-dom";
+import { hasRoleAccess, moduleForPath } from "@/lib/permissions";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { FirstLoginPasswordModal } from "@/modules/auth/change-password/FirstLoginPasswordModal";
-import { EmailVerificationModal } from "@/modules/auth/email-verification/EmailVerificationModal";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useUserModules } from "@/hooks/use-user-modules";
@@ -12,11 +12,14 @@ interface ProtectedRouteProps {
     requiredPermissions?: string[];
     requiredModule?: string;
     allowWithoutPermissions?: boolean;
+    deniedRedirect?: string;
 }
 
-export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions, requiredModule, allowWithoutPermissions = false }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions, requiredModule, allowWithoutPermissions = false, deniedRedirect = "/inicio" }: ProtectedRouteProps) => {
     const { isAuthenticated, isLoading, authData } = useAuth();
-    const { moduleCodesSet, isLoading: isModulesLoading, hasError: hasModulesError } = useUserModules(isAuthenticated);
+    const { pathname } = useLocation();
+    const screenModule = requiredModule || moduleForPath(pathname);
+    const { disabledModulesSet, moduleCodesSet, isLoading: isModulesLoading, hasError: hasModulesError } = useUserModules(isAuthenticated);
     const hasShownErrorRef = useRef(false);
 
     const userRole = authData?.user?.user_type;
@@ -24,20 +27,18 @@ export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions, re
         ? ((authData?.user as any)?.permissions as string[])
         : [];
 
-    const hasRoleConstraint = Array.isArray(allowedRoles) && allowedRoles.length > 0;
     const hasPermissionConstraint = Array.isArray(requiredPermissions) && requiredPermissions.length > 0;
     const isStaffUser = userRole !== 'patient';
 
-    const hasRoleAccess = hasRoleConstraint ? Boolean(userRole && allowedRoles?.includes(userRole)) : true;
+    const roleAccess = hasRoleAccess(userRole, allowedRoles);
     const hasPermissionAccess = hasPermissionConstraint
         ? (userPermissions.includes("*") || requiredPermissions!.some((permission) => userPermissions.includes(permission)))
         : (isStaffUser ? allowWithoutPermissions : true);
 
-    const hasAccess = hasRoleAccess && hasPermissionAccess;
+    const hasAccess = roleAccess && hasPermissionAccess;
 
-    const hasModuleAccess = !requiredModule
-        ? true
-        : (!hasModulesError && moduleCodesSet.has(requiredModule));
+    const hasModuleAccess = !screenModule || (!disabledModulesSet.has(screenModule)
+        && !hasModulesError && moduleCodesSet.has(screenModule));
 
     // Mostrar error si no tiene acceso (solo una vez)
     useEffect(() => {
@@ -52,7 +53,7 @@ export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions, re
         }
     }, [isAuthenticated, isLoading, isModulesLoading, hasAccess, hasModuleAccess]);
 
-    if (isLoading || (requiredModule && isModulesLoading && !hasModulesError)) {
+    if (isLoading || (screenModule && isModulesLoading && !hasModulesError)) {
         return (
             <div className="flex justify-center items-center h-screen">
                 <span className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-purple"></span>
@@ -65,15 +66,10 @@ export const ProtectedRoute = ({ children, allowedRoles, requiredPermissions, re
     }
 
     if (!hasAccess || !hasModuleAccess) {
-        return <Navigate to="/inicio" replace />;
+        return <Navigate to={deniedRedirect} replace />;
     }
 
-    const requiresPasswordChange = !!authData?.user?.requires_password_change;
-    const requiresEmailVerification = !!authData?.user?.email_verification_required;
-
-    if (requiresEmailVerification) {
-        return <EmailVerificationModal />;
-    }
+    const requiresPasswordChange = isStaffUser && !!authData?.user?.requires_password_change;
 
     return (
         <>

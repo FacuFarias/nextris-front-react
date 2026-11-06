@@ -19,18 +19,18 @@ export const templateColumns: TableColumn<Template>[] = [
         sortable: true,
     },
     {
-        key: "findings",
-        label: "HALLAZGOS",
+        key: "study_reason",
+        label: "RAZÓN DEL ESTUDIO",
         className: "max-w-xs truncate",
         hideOnMobile: true,
-        render: (value: string) => value || "Sin hallazgos",
+        render: (value: string) => value || "Sin razón",
     },
     {
-        key: "technique",
-        label: "TÉCNICA",
+        key: "content",
+        label: "CONTENIDO",
         className: "max-w-xs truncate",
         hideOnMobile: true,
-        render: (value: string) => value || "Sin técnica",
+        render: (value: string) => value || "Sin contenido",
     },
 ];
 

@@ -1,11 +1,12 @@
-import { createBrowserRouter, RouterProvider, Outlet, useLocation } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Outlet, Navigate, useLocation, useMatches } from "react-router-dom";
 import { lazy, Suspense, useEffect, useRef } from "react";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { useAnalytics } from "@/context/AnalyticsContext";
+import { useAuth } from "@/context/AuthContext";
+import { BridgeWidget } from "@/assistant/BridgeWidget";
 
 // Rutas de autenticación — cargadas de forma eager (necesarias en el arranque)
 import { Login } from "@/modules/auth/login/Login";
-import { FreeSignup } from "@/modules/auth/free-signup/FreeSignup";
 import { ChangePassword } from "@/modules/auth/change-password/ChangePassword";
 
 // ── Page-view tracker ─────────────────────────────────────────────────────────
@@ -13,6 +14,15 @@ import { ChangePassword } from "@/modules/auth/change-password/ChangePassword";
 // tree and can call useLocation(). A ref guard avoids StrictMode double-fire.
 function RootLayout() {
     const location = useLocation();
+    const matches = useMatches();
+    const pageTitle = matches
+        .map((match) => (match.handle as { title?: string } | undefined)?.title)
+        .filter((title): title is string => Boolean(title))
+        .at(-1);
+
+    useEffect(() => {
+        document.title = pageTitle ? `NextRIS - ${pageTitle}` : "NextRIS";
+    }, [pageTitle]);
     const { track } = useAnalytics();
     const lastPath = useRef<string | null>(null);
 
@@ -22,7 +32,7 @@ function RootLayout() {
         track("$pageview", { path: location.pathname, search: location.search });
     }, [location.pathname, location.search, track]);
 
-    return <Outlet />;
+    return <><Outlet /><BridgeWidget /></>;
 }
 
 // El resto se carga sólo cuando se navega a la ruta (lazy)
@@ -34,23 +44,33 @@ const AdmisionEspontanea = lazy(() => import("@/modules/admision").then(m => ({ 
 const NuevaCita = lazy(() => import("@/modules/citas").then(m => ({ default: m.NuevaCita })));
 const EditarCita = lazy(() => import("@/modules/citas").then(m => ({ default: m.EditarCita })));
 const EditarFecha = lazy(() => import("@/modules/citas").then(m => ({ default: m.EditarFecha })));
-const Ejecucion = lazy(() => import("@/modules/ejecucion/Ejecucion").then(m => ({ default: m.Ejecucion })));
-const DetalleEjecucion = lazy(() => import("@/modules/ejecucion/detalle-ejecucion/DetalleEjecucion").then(m => ({ default: m.DetalleEjecucion })));
-const Radiologia = lazy(() => import("@/modules/redaccion").then(m => ({ default: m.Radiologia })));
-const InformePredefinidos = lazy(() => import("@/modules/redaccion").then(m => ({ default: m.InformePredefinidos })));
-const Imagenes = lazy(() => import("@/modules/redaccion/Imagenes/Imagenes").then(m => ({ default: m.Imagenes })));
+const Worklist = lazy(() => import("@/modules/worklist").then(m => ({ default: m.Worklist })));
+const AdministrativeView = lazy(() => import("@/modules/worklist").then(m => ({ default: m.AdministrativeView })));
+const InformePredefinidos = lazy(() => import("@/modules/gestion").then(m => ({ default: m.InformePredefinidos })));
+const Imagenes = lazy(() => import("@/modules/imagenes").then(m => ({ default: m.Imagenes })));
 const Distribucion = lazy(() => import("@/modules/distribucion").then(m => ({ default: m.Distribucion })));
-const RedactarInforme = lazy(() => import("@/modules/redaccion/Radiologia/redactar-informe/RedactarInforme").then(m => ({ default: m.RedactarInforme })));
+const RedactarInforme = lazy(() => import("@/modules/worklist").then(m => ({ default: m.RedactarInforme })));
 const ConfiguracionTablas = lazy(() => import("@/modules/configuracion/configuracion-tablas/ConfiguracionTablas").then(m => ({ default: m.ConfiguracionTablas })));
 const Estudios = lazy(() => import("@/modules/estudios/Estudios").then(m => ({ default: m.Estudios })));
+const CaseLink = lazy(() => import("@/modules/case-link").then(m => ({ default: m.CaseLink })));
 const MisDatos = lazy(() => import("@/modules/mis-datos/MisDatos").then(m => ({ default: m.MisDatos })));
-const CrearInforme = lazy(() => import("@/modules/redaccion/informe-predefinidos/crear-informe/CrearInforme").then(m => ({ default: m.CrearInforme })));
+const CrearInforme = lazy(() => import("@/modules/gestion").then(m => ({ default: m.CrearInforme })));
 const UnificacionPaciente = lazy(() => import("@/modules/administracion/unificacion-paciente/UnificacionPaciente").then(m => ({ default: m.UnificacionPaciente })));
 const ReasignacionExamenes = lazy(() => import("@/modules/administracion/reasignacion-examenes/ReasignacionExamenes").then(m => ({ default: m.ReasignacionExamenes })));
-const Demograficos = lazy(() => import("@/modules/administracion/demograficos/Demograficos").then(m => ({ default: m.Demograficos })));
-const CargarEstudios = lazy(() => import("@/modules/redaccion/cargar-estudios/CargarEstudios").then(m => ({ default: m.CargarEstudios })));
+const CargarEstudios = lazy(() => import("@/modules/gestion").then(m => ({ default: m.CargarEstudios })));
+const AccesosExternos = lazy(() => import("@/modules/gestion/accesos-externos").then(m => ({ default: m.AccesosExternos })));
+// structured_reports — deshabilitado temporalmente
+// nexi — deshabilitado temporalmente
+
+const Ejecucion = lazy(() => import("@/modules/ejecucion/Ejecucion").then(m => ({ default: m.Ejecucion })));
+
+const DetalleEjecucion = lazy(() => import("@/modules/ejecucion/detalle-ejecucion/DetalleEjecucion").then(m => ({ default: m.DetalleEjecucion })));
+
 const ReportesEstructurados = lazy(() => import("@/modules/reportes-estructurados/ReportesEstructurados").then(m => ({ default: m.ReportesEstructurados })));
+
 const Nexi = lazy(() => import("@/modules/nexi/Nexi").then(m => ({ default: m.Nexi })));
+
+const LocalReportPage = lazy(() => import("@/modules/estudios/LocalReportPage").then(m => ({default: m.LocalReportPage})));
 
 const PageLoader = () => (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -59,6 +79,12 @@ const PageLoader = () => (
     </div>
 );
 
+function RequireSession() {
+    const { isAuthenticated, isLoading } = useAuth();
+    if (isLoading) return <PageLoader />;
+    return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+}
+
 const router = createBrowserRouter([
     {
         // RootLayout wraps every route so PageViewTracker has useLocation access
@@ -66,22 +92,38 @@ const router = createBrowserRouter([
         children: [
     {
         path: "/",
+        handle: { title: "Iniciar sesión" },
         element: <Login />,
     },
     {
         path: "/login",
+        handle: { title: "Iniciar sesión" },
         element: <Login />,
     },
     {
-        path: "/registro-gratuito",
-        element: <FreeSignup />,
-    },
-    {
         path: "/pacientes",
+        handle: { title: "Portal de pacientes" },
         element: <Login initialIsPatient={true} />,
     },
     {
+        path: "/login/pacientes",
+        handle: { title: "Portal de pacientes" },
+        element: <Login initialIsPatient={true} />,
+    },
+    {
+        element: <RequireSession />,
+        children: [
+    {path: '/informes/:examId', element: <ProtectedRoute requiredPermissions={['reports.write','patients.view','distribution.view','tabs.worklist.view']}><LocalReportPage /></ProtectedRoute>},
+    {path: '/ejecucion', element: <ProtectedRoute requiredPermissions={['tabs.worklist.view']}><Ejecucion /></ProtectedRoute>},
+    {path: '/ejecucion/detalle/:guid', element: <ProtectedRoute requiredPermissions={['worklist.confirm_execute']}><DetalleEjecucion /></ProtectedRoute>},
+    {path: '/nexi', element: <ProtectedRoute requiredPermissions={['tabs.nexi.view']}><Nexi /></ProtectedRoute>},
+    {path: '/reportes-estructurados/lista-parser', element: <ProtectedRoute requiredPermissions={['tabs.structured_reports.view']}><ReportesEstructurados /></ProtectedRoute>},
+    {path: '/reportes-estructurados/mapeo-variables', element: <ProtectedRoute requiredPermissions={['tabs.structured_reports.view']}><ReportesEstructurados /></ProtectedRoute>},
+    {path: '/reportes-estructurados/conceptos-criterios', element: <ProtectedRoute requiredPermissions={['tabs.structured_reports.view']}><ReportesEstructurados /></ProtectedRoute>},
+    {path: '/reportes-estructurados/plantillas-inteligentes', element: <ProtectedRoute requiredPermissions={['tabs.structured_reports.view']}><ReportesEstructurados /></ProtectedRoute>},
+    {
         path: "/inicio",
+        handle: { title: "Inicio" },
         element: (
             <ProtectedRoute allowWithoutPermissions>
                 <Inicio />
@@ -90,6 +132,7 @@ const router = createBrowserRouter([
     },
     {
         path: "/cambiar-password",
+        handle: { title: "Cambiar contraseña" },
         element: (
             <ProtectedRoute allowWithoutPermissions>
                 <ChangePassword />
@@ -99,10 +142,11 @@ const router = createBrowserRouter([
     {/*buscar pacientes*/ },
     {
         path: "/buscar-pacientes",
+        handle: { title: "Pacientes" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo"]}
-                requiredPermissions={["tabs.patients.view", "patients.view"]}
+                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo", "Administrador"]}
+                requiredPermissions={["patients.view"]}
             >
                 <BuscarPaciente />
             </ProtectedRoute>
@@ -110,10 +154,11 @@ const router = createBrowserRouter([
     },
     {
         path: "/buscar-pacientes/historial-paciente",
+        handle: { title: "Historial del paciente" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo"]}
-                requiredPermissions={["tabs.patients.view", "patients.view"]}
+                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo", "Administrador"]}
+                requiredPermissions={["patients.view"]}
             >
                 <HistorialPaciente />
             </ProtectedRoute>
@@ -123,9 +168,10 @@ const router = createBrowserRouter([
     {/*citas*/ },
     {
         path: "/cita/nueva-cita",
+        handle: { title: "Nueva cita" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Administrativo"]}
+                allowedRoles={["Sysadmin", "Administrativo", "Administrador"]}
                 requiredPermissions={["tabs.appointments.view", "appointments.create"]}
                 requiredModule="appointments"
             >
@@ -135,9 +181,10 @@ const router = createBrowserRouter([
     },
     {
         path: "/cita/editar-cita",
+        handle: { title: "Editar cita" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Administrativo"]}
+                allowedRoles={["Sysadmin", "Administrativo", "Administrador"]}
                 requiredPermissions={["tabs.appointments.view", "appointments.view"]}
                 requiredModule="appointments"
             >
@@ -147,9 +194,10 @@ const router = createBrowserRouter([
     },
     {
         path: "/cita/editar-cita/:id",
+        handle: { title: "Editar fecha de cita" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Administrativo"]}
+                allowedRoles={["Sysadmin", "Administrativo", "Administrador"]}
                 requiredPermissions={["tabs.appointments.view", "appointments.view"]}
                 requiredModule="appointments"
             >
@@ -163,9 +211,10 @@ const router = createBrowserRouter([
 
     {
         path: "/nueva-admision",
+        handle: { title: "Admisión de cita" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Administrativo"]}
+                allowedRoles={["Sysadmin", "Administrativo", "Administrador"]}
                 requiredPermissions={["tabs.admissions.view", "admissions.view", "admissions.admit_appointments"]}
                 requiredModule="appointments"
             >
@@ -175,111 +224,120 @@ const router = createBrowserRouter([
     },
     {
         path: "/admision-espontanea",
+        handle: { title: "Admisión espontánea" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Administrativo", "Medico"]}
+                allowedRoles={["Sysadmin", "Administrativo", "Administrador", "Medico"]}
                 requiredPermissions={["tabs.admissions.view", "admissions.view", "admissions.create_spontaneous"]}
             >
                 <AdmisionEspontanea />
             </ProtectedRoute>
         ),
     },
-    {/*Ejecucion*/ },
+    {/* Lista de trabajo */ },
     {
-        path: "/ejecucion",
+        path: "/worklist",
+        handle: { title: "Lista de trabajo" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Tecnico"]}
-                requiredPermissions={["tabs.execution.view", "execution.view_pending"]}
+                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrador"]}
+                requiredPermissions={["tabs.worklist.view"]}
             >
-                <Ejecucion />
+                <Worklist />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/ejecucion/detalle/:guid",
+        path: "/administrative_view",
+        handle: { title: "Vista administrativa" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Tecnico"]}
-                requiredPermissions={["tabs.execution.view", "execution.view_pending"]}
+                allowedRoles={["Sysadmin", "Administrador", "Administrativo"]}
+                requiredPermissions={["tabs.worklist.view"]}
             >
-                <DetalleEjecucion />
-            </ProtectedRoute>
-        ),
-    },
-    {/*Redaccion*/ },
-    {
-        path: "/estudios/redaccion",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico"]}
-                requiredPermissions={["tabs.reports.view", "reports.view_writing"]}
-            >
-                <Radiologia />
+                <AdministrativeView />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/estudios/redaccion/redactar-informe/:informeGuid/:studyInstanceUID",
+        path: "/worklist/redactar-informe/:informeGuid/:studyInstanceUID?",
+        handle: { title: "Redactar informe" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico"]}
-                requiredPermissions={["tabs.reports.view", "reports.view_writing"]}
+                allowedRoles={["Sysadmin", "Medico", "Administrador"]}
+                requiredPermissions={["reports.write"]}
             >
                 <RedactarInforme />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/estudios/informes-predefinidos",
+        path: "/gestion/informes-predefinidos",
+        handle: { title: "Informes predefinidos" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico"]}
-                requiredPermissions={["tabs.reports.view", "reports.view_reports"]}
+                allowedRoles={["Sysadmin", "Medico", "Administrador"]}
+                requiredPermissions={["templates.manage"]}
             >
                 <InformePredefinidos />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/estudios/crear-informe",
+        path: "/gestion/crear-informe",
+        handle: { title: "Crear informe" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico"]}
-                requiredPermissions={["tabs.reports.view", "reports.view_reports"]}
+                allowedRoles={["Sysadmin", "Medico", "Administrador"]}
+                requiredPermissions={["templates.manage"]}
             >
                 <CrearInforme />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/estudios/editar-informe/:id",
+        path: "/gestion/editar-informe/:id",
+        handle: { title: "Editar informe" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico"]}
-                requiredPermissions={["tabs.reports.view", "reports.view_reports"]}
+                allowedRoles={["Sysadmin", "Medico", "Administrador"]}
+                requiredPermissions={["templates.manage"]}
             >
                 <CrearInforme />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/estudios/cargar-estudios",
+        path: "/gestion/cargar-estudios",
+        handle: { title: "Cargar estudios" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico"]}
-                requiredPermissions={["tabs.reports.view", "reports.view_writing"]}
+                allowedRoles={["Sysadmin", "Medico", "Administrador"]}
+                requiredPermissions={["dicom.studies.manage"]}
             >
                 <CargarEstudios />
             </ProtectedRoute>
         ),
     },
     {
-        path: "/estudios/imagenes",
+        path: "/gestion/accesos-externos",
+        handle: { title: "Accesos externos" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico", "Tecnico"]}
-                requiredPermissions={["tabs.images.view", "images.view"]}
+                allowedRoles={["Sysadmin", "Administrador"]}
+                requiredPermissions={["tabs.gestion.view"]}
+            >
+                <AccesosExternos />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/imagenes",
+        handle: { title: "Imágenes" },
+        element: (
+            <ProtectedRoute
+                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrador"]}
+                requiredPermissions={["images.view"]}
             >
                 <Imagenes />
             </ProtectedRoute>
@@ -289,10 +347,11 @@ const router = createBrowserRouter([
     {/*Distribucion*/ },
     {
         path: "/distribucion",
+        handle: { title: "Distribución" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin", "Administrativo", "Medico"]}
-                requiredPermissions={["tabs.distribution.view", "distribution.view"]}
+                allowedRoles={["Sysadmin", "Administrativo", "Administrador", "Medico"]}
+                requiredPermissions={["distribution.view"]}
             >
                 <Distribucion />
             </ProtectedRoute>
@@ -302,60 +361,13 @@ const router = createBrowserRouter([
     {/*Configuraciones*/ },
     {
         path: "/configuraciones/tablas",
+        handle: { title: "Configuración de tablas" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
-                requiredPermissions={["tabs.config.view", "users.manage"]}
+                allowedRoles={["Sysadmin", "Admin", "Administrador"]}
+                requiredPermissions={["tabs.config.view", "users.manage", "users.permissions.manage", "users.impersonate"]}
             >
                 <ConfiguracionTablas />
-            </ProtectedRoute>
-        ),
-    },
-    {
-        path: "/reportes-estructurados/lista-parser",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
-                requiredPermissions={["tabs.structured_reports.view"]}
-                requiredModule="structured_reports"
-            >
-                <ReportesEstructurados />
-            </ProtectedRoute>
-        ),
-    },
-    {
-        path: "/reportes-estructurados/mapeo-variables",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
-                requiredPermissions={["tabs.structured_reports.view"]}
-                requiredModule="structured_reports"
-            >
-                <ReportesEstructurados />
-            </ProtectedRoute>
-        ),
-    },
-    {
-        path: "/reportes-estructurados/conceptos-criterios",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
-                requiredPermissions={["tabs.structured_reports.view"]}
-                requiredModule="structured_reports"
-            >
-                <ReportesEstructurados />
-            </ProtectedRoute>
-        ),
-    },
-    {
-        path: "/reportes-estructurados/plantillas-inteligentes",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
-                requiredPermissions={["tabs.structured_reports.view"]}
-                requiredModule="structured_reports"
-            >
-                <ReportesEstructurados />
             </ProtectedRoute>
         ),
     },
@@ -363,9 +375,10 @@ const router = createBrowserRouter([
 
     {
         path: "/administracion/unificacion-paciente",
+        handle: { title: "Unificación de pacientes" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
+                allowedRoles={["Sysadmin", "Administrador"]}
                 requiredPermissions={["tabs.gestion.view"]}
             >
                 <UnificacionPaciente />
@@ -374,29 +387,32 @@ const router = createBrowserRouter([
     },
     {
         path: "/administracion/reasignacion-examenes",
+        handle: { title: "Reasignación de exámenes" },
         element: (
             <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
+                allowedRoles={["Sysadmin", "Administrador"]}
                 requiredPermissions={["tabs.gestion.view"]}
             >
                 <ReasignacionExamenes />
             </ProtectedRoute>
         ),
     },
-    {
-        path: "/administracion/demograficos",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin"]}
-                requiredPermissions={["tabs.gestion.view"]}
-            >
-                <Demograficos />
-            </ProtectedRoute>
-        ),
-    },
+    // DEPRECATED: Demográficos
+    // {
+    //     path: "/administracion/demograficos",
+    //     element: (
+    //         <ProtectedRoute
+    //             allowedRoles={["Sysadmin", "Administrador"]}
+    //             requiredPermissions={["tabs.gestion.view"]}
+    //         >
+    //             <Demograficos />
+    //         </ProtectedRoute>
+    //     ),
+    // },
     {/*Mis estudios pacientes*/ },
     {
         path: "/estudios",
+        handle: { title: "Mis estudios" },
         element: (
             <ProtectedRoute allowedRoles={["patient"]} requiredModule="patient_portal">
                 <Estudios />
@@ -405,25 +421,22 @@ const router = createBrowserRouter([
     },
     {
         path: "/mis-datos",
+        handle: { title: "Mis datos" },
         element: (
             <ProtectedRoute allowedRoles={["patient"]} requiredModule="patient_portal">
                 <MisDatos />
             </ProtectedRoute>
         ),
     },
-    {/*Nexi IA*/},
+    // Explicit redirects for retired screens avoid rendering a router error page.
+
+        ],
+    },
     {
-        path: "/nexi",
-        element: (
-            <ProtectedRoute
-                allowedRoles={["Sysadmin", "Medico", "Tecnico", "Administrativo"]}
-                requiredPermissions={["tabs.nexi.view"]}
-                requiredModule="nexi"
-            >
-                <Nexi />
-            </ProtectedRoute>
-        ),
-    }
+        path: "/case/:shortCode",
+        handle: { title: "Estudio compartido" },
+        element: <CaseLink />,
+    },
         ], // end children of RootLayout
     },   // end root route
 ]);

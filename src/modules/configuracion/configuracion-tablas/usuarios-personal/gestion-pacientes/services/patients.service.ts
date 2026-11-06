@@ -1,10 +1,12 @@
 import { api } from '@/lib/api';
-import type { Patient, PatientFormData, PatientResponse } from '../types/patients.types';
+import type { Patient, PatientFormData, PatientResponse, PatientListParams } from '../types/patients.types';
 
 export const patientService = {
-    getAll: async (includeInactive: boolean = false): Promise<PatientResponse> => {
-        const params = includeInactive ? { include_inactive: true } : {};
-        const response = await api.get('/config/patients', { params });
+    getAll: async (params: PatientListParams, signal?: AbortSignal): Promise<PatientResponse> => {
+        const response = await api.get('/config/patients', {
+            params: { ...params, column_filters: JSON.stringify(params.column_filters) },
+            signal,
+        });
         return response.data;
     },
 

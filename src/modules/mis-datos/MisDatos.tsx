@@ -1,8 +1,10 @@
 import { MainLayout } from "@/layouts/layout";
 import { DynamicBreadcrumb } from "@/components";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { misDatosService } from "./services/mis-datos.service";
 import { useMisDatos } from "./hooks/use-mis-datos";
 import { useUpdateProfile } from "./hooks/use-update-profile";
+import { PatientChangePasswordModal } from "@/modules/auth/change-password/PatientChangePasswordModal";
 import type { UpdateProfilePayload } from "./types";
 import { toast } from "sonner";
 import {
@@ -10,7 +12,6 @@ import {
     Mail,
     Phone,
     Calendar,
-    CreditCard,
     IdCard,
     Users,
     Pencil,
@@ -18,18 +19,17 @@ import {
     UserCircle,
     Home,
     MapPin,
-    CheckCircle2,
-    Clock,
     Check,
     X,
     Building2,
     Hash,
+    KeyRound,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/fechaYhora";
 
 // ─── Inline editable field ──────────────────────────────────────────────────
 
@@ -58,24 +58,25 @@ const EditableField = ({
 
     return (
         <div className={cn(
-            "group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+            "group flex items-center gap-3 rounded-xl px-3 py-3 transition-all duration-200 sm:px-4",
             isEditing
-                ? "bg-purple-50 ring-1 ring-purple-200"
-                : "hover:bg-gray-50 cursor-default"
+                ? "bg-purple-50 ring-1 ring-purple-200 dark:bg-purple-950 dark:ring-purple-700"
+                : "hover:bg-muted cursor-default"
         )}>
             <div className={cn("shrink-0 transition-colors", isEditing ? "text-brand-purple" : "text-gray-400 group-hover:text-purple-400")}>
                 {icon}
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">{label}</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">{label}</p>
                 {isEditing ? (
-                    <div className="flex items-center gap-1.5 mt-1">
+                    <div className="mt-1 flex min-w-0 flex-wrap items-center justify-end gap-1.5">
                         <Input
                             type={type}
                             value={editingValue}
                             onChange={(e) => onChange(e.target.value)}
                             placeholder={placeholder}
-                            className="h-7 text-sm px-2"
+                            aria-label={label}
+                            className="h-11 min-w-0 basis-full px-2 text-base sm:basis-auto sm:flex-1 lg:h-7 lg:text-sm"
                             autoFocus
                             onKeyDown={(e) => {
                                 if (e.key === "Enter") onSave(field);
@@ -84,7 +85,8 @@ const EditableField = ({
                         />
                         <Button
                             size="icon"
-                            className="h-7 w-7 bg-green-500 hover:bg-green-600 shrink-0"
+                            className="h-11 w-11 shrink-0 bg-green-500 hover:bg-green-600 lg:h-7 lg:w-7"
+                            aria-label="Guardar"
                             onClick={() => onSave(field)}
                             disabled={isPending}
                         >
@@ -95,7 +97,8 @@ const EditableField = ({
                         <Button
                             size="icon"
                             variant="outline"
-                            className="h-7 w-7 shrink-0"
+                            className="h-11 w-11 shrink-0 lg:h-7 lg:w-7"
+                            aria-label="Cancelar edición"
                             onClick={onCancel}
                             disabled={isPending}
                         >
@@ -105,14 +108,14 @@ const EditableField = ({
                 ) : (
                     <div className="flex items-center justify-between gap-2">
                         <span className={cn(
-                            "text-sm font-semibold truncate",
-                            value ? "text-gray-900" : "text-gray-400 italic font-normal"
+                            "text-sm font-semibold [overflow-wrap:anywhere]",
+                            value ? "text-foreground" : "text-gray-400 italic font-normal"
                         )}>
                             {value || "No registrado"}
                         </span>
                         <button
                             onClick={() => onEdit(field, value)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-purple-100 text-gray-400 hover:text-purple-600 shrink-0"
+                            className="min-h-11 min-w-11 shrink-0 rounded-lg p-1.5 text-gray-400 transition-opacity hover:bg-purple-100 hover:text-purple-600 lg:min-h-0 lg:min-w-0 lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
                             title="Editar"
                         >
                             <Pencil className="w-3.5 h-3.5" />
@@ -129,11 +132,11 @@ const EditableField = ({
 const ReadOnlyField = ({
     label, value, icon,
 }: { label: string; value: string; icon: React.ReactNode }) => (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 transition-colors">
+    <div className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted transition-colors">
         <div className="shrink-0 text-gray-400">{icon}</div>
         <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">{label}</p>
-            <p className="text-sm font-semibold text-gray-900 truncate">{value || "-"}</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">{label}</p>
+            <p className="text-sm font-semibold text-foreground [overflow-wrap:anywhere]">{value || "-"}</p>
         </div>
     </div>
 );
@@ -147,7 +150,7 @@ const SectionHeader = ({
         <div className={cn("p-2 rounded-lg shadow-sm", color)}>
             {icon}
         </div>
-        <h3 className="text-base font-bold text-gray-800">{title}</h3>
+        <h3 className="text-base font-bold text-foreground">{title}</h3>
     </div>
 );
 
@@ -156,8 +159,47 @@ const SectionHeader = ({
 export const MisDatos = () => {
     const [editingField, setEditingField] = useState<string | null>(null);
     const [editingValue, setEditingValue] = useState("");
-    const { profile, isLoading, refetch } = useMisDatos();
+    const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+    const { profile, isLoading, isError, error, refetch } = useMisDatos();
     const updateProfileMutation = useUpdateProfile();
+    const [verificationSent, setVerificationSent] = useState(false);
+    const [verificationCode, setVerificationCode] = useState("");
+    const [verificationBusy, setVerificationBusy] = useState(false);
+    const [resendAt, setResendAt] = useState(0);
+    const [now, setNow] = useState(Date.now());
+    useEffect(() => {
+        if (!profile?.email_verification_enabled) return;
+        const timer = window.setInterval(() => setNow(Date.now()), 1000);
+        return () => window.clearInterval(timer);
+    }, [profile?.email_verification_enabled]);
+    useEffect(() => {
+        const refresh = () => { void refetch(); };
+        window.addEventListener("focus", refresh);
+        return () => window.removeEventListener("focus", refresh);
+    }, [refetch]);
+
+    const handleVerification = async (confirm: boolean) => {
+        setVerificationBusy(true);
+        try {
+            const result = confirm
+                ? await misDatosService.confirmEmailVerification(verificationCode.trim())
+                : await misDatosService.sendEmailVerification();
+            if (confirm) {
+                setVerificationSent(false);
+                setVerificationCode("");
+                await refetch();
+            } else {
+                setVerificationSent(true);
+                setResendAt(Date.now() + 60000);
+            }
+            toast.success(result.message);
+        } catch (error: unknown) {
+            const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+            toast.error(message || "No se pudo validar el email");
+        } finally {
+            setVerificationBusy(false);
+        }
+    };
 
     const handleEdit = (field: string, value: string) => {
         setEditingField(field);
@@ -165,20 +207,16 @@ export const MisDatos = () => {
     };
 
     const handleSave = async (field: string) => {
-        const payload: UpdateProfilePayload = {
-            phone: profile?.phone || "",
-            email: profile?.email || "",
-            address: profile?.address || "",
-            city: profile?.city || "",
-            state: profile?.state || "",
-            zip_code: profile?.zip_code || "",
-            [field]: editingValue,
-        };
+        const payload: UpdateProfilePayload = { [field]: editingValue.trim() };
         try {
             await updateProfileMutation.mutateAsync(payload);
-            toast.success("Campo actualizado correctamente");
+            await refetch();
             setEditingField(null);
-            refetch();
+            if (field === "email") {
+                setVerificationSent(false);
+                setVerificationCode("");
+            }
+            toast.success("Campo actualizado correctamente");
         } catch {
             toast.error("Error al actualizar");
         }
@@ -209,64 +247,36 @@ export const MisDatos = () => {
         );
     }
 
+    if (isError) {
+        return <MainLayout><div role="alert" className="space-y-3 rounded-xl border border-border bg-card p-4">
+            <p>No se pudieron cargar tus datos. {error?.message}</p>
+            <Button variant="outline" onClick={() => { void refetch(); }}>Reintentar</Button>
+        </div></MainLayout>;
+    }
+
     return (
         <MainLayout>
-            <div className="space-y-6 p-6">
+            <div className="page-dark-gradient min-w-0 rounded-2xl p-3 sm:p-6 shadow-sm border border-border flex flex-col">
                 <DynamicBreadcrumb />
 
                 {/* ── Header ── */}
-                <div className="bg-gradient-to-br from-brand-purple via-purple-600 to-purple-800 rounded-2xl p-7 shadow-lg">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-                        {/* Avatar */}
-                        <div className="relative shrink-0">
-                            <div className="w-20 h-20 rounded-full bg-white/15 border-4 border-white/30 flex items-center justify-center shadow-xl">
-                                <User className="w-9 h-9 text-white" />
-                            </div>
-                            {profile?.account_status === "Active" && (
-                                <div className="absolute -bottom-1 -right-1 bg-green-400 rounded-full p-1 border-2 border-white shadow">
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Info */}
-                        <div className="text-white min-w-0">
-                            <h1 className="text-2xl sm:text-3xl font-bold leading-tight truncate">
-                                {profile?.full_name || "Usuario"}
-                            </h1>
-                            <p className="text-white/60 text-sm mt-0.5">
-                                @{profile?.username || "-"}
-                            </p>
-                            <div className="flex flex-wrap gap-2 mt-3">
-                                <Badge className="bg-white/15 hover:bg-white/20 border border-white/25 text-white text-xs font-medium">
-                                    <IdCard className="w-3 h-3 mr-1.5" />
-                                    DNI: {profile?.national_code || "-"}
-                                </Badge>
-                                <Badge className="bg-white/15 hover:bg-white/20 border border-white/25 text-white text-xs font-medium">
-                                    <Users className="w-3 h-3 mr-1.5" />
-                                    {profile?.sex || "-"}
-                                </Badge>
-                                {profile?.age && (
-                                    <Badge className="bg-white/15 hover:bg-white/20 border border-white/25 text-white text-xs font-medium">
-                                        {profile.age} años
-                                    </Badge>
-                                )}
-                            </div>
-                        </div>
+                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <div className="bg-brand-purple dark:bg-gradient-to-br dark:from-purple-600 dark:to-purple-900 p-2 sm:p-3 rounded-lg dark:shadow-[0_0_16px_rgba(139,92,246,0.5),0_2px_8px_rgba(0,0,0,0.4)]">
+                        <UserCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
+                    <h1 className="text-xl sm:text-2xl font-bold text-brand-purple dark:text-purple-400 dark:drop-shadow-[0_0_8px_rgba(167,139,250,0.3)]">Mis Datos</h1>
                 </div>
 
                 {/* ── Cards grid ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                     {/* Datos Personales */}
-                    <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <CardContent className="p-5">
+                    <Card className="bg-transparent">
+                        <CardContent className="min-w-0 p-3 sm:p-5">
                             <SectionHeader
                                 icon={<UserCircle className="w-5 h-5 text-white" />}
                                 title="Datos Personales"
                             />
-                            <div className="space-y-1 divide-y divide-gray-50">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                                 <ReadOnlyField
                                     label="Nombre completo"
                                     value={profile?.full_name || ""}
@@ -275,9 +285,7 @@ export const MisDatos = () => {
                                 <ReadOnlyField
                                     label="Fecha de nacimiento"
                                     value={
-                                        profile?.birthdate
-                                            ? new Date(profile.birthdate).toLocaleDateString("es-AR")
-                                            : ""
+                                        profile?.birthdate ? formatDate(profile.birthdate) : ""
                                     }
                                     icon={<Calendar className="w-4 h-4" />}
                                 />
@@ -292,34 +300,69 @@ export const MisDatos = () => {
                                     icon={<Users className="w-4 h-4" />}
                                 />
                             </div>
+
                         </CardContent>
                     </Card>
 
                     {/* Contacto — campos editables */}
-                    <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <CardContent className="p-5">
+                    <Card className="bg-transparent">
+                        <CardContent className="min-w-0 p-3 sm:p-5">
                             <SectionHeader
                                 icon={<Mail className="w-5 h-5 text-white" />}
                                 title="Contacto"
                             />
-                            <div className="space-y-1 divide-y divide-gray-50">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                                 <EditableField
                                     label="Teléfono"
+                                    type="tel"
                                     value={profile?.phone || ""}
                                     field="phone"
                                     icon={<Phone className="w-4 h-4" />}
                                     placeholder="+54 11 1234-5678"
                                     {...editProps}
                                 />
-                                <EditableField
-                                    label="Email"
-                                    value={profile?.email || ""}
-                                    field="email"
-                                    type="email"
-                                    icon={<Mail className="w-4 h-4" />}
-                                    placeholder="ejemplo@email.com"
-                                    {...editProps}
-                                />
+                                <div className="min-w-0">
+                                    <EditableField
+                                        label="Email"
+                                        value={profile?.email || ""}
+                                        field="email"
+                                        type="email"
+                                        icon={<Mail className="w-4 h-4" />}
+                                        placeholder="ejemplo@email.com"
+                                        {...editProps}
+                                    />
+                                    {profile?.email_verification_enabled && <div className="px-4 pb-3 space-y-2">
+                                        {profile?.email_verified ? (
+                                            <p className="flex items-center gap-1 text-sm text-green-700"><Check className="h-4 w-4" />Email validado</p>
+                                        ) : (
+                                            <>
+                                                <p className="text-sm text-muted-foreground">{profile?.email ? "Email pendiente de validación" : "Agregue y guarde su email para validarlo."}</p>
+                                                <Button
+                                                    type="button" variant="outline" size="sm"
+                                                    disabled={!profile?.email || verificationBusy || editingField === "email" || updateProfileMutation.isPending || now < resendAt}
+                                                    onClick={() => handleVerification(false)}
+                                                >
+                                                    {verificationBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                    {now < resendAt ? `Reenviar en ${Math.ceil((resendAt - now) / 1000)} s` : verificationSent ? "Reenviar código" : "Validar email"}
+                                                </Button>
+                                                <p className="text-xs text-muted-foreground">Ingrese el código enviado a su email. Vence en 30 minutos; revise también la carpeta de spam.</p>
+                                                <form className="flex flex-col gap-2 sm:flex-row sm:flex-wrap" onSubmit={(event) => { event.preventDefault(); void handleVerification(true); }}>
+                                                    <Input
+                                                        aria-label="Código de validación del email"
+                                                        placeholder="Código de 6 dígitos"
+                                                        inputMode="numeric" autoComplete="one-time-code"
+                                                        maxLength={6} pattern="[0-9]{6}" required
+                                                        value={verificationCode}
+                                                        onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, ""))}
+                                                        className="min-w-0 flex-1"
+                                                        disabled={verificationBusy || editingField === "email"}
+                                                    />
+                                                    <Button type="submit" size="sm" disabled={verificationBusy || verificationCode.length !== 6 || editingField === "email" || updateProfileMutation.isPending}>Confirmar código</Button>
+                                                </form>
+                                            </>
+                                        )}
+                                    </div>}
+                                </div>
                                 <EditableField
                                     label="Dirección"
                                     value={profile?.address || ""}
@@ -355,65 +398,36 @@ export const MisDatos = () => {
                             </div>
                         </CardContent>
                     </Card>
-
-                    {/* Obra Social */}
-                    <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <CardContent className="p-5">
-                            <SectionHeader
-                                icon={<CreditCard className="w-5 h-5 text-white" />}
-                                title="Obra Social"
-                            />
-                            <div className="space-y-1 divide-y divide-gray-50">
-                                <ReadOnlyField
-                                    label="N° Afiliado"
-                                    value={profile?.health_card || "No registrado"}
-                                    icon={<CreditCard className="w-4 h-4" />}
-                                />
-                                <ReadOnlyField
-                                    label="CUIL"
-                                    value={profile?.patient_id_number || ""}
-                                    icon={<IdCard className="w-4 h-4" />}
-                                />
-                            </div>
-
-                            {/* Estado de cuenta */}
-                            <div className="mt-5 pt-4 border-t border-gray-100">
-                                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
-                                    Estado de cuenta
-                                </p>
-                                <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50">
-                                    <div className="flex items-center gap-2">
-                                        <CheckCircle2 className={cn(
-                                            "w-4 h-4",
-                                            profile?.account_status === "Active" ? "text-green-500" : "text-gray-400"
-                                        )} />
-                                        <span className="text-sm font-medium text-gray-700">Estado</span>
-                                    </div>
-                                    <Badge
-                                        className={cn(
-                                            "text-xs font-semibold",
-                                            profile?.account_status === "Active"
-                                                ? "bg-green-100 text-green-700 hover:bg-green-100"
-                                                : "bg-red-100 text-red-700 hover:bg-red-100"
-                                        )}
-                                    >
-                                        {profile?.account_status === "Active" ? "Activo" : "Inactivo"}
-                                    </Badge>
-                                </div>
-                                <div className="flex items-center gap-2 mt-3 px-4 text-gray-400">
-                                    <Clock className="w-3.5 h-3.5 shrink-0" />
-                                    <span className="text-xs">
-                                        Último acceso:{" "}
-                                        {profile?.last_login
-                                            ? new Date(profile.last_login).toLocaleString("es-AR")
-                                            : "-"}
-                                    </span>
-                                </div>
+                    <Card className="bg-transparent lg:col-span-2">
+                        <CardContent className="min-w-0 p-3 sm:p-5">
+                            <SectionHeader icon={<KeyRound className="h-5 w-5 text-white" />} title="Seguridad" />
+                            <div className="space-y-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full gap-2 border-brand-purple/30 text-brand-purple hover:bg-purple-50 hover:text-brand-purple sm:w-auto"
+                                    onClick={() => setIsChangePasswordOpen(true)}
+                                    disabled={!profile?.can_change_password || editingField === "email" || updateProfileMutation.isPending}
+                                >
+                                    <KeyRound className="h-4 w-4" />
+                                    Cambiar contraseña
+                                </Button>
+                                {!profile?.can_change_password && (
+                                    <p className="mt-2 text-sm text-muted-foreground">
+                                        {profile?.email_verification_enabled
+                                            ? "Complete y valide su email en Contacto para habilitar el cambio de contraseña."
+                                            : "Agregue y guarde un email válido en Contacto para habilitar el cambio de contraseña."}
+                                    </p>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
                 </div>
             </div>
+            <PatientChangePasswordModal
+                isOpen={isChangePasswordOpen && !!profile?.can_change_password && editingField !== "email"}
+                onClose={() => setIsChangePasswordOpen(false)}
+            />
         </MainLayout>
     );
 };

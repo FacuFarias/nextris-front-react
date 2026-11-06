@@ -23,32 +23,22 @@ export const TemplateDetailModal = ({ template, isOpen, onClose }: TemplateDetai
                     </div>
                 </div>
 
-                {/* Técnica */}
-                {template.technique && (
+                {/* Razón del estudio */}
+                {template.study_reason && (
                     <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Técnica</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Razón del estudio</h3>
                         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{stripHtmlTags(template.technique)}</p>
+                            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{stripHtmlTags(template.study_reason)}</p>
                         </div>
                     </div>
                 )}
 
-                {/* Hallazgos */}
-                {template.findings && (
+                {/* Contenido */}
+                {template.content && (
                     <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Hallazgos</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Contenido</h3>
                         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{stripHtmlTags(template.findings)}</p>
-                        </div>
-                    </div>
-                )}
-
-                {/* Impresión */}
-                {template.impression && (
-                    <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Impresión</h3>
-                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{stripHtmlTags(template.impression)}</p>
+                            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{stripHtmlTags(template.content)}</p>
                         </div>
                     </div>
                 )}

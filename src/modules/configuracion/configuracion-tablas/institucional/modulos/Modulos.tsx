@@ -26,6 +26,7 @@ import { useFacilities } from '../facilities/hooks/useFacilities';
 import { useModuleChangeLogs } from './hooks/useModuleChangeLogs';
 import { useModulesByFacility } from './hooks/useModulesByFacility';
 import type { FacilityModuleChangeLog } from './types/modules.types';
+import { formatDateTime } from '@/lib/fechaYhora';
 
 export const Modulos = () => {
   const [activeSubTab, setActiveSubTab] = useState<'configuracion' | 'historial'>('configuracion');
@@ -60,10 +61,7 @@ export const Modulos = () => {
             return String(value);
           }
 
-          return parsed.toLocaleString('es-AR', {
-            dateStyle: 'short',
-            timeStyle: 'medium',
-          });
+          return formatDateTime(parsed);
         },
       },
       {

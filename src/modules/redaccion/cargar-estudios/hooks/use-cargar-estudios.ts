@@ -8,8 +8,8 @@ import { toast } from 'sonner';
 export const useCargarEstudios = () => {
     const queryClient = useQueryClient();
     const mutation = useMutation({
-        mutationFn: async ({ file, location_id }: { file: File, location_id: string }) => {
-            const response = await uploadFiles(file, location_id);
+        mutationFn: async ({ file }: { file: File }) => {
+            const response = await uploadFiles(file);
             return response;
         },
         onSuccess: () => {
@@ -23,41 +23,39 @@ export const useCargarEstudios = () => {
 }
 
 export const useEstudiosNoVinculados = ({
-    location_id,
     include_linked = false,
     include_pacs = true,
 }: {
-    location_id: string,
     include_linked?: boolean,
     include_pacs?: boolean,
-}) => {
+} = {}) => {
 
-    const { data, isLoading, error, refetch } = useQuery<EstudiosNoVinculados>({
-        queryKey: cargarEstudiosKeys.listNoVinculados(location_id, include_linked, include_pacs),
-        queryFn: () => getUnlinkedStudies({ location_id, include_linked, include_pacs }),
-        enabled: !!location_id,
+    const { data, isLoading, isFetching, error, refetch } = useQuery<EstudiosNoVinculados>({
+        queryKey: cargarEstudiosKeys.listNoVinculados(include_linked, include_pacs),
+        queryFn: () => getUnlinkedStudies({ include_linked, include_pacs }),
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
     });
     return {
         estudiosNoVinculadosData: data,
         isLoading,
+        isFetching,
         error,
         refetchEstudiosNoVinculados: refetch,
     }
 }
 
-export const useSearchExams = ({ location_id }: { location_id: string }) => {
-    const { data, isLoading, error, refetch } = useQuery<SearchExams>({
-        queryKey: cargarEstudiosKeys.searchExams(location_id),
-        queryFn: () => getSearchExams({ location_id }),
-        enabled: !!location_id,
+export const useSearchExams = () => {
+    const { data, isLoading, isFetching, error, refetch } = useQuery<SearchExams>({
+        queryKey: cargarEstudiosKeys.searchExams(),
+        queryFn: () => getSearchExams({}),
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
     });
     return {
         ordenesSinImagenData: data,
         isLoading,
+        isFetching,
         error,
         refetchOrdenesSinImagen: refetch,
     }
@@ -81,11 +79,10 @@ export const useVincularEstudio = () => {
     return mutation;
 }
 
-export const useEstudiosVinculados = ({ location_id }: { location_id: string }) => {
-    const { data, isLoading, error, refetch } = useQuery<LinkedStudiesResponse>({
-        queryKey: cargarEstudiosKeys.listLinkedStudies(location_id),
-        queryFn: () => getLinkedStudies({ location_id }),
-        enabled: !!location_id,
+export const useEstudiosVinculados = () => {
+    const { data, isLoading, isFetching, error, refetch } = useQuery<LinkedStudiesResponse>({
+        queryKey: cargarEstudiosKeys.listLinkedStudies(),
+        queryFn: () => getLinkedStudies(),
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
     });
@@ -93,6 +90,7 @@ export const useEstudiosVinculados = ({ location_id }: { location_id: string }) 
     return {
         estudiosVinculadosData: data,
         isLoading,
+        isFetching,
         error,
         refetchEstudiosVinculados: refetch,
     }

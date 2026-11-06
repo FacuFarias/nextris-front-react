@@ -1,6 +1,6 @@
 import type { TableColumn, TableAction } from "@/types/table";
 import type { User } from "../types/users.types";
-import { Edit, Lock, Trash2 } from "lucide-react";
+import { Edit, Lock, LogIn, Trash2 } from "lucide-react";
 
 export const getUserColumns = (): TableColumn<User>[] => [
     {
@@ -56,20 +56,27 @@ export const getUserActions = (
     onEditar: (user: User) => void,
     onResetPassword: (user: User) => void,
     onEliminar: (user: User) => void,
+    onImpersonate?: (user: User) => void,
+    currentUserId?: string,
+    canManageUsers = true,
 ): TableAction<User>[] => [
-        {
+        ...(onImpersonate ? [{
+            label: "Conectarme como este usuario",
+            icon: <LogIn className="h-4 w-4 text-emerald-700" />,
+            onClick: onImpersonate,
+            hidden: (user: User) => !user.is_active || user.guid === currentUserId,
+        }] : []),
+        ...(canManageUsers ? [{
             label: "Editar",
             icon: <Edit className="h-4 w-4 text-blue-900" />,
             onClick: onEditar,
-        },
-        {
+        }, {
             label: "Resetear Contraseña",
             icon: <Lock className="h-4 w-4 text-purple-600" />,
             onClick: onResetPassword,
-        },
-        {
+        }, {
             label: "Eliminar",
             icon: <Trash2 className="h-4 w-4 text-red-600" />,
             onClick: onEliminar,
-        },
+        }] : []),
     ];

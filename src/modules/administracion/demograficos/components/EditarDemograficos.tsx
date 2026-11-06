@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Examinacion, UpdateDemograficosPayload } from "../types/demograficos.type";
+import { DateInput } from "@/components/ui/date-input";
 
 interface EditarDemograficosProps {
     examinacion: Examinacion | null;
@@ -79,7 +80,7 @@ export const EditarDemograficos = ({ examinacion, isOpen, onClose, onSave, isSav
                         </div>
                         <div className="space-y-1">
                             <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
-                            <Input id="birthdate" type="date" value={form.birthdate ?? ''} onChange={handleChange('birthdate')} />
+                            <DateInput id="birthdate" value={form.birthdate ?? ''} onChange={(value) => setForm(prev => ({ ...prev, birthdate: value }))} />
                         </div>
                     </div>
                 </div>

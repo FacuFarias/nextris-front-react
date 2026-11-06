@@ -5,6 +5,7 @@ export interface Patient {
     guid: string;
     name: string;
     nationalcode: string;
+    patient_type?: string | null;
     patientid: string;
     phone?: string;
     study_count?: number;
@@ -14,23 +15,4 @@ export interface Patient {
 }
 
 
-export interface HistoryPatient {
-    guid: string;
-    estudio: string;
-    medico_autor: string;
-    medico_referente: string;
-    fecha: string;
-    modalidad: string;
-    con_imagen: string;
-    isreported: number;
-    pdf_path: string | null;
-}
-
-export interface HistoryPatientResponse {
-    data: HistoryPatient[];
-    success: boolean;
-}
-
-
-
-
+export type { CombinedHistoryEntry as HistoryPatient, CombinedHistoryResponse as HistoryPatientResponse } from '@/types/patientHistory';

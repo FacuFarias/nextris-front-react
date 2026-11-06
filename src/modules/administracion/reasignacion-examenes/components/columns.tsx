@@ -1,5 +1,6 @@
 import type { TableColumn } from "@/types/table";
 import type { ReasignacionExamenes } from "../types/reasignacion-examenes.type";
+import { formatDate } from "@/lib/fechaYhora";
 
 
 // Configuración de columnas para usuarios
@@ -8,7 +9,7 @@ const reasignacionColumns: TableColumn<ReasignacionExamenes>[] = [
         key: "createdon",
         label: "Fecha del estudio",
         className: "font-medium",
-        render: (date) => new Date(date).toLocaleDateString(),
+        render: (date) => formatDate(date),
     },
     {
         key: "localacc",

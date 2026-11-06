@@ -1,6 +1,6 @@
 import { api } from '@/lib/api';
 import type {
-    User,
+    User, UserCreationResponse,
     UserFormData,
     UserResponse,
     RolesResponse,
@@ -23,7 +23,7 @@ export const userService = {
         return response.data;
     },
 
-    create: async (userData: UserFormData): Promise<User> => {
+    create: async (userData: UserFormData): Promise<UserCreationResponse> => {
         const response = await api.post('/config/users', userData);
         return response.data;
     },
@@ -67,9 +67,14 @@ export const userService = {
         const formData = new FormData();
         formData.append('aclaracion_firma', medicalData.aclaracion_firma);
         formData.append('matricula_nacional', medicalData.matricula_nacional);
+        formData.append('integration_id_1', medicalData.integration_id_1);
 
         if (medicalData.firma_digital) {
             formData.append('firma_digital', medicalData.firma_digital);
+        }
+
+        if (medicalData.sello_digital) {
+            formData.append('sello_digital', medicalData.sello_digital);
         }
 
         await api.post(`/config/users/${userId}/medical-data`, formData);

@@ -28,4 +28,17 @@ export interface PatientFormData {
 export interface PatientResponse {
     success: boolean;
     data: Patient[];
+    total: number;
+    page: number;
+    per_page: number;
+    pages: number;
+}
+
+export interface PatientListParams {
+    page: number;
+    per_page: number;
+    include_inactive?: boolean;
+    column_filters: Record<string, string>;
+    sort_column: string;
+    sort_direction: 'asc' | 'desc';
 }

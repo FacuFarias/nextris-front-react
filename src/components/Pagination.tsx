@@ -32,6 +32,7 @@ interface TablePaginationProps {
     columns?: Array<{ key: string; label: string }>;
     visibleColumns?: string[];
     onToggleColumn?: (columnKey: string) => void;
+    fixedColumnKeys?: string[];
     additionalControls?: React.ReactNode;
 }
 
@@ -44,12 +45,27 @@ export function TablePagination({
     columns,
     visibleColumns,
     onToggleColumn,
+    fixedColumnKeys = [],
     additionalControls,
 }: TablePaginationProps) {
     const { page, pageSize, total } = pagination;
     const effectivePerPage = perPageValue ?? pageSize;
 
     const totalPages = Math.ceil(total / pageSize);
+    const fixedKeys = new Set(fixedColumnKeys);
+    const selectableColumns = columns
+        ? Array.from(
+            new Map(
+                columns
+                    .filter((column) => !fixedKeys.has(column.key))
+                    .map((column) => [column.key, column])
+            ).values()
+        )
+        : [];
+    const selectableKeys = new Set(selectableColumns.map((column) => column.key));
+    const selectableVisibleColumns = visibleColumns
+        ? Array.from(new Set(visibleColumns.filter((key) => selectableKeys.has(key))))
+        : [];
 
     const handlePageChange = (newPage: number) => {
         if (newPage >= 1 && newPage <= totalPages) {
@@ -96,9 +112,9 @@ export function TablePagination({
     };
 
     return (
-        <div className="flex items-center justify-between px-2 py-1">
+        <div className="flex flex-col gap-3 px-1 py-2 sm:px-2 md:flex-row md:items-center md:justify-between md:py-1">
             {/* Selector de filas por página y columnas */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                 <div className="flex items-center gap-2">
                     <Label htmlFor="per-page" className="text-sm font-medium text-foreground">
                         Filas:
@@ -121,18 +137,18 @@ export function TablePagination({
                 </div>
 
                 {/* Selector de columnas visibles - Multi-select */}
-                {columns && visibleColumns && onToggleColumn && (
+                {selectableColumns.length > 0 && visibleColumns && onToggleColumn && (
                     <div className="flex items-center gap-2">
                         <Label className="text-sm font-medium text-foreground">
                             Columnas:
                         </Label>
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" className="w-[220px] justify-between">
+                                <Button variant="outline" className="w-[min(220px,calc(100vw-2rem))] justify-between">
                                     <span className="truncate">
-                                        {visibleColumns.length === columns.length
+                                        {selectableVisibleColumns.length === selectableColumns.length
                                             ? 'Todas las columnas'
-                                            : `${visibleColumns.length} de ${columns.length} columnas`}
+                                            : `${selectableVisibleColumns.length} de ${selectableColumns.length} columnas`}
                                     </span>
                                     <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                                 </Button>
@@ -140,7 +156,7 @@ export function TablePagination({
                             <PopoverContent className="w-[220px] p-0" align="start">
                                 <div className="max-h-[300px] overflow-y-auto p-3">
                                     <div className="space-y-2">
-                                        {columns.map((column) => (
+                                        {selectableColumns.map((column) => (
                                             <div
                                                 key={column.key}
                                                 className="flex items-center space-x-2 hover:bg-accent p-1 rounded cursor-pointer"
@@ -148,7 +164,7 @@ export function TablePagination({
                                             >
                                                 <Checkbox
                                                     id={`column-${column.key}`}
-                                                    checked={visibleColumns.includes(column.key)}
+                                                    checked={selectableVisibleColumns.includes(column.key)}
                                                     onCheckedChange={() => onToggleColumn(column.key)}
                                                     className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple"
                                                 />
@@ -172,11 +188,11 @@ export function TablePagination({
             </div>
 
             {/* Paginación - siempre a la derecha */}
-            <div className="flex justify-end space-x-2">
-                <div className="flex items-center space-x-2">
+            <div className="flex justify-center md:justify-end">
+                <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
                     <Button
                         variant="outline"
-                        className="h-8 w-8 p-0 bg-transparent"
+                        className="hidden h-11 w-11 bg-transparent p-0 sm:inline-flex sm:h-8 sm:w-8"
                         onClick={() => handlePageChange(1)}
                         disabled={page <= 1}
                     >
@@ -185,7 +201,7 @@ export function TablePagination({
                     </Button>
                     <Button
                         variant="outline"
-                        className="h-8 w-8 p-0 bg-transparent"
+                        className="h-11 w-11 bg-transparent p-0 sm:h-8 sm:w-8"
                         onClick={() => handlePageChange(page - 1)}
                         disabled={page <= 1}
                     >
@@ -193,7 +209,7 @@ export function TablePagination({
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
 
-                    <div className="flex items-center space-x-1">
+                    <div className="hidden items-center space-x-1 sm:flex">
                         {getVisiblePages().map((pageNum, index) => (
                             <Button
                                 key={index}
@@ -213,9 +229,18 @@ export function TablePagination({
                         ))}
                     </div>
 
+                    <div className="flex shrink-0 flex-col items-center gap-0.5 text-xs text-muted-foreground sm:items-start">
+                        <span className="font-medium sm:hidden">
+                            {totalPages > 0 ? `${page} de ${totalPages}` : "0 de 0"}
+                        </span>
+                        <span className="whitespace-nowrap" aria-live="polite">
+                            {total.toLocaleString('es-AR')} {total === 1 ? 'resultado' : 'resultados'}
+                        </span>
+                    </div>
+
                     <Button
                         variant="outline"
-                        className="h-8 w-8 p-0 bg-transparent"
+                        className="h-11 w-11 bg-transparent p-0 sm:h-8 sm:w-8"
                         onClick={() => handlePageChange(page + 1)}
                         disabled={page >= totalPages}
                     >
@@ -224,7 +249,7 @@ export function TablePagination({
                     </Button>
                     <Button
                         variant="outline"
-                        className="h-8 w-8 p-0 bg-transparent"
+                        className="hidden h-11 w-11 bg-transparent p-0 sm:inline-flex sm:h-8 sm:w-8"
                         onClick={() => handlePageChange(totalPages)}
                         disabled={page >= totalPages}
                     >

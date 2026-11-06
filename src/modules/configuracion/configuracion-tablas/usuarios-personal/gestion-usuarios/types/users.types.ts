@@ -13,6 +13,7 @@ export interface User {
 }
 
 export interface UserFormData {
+    permission_codes?: string[];
     username: string;
     password?: string;
     role_id: string;
@@ -30,6 +31,7 @@ export interface UserResponse {
 }
 
 export interface Role {
+    default_permissions: string[];
     guid: string;
     description: string;
 }
@@ -53,7 +55,9 @@ export interface UserLocationsResponse {
 export interface UserMedicalData {
     aclaracion_firma: string;
     matricula_nacional: string;
+    integration_id_1: string;
     firma_digital: string | null;
+    sello_digital: string | null;
     firma_habilitada: boolean;
 }
 
@@ -65,7 +69,9 @@ export interface UserMedicalDataResponse {
 export interface UserMedicalSubmitData {
     aclaracion_firma: string;
     matricula_nacional: string;
+    integration_id_1: string;
     firma_digital?: File;
+    sello_digital?: File;
 }
 
 export interface PermissionItem {
@@ -90,4 +96,10 @@ export interface UserPermissionsData {
 export interface UserPermissionsResponse {
     success: boolean;
     data: UserPermissionsData;
+}
+
+export interface UserCreationResponse {
+    success: boolean;
+    message: string;
+    data: { user_id: string; username: string; credentials_email_sent: boolean };
 }

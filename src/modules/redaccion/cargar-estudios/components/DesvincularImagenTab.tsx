@@ -1,6 +1,6 @@
 import { AlertTriangle, Link2Off, Loader2, RefreshCw, Search, Unlink2 } from "lucide-react"
 import { useMemo, useState } from "react"
-import { DireccionSelector, PrimaryButton, SecondaryButton } from "@/components"
+import { PrimaryButton, SecondaryButton } from "@/components"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -11,27 +11,30 @@ import {
 } from "@/components/ui/dialog"
 import { useDesvincularEstudio, useEstudiosVinculados } from "../hooks/use-cargar-estudios"
 import type { LinkedStudyData } from "../types/cargar-estudios.types"
+import { formatDate as formatVisibleDate } from "@/lib/fechaYhora"
+import { TableRefreshStatus } from "@/components/TableRefreshStatus"
+import { useRowHighlights } from "@/hooks/use-row-highlights"
 
-const formatDate = (value?: string | null) => {
-    if (!value) return "N/A"
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return value
-    return date.toLocaleDateString()
-}
+const formatDate = (value?: string | null) => value ? formatVisibleDate(value) : "N/A"
 
 export const DesvincularImagenTab = () => {
-    const [selectedDireccion, setSelectedDireccion] = useState<string>("")
     const [selectedLink, setSelectedLink] = useState<LinkedStudyData | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
     const [reason, setReason] = useState("Desvinculacion manual desde pestaña")
 
-    const { estudiosVinculadosData, isLoading, refetchEstudiosVinculados } = useEstudiosVinculados({
-        location_id: selectedDireccion,
-    })
+    const { estudiosVinculadosData, isLoading, isFetching, error, refetchEstudiosVinculados } = useEstudiosVinculados()
     const { mutate: desvincularEstudio, isPending } = useDesvincularEstudio()
 
     const linkedData = estudiosVinculadosData?.data?.data || []
+    const getLinkId = (item: LinkedStudyData) => `${item.link_id ?? 'legacy'}-${item.examination_guid}-${item.study_instance_uid}`
+    const changedLinks = useRowHighlights(
+        linkedData,
+        "linked-studies",
+        !isLoading,
+        getLinkId,
+        (item) => [item.patient_name, item.patient_id, item.order_accession, item.study_type, item.source, item.linked_at],
+    )
 
     const filteredData = useMemo(() => {
         if (!searchTerm.trim()) return linkedData
@@ -46,11 +49,6 @@ export const DesvincularImagenTab = () => {
             )
         })
     }, [linkedData, searchTerm])
-
-    const handleDireccionChange = (direccionId: string) => {
-        setSelectedDireccion(direccionId)
-        setSelectedLink(null)
-    }
 
     const handleDesvincular = () => {
         if (!selectedLink) return
@@ -74,17 +72,7 @@ export const DesvincularImagenTab = () => {
 
     return (
         <>
-            <div className="mb-5">
-                <DireccionSelector
-                    selectedDireccion={selectedDireccion}
-                    onDireccionChange={handleDireccionChange}
-                    isRow={true}
-                    includeAllOption={true}
-                />
-            </div>
-
-            {selectedDireccion && (
-                <div className="rounded-xl overflow-hidden border border-amber-200 dark:border-amber-900 shadow-sm">
+            <div className="relative overflow-x-auto overflow-y-hidden rounded-xl border border-amber-200 shadow-sm dark:border-amber-900">
                     <div className="bg-gradient-to-r from-amber-600 to-orange-500 px-5 py-4 text-white">
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3">
@@ -102,11 +90,11 @@ export const DesvincularImagenTab = () => {
                                 </span>
                                 <button
                                     onClick={() => refetchEstudiosVinculados()}
-                                    disabled={isLoading}
+                                    disabled={isFetching}
                                     className="bg-white/15 hover:bg-white/25 p-1.5 rounded-lg transition-colors disabled:opacity-50"
                                     title="Actualizar"
                                 >
-                                    <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                                    <RefreshCw className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         </div>
@@ -121,7 +109,7 @@ export const DesvincularImagenTab = () => {
                         </div>
                     </div>
 
-                    <div className="bg-transparent">
+                    <div className="min-w-[680px] bg-transparent">
                         <div className="grid grid-cols-6 px-4 py-2.5 bg-transparent border-b border-gray-200/60 dark:border-gray-700/60">
                             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Paciente</span>
                             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">DNI</span>
@@ -133,9 +121,9 @@ export const DesvincularImagenTab = () => {
 
                         <div className="overflow-y-auto" style={{ maxHeight: '420px' }}>
                             {isLoading ? (
-                                <div className="flex items-center justify-center py-16">
-                                    <Loader2 className="w-7 h-7 animate-spin text-orange-500/70" />
-                                </div>
+                                <div className="py-16" />
+                            ) : error && !estudiosVinculadosData ? (
+                                <div className="py-16 text-center text-xs text-red-500">No se pudieron cargar los vínculos</div>
                             ) : filteredData.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
                                     <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-full">
@@ -151,9 +139,9 @@ export const DesvincularImagenTab = () => {
 
                                     return (
                                         <div
-                                            key={`${item.link_id ?? 'legacy'}-${item.examination_guid}-${item.study_instance_uid}`}
+                                            key={getLinkId(item)}
                                             onClick={() => setSelectedLink(item)}
-                                            className={`grid grid-cols-6 px-4 py-3 cursor-pointer transition-all border-b border-gray-100 dark:border-gray-700/60
+                                            className={`grid grid-cols-6 px-4 py-3 cursor-pointer transition-all border-b border-gray-100 dark:border-gray-700/60 ${changedLinks.has(getLinkId(item)) ? 'row-change-highlight' : ''}
                                                 ${isSelected
                                                     ? 'bg-orange-50 dark:bg-orange-900/20 border-l-2 border-l-orange-500'
                                                     : 'hover:bg-white/5 dark:hover:bg-white/5'
@@ -191,8 +179,8 @@ export const DesvincularImagenTab = () => {
                             Desvincular
                         </Button>
                     </div>
+                    <TableRefreshStatus refreshing={isFetching} error={Boolean(error && estudiosVinculadosData)} />
                 </div>
-            )}
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="max-w-xl dark:bg-[#2a2e32] dark:border-gray-700">

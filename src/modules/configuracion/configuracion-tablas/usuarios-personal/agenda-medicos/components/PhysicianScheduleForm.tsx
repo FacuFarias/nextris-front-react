@@ -6,6 +6,7 @@ import { PrimaryButton, SecondaryButton } from "@/components";
 import type { PhysicianScheduleFormData } from "../types/physician-schedules.types";
 import { useRequestingPhysicians } from "../../medicos-solicitantes/hooks/useRequestingPhysicians";
 import { useLocations } from "../../../institucional/locations";
+import { DateInput } from "@/components/ui/date-input";
 
 interface PhysicianScheduleFormProps {
     onSubmit: (data: PhysicianScheduleFormData) => void;
@@ -133,21 +134,19 @@ export const PhysicianScheduleForm = ({
 
                 <div className="space-y-2">
                     <Label htmlFor="init_day">Fecha Inicio</Label>
-                    <Input
+                    <DateInput
                         id="init_day"
-                        type="date"
                         value={formData.init_day}
-                        onChange={(e) => handleChange("init_day", e.target.value)}
+                        onChange={(value) => handleChange("init_day", value)}
                     />
                 </div>
 
                 <div className="space-y-2">
                     <Label htmlFor="finish_day">Fecha Fin</Label>
-                    <Input
+                    <DateInput
                         id="finish_day"
-                        type="date"
                         value={formData.finish_day}
-                        onChange={(e) => handleChange("finish_day", e.target.value)}
+                        onChange={(value) => handleChange("finish_day", value)}
                     />
                 </div>
 

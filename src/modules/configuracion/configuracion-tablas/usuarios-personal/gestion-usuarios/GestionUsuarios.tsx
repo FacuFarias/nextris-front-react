@@ -1,4 +1,9 @@
-import { useState } from "react";
+import axios from "axios";
+import { useQueryClient } from "@tanstack/react-query";
+import { ShieldCheck } from "lucide-react";
+import { UserPermissionsModal } from "./components/UserPermissionsModal";
+import type { PermissionItem } from "./types/users.types";
+import { useState, useRef } from "react";
 import TablaDynamic from "@/components/TableDynamic";
 import { getUserColumns, getUserActions } from "./components/columns";
 import { useUsers } from "./hooks/useUsers";
@@ -7,23 +12,39 @@ import { UserModal } from "./components/UserModal";
 import { ResetPasswordModal } from "./components/ResetPasswordModal";
 import type { User, UserFormData, UserMedicalSubmitData } from "./types/users.types";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { ImpersonationDialog } from "./components/ImpersonationDialog";
 
 export const GestionUsuarios = () => {
+    const { authData, refreshPermissions } = useAuth();
+    const queryClient = useQueryClient();
+    const [isSaving, setIsSaving] = useState(false);
+    const permissionRequest = useRef(0);
+    const [permissionUser, setPermissionUser] = useState<User | null>(null);
+    const [permissionCatalog, setPermissionCatalog] = useState<PermissionItem[]>([]);
+    const [permissionSelection, setPermissionSelection] = useState<Set<string>>(new Set());
+    const [isPermissionsLoading, setIsPermissionsLoading] = useState(false);
+    const [isPermissionsSaving, setIsPermissionsSaving] = useState(false);
+    const canManagePermissions = Boolean(authData?.user?.permissions?.some((code) => code === '*' || code === 'users.permissions.manage'));
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(8);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [impersonationTarget, setImpersonationTarget] = useState<User | null>(null);
+    const canManageUsers = Boolean(
+        authData?.user?.permissions?.includes('*') || authData?.user?.permissions?.includes('users.manage'),
+    );
+    const canImpersonate = Boolean(
+        (authData?.user?.permissions?.includes('*') || authData?.user?.permissions?.includes('users.impersonate'))
+        && !authData?.user?.impersonation,
+    );
 
     const {
         users,
         isLoading,
-        createUser,
-        updateUser,
         deleteUser,
         resetPassword,
-        setUserLocations,
-        saveUserMedicalData,
     } = useUsers();
 
     const handlePaginationChange = (newPage: number, newPageSize: number) => {
@@ -51,10 +72,11 @@ export const GestionUsuarios = () => {
         setSelectedUser(null);
     };
 
-    const getApiErrorMessage = (error: any, fallback: string) => {
-        const backendMessage = error?.response?.data?.message;
-        const backendError = error?.response?.data?.error;
-        const status = error?.response?.status;
+    const getApiErrorMessage = (error: unknown, fallback: string) => {
+        const response = axios.isAxiosError<{ message?: string; error?: string }>(error) ? error.response : undefined;
+        const backendMessage = response?.data?.message;
+        const backendError = response?.data?.error;
+        const status = response?.status;
 
         if (backendMessage && backendError && backendError !== backendMessage) {
             return `${backendMessage}. ${backendError}`;
@@ -79,168 +101,72 @@ export const GestionUsuarios = () => {
         return fallback;
     };
 
-    const handleSubmit = (data: UserFormData, locationIds?: string[], medicalData?: UserMedicalSubmitData, permissionCodes?: string[]) => {
-        if (selectedUser) {
-            // Actualizar
-            updateUser(
-                { id: selectedUser.guid, data },
-                {
-                    onSuccess: () => {
-                        const savePermissionsIfNeeded = () => {
-                            if (!permissionCodes) {
-                                toast.success("Usuario actualizado exitosamente");
-                                handleCloseModal();
-                                return;
-                            }
-
-                            userService
-                                .setUserPermissions(selectedUser.guid, permissionCodes)
-                                .then(() => {
-                                    toast.success("Usuario actualizado exitosamente");
-                                    handleCloseModal();
-                                })
-                                .catch((error: any) => {
-                                    const message = error?.response?.data?.message || "Usuario actualizado, pero falló el guardado de permisos";
-                                    toast.error(message);
-                                });
-                        };
-
-                        const saveMedicalIfNeeded = () => {
-                            if (!medicalData) {
-                                savePermissionsIfNeeded();
-                                return;
-                            }
-
-                            saveUserMedicalData(
-                                { userId: selectedUser.guid, medicalData },
-                                {
-                                    onSuccess: () => {
-                                        savePermissionsIfNeeded();
-                                    },
-                                    onError: (error: any) => {
-                                        const message = error?.response?.data?.message || "Error al guardar los datos médicos";
-                                        toast.error(message);
-                                    },
-                                }
-                            );
-                        };
-
-                        if (locationIds) {
-                            setUserLocations(
-                                { userId: selectedUser.guid, locationIds },
-                                {
-                                    onSuccess: () => {
-                                        saveMedicalIfNeeded();
-                                    },
-                                    onError: (error: any) => {
-                                        const message = error?.response?.data?.message || "Error al actualizar las ubicaciones del usuario";
-                                        const missingIds = error?.response?.data?.missing_location_ids;
-
-                                        if (Array.isArray(missingIds) && missingIds.length > 0) {
-                                            toast.error(`${message}: ${missingIds.join(", ")}`);
-                                            return;
-                                        }
-
-                                        toast.error(message);
-                                    },
-                                }
-                            );
-                            return;
-                        }
-
-                        saveMedicalIfNeeded();
-                    },
-                    onError: () => {
-                        toast.error("Error al actualizar el usuario");
-                    },
-                }
-            );
-        } else {
-            // Crear
-            createUser(data, {
-                onSuccess: (response: any) => {
-                    const createdUserId = response?.data?.user_id;
-                    const creationMessage = response?.message || "Usuario creado exitosamente";
-                    const credentialsEmailSent = response?.data?.credentials_email_sent !== false;
-
-                    const notifyCreateOutcome = () => {
-                        if (credentialsEmailSent) {
-                            toast.success(creationMessage);
-                            return;
-                        }
-
-                        toast.error(creationMessage);
-                    };
-
-                    const savePermissionsIfNeeded = () => {
-                        if (!(createdUserId && permissionCodes)) {
-                            notifyCreateOutcome();
-                            handleCloseModal();
-                            return;
-                        }
-
-                        userService
-                            .setUserPermissions(createdUserId, permissionCodes)
-                            .then(() => {
-                                notifyCreateOutcome();
-                                handleCloseModal();
-                            })
-                            .catch((error: any) => {
-                                const message = error?.response?.data?.message || "Usuario creado, pero falló el guardado de permisos";
-                                toast.error(message);
-                            });
-                    };
-
-                    const saveMedicalIfNeeded = () => {
-                        if (!(medicalData && createdUserId)) {
-                            savePermissionsIfNeeded();
-                            return;
-                        }
-
-                        saveUserMedicalData(
-                            { userId: createdUserId, medicalData },
-                            {
-                                onSuccess: () => {
-                                    savePermissionsIfNeeded();
-                                },
-                                onError: (error: any) => {
-                                    const message = error?.response?.data?.message || "Usuario creado, pero falló el guardado de datos médicos";
-                                    toast.error(message);
-                                },
-                            }
-                        );
-                    };
-
-                    if (createdUserId && locationIds) {
-                        setUserLocations(
-                            { userId: createdUserId, locationIds },
-                            {
-                                onSuccess: () => {
-                                    saveMedicalIfNeeded();
-                                },
-                                onError: (error: any) => {
-                                    const message = error?.response?.data?.message || "Usuario creado, pero falló la asociación de ubicaciones";
-                                    const missingIds = error?.response?.data?.missing_location_ids;
-
-                                    if (Array.isArray(missingIds) && missingIds.length > 0) {
-                                        toast.error(`${message}: ${missingIds.join(", ")}`);
-                                        return;
-                                    }
-
-                                    toast.error(message);
-                                },
-                            }
-                        );
-                        return;
-                    }
-
-                    saveMedicalIfNeeded();
-                },
-                onError: (error: any) => {
-                    toast.error(getApiErrorMessage(error, "Error al crear el usuario"));
-                },
-            });
+    const handleSubmit = async (data: UserFormData, locationIds?: string[], medicalData?: UserMedicalSubmitData, permissionCodes?: string[]) => {
+        if (isSaving) return;
+        setIsSaving(true);
+        const payload = permissionCodes === undefined ? data : { ...data, permission_codes: permissionCodes };
+        let accountSaved = false;
+        try {
+            let userId = selectedUser?.guid;
+            let message = "Usuario actualizado exitosamente";
+            let emailSent = true;
+            if (userId) {
+                await userService.update(userId, payload);
+            } else {
+                const response = await userService.create(payload);
+                userId = response.data.user_id;
+                message = response.message;
+                emailSent = response.data.credentials_email_sent !== false;
+            }
+            accountSaved = true;
+            if (userId === authData?.user?.id) await refreshPermissions();
+            if (locationIds) await userService.setLocations(userId, locationIds);
+            if (medicalData) await userService.saveMedicalData(userId, medicalData);
+            if (emailSent) toast.success(message);
+            else toast.error(message);
+            handleCloseModal();
+        } catch (error) {
+            toast.error(getApiErrorMessage(error, accountSaved
+                ? "Usuario y permisos guardados; no se pudieron completar los datos adicionales"
+                : "No se pudo guardar el usuario"));
+            // A completed account must never be created again when retrying metadata.
+            if (accountSaved) handleCloseModal();
+        } finally {
+            setIsSaving(false);
+            if (accountSaved) await queryClient.invalidateQueries({ queryKey: ['users'] });
         }
+    };
+
+    const openPermissions = async (user: User) => {
+        const requestId = ++permissionRequest.current;
+        setPermissionUser(user);
+        setIsPermissionsLoading(true);
+        setPermissionSelection(new Set());
+        try {
+            const [catalog, saved] = await Promise.all([
+                userService.getPermissionsCatalog(), userService.getUserPermissions(user.guid),
+            ]);
+            if (permissionRequest.current !== requestId) return;
+            setPermissionCatalog(catalog.data);
+            setPermissionSelection(new Set(saved.data.custom_permissions));
+        } catch (error) {
+            if (permissionRequest.current !== requestId) return;
+            toast.error(getApiErrorMessage(error, "No se pudieron cargar los permisos. Reintente desde la acción Permisos."));
+            setPermissionUser(null);
+        } finally { if (permissionRequest.current === requestId) setIsPermissionsLoading(false); }
+    };
+
+    const savePermissions = async () => {
+        if (!permissionUser || isPermissionsLoading || isPermissionsSaving) return;
+        setIsPermissionsSaving(true);
+        try {
+            await userService.setUserPermissions(permissionUser.guid, Array.from(permissionSelection));
+            if (permissionUser.guid === authData?.user?.id) await refreshPermissions();
+            toast.success("Permisos guardados");
+            setPermissionUser(null);
+            await queryClient.invalidateQueries({ queryKey: ['users'] });
+        } catch (error) { toast.error(getApiErrorMessage(error, "No se pudieron guardar los permisos")); }
+        finally { setIsPermissionsSaving(false); }
     };
 
     const handleResetPassword = (newPassword: string) => {
@@ -277,8 +203,17 @@ export const GestionUsuarios = () => {
     const userActions = getUserActions(
         handleOpenModal,
         handleOpenResetPasswordModal,
-        handleDelete
+        handleDelete,
+        canImpersonate ? (user) => {
+            if (user.guid !== authData?.user?.id) setImpersonationTarget(user);
+        } : undefined,
+        authData?.user?.id,
+        canManageUsers,
     );
+    if (canManagePermissions) userActions.push({
+        label: "Permisos", icon: <ShieldCheck className="h-4 w-4 text-purple-700" />,
+        onClick: (user) => { void openPermissions(user); },
+    });
 
     return (
         <div className="space-y-4">
@@ -287,12 +222,14 @@ export const GestionUsuarios = () => {
                     <h2 className="text-2xl font-bold">Gestión de Usuarios</h2>
                     <p className="text-muted-foreground">Administración de usuarios del sistema</p>
                 </div>
-                <button
-                    className="px-4 py-2 bg-brand-purple text-white rounded-md hover:bg-brand-purple/90"
-                    onClick={() => handleOpenModal()}
-                >
-                    Nuevo Usuario
-                </button>
+                {canManageUsers && canManagePermissions && (
+                    <button
+                        className="px-4 py-2 bg-brand-purple text-white rounded-md hover:bg-brand-purple/90"
+                        onClick={() => handleOpenModal()}
+                    >
+                        Nuevo Usuario
+                    </button>
+                )}
             </div>
 
             {isLoading ? (
@@ -330,7 +267,7 @@ export const GestionUsuarios = () => {
                     phone: selectedUser.phone || undefined,
                     is_active: selectedUser.is_active,
                 } : undefined}
-                isLoading={false}
+                isLoading={isSaving}
             />
 
             <ResetPasswordModal
@@ -341,7 +278,20 @@ export const GestionUsuarios = () => {
                 isLoading={false}
             />
 
+            <UserPermissionsModal
+                isOpen={Boolean(permissionUser)} onClose={() => { if (!isPermissionsSaving) { permissionRequest.current++; setPermissionUser(null); } }}
+                user={permissionUser} catalog={permissionCatalog} selectedCodes={permissionSelection}
+                isLoading={isPermissionsLoading} isSaving={isPermissionsSaving}
+                onToggleCode={(code, checked) => setPermissionSelection((previous) => {
+                    const next = new Set(previous);
+                    if (checked) next.add(code); else next.delete(code);
+                    return next;
+                })}
+                onSave={() => { void savePermissions(); }}
+            />
+
+            <ImpersonationDialog target={impersonationTarget} onClose={() => setImpersonationTarget(null)} />
+
         </div>
     )
 }
-

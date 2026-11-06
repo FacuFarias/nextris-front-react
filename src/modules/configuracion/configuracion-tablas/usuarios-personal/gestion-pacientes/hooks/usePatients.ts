@@ -1,14 +1,15 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { patientService } from '../services/patients.service';
-import type { PatientFormData } from '../types/patients.types';
+import type { PatientFormData, PatientListParams } from '../types/patients.types';
 import { patientKeys } from '../constants/query-keys';
 
-export const usePatients = (includeInactive: boolean = false) => {
+export const usePatients = (params: PatientListParams) => {
     const queryClient = useQueryClient();
 
-    const { data: patients, isLoading, error } = useQuery({
-        queryKey: patientKeys.list(includeInactive ? 'inactive' : 'active'),
-        queryFn: () => patientService.getAll(includeInactive),
+    const { data: patients, isFetching, isPlaceholderData, error } = useQuery({
+        queryKey: patientKeys.list(params),
+        queryFn: ({ signal }) => patientService.getAll(params, signal),
+        placeholderData: keepPreviousData,
         staleTime: 10 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
     });
@@ -45,7 +46,8 @@ export const usePatients = (includeInactive: boolean = false) => {
 
     return {
         patients,
-        isLoading,
+        isLoading: isFetching,
+        isPlaceholderData,
         error,
         createPatient: createMutation.mutate,
         updatePatient: updateMutation.mutate,

@@ -1,24 +1,27 @@
+import { combinedHistoryKey } from '@/services/patientHistory';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { type InformeDetalle, type Informes } from "../types/informes.types";
+import { type InformeDetalle, type Informes, type StudyNote, type ExaminationNotesResponse } from "../types/informes.types";
 import type { ApiPaginatedResponse } from "@/types/global.type";
-import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, updateExaminationFlags, updateExaminationTagIds, getAllTags, updateGeneralNotes, getPatientHistory, type UpdateReportPayload } from "../services/informes.service";
+import { getInformeDetalle, getInformes, putRedactarInforme, blockExam, unblockExam, updateExaminationFlags, updateExaminationTagIds, getAllTags, createGeneralNote, getExaminationNotes, deleteExaminationNote, getPatientHistory, assignExam, assignExamBatch, addTagsToExamsBatch, addFlagsToExamsBatch, confirmStudy, cancelStudy, getCancellationReasons, type ConfirmStudyPayload, type UpdateReportPayload } from "../services/informes.service";
 import { informesKeys } from "../constants/query-keys";
 import { toast } from "sonner";
 import { notifyInformeChange, useCrossWindowSync } from "../redactar-informe/hooks/use-cross-windows";
 
-export const useInformes = ({ page = 1, per_page = 8, search = "", show_reported = false, show_ready = false, show_no_image = false, show_only_with_notes = false, bodypart_id = "", modality_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc", facility_id = "" }) => {
+export const useInformes = ({ page = 1, per_page = 8, search = "", column_filters = {} as Record<string, string>, patient_id_exact = "", show_reported = false, show_ready = false, assigned_to_me = false, show_no_image = false, show_without_order = false, show_only_with_notes = false, show_cancelled = false, bodypart_id = "", modality_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc" }) => {
     useCrossWindowSync();
 
     const { data, isLoading, isFetching, error, refetch } = useQuery<ApiPaginatedResponse<Informes>>({
-        queryKey: informesKeys.list(page, per_page, search, show_reported, show_ready, show_no_image, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction, show_only_with_notes, facility_id),
-        queryFn: () => getInformes({ page, per_page, search, show_reported, show_ready, show_no_image, show_only_with_notes, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction, facility_id }),
+        queryKey: [...informesKeys.list(page, per_page, search, show_reported, show_ready, assigned_to_me, show_no_image, show_without_order, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction, show_only_with_notes, patient_id_exact), column_filters, show_cancelled],
+        queryFn: () => getInformes({ page, per_page, search, column_filters, show_cancelled, patient_id_exact, show_reported, show_ready, assigned_to_me, show_no_image, show_without_order, show_only_with_notes, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction }),
+        staleTime: 5_000,
         refetchInterval: 120000,
         refetchIntervalInBackground: false,
     });
 
     return {
         informesData: data,
-        isLoading: isLoading || isFetching,
+        isLoading,
+        isFetching,
         error,
         refetchInformes: refetch,
     }
@@ -56,6 +59,52 @@ export const useUpdateReport = (examId: string) => {
         }
     });
 }
+
+export const useConfirmStudy = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examId, data }: { examId: string; data: ConfirmStudyPayload }) =>
+            confirmStudy(examId, data),
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: informesKeys.listDetalle(undefined) });
+            toast.success(response.message || 'Estudio confirmado correctamente');
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Error al confirmar el estudio');
+        },
+    });
+};
+
+export const useCancellationReasons = (enabled = true) => useQuery({
+    queryKey: ['cancellation-reasons'],
+    queryFn: getCancellationReasons,
+    enabled,
+    staleTime: 10 * 60 * 1000,
+});
+
+export const useCancelStudy = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ examId, reasonCode, detail }: { examId: string; reasonCode: string; detail?: string }) =>
+            cancelStudy(examId, reasonCode, detail),
+        onSuccess: (response, variables) => {
+            queryClient.setQueriesData({ queryKey: informesKeys.lists() }, (old: any) => {
+                if (!old?.data?.data) return old;
+                return { ...old, data: { ...old.data, data: old.data.data.map((item: Informes) =>
+                    item.guid === variables.examId
+                        ? { ...item, workflow_state: 'cancelled', status: 'Cancelled', workflow_state_at: new Date().toISOString(), workflow_state_source: 'nextris_ui', cancellation_reason_code: variables.reasonCode, cancellation_reason: response?.data?.reason || item.cancellation_reason }
+                        : item
+                ) } };
+            });
+            queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
+            toast.success(response.message || 'Estudio cancelado correctamente');
+        },
+        onError: (error: any) => toast.error(error.response?.data?.message || 'No se pudo cancelar el estudio'),
+    });
+};
+
 
 export const useBlockExam = () => {
     const queryClient = useQueryClient();
@@ -217,17 +266,84 @@ export const useAllTags = () => {
     };
 }
 
+export const useExaminationNotes = (examId: string, enabled: boolean) => {
+    const { data, isLoading, isFetching, error } = useQuery<ExaminationNotesResponse>({
+        queryKey: informesKeys.notes(examId),
+        queryFn: () => getExaminationNotes(examId),
+        enabled,
+    });
+
+    return {
+        notes: data?.data?.notes ?? [],
+        isLoading: isLoading || isFetching,
+        error,
+    };
+};
+
 export const useUpdateGeneralNotes = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: ({ examId, notes }: { examId: string; notes: string }) =>
-            updateGeneralNotes(examId, notes),
+            createGeneralNote(examId, notes),
 
-        onMutate: async ({ examId, notes }) => {
-            await queryClient.cancelQueries({ queryKey: informesKeys.lists() });
-            const previousData = queryClient.getQueriesData({ queryKey: informesKeys.lists() });
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Error al guardar la nota');
+        },
 
+        onSuccess: (response, { examId }) => {
+            const note = response?.data as StudyNote | undefined;
+            if (note) {
+                queryClient.setQueriesData(
+                    { queryKey: informesKeys.lists() },
+                    (old: any) => {
+                        if (!old?.data?.data) return old;
+                        return {
+                            ...old,
+                            data: {
+                                ...old.data,
+                                data: old.data.data.map((item: Informes) => {
+                                    if (item.guid !== examId) return item;
+                                    return {
+                                        ...item,
+                                        general_notes: note.message,
+                                        notes_count: (item.notes_count ?? 0) + 1,
+                                        recent_notes: [note, ...(item.recent_notes ?? [])].slice(0, 3),
+                                    };
+                                }),
+                            },
+                        };
+                    }
+                );
+
+                queryClient.setQueryData<ExaminationNotesResponse>(informesKeys.notes(examId), (old) => {
+                    if (!old?.data) return old;
+                    return {
+                        ...old,
+                        data: {
+                            ...old.data,
+                            notes: [note, ...(old.data.notes ?? [])],
+                        },
+                    };
+                });
+            }
+            toast.success('Nota guardada');
+        },
+    });
+}
+
+export const useDeleteExaminationNote = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examId, noteId }: { examId: string; noteId: string }) =>
+            deleteExaminationNote(examId, noteId),
+
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Error al eliminar la nota');
+        },
+
+        onSuccess: (_response, { examId, noteId }) => {
             queryClient.setQueriesData(
                 { queryKey: informesKeys.lists() },
                 (old: any) => {
@@ -236,28 +352,31 @@ export const useUpdateGeneralNotes = () => {
                         ...old,
                         data: {
                             ...old.data,
-                            data: old.data.data.map((item: Informes) =>
-                                item.guid === examId ? { ...item, general_notes: notes } : item
-                            ),
+                            data: old.data.data.map((item: Informes) => {
+                                if (item.guid !== examId) return item;
+                                const recentNotes = (item.recent_notes ?? []).filter((note) => note.id !== noteId);
+                                return {
+                                    ...item,
+                                    general_notes: recentNotes[0]?.message ?? null,
+                                    notes_count: Math.max(0, (item.notes_count ?? 0) - 1),
+                                    recent_notes: recentNotes,
+                                };
+                            }),
                         },
                     };
                 }
             );
-
-            return { previousData, examId };
-        },
-
-        onError: (error: any, _vars, context: any) => {
-            if (context?.previousData) {
-                context.previousData.forEach(([queryKey, data]: [any, any]) => {
-                    queryClient.setQueryData(queryKey, data);
-                });
-            }
-            toast.error(error.response?.data?.message || 'Error al guardar la nota');
-        },
-
-        onSuccess: () => {
-            toast.success('Nota guardada');
+            queryClient.setQueryData<ExaminationNotesResponse>(informesKeys.notes(examId), (old) => {
+                if (!old?.data) return old;
+                return {
+                    ...old,
+                    data: {
+                        ...old.data,
+                        notes: old.data.notes.filter((note) => note.id !== noteId),
+                    },
+                };
+            });
+            toast.success('Nota eliminada');
         },
     });
 }
@@ -320,11 +439,71 @@ export const useUnblockExam = () => {
 } */
 
 export const usePatientHistory = (patientId: string | undefined) => {
-    const { data, isLoading } = useQuery({
-        queryKey: ['patient-history', patientId],
+    const { data, isLoading, error } = useQuery({
+        queryKey: combinedHistoryKey(patientId),
         queryFn: () => getPatientHistory(patientId!),
         enabled: !!patientId,
         staleTime: 5 * 60 * 1000, // 5 minutos — historial no cambia durante la sesión
     });
-    return { historyData: data, isLoading };
+    return { historyData: data, isLoading, error };
 }
+
+export const useAssignExam = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examId, userId }: { examId: string; userId: string }) => assignExam(examId, userId),
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
+            toast.success(response.message || 'Estudio asignado correctamente');
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Error al asignar el estudio');
+        }
+    });
+}
+
+export const useAssignExamBatch = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examIds, userId }: { examIds: string[]; userId: string }) => assignExamBatch(examIds, userId),
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
+            toast.success(response.message);
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || error.message || 'Error al asignar los estudios');
+        }
+    });
+};
+
+export const useAddTagsBatch = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examIds, tagIds }: { examIds: string[]; tagIds: string[] }) => addTagsToExamsBatch(examIds, tagIds),
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
+            toast.success(response.message);
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || error.message || 'Error al agregar tags');
+        }
+    });
+};
+
+export const useAddFlagsBatch = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ examIds, flags }: { examIds: string[]; flags: string[] }) => addFlagsToExamsBatch(examIds, flags),
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: informesKeys.lists() });
+            toast.success(response.message);
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || error.message || 'Error al agregar banderas');
+        }
+    });
+};

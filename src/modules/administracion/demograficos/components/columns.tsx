@@ -1,10 +1,12 @@
 import type { TableColumn } from "@/types/table";
 import type { Examinacion } from "../types/demograficos.type";
+import { formatDate } from "@/lib/fechaYhora";
 
 export const demograficosColumns: TableColumn<Examinacion>[] = [
     {
         key: "createdon",
         label: "Fecha",
+        render: (value) => formatDate(value),
         className: "font-medium whitespace-nowrap",
     },
     {
@@ -34,6 +36,7 @@ export const demograficosColumns: TableColumn<Examinacion>[] = [
         label: "Nacimiento",
         className: "font-medium",
         hideOnMobile: true,
+        render: (value) => formatDate(value),
     },
     {
         key: "study_type",

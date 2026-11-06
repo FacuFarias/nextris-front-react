@@ -19,6 +19,7 @@ interface FilterPresetTabsProps {
   currentFilters: ImageFilterPresetFilters
   filtersVisible: boolean
   onToggleFilters: () => void
+  activeFilterCount?: number
 }
 
 export const FilterPresetTabs = ({
@@ -27,6 +28,7 @@ export const FilterPresetTabs = ({
   currentFilters,
   filtersVisible,
   onToggleFilters,
+  activeFilterCount = 0,
 }: FilterPresetTabsProps) => {
   const { presets, isLoading } = useImageFilterPresets()
   const { mutateAsync: createPreset, isPending: isCreating } = useCreateImageFilterPreset()
@@ -123,11 +125,11 @@ export const FilterPresetTabs = ({
 
   return (
     <>
-      <div className="mb-2 flex items-center gap-3 overflow-hidden border-b border-gray-200">
-        <div className="flex shrink-0 items-center gap-0">
+      <div className="mb-2 flex min-w-0 items-center gap-2 border-b border-gray-200">
+        <div className="flex min-w-0 flex-1 items-center gap-0 overflow-x-auto overscroll-x-contain pb-1 table-scrollbar-purple">
           <button
             onClick={() => handleTabClick(null)}
-            className={`-mb-px whitespace-nowrap border-b-2 px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`-mb-px min-h-11 whitespace-nowrap border-b-2 px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-0 ${
               activePresetId === null
                 ? "border-brand-purple text-brand-purple dark:border-purple-400 dark:text-purple-400"
                 : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300"
@@ -139,7 +141,7 @@ export const FilterPresetTabs = ({
           {presets.map((preset) => (
             <div
               key={preset.guid}
-              className={`group -mb-px flex cursor-pointer items-center gap-0.5 whitespace-nowrap border-b-2 px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`group -mb-px flex min-h-11 cursor-pointer items-center gap-0.5 whitespace-nowrap border-b-2 px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-0 ${
                 activePresetId === preset.guid
                   ? "border-brand-purple text-brand-purple dark:border-purple-400 dark:text-purple-400"
                   : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300"
@@ -180,7 +182,7 @@ export const FilterPresetTabs = ({
                 <button
                   onClick={handleSaveLayout}
                   disabled={activePresetId === null || isUpdating}
-                  className="p-1 text-gray-400 transition-colors hover:text-brand-purple disabled:cursor-not-allowed disabled:opacity-30"
+                  className="h-11 w-11 p-1 text-gray-400 transition-colors hover:text-brand-purple disabled:cursor-not-allowed disabled:opacity-30 sm:h-auto sm:w-auto"
                 >
                   {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 </button>
@@ -196,7 +198,7 @@ export const FilterPresetTabs = ({
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setIsSaveDialogOpen(true)}
-                  className="p-1 text-gray-400 transition-colors hover:text-brand-purple"
+                  className="flex h-11 w-11 items-center justify-center p-1 text-gray-400 transition-colors hover:text-brand-purple sm:h-auto sm:w-auto"
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </button>
@@ -210,9 +212,14 @@ export const FilterPresetTabs = ({
               <TooltipTrigger asChild>
                 <button
                   onClick={onToggleFilters}
-                  className="p-1 text-gray-400 transition-colors hover:text-brand-purple"
+                  className="h-11 w-11 p-1 text-gray-400 transition-colors hover:text-brand-purple sm:h-auto sm:w-auto"
                 >
                   {filtersVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {activeFilterCount > 0 && (
+                    <span className="ml-0.5 rounded-full bg-brand-purple px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                      {activeFilterCount}
+                    </span>
+                  )}
                 </button>
               </TooltipTrigger>
               <TooltipContent>{filtersVisible ? "Ocultar filtros" : "Mostrar filtros"}</TooltipContent>

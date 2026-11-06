@@ -1,6 +1,7 @@
 import type { TableAction, TableColumn } from "@/types/table";
 import type { Admision } from "../types/admision.type";
 import { Check, Delete, Printer } from "lucide-react";
+import { formatPatientName } from "@/lib/formatPatientName";
 
 // Configuración de columnas para usuarios
 const admisionColumns: TableColumn<Admision>[] = [
@@ -10,6 +11,8 @@ const admisionColumns: TableColumn<Admision>[] = [
         className: "font-medium",
         sortable: true,
         filterable: true,
+        mobile: { role: "title", order: 1 },
+        render: (value) => formatPatientName(value),
     },
     {
         key: "medref",
@@ -17,6 +20,7 @@ const admisionColumns: TableColumn<Admision>[] = [
         className: "font-medium",
         sortable: true,
         filterable: true,
+        mobile: { label: "Médico referente", order: 3 },
     },
     {
         key: "equipment_name",
@@ -24,6 +28,7 @@ const admisionColumns: TableColumn<Admision>[] = [
         className: "font-medium",
         sortable: true,
         filterable: true,
+        mobile: { label: "Equipo", order: 2 },
     },
     {
         key: "med_solicitante",
@@ -31,6 +36,7 @@ const admisionColumns: TableColumn<Admision>[] = [
         className: "font-medium",
         sortable: true,
         filterable: true,
+        mobile: { label: "Médico solicitante", order: 4 },
     },
 ];
 
@@ -42,6 +48,7 @@ export const getAdmisionActions = (
             label: "Admisionar",
             icon: <Check className="h-4 w-4 text-blue-900" />,
             onClick: onVerDetalle,
+            mobilePrimary: true,
         },
         {
             label: "Eliminar",

@@ -18,8 +18,15 @@ const routeNames: Record<string, string> = {
     citas: "Citas",
     cita: "Cita",
     admision: "Admisión",
-    ejecucion: "Ejecución",
-    redaccion: "Redacción",
+    worklist: "Lista de trabajo",
+    administrative_view: "Vista administrativa",
+    imagenes: "Imágenes",
+    gestion: "Gestión",
+    "informes-predefinidos": "Informes predefinidos",
+    "crear-informe": "Crear informe",
+    "editar-informe": "Editar informe",
+    "cargar-estudios": "Cargar estudios",
+    "redactar-informe": "Redactar informe",
     distribucion: "Distribución",
     configuraciones: "Configuraciones",
     unificacion: "Unificación de Paciente",
@@ -27,7 +34,7 @@ const routeNames: Record<string, string> = {
 };
 
 // Rutas que no deben ser clicables
-const disabledRoutes = ["cita", "redaccion"];
+const disabledRoutes = ["cita", "gestion", "worklist", "administrative_view"];
 
 export const DynamicBreadcrumb = () => {
     const location = useLocation();
@@ -37,7 +44,7 @@ export const DynamicBreadcrumb = () => {
     if (pathnames.length === 0) return null;
 
     return (
-        <Breadcrumb className="mb-4">
+        <Breadcrumb className="mb-4 hidden md:block">
             <BreadcrumbList>
                 {/* Home siempre visible */}
                 <BreadcrumbItem>

@@ -5,10 +5,14 @@ export interface Template {
     title: string;
     study_type_id: string;
     study_type_description?: string;
-    findings: string;
-    technique: string;
-    impression: string;
+    study_type_code?: string;
+    study_reason: string;
+    content: string;
     conclusion: string;
+    /** @deprecated response aliases */
+    findings?: string;
+    technique?: string;
+    impression?: string;
     bodypart_description: string;
     bodypart_id: string;
     modality_description: string;
@@ -17,6 +21,7 @@ export interface Template {
     location_ids?: string[];
     structured_variables?: string;
     criteria?: string;
+    is_default?: boolean;
     owner_id: string;
     can_edit: boolean;
     can_delete: boolean;
@@ -37,9 +42,8 @@ export interface TemplateResponse {
 export interface CreateTemplateRequest {
     title: string;
     study_type_id: string;
-    findings?: string;
-    technique?: string;
-    impression?: string;
+    study_reason?: string;
+    content?: string;
     conclusion?: string;
     report_type?: ReportType;
     location_ids?: string[];
@@ -51,14 +55,12 @@ export interface CreateTemplateRequest {
 export interface UpdateTemplateRequest {
     title?: string;
     study_type_id?: string;
-    findings?: string;
-    technique?: string;
-    impression?: string;
+    study_reason?: string;
+    content?: string;
     conclusion?: string;
     report_type?: ReportType;
     location_ids?: string[];
     structured_variables?: string;
     criteria?: string;
+    is_default?: boolean;
 }
-
-

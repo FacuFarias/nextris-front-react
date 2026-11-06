@@ -68,10 +68,9 @@ api.interceptors.request.use(
         // Configurar header de Authorization si hay token
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
-            console.log('[API] Request con token:', config.method?.toUpperCase(), config.url);
-        } else {
-            console.warn('[API] Request SIN token:', config.method?.toUpperCase(), config.url);
         }
+        (config as typeof config & { _authSessionSwitch?: string | null })._authSessionSwitch =
+            localStorage.getItem('nextris_session_switch');
 
         // Forward session ID to backend analytics middleware
         const sid = getSessionId();
@@ -97,6 +96,11 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
+        // A request from a previous identity must never be retried with the new identity.
+        if (originalRequest?._authSessionSwitch !== localStorage.getItem('nextris_session_switch')) {
+            return Promise.reject(error);
+        }
+
         // Si el 401 viene del login, no intentar refresh — dejar que onError lo maneje
         if (originalRequest.url?.includes('/auth/login')) {
             return Promise.reject(error);
@@ -121,8 +125,9 @@ api.interceptors.response.use(
 
             const authDataStr = localStorage.getItem('authData');
             if (!authDataStr) {
+                isRefreshing = false;
                 // No hay refresh token, redirigir al login
-                window.location.href = '/';
+                // Avoid redirect — prevent infinite reload loop
                 return Promise.reject(error);
             }
 
@@ -130,9 +135,11 @@ api.interceptors.response.use(
             const refreshToken = authData?.refresh_token;
 
             if (!refreshToken) {
+                isRefreshing = false;
                 // No hay refresh token, redirigir al login
                 localStorage.removeItem('authData');
-                window.location.href = '/';
+                window.dispatchEvent(new Event('nextris-auth-expired'));
+                // Avoid redirect — prevent infinite reload loop
                 return Promise.reject(error);
             }
 
@@ -168,7 +175,8 @@ api.interceptors.response.use(
                 processQueue(refreshError, null);
                 isRefreshing = false;
                 localStorage.removeItem('authData');
-                window.location.href = '/';
+                window.dispatchEvent(new Event('nextris-auth-expired'));
+                // Avoid redirect — prevent infinite reload loop
                 return Promise.reject(refreshError);
             }
         }

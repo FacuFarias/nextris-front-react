@@ -22,11 +22,13 @@ export const useTemplates = (
     studyTypeId?: string,
     modalityId?: string,
     bodypartId?: string,
-    reportType?: string
+    reportType?: string,
+    enabled = true,
 ) => {
     return useQuery({
         queryKey: ['templates', studyTypeId, modalityId, bodypartId, reportType],
         queryFn: () => getTemplates(studyTypeId, modalityId, bodypartId, reportType),
+        enabled,
         staleTime: 5 * 60 * 1000, // 5 minutos
     });
 };

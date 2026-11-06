@@ -3,34 +3,35 @@ import { UploadCloud, FolderOpen, FileText, Sparkles, Rocket, CheckCircle, Loade
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { useState, useRef, useEffect, useCallback } from "react"
-import { DireccionSelector } from "@/components"
 import { Progress } from "@/components/ui/progress"
 import { useCargarEstudios, useEstudiosNoVinculados } from "./hooks/use-cargar-estudios"
 import { Badge } from "@/components/ui/badge"
 import { DesvincularImagenTab, VincularImagenTab } from "./components"
 import { api } from "@/lib/api"
 import { useQuery } from "@tanstack/react-query"
-import { useFacility } from "@/context/FacilityContext"
+import { useAppConfig } from "@/context/AppConfigContext"
 import { toast } from "sonner"
+import { formatDate } from "@/lib/fechaYhora"
+import { TableRefreshStatus } from "@/components/TableRefreshStatus"
+import { useRowHighlights } from "@/hooks/use-row-highlights"
 
 export const CargarEstudios = () => {
     const [files, setFiles] = useState<File[]>([])
     const [isDragging, setIsDragging] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const [selectedDireccion, setSelectedDireccion] = useState<string>("");
     const [isUploading, setIsUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
     const [uploadedCount, setUploadedCount] = useState(0)
     const [totalFiles, setTotalFiles] = useState(0)
-    const { selectedFacilityId } = useFacility();
+    const { config } = useAppConfig();
 
     const { data: facilityPlanData } = useQuery({
-        queryKey: ["facility-plan", selectedFacilityId, "cargar-estudios"],
+        queryKey: ["facility-plan", config?.id?.toString() || "1", "cargar-estudios"],
         queryFn: async () => {
-            const response = await api.get(`/config/facilities/${selectedFacilityId}/plan`);
+            const response = await api.get(`/config/facilities/${config?.id?.toString() || "1"}/plan`);
             return response.data?.data || null;
         },
-        enabled: Boolean(selectedFacilityId),
+        enabled: Boolean(config?.id?.toString() || "1"),
         staleTime: 60 * 1000,
     });
 
@@ -40,11 +41,18 @@ export const CargarEstudios = () => {
         typeof receiveMonthlyLimit === "number"
         && receiveMonthlyLimit >= 0
         && receivedCount >= receiveMonthlyLimit;
-    const { estudiosNoVinculadosData, isLoading, error, refetchEstudiosNoVinculados } = useEstudiosNoVinculados({
-        location_id: selectedDireccion,
+    const { estudiosNoVinculadosData, isLoading, isFetching, error, refetchEstudiosNoVinculados } = useEstudiosNoVinculados({
         include_linked: true,
         include_pacs: false,
     });
+    const uploadedStudies = estudiosNoVinculadosData?.data?.data || [];
+    const changedUploadedStudies = useRowHighlights(
+        uploadedStudies,
+        "uploaded-studies",
+        !isLoading,
+        (study) => study.guid,
+        (study) => [study.patient_name, study.patient_id, study.study_description, study.file_size_mb, study.upload_date, study.modality, study.islinked, study.study_instance_uid, study.linked_order_accession, study.linked_examination_guid],
+    );
     const cargarEstudiosMutation = useCargarEstudios();
 
     // Estados para animación de tabs
@@ -52,13 +60,6 @@ export const CargarEstudios = () => {
     const tabsListRef = useRef<HTMLDivElement>(null)
     const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
     const [indicator, setIndicator] = useState({ left: 0, width: 0 })
-
-    const handleDireccionChange = (direccionId: string) => {
-        setSelectedDireccion(direccionId);
-        /*  fetchPacientesDireccion(
-             { uuid: direccionId, searchTerm: debouncedSearch },
-         ); */
-    };
 
     // Replica el estilo de tabs de Admision Espontanea (linea inferior animada).
     const updatePill = useCallback(() => {
@@ -120,7 +121,7 @@ export const CargarEstudios = () => {
     const uploadFile = async (file: File): Promise<boolean> => {
         return new Promise((resolve, reject) => {
             cargarEstudiosMutation.mutate(
-                { file, location_id: selectedDireccion },
+                { file },
                 {
                     onSuccess: () => {
                         resolve(true);
@@ -189,7 +190,7 @@ export const CargarEstudios = () => {
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col flex-1 min-h-0">
                         <TabsList
                             ref={tabsListRef}
-                            className="relative bg-transparent border-b border-gray-200 dark:border-gray-700 rounded-none h-auto p-0 justify-start gap-0 w-full"
+                            className="relative w-full justify-start gap-0 overflow-x-auto overscroll-x-contain rounded-none border-b border-gray-200 bg-transparent p-0 dark:border-gray-700 [&>[data-slot=tabs-trigger]]:flex-none"
                         >
                             <TabsTrigger
                                 value="cargar-dicom"
@@ -237,19 +238,12 @@ export const CargarEstudios = () => {
                                 </div>
                                 <p className="text-gray-600 text-sm dark:text-gray-200">Arrastra archivos DICOM aquí o haz clic para seleccionar</p>
                             </div>
-                            <DireccionSelector
-                                selectedDireccion={selectedDireccion}
-                                onDireccionChange={handleDireccionChange}
-                                isRow={true}
-                            />
-                            {selectedDireccion && isReceiveLimitReached && (
+                            {isReceiveLimitReached && (
                                 <div className="mt-3 rounded-lg border border-red-500/70 bg-red-500/15 px-4 py-3 text-sm text-red-200">
                                     <strong className="font-semibold">Límite alcanzado:</strong> ya se llegó al máximo mensual de carga DICOM para esta institución ({receivedCount}/{receiveMonthlyLimit}).
                                 </div>
                             )}
-                            {
-                                selectedDireccion && (
-                                    <>
+                            <>
                                         <div
                                             onDragOver={handleDragOver}
                                             onDragLeave={handleDragLeave}
@@ -346,7 +340,7 @@ export const CargarEstudios = () => {
                                         )}
 
                                         {/* Lista de Archivos DICOM Subidos */}
-                                        <div className="mt-8">
+                                        <div className="relative mt-8">
                                             <div className="flex items-center justify-between mb-6">
                                                 <div className="flex items-center gap-2">
                                                     <Archive className="w-5 h-5 text-gray-700 dark:text-gray-200" />
@@ -354,11 +348,11 @@ export const CargarEstudios = () => {
                                                 </div>
                                                 <Button
                                                     onClick={() => refetchEstudiosNoVinculados()}
-                                                    disabled={isLoading}
+                                                    disabled={isFetching}
                                                     variant="outline"
                                                     className="flex items-center gap-2 bg-brand-purple text-white hover:bg-brand-purple/90 hover:text-white"
                                                 >
-                                                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                                    <RefreshCw className="w-4 h-4" />
                                                     Actualizar
                                                 </Button>
                                             </div>
@@ -366,22 +360,20 @@ export const CargarEstudios = () => {
                                             {/* Lista de estudios */}
                                             <div className="space-y-3">
                                                 {isLoading ? (
-                                                    <div className="flex items-center justify-center py-12">
-                                                        <Loader2 className="w-8 h-8 animate-spin text-brand-purple dark:text-purple-400" />
-                                                    </div>
-                                                ) : error ? (
+                                                    <div className="py-12" />
+                                                ) : error && !estudiosNoVinculadosData ? (
                                                     <div className="text-center py-12 text-red-500 dark:text-red-400">
                                                         Error al cargar los archivos
                                                     </div>
-                                                ) : estudiosNoVinculadosData?.data?.data?.length === 0 ? (
+                                                ) : uploadedStudies.length === 0 ? (
                                                     <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                                                         No hay archivos DICOM subidos
                                                     </div>
                                                 ) : (
-                                                    estudiosNoVinculadosData?.data?.data?.map((estudio) => (
+                                                    uploadedStudies.map((estudio) => (
                                                         <div
                                                             key={estudio.guid}
-                                                            className="bg-transparent border border-gray-200/70 dark:border-gray-700/70 rounded-lg p-4 hover:bg-white/5 transition-colors"
+                                                            className={`bg-transparent border border-gray-200/70 dark:border-gray-700/70 rounded-lg p-4 hover:bg-white/5 transition-colors ${changedUploadedStudies.has(estudio.guid) ? 'row-change-highlight' : ''}`}
                                                         >
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-start gap-3 flex-1">
@@ -397,7 +389,7 @@ export const CargarEstudios = () => {
                                                                             </div>
                                                                             <div className="flex items-center gap-1">
                                                                                 <Calendar className="w-3 h-3 text-gray-500" />
-                                                                                <span>{new Date(estudio.upload_date).toLocaleDateString()}</span>
+                                                                                <span>{formatDate(estudio.upload_date)}</span>
                                                                             </div>
 
                                                                             <Badge variant="outline" className="text-xs">
@@ -428,11 +420,9 @@ export const CargarEstudios = () => {
                                                     ))
                                                 )}
                                             </div>
+                                            <TableRefreshStatus refreshing={isFetching} error={Boolean(error && estudiosNoVinculadosData)} />
                                         </div>
                                     </>
-                                )
-                            }
-
 
 
                         </TabsContent>

@@ -23,3 +23,14 @@ dist-ssr
 *.sln
 *.sw?
 
+
+# Local configuration and clinical files
+.env
+.env.*
+!.env.example
+!*.env.example
+media/
+output_pdfs/
+deployment/reports/
+
+.cache/

@@ -5,6 +5,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { toast } from 'sonner';
 import { useCrearCita } from '../hooks/use-crear-cita';
 import { useMedicosPorLocacion, useObrasSocialesPorLocacion } from '@/hooks/use-global';
+import { formatDateTime } from '@/lib/fechaYhora';
 
 interface PrestacionProps {
     selectedPatient: any;
@@ -153,19 +154,11 @@ export const Prestacion: React.FC<PrestacionProps> = ({
                                                 </div>
                                                 <div>
                                                     <span className="font-semibold">Inicio:</span>{' '}
-                                                    {new Date(ev.start).toLocaleString('es-ES', {
-                                                        dateStyle: 'short',
-                                                        timeStyle: 'short',
-                                                        hour12: false
-                                                    })}
+                                                    {formatDateTime(ev.start)}
                                                 </div>
                                                 <div>
                                                     <span className="font-semibold">Fin:</span>{' '}
-                                                    {new Date(ev.end).toLocaleString('es-ES', {
-                                                        dateStyle: 'short',
-                                                        timeStyle: 'short',
-                                                        hour12: false
-                                                    })}
+                                                    {formatDateTime(ev.end)}
                                                 </div>
                                             </div>
                                         </div>

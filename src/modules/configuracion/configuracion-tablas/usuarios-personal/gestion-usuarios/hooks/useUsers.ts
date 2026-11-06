@@ -121,10 +121,10 @@ export const useUserMedicalData = (userId: string | null) => {
 };
 
 export const useRoles = () => {
-    const { data: roles, isLoading, error } = useQuery({
+    const { data: roles, isLoading, error, refetch } = useQuery({
         queryKey: roleKeys.all,
         queryFn: () => roleService.getAll(),
-        staleTime: 30 * 60 * 1000, // Los roles cambian poco, cache por 30 min
+        staleTime: 0, // Refresh templates when the user editor opens after a deployment.
         gcTime: 30 * 60 * 1000,
     });
 
@@ -132,5 +132,6 @@ export const useRoles = () => {
         roles,
         isLoading,
         error,
+        refetch,
     };
 };

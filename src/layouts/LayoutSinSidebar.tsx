@@ -8,17 +8,17 @@ interface LayoutSinSidebarProps {
 
 export const LayoutSinSidebar = ({ children, disableDefaultBackground = false }: LayoutSinSidebarProps) => {
     return (
-        <div className="min-h-screen flex flex-col bg-background">
+        <div className="flex min-h-dvh min-w-0 flex-col overflow-x-hidden bg-background">
             {/* Mobile Header */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-40 flex items-center px-4">
+            <div className="fixed top-0 left-0 right-0 z-40 flex h-[calc(4rem+env(safe-area-inset-top))] items-center border-b border-border bg-card px-4 pt-[env(safe-area-inset-top)] lg:hidden">
                 <div className="font-display text-xl font-bold text-foreground">
                     Next<span className="text-primary">RIS</span>
                 </div>
             </div>
 
-            <div className="flex flex-1 pt-16 lg:pt-0 min-h-screen">
+            <div className="flex min-h-dvh min-w-0 flex-1 pt-[calc(4rem+env(safe-area-inset-top))] lg:pt-0">
                 {/* Main Content - Sin sidebar */}
-                <main className="flex-1 flex flex-col relative w-full">
+                <main className="relative flex w-full min-w-0 flex-1 flex-col">
                     {/* Background con overlay morado */}
                     {!disableDefaultBackground && (
                         <div
@@ -34,7 +34,7 @@ export const LayoutSinSidebar = ({ children, disableDefaultBackground = false }:
                     )}
 
                     {/* Content Area */}
-                    <div className="flex-1 p-4 md:p-6 lg:p-3 relative z-10">
+                    <div className="relative z-10 min-w-0 flex-1 p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:p-4 md:p-6 lg:p-3">
                         {children}
                     </div>
 
