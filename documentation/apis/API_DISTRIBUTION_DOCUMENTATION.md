@@ -210,7 +210,7 @@ Cada envío exitoso se registra en la tabla `tbemailqueue`:
 - `sent_at`: Timestamp del envío
 
 **Notas Importantes:**
-- El PDF debe existir en el servidor en la ruta especificada en `tbreport.pdfpath`
+- El PDF se genera en memoria al enviar el informe firmado
 - La configuración SMTP debe estar completa en la instalación
 - El email se envía de forma síncrona (bloqueante)
 - Si falla el envío, no se registra en la cola de emails
@@ -394,7 +394,7 @@ Authorization: Bearer <token>
 | 500 | Error al acceder al archivo o error de base de datos |
 
 **Notas:**
-- El archivo PDF debe existir en la ruta especificada en `tbreport.pdfpath`
+- El PDF se genera en memoria al visualizar el informe firmado
 - El PDF se abre directamente en el navegador, no se descarga
 - Si el archivo no existe físicamente aunque esté registrado en la BD, retorna 404
 

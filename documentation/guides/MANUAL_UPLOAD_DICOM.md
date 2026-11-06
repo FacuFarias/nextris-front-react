@@ -481,7 +481,7 @@ Content-Type: application/dicom
 | Frontend | `types/cargar-estudios.types.ts` | Tipos TypeScript |
 | Frontend | `constants/query-keys.ts` | Claves de caché React Query |
 | Disco | `/uploads_dicom/` | Archivos .dcm guardados en el servidor |
-| Disco | `/output_pdfs/` | _(no relacionado con upload, es para reportes)_ |
+| Disco | _(sin almacenamiento de PDFs)_ | Los informes se generan bajo demanda |
 
 ---
 

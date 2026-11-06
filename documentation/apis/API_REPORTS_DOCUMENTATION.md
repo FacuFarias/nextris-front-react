@@ -95,7 +95,7 @@ GET /api/examinations/for-reporting?show_ready=true&modality_id=abc-123&body_par
         "equipment": "CT-01",
         "location": "Sede Central",
         "assigned_to": "uuid-del-medico-asignado",
-        "pdf_path": "output_pdfs/ACC001_NR00000001_García_Juan.pdf",
+        "report_available": true,
         "modality_id": "abc-123-guid",
         "modality_description": "CT",
         "study_group_id": "def-456-guid",
@@ -513,10 +513,8 @@ Catálogo de lateralidades (Izquierda, Derecha, Bilateral, etc.)
 - Campo `blocked_by` incluido en GET /examinations/for-reporting
 
 ### Version 1.1.0 (2026-01-15)
-- Agregado campo `pdf_path` en GET /examinations/for-reporting
-- Nuevo endpoint público GET /pdfs/{filename} para servir PDFs sin autenticación
-- Mejoras en la generación automática de PDFs al firmar reportes
-- Formato de nombres de PDF: `{ACC}_{PatientID}_{Surname}_{Name}.pdf`
+- Agregado campo `report_available` en GET /examinations/for-reporting
+- El PDF se genera bajo demanda al visualizar, descargar o distribuir un informe firmado
 
 ### Version 1.0.0 (2026-01-03)
 - Endpoints iniciales para redacción de informes
@@ -692,14 +690,13 @@ useEffect(() => {
 ## Endpoints de Firma de Reportes
 
 ### 13. POST /quitar_firma/{exam_id}
-Quita la firma de un reporte (desmarca como reportado y elimina el PDF).
+Quita la firma de un reporte y lo vuelve inmediatamente no disponible para visualización.
 
 #### Description
 Revierte completamente el proceso de firma de un reporte. Esta función es lo contrario de `sign_report`:
 - Marca el examen como NO reportado (`IsReported=0`)
 - Limpia la fecha de reporte (`reportdate=NULL`)
-- Elimina la referencia al PDF en la base de datos (`pdfpath=NULL`)
-- Elimina el archivo PDF físico del servidor
+- No elimina archivos: los PDFs se generan únicamente bajo demanda
 - Actualiza el estado del examen
 
 #### Parameters
@@ -719,14 +716,12 @@ Content-Type: application/json
 ```json
 {
   "success": true,
-  "message": "Firma removida exitosamente, PDF eliminado"
+  "message": "Firma removida exitosamente"
 }
 ```
 
 **Posibles mensajes:**
-- `"Firma removida exitosamente, PDF eliminado"` - Todo se eliminó correctamente
-- `"Firma removida exitosamente, pero el PDF no se pudo eliminar"` - La firma se removió pero el PDF no existía o no se pudo eliminar
-- `"Firma removida exitosamente"` - No había PDF asociado
+- `"Firma removida exitosamente"` - La firma se removió y el informe dejó de estar disponible
 
 #### Errors
 ```json
@@ -749,11 +744,8 @@ Content-Type: application/json
 - `500`: Internal Server Error
 
 #### Comportamiento
-1. Busca el path del PDF en la base de datos antes de eliminarlo
-2. Actualiza el examen: `IsReported=0`, `reportdate=NULL`
-3. Actualiza el reporte: `pdfpath=NULL`
-4. Elimina el archivo PDF físico del sistema si existe
-5. Actualiza el estado del examen mediante `updatestatus()`
+1. Actualiza el examen: `IsReported=0`, `reportdate=NULL`
+2. Actualiza el estado del examen mediante `updatestatus()`
 
 #### Uso desde Frontend
 ```javascript
@@ -789,7 +781,7 @@ const quitarFirmaReporte = async (examId) => {
 
 #### Notas Importantes
 - Esta acción es **reversible** - se puede volver a firmar el reporte después
-- El PDF se elimina permanentemente del servidor
+- El informe queda inmediatamente sin PDF disponible hasta volver a firmarlo
 - Los datos del informe (findings, impressions, etc.) **NO se eliminan** de la base de datos, solo se marca como no reportado
 - Se recomienda solicitar confirmación al usuario antes de ejecutar esta acción
 - Actualiza automáticamente el estado del examen en el sistema
@@ -799,27 +791,24 @@ const quitarFirmaReporte = async (examId) => {
 ## Endpoints de Visualización de PDFs
 
 ### 14. GET /pdfs/{filename}
-Sirve archivos PDF directamente desde el servidor.
+Ruta retirada. Los nombres de archivo antiguos ya no identifican informes dinámicos.
 
 #### Description
-Endpoint público (sin autenticación) para servir archivos PDF de reportes médicos. Permite abrir PDFs directamente en el navegador o en nuevas pestañas.
+Responde `410 Gone`. Use `GET /api/pdfs/by-exam/{exam_id}` para compatibilidad pública por GUID o `GET /api/reports/{exam_id}/pdf` con JWT.
 
 #### Parameters
 **Path Parameters:**
-- `filename` (required): Nombre del archivo PDF
+- `filename` (required): Nombre histórico del archivo (ya no válido)
 
 #### Request
 ```http
-GET /api/pdfs/ACC001_NR00000001_García_Juan.pdf
+GET /api/pdfs/informe-antiguo.pdf
 ```
 
 **Nota:** No requiere token de autenticación.
 
 #### Response
-**Status Code:** 200 OK
-**Content-Type:** application/pdf
-
-Devuelve el archivo PDF directamente.
+**Status Code:** 410 Gone
 
 #### Errors
 ```json
@@ -830,25 +819,21 @@ Devuelve el archivo PDF directamente.
 ```
 
 **Status Codes:**
-- `200`: Success - PDF encontrado y servido
+- `410`: Endpoint retirado
 - `400`: Bad Request - Archivo no válido (no es PDF)
 - `404`: Not Found - PDF no encontrado
 - `500`: Internal Server Error
 
 #### Uso desde Frontend
 ```javascript
-// Extraer nombre del archivo desde pdf_path
-const pdfPath = "output_pdfs/ACC001_NR00000001_García_Juan.pdf";
-const filename = pdfPath.split('/').pop();
-
-// Construir URL completa
-const pdfUrl = `${API_BASE_URL}/api/pdfs/${filename}`;
+// Obtener un PDF dinámico autenticado
+const pdfUrl = `${API_BASE_URL}/api/reports/${examId}/pdf`;
 
 // Abrir en nueva pestaña
 window.open(pdfUrl, '_blank');
 ```
 
 #### Seguridad
-- El endpoint sanitiza el nombre del archivo para prevenir path traversal
-- Solo sirve archivos con extensión `.pdf`
-- Los archivos se sirven desde `/var/www/nextris-dev-react/output_pdfs/`
+- Los PDFs sólo se generan para informes firmados y con reporte persistido.
+- La ruta por nombre de archivo antiguo responde `410 Gone`.
+- Las respuestas incluyen `Cache-Control: no-store`.
