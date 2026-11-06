@@ -93,6 +93,15 @@ export const UserForm = ({
         .trim()
         .toLowerCase();
     const isMedicalRole = normalizedRoleDescription === "medico";
+    // Un admin puede ser además médico; sin datos propios firma con datos de prueba.
+    const isAdminRole = ["sysadmin", "admin", "administrador"].includes(normalizedRoleDescription);
+    const hasOptionalMedicalData = Boolean(
+        medicalFormData.matricula_nacional.trim()
+        || medicalFormData.integration_id_1.trim()
+        || medicalFormData.firma_digital
+        || medicalFormData.sello_digital
+    );
+    const requiresAclaracion = isMedicalRole || hasOptionalMedicalData;
     const isSysadminRole = selectedRole?.default_permissions?.includes("*") ?? false;
 
     useEffect(() => {
@@ -215,7 +224,7 @@ export const UserForm = ({
 
         const dataToSubmit = { ...formData };
 
-        const medicalData = isMedicalRole
+        const medicalData = isMedicalRole || medicalFormData.aclaracion_firma.trim() || hasOptionalMedicalData
             ? {
                 matricula_nacional: medicalFormData.matricula_nacional,
                 aclaracion_firma: medicalFormData.aclaracion_firma,
@@ -415,12 +424,14 @@ export const UserForm = ({
                         </div>
                     </div>
 
-                    {isMedicalRole && (
+                    {(isMedicalRole || isAdminRole) && (
                         <div className="space-y-1.5 border rounded-lg p-2">
                             <div>
                                 <h4 className="text-sm font-semibold">Datos médicos</h4>
                                 <p className="text-xs text-muted-foreground">
-                                    Complete matrícula, aclaración, firma y sello
+                                    {isMedicalRole
+                                        ? "Complete aclaración, firma y sello. La matrícula es opcional."
+                                        : "Opcional: sin aclaración de firma propia, firma con datos de prueba."}
                                 </p>
                             </div>
 
@@ -432,27 +443,26 @@ export const UserForm = ({
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <div className="space-y-1.5">
                                         <Label htmlFor="matricula_nacional">
-                                            Matrícula <span className="text-red-500">*</span>
+                                            Matrícula
                                         </Label>
                                         <Input
                                             id="matricula_nacional"
                                             value={medicalFormData.matricula_nacional}
                                             onChange={(e) => handleMedicalChange("matricula_nacional", e.target.value)}
                                             placeholder="Ej: MN12345"
-                                            required={isMedicalRole}
                                         />
                                     </div>
 
                                     <div className="space-y-1.5">
                                         <Label htmlFor="aclaracion_firma">
-                                            Aclaración de firma <span className="text-red-500">*</span>
+                                            Aclaración de firma {requiresAclaracion && <span className="text-red-500">*</span>}
                                         </Label>
                                         <Input
                                             id="aclaracion_firma"
                                             value={medicalFormData.aclaracion_firma}
                                             onChange={(e) => handleMedicalChange("aclaracion_firma", e.target.value)}
                                             placeholder="Ej: Dr. Juan Pérez"
-                                            required={isMedicalRole}
+                                            required={requiresAclaracion}
                                         />
                                     </div>
 
