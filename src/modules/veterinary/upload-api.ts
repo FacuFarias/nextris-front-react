@@ -10,7 +10,7 @@ export interface UploadSession {
     veterinary?: {species?: string; breed?: string}; ignored?: {name:string; reason:string}[] };
   selection: { mode?: 'create'|'link'; patient_id?: string; exam_id?: string; study_type_id?: string };
   result: UploadResult | Record<string, never>;
-  limits: {max_bytes:number; max_files:number; chunk_bytes:number};
+  limits: {max_files:number; chunk_bytes:number};
 }
 export interface UploadTarget { mode: 'link'|'create'; patient_id: string; exam_id?: string; study_type_id?: string; clinical_question?: string; confirm_identity?: boolean }
 export interface UploadPreview { differences: {field:string; dicom:string; ris:string}[]; exam_id: string; accession: string }
@@ -36,7 +36,7 @@ export async function transferFiles(session:UploadSession,files:DroppedFile[],si
   const valid=files.filter(item=>item.file.size>0);
   const total=valid.reduce((sum,item)=>sum+item.file.size,0);
   if(!total)throw Error('No se encontraron archivos con contenido.');
-  if(valid.length>session.limits.max_files||total>session.limits.max_bytes)throw Error('La carga supera el límite de archivos o tamaño.');
+  if(valid.length>session.limits.max_files)throw Error('La carga supera el límite de archivos.');
   let sent=0;
   for(const item of valid){
     const created=await api.post<{data:{id:string}}>('/veterinary/uploads/'+session.id+'/files',{name:item.name,size:item.file.size},{signal});
