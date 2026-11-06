@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { User, Lock, Shield, Activity, Clipboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoginTypeSelector } from "./LoginTypeSelector";
+import { BrandLogo } from "@/components/BrandLogo";
 import { brand } from "@/lib/brand";
 import { UseLogin } from "../hooks/use-login";
 interface LoginCardProps {
@@ -56,11 +57,7 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
             "bg-card/95 backdrop-blur-xl border border-border/50"
         )}>
             <div className="mb-4 animate-slide-up flex flex-col items-center sm:mb-8">
-                <img
-                    src={brand.logo}
-                    alt={brand.name}
-                    className="h-28 w-auto rounded-lg sm:h-36"
-                />
+                <BrandLogo className="h-28 w-auto sm:h-36" />
             </div>
 
             {/* Title */}

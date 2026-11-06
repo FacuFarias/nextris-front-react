@@ -1,5 +1,6 @@
 import nextrisLogo from "@/assets/logo/logo5.png";
 import cdivetLogo from "@/assets/logo/cdivet-logo.png";
+import cdivetLogoDark from "@/assets/logo/cdivet-logo-dark.png";
 import cdivetMark from "@/assets/logo/cdivet-mark.png";
 
 const cdivet = import.meta.env.VITE_BRAND === "cdivet";
@@ -8,6 +9,7 @@ const cdivet = import.meta.env.VITE_BRAND === "cdivet";
 export const brand = {
     name: cdivet ? "CDIVET" : "NextRIS",
     logo: cdivet ? cdivetLogo : nextrisLogo,
+    logoDark: cdivet ? cdivetLogoDark : nextrisLogo,
     mark: cdivet ? cdivetMark : nextrisLogo,
     icon: cdivet ? "/cdivet-icon.png" : null,
     veterinary: cdivet,
