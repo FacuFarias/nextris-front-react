@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/layouts/layout';
-import { fetchReportPdf, staffReportPdfPath } from '@/services/reportPdf';
+import { getReportPdfUrl, staffReportPdfLink } from '@/services/reportPdf';
 
 export function LocalReportPage() {
     const { examId } = useParams();
@@ -9,7 +9,7 @@ export function LocalReportPage() {
     useEffect(() => {
         if (!examId) return;
         let active = true;
-        fetchReportPdf(staffReportPdfPath(examId))
+        getReportPdfUrl(staffReportPdfLink(examId))
             .then(url => { if (active) window.location.replace(url); })
             .catch((failure: Error) => { if (active) setError(failure.message); });
         return () => { active = false; };

@@ -1,5 +1,5 @@
 import { useAuth } from "@/context/AuthContext";
-import { openReportPdf, staffReportPdfPath } from '@/services/reportPdf';
+import { openReportPdf, staffReportPdfLink } from '@/services/reportPdf';
 import { hasAnyPermission } from "@/lib/permissions";
 import { DynamicBreadcrumb, InputSearch } from "@/components"
 import TablaDynamic from "@/components/TableDynamic";
@@ -86,7 +86,7 @@ export const Distribucion = () => {
 
     const handleViewReport = async (examen: Examen) => {
         try {
-            await openReportPdf(staffReportPdfPath(examen.guid));
+            await openReportPdf(staffReportPdfLink(examen.guid));
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
             console.error("Error al abrir informe:", error);

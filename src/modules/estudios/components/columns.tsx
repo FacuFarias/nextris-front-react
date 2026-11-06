@@ -1,4 +1,4 @@
-import { openReportPdf } from '@/services/reportPdf';
+import { openReportPdf, staffReportPdfLink } from '@/services/reportPdf';
 import { useRef, useState, type ReactNode } from "react";
 import type { TableColumn } from "@/types/table";
 import { formatDate } from "@/lib/fechaYhora";
@@ -17,7 +17,7 @@ export const ReportButton = ({ study }: { study: Study }) => {
         const version = ++requestVersion.current;
         setLoading(true);
         try {
-            await openReportPdf(`/patient-portal/examinations/${encodeURIComponent(study.examination_id)}/report/pdf`);
+            await openReportPdf(staffReportPdfLink(study.examination_id));
         } catch (error) {
             if (version !== requestVersion.current) return;
             toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');

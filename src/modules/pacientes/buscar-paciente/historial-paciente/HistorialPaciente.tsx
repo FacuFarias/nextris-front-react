@@ -1,4 +1,4 @@
-import { openReportPdf, staffReportPdfPath } from '@/services/reportPdf';
+import { openReportPdf, staffReportPdfLink } from '@/services/reportPdf';
 import { MainLayout } from '@/layouts/layout'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useHistorialPaciente, useViewImagenDicom, useToggleExamVisibility } from './hooks/use-historial-paciente';
@@ -132,7 +132,7 @@ export const HistorialPaciente = () => {
         }
         try {
             if (!patient.local_exam_id) return;
-            await openReportPdf(staffReportPdfPath(patient.local_exam_id));
+            await openReportPdf(staffReportPdfLink(patient.local_exam_id));
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
         }

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, ExternalLink, FileText, Image, Loader2, ShieldCheck } from "lucide-react";
 import { brand } from "@/lib/brand";
 import { formatDate, formatDateTime } from "@/lib/fechaYhora";
-import { openReportPdf } from "@/services/reportPdf";
+import { openPublicReportPdf } from "@/services/reportPdf";
 
 interface CaseData {
     expires_at: string;
@@ -55,8 +55,6 @@ const formatExpiry = (value: string) => {
 export const CaseLink = () => {
     const { shortCode } = useParams<{ shortCode: string }>();
     const [expiredLink, setExpiredLink] = useState<string | null>(null);
-    const [loadingReportCode, setLoadingReportCode] = useState<string | null>(null);
-    const [reportFailure, setReportFailure] = useState<{ shortCode: string; message: string } | null>(null);
     const { data: caseData, error, isLoading, refetch, isFetching } = useQuery({
         queryKey: ["shared-case", shortCode],
         enabled: Boolean(shortCode),
@@ -82,20 +80,9 @@ export const CaseLink = () => {
         return () => window.clearTimeout(timeout);
     }, [caseData]);
     const expired = caseData && (expiredLink === caseData.expires_at || Date.parse(caseData.expires_at) <= Date.now());
-    const reportLoading = loadingReportCode === shortCode;
-    const reportError = reportFailure && reportFailure.shortCode === shortCode ? reportFailure.message : null;
 
-    const openReport = async () => {
-        if (!shortCode || expired) return;
-        setLoadingReportCode(shortCode);
-        setReportFailure(null);
-        try {
-            await openReportPdf(`/s/${encodeURIComponent(shortCode)}/report.pdf`);
-        } catch (error: unknown) {
-            setReportFailure({ shortCode, message: error instanceof Error ? error.message : "No se pudo abrir el informe" });
-        } finally {
-            setLoadingReportCode(null);
-        }
+    const openReport = () => {
+        if (shortCode && !expired) openPublicReportPdf(shortCode);
     };
 
     if (isLoading) {
@@ -176,20 +163,19 @@ export const CaseLink = () => {
                 </div>
 
                 <section aria-label="Acciones del estudio" className="shrink-0 border-t bg-white px-3 pt-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))] sm:px-6">
-                    {reportError && <p role="alert" className="mb-3 max-h-24 overflow-y-auto text-center text-sm text-red-600">{reportError}</p>}
                     <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 sm:flex sm:justify-center sm:gap-3 [&>button]:min-h-14 [&>button]:min-w-0 [&>button]:flex-col [&>button]:gap-1 [&>button]:whitespace-normal [&>button]:px-2 [&>button]:py-2 [&>button]:text-xs [&>button]:leading-tight sm:[&>button]:min-h-11 sm:[&>button]:flex-row sm:[&>button]:gap-2 sm:[&>button]:px-4 sm:[&>button]:text-sm">
                         <Button disabled={!caseData.viewer_url || caseData.study.image_count === 0} onClick={() => { if (caseData.viewer_url) window.open(caseData.viewer_url, "_blank", "noopener,noreferrer") }} className="gap-2 bg-[#6a1bb0] hover:bg-[#4a148c]">
                             <Image className="h-4 w-4" />
                             {caseData.study.image_count > 0 ? "Ver estudio" : "Sin imágenes"}
                         </Button>
                         <Button
-                            disabled={reportLoading || !caseData.report_available}
+                            disabled={!caseData.report_available}
                             variant="outline"
                             className="gap-2"
-                            onClick={() => void openReport()}
+                            onClick={openReport}
                         >
-                            {reportLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                            {reportLoading ? "Consultando reporte…" : "Ver reporte"}
+                            <FileText className="h-4 w-4" />
+                            Ver reporte
                         </Button>
                         <Button variant="outline" onClick={() => window.close()} className="gap-2">
                             <ExternalLink className="h-4 w-4" />

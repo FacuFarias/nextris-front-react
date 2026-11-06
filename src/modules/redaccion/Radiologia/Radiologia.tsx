@@ -1,5 +1,5 @@
 import { useAppConfig } from "@/context/AppConfigContext";
-import { openReportPdf, staffReportPdfPath } from '@/services/reportPdf';
+import { openReportPdf, staffReportPdfLink } from '@/services/reportPdf';
 import { hasAnyPermission } from "@/lib/permissions";
 import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
 import { InputSearch } from "@/components/InputSearch"
@@ -1136,7 +1136,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
         openingReportRef.current = true;
         setOpeningReport(true);
         try {
-            await openReportPdf(staffReportPdfPath(informe.guid));
+            await openReportPdf(staffReportPdfLink(informe.guid));
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
         } finally {

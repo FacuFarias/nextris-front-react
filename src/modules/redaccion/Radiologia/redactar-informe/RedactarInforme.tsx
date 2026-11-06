@@ -1,7 +1,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { ExamViewerButton } from "@/components/ExamViewerButton";
 import { hasAnyPermission } from "@/lib/permissions";
-import { openReportPdf, staffReportPdfPath } from '@/services/reportPdf';
+import { openReportPdf, staffReportPdfLink } from '@/services/reportPdf';
 import type { CombinedHistoryEntry } from '@/types/patientHistory';
 import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { onAssistantCommandAcknowledged, registerAssistantHandler } from "@/assistant/commands"
@@ -392,7 +392,7 @@ export const RedactarInforme = () => {
         try {
             // The external report ID remains authoritative even when linked to a local exam.
             if (!examId) return;
-            await openReportPdf(staffReportPdfPath(examId));
+            await openReportPdf(staffReportPdfLink(examId));
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe previo');
         }
@@ -1024,7 +1024,7 @@ export const RedactarInforme = () => {
             return;
         }
         try {
-            await openReportPdf(staffReportPdfPath(informeGuid));
+            await openReportPdf(staffReportPdfLink(informeGuid));
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
         }
