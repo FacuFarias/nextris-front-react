@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useEffect, useRef } from "react";
-import pacientesImg from "@/assets/auth/pacientes.jpg";
-import medicoImg from "@/assets/auth/medico.jpg";
+import { brand } from "@/lib/brand";
 
 const PATIENT_COLORS: [number, number, number][] = [
     [13, 148, 136],   // teal-600
@@ -117,38 +116,46 @@ export const BackgroundEffects = ({ isPatient }: BackgroundEffectsProps) => {
             <div
                 className="absolute inset-0 transition-opacity duration-700 bg-cover bg-center"
                 style={{
-                    backgroundImage: `url(${isPatient ? pacientesImg : medicoImg})`,
-                    opacity: isPatient ? 0.5 : 0.3
+                    backgroundImage: `url(${isPatient ? brand.loginImage.patient : brand.loginImage.staff})`,
+                    opacity: brand.veterinary ? 1 : isPatient ? 0.5 : 0.3
                 }}
             />
 
             {/* Main gradient background overlay */}
             <div className={cn(
                 "absolute inset-0 transition-all duration-700",
-                isPatient
-                    ? "bg-linear-to-br from-teal-100/50 via-cyan-100/50 to-emerald-200/60"
-                    : "bg-linear-to-br from-purple-950/80 via-violet-950/80 to-purple-900/80"
+                brand.veterinary
+                    ? isPatient
+                        ? "bg-linear-to-br from-teal-900/15 via-cyan-900/10 to-emerald-900/20"
+                        : "bg-linear-to-br from-purple-950/45 via-violet-950/30 to-purple-900/45"
+                    : isPatient
+                        ? "bg-linear-to-br from-teal-100/50 via-cyan-100/50 to-emerald-200/60"
+                        : "bg-linear-to-br from-purple-950/80 via-violet-950/80 to-purple-900/80"
             )} />
 
-            {/* Floating orbs */}
-            <div className={cn(
-                "absolute top-20 left-20 w-96 h-96 rounded-full blur-3xl animate-float transition-all duration-700",
-                isPatient
-                    ? "bg-teal-400/40"
-                    : "bg-purple-600/30"
-            )} />
-            <div className={cn(
-                "absolute bottom-20 right-20 w-[500px] h-[500px] rounded-full blur-3xl animate-float transition-all duration-700",
-                isPatient
-                    ? "bg-cyan-400/40"
-                    : "bg-violet-600/30"
-            )} style={{ animationDelay: '-3s' }} />
-            <div className={cn(
-                "absolute top-1/2 left-1/3 w-80 h-80 rounded-full blur-3xl animate-float transition-all duration-700",
-                isPatient
-                    ? "bg-emerald-400/30"
-                    : "bg-violet-600/25"
-            )} style={{ animationDelay: '-1.5s' }} />
+            {/* Floating orbs: would tint the people in the brand photos */}
+            {!brand.veterinary && (
+                <>
+                    <div className={cn(
+                        "absolute top-20 left-20 w-96 h-96 rounded-full blur-3xl animate-float transition-all duration-700",
+                        isPatient
+                            ? "bg-teal-400/40"
+                            : "bg-purple-600/30"
+                    )} />
+                    <div className={cn(
+                        "absolute bottom-20 right-20 w-[500px] h-[500px] rounded-full blur-3xl animate-float transition-all duration-700",
+                        isPatient
+                            ? "bg-cyan-400/40"
+                            : "bg-violet-600/30"
+                    )} style={{ animationDelay: '-3s' }} />
+                    <div className={cn(
+                        "absolute top-1/2 left-1/3 w-80 h-80 rounded-full blur-3xl animate-float transition-all duration-700",
+                        isPatient
+                            ? "bg-emerald-400/30"
+                            : "bg-violet-600/25"
+                    )} style={{ animationDelay: '-1.5s' }} />
+                </>
+            )}
 
             {/* Grid pattern */}
             <div className={cn(

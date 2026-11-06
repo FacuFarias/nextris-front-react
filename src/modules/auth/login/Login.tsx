@@ -1,3 +1,4 @@
+import { brand } from "@/lib/brand";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { LoginCard } from "./components/LoginCard";
@@ -31,10 +32,12 @@ export const Login = ({ initialIsPatient = false }: LoginProps) => {
                 {/* Bottom info */}
                 <div className={cn(
                     "mt-4 text-center animate-slide-up transition-colors duration-500 sm:mt-8",
-                    isPatient ? "text-teal-700/60" : "text-indigo-300/60"
+                    brand.veterinary
+                        ? "rounded-full bg-black/45 px-3 py-1 text-white"
+                        : isPatient ? "text-teal-700/60" : "text-indigo-300/60"
                 )} style={{ animationDelay: '0.2s' }}>
                     <p className="text-sm">
-                        © 2025 NextRIS - Todos los derechos reservados
+                        © 2026 NextRIS - Todos los derechos reservados
                     </p>
                 </div>
             </div>

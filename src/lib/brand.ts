@@ -2,6 +2,10 @@ import nextrisLogo from "@/assets/logo/logo5.png";
 import cdivetLogo from "@/assets/logo/cdivet-logo.png";
 import cdivetLogoDark from "@/assets/logo/cdivet-logo-dark.png";
 import cdivetMark from "@/assets/logo/cdivet-mark.png";
+import medicoImg from "@/assets/auth/medico.jpg";
+import pacientesImg from "@/assets/auth/pacientes.jpg";
+import veterinariaImg from "@/assets/auth/veterinaria.jpg";
+import responsablesImg from "@/assets/auth/responsables.jpg";
 
 const cdivet = import.meta.env.VITE_BRAND === "cdivet";
 
@@ -14,4 +18,8 @@ export const brand = {
     icon: cdivet ? "/cdivet-icon.png" : null,
     veterinary: cdivet,
     productLogo: nextrisLogo,
+    loginImage: {
+        staff: cdivet ? veterinariaImg : medicoImg,
+        patient: cdivet ? responsablesImg : pacientesImg,
+    },
 };
