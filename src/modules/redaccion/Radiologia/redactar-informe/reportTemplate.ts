@@ -14,6 +14,26 @@ const hasMeaningfulTemplateText = (value: string): boolean => {
     return Boolean((document.body.textContent || '').replace(/\u200B/g, '').trim());
 };
 
+const ANIMAL_FIELD_RE = /\{\{\s*([^{}<>]+?)\s*\}\}/g;
+
+/**
+ * Replaces {{Campo}} with the animal's data. A datum the animal lacks becomes
+ * [[ ]], which F3 jumps to and which blocks signing. Unknown names stay visible.
+ */
+export const fillAnimalFields = (
+    html: string,
+    fields: Record<string, string | null> | null | undefined,
+): string => {
+    if (!html || !fields) return html;
+    const byName = new Map(Object.entries(fields).map(([name, value]) => [name.toLowerCase(), value]));
+    return html.replace(ANIMAL_FIELD_RE, (token, name: string) => {
+        const key = name.replace(/\s+/g, ' ').toLowerCase();
+        if (!byName.has(key)) return token;
+        const value = byName.get(key);
+        return value ? escapeHtml(value) : '[[ ]]';
+    });
+};
+
 /** Keeps the template's complete reason section and fills only its motive. */
 export const mergeTemplateStudyReason = (
     templateReason: string | null | undefined,

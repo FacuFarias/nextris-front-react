@@ -28,6 +28,8 @@ export interface Template {
     is_user_default?: boolean;
     is_system_default?: boolean;
     applies_to_all?: boolean;
+    species_id?: string | null;
+    species_name?: string;
 }
 
 export interface TemplateListResponse {
@@ -43,6 +45,7 @@ export interface TemplateResponse {
 export interface CreateTemplateRequest {
     title: string;
     study_type_id: string;
+    species_id?: string | null;
     study_reason?: string;
     content?: string;
     conclusion?: string;
@@ -56,6 +59,7 @@ export interface CreateTemplateRequest {
 export interface UpdateTemplateRequest {
     title?: string;
     study_type_id?: string;
+    species_id?: string | null;
     study_reason?: string;
     content?: string;
     conclusion?: string;

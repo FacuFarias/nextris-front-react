@@ -11,13 +11,15 @@ import type {
  * @param studyTypeId - UUID del tipo de estudio (opcional)
  * @param modalityId - UUID de la modalidad (opcional)
  * @param bodypartId - UUID de la parte del cuerpo (opcional)
+ * @param speciesId - UUID de la especie (opcional); incluye las plantillas sin especie
  * @returns Lista de plantillas
  */
 export const getTemplates = async (
     studyTypeId?: string,
     modalityId?: string,
     bodypartId?: string,
-    reportType?: string
+    reportType?: string,
+    speciesId?: string
 ): Promise<TemplateListResponse> => {
     try {
         const params = new URLSearchParams();
@@ -26,6 +28,7 @@ export const getTemplates = async (
         if (modalityId) params.append('modality_id', modalityId);
         if (bodypartId) params.append('bodypart_id', bodypartId);
         if (reportType) params.append('report_type', reportType);
+        if (speciesId) params.append('species_id', speciesId);
 
         const url = params.toString()
             ? `/templates?${params.toString()}`

@@ -24,10 +24,11 @@ export const useTemplates = (
     bodypartId?: string,
     reportType?: string,
     enabled = true,
+    speciesId?: string,
 ) => {
     return useQuery({
-        queryKey: ['templates', studyTypeId, modalityId, bodypartId, reportType],
-        queryFn: () => getTemplates(studyTypeId, modalityId, bodypartId, reportType),
+        queryKey: ['templates', studyTypeId, modalityId, bodypartId, reportType, speciesId],
+        queryFn: () => getTemplates(studyTypeId, modalityId, bodypartId, reportType, speciesId),
         enabled,
         staleTime: 5 * 60 * 1000, // 5 minutos
     });

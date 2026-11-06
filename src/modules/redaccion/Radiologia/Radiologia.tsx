@@ -268,6 +268,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
         undefined,
         'simple',
         Boolean(isContextTemplateModalOpen && contextTemplateRow && !isAdministrativeView),
+        contextTemplateRow?.species_id || undefined,
     );
     const contextTemplateOptions = contextTemplates?.data || [];
     const filteredContextTemplates = contextTemplateOptions.filter((template) => {

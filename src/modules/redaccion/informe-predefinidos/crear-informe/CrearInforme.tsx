@@ -17,6 +17,10 @@ import { parserFacilityRelService } from "@/services/parser-facility-rel.service
 import { criteriaService, type ParserCriterionVariable, type StructuredCriterion } from "@/services/criteria.service";
 import type { ReportType } from "../types/informe-pred.types";
 import { useAuth } from "@/context/AuthContext";
+import { useAppConfig } from "@/context/AppConfigContext";
+import { useQuery } from "@tanstack/react-query";
+import { get, type Choice } from "@/modules/veterinary/api";
+import { ANIMAL_TEMPLATE_FIELDS } from "../animalFields";
 import type { CommandProps } from "@tiptap/core";
 
 const stripVariablePlaceholdersFromHtml = (html: string): string => {
@@ -44,6 +48,14 @@ export const CrearInforme = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>(); // Obtener el ID de la URL
     const isEditMode = !!id; // Determinar si estamos en modo edición
+    const { config, isLoading: isLoadingConfig } = useAppConfig();
+    const veterinary = config?.patient_mode === "veterinary";
+    const { data: species } = useQuery({
+        queryKey: ["veterinary", "species"],
+        queryFn: () => get<Choice[]>("/veterinary/species"),
+        enabled: veterinary,
+    });
+    const [speciesId, setSpeciesId] = useState("");
 
     const { authData } = useAuth();
     const isSysadmin = ['sysadmin', 'admin', 'administrador'].includes(
@@ -219,6 +231,7 @@ export const CrearInforme = () => {
             setConclusion(template.conclusion || "");
             setTechnique(template.study_reason || "");
             setStudyTypeFilter(template.study_type_id || "");
+            setSpeciesId(template.species_id || "");
             setAppliesToAll(Boolean(template.applies_to_all));
             setReportType((template.report_type as ReportType) || 'simple');
             setIsDefaultReport(Boolean(template.is_system_default || template.is_user_default));
@@ -247,7 +260,8 @@ export const CrearInforme = () => {
     // Cargar variables y criterios relacionados por study type + facility/location
     useEffect(() => {
         const loadRelatedData = async () => {
-            if (!studyTypeFilter) {
+            // La edición veterinaria no usa parsers ni informes inteligentes.
+            if (!studyTypeFilter || isLoadingConfig || veterinary) {
                 setStudyTypeVariables([]);
                 setRelatedCriteria([]);
                 setStudyTypeVariablesError("");
@@ -360,7 +374,7 @@ export const CrearInforme = () => {
         };
 
         loadRelatedData();
-    }, [studyTypeFilter, reportType, selectedFacilityIds]);
+    }, [studyTypeFilter, reportType, selectedFacilityIds, isLoadingConfig, veterinary]);
 
     // Handler para guardar template
     const handleSaveTemplate = async () => {
@@ -401,7 +415,8 @@ export const CrearInforme = () => {
                 location_ids: reportType === 'inteligente' ? selectedLocationIds : [],
                 structured_variables: reportType === 'simple' ? '' : structuredVariables,
                 criteria: reportType === 'simple' ? '' : criteria,
-                is_default: isDefaultReport
+                is_default: isDefaultReport,
+                ...(veterinary ? { species_id: speciesId || null } : {}),
             };
 
             if (isEditMode && id) {
@@ -450,6 +465,15 @@ export const CrearInforme = () => {
             label: estudio.description
         }));
     }, [tiposEstudio]);
+
+    const speciesOptions = useMemo<AutocompleteOption[]>(() => (species || []).map((item) => ({
+        value: item.id,
+        label: item.name,
+    })), [species]);
+
+    const handleInsertAnimalField = (field: string) => {
+        activeEditor?.chain().focus().insertContent(`{{${field}}} `).run();
+    };
 
     const reportTypeOptions = useMemo(() => ([
         { value: 'simple', label: 'Simple' },
@@ -771,7 +795,30 @@ export const CrearInforme = () => {
                                                 )}
                                             </div>
 
-                                            <div>
+                                            {veterinary && (
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
+                                                        Tipo de animal:
+                                                    </label>
+                                                    {appliesToAll ? (
+                                                        <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-[#1e2430] text-gray-500 dark:text-gray-400 text-sm cursor-not-allowed select-none">
+                                                            <Lock className="h-3.5 w-3.5 shrink-0" />
+                                                            <span>Todos los animales</span>
+                                                        </div>
+                                                    ) : (
+                                                        <Autocomplete
+                                                            options={speciesOptions}
+                                                            value={speciesId}
+                                                            onValueChange={setSpeciesId}
+                                                            placeholder="Todos los animales"
+                                                            emptyMessage="No se encontraron tipos de animal."
+                                                            searchPlaceholder="Buscar tipo de animal..."
+                                                        />
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {!veterinary && <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                                                     Tipo de informe:
                                                 </label>
@@ -790,7 +837,7 @@ export const CrearInforme = () => {
                                                         <span>Simple</span>
                                                     </div>
                                                 )}
-                                            </div>
+                                            </div>}
 
                                             {reportType === 'inteligente' && (
                                                 <div className="space-y-2">
@@ -853,6 +900,29 @@ export const CrearInforme = () => {
                                                     Configurar como informe por defecto
                                                 </label>
                                             </div>}
+
+                                            {veterinary && (
+                                                <div className="space-y-2 border-t border-gray-200 pt-4 dark:border-gray-700">
+                                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Datos del animal</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                        Coloque el cursor en el texto y elija un dato. Se completa al aplicar la plantilla al informe; si el animal no lo tiene, queda un campo [[ ]] para completar antes de firmar.
+                                                    </p>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {ANIMAL_TEMPLATE_FIELDS.map((field) => (
+                                                            <button
+                                                                key={field}
+                                                                type="button"
+                                                                disabled={!activeEditor}
+                                                                onMouseDown={(event) => event.preventDefault()}
+                                                                onClick={() => handleInsertAnimalField(field)}
+                                                                className="rounded-md border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-100 disabled:opacity-50 dark:border-teal-700 dark:bg-teal-900 dark:text-teal-200 dark:hover:bg-teal-800"
+                                                            >
+                                                                {field}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 

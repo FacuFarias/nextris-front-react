@@ -39,7 +39,7 @@ import { closeViewerWindow } from "@/services/viewerWindow";
 import { formatDate } from "@/lib/fechaYhora";
 import { AdministrativeShareModal } from "../components/AdministrativeShareModal";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { mergeTemplateStudyReason } from "./reportTemplate";
+import { fillAnimalFields, mergeTemplateStudyReason } from "./reportTemplate";
 
 const normalizeVariableKey = (value: string | null | undefined): string =>
     String(value || "")
@@ -183,6 +183,7 @@ export const RedactarInforme = () => {
         undefined,
         reportTypeFilter,
         Boolean(reportStudyTypeId),
+        reportData.veterinary_context?.species_id || undefined,
     );
     const { data: modalTemplates, isLoading: isLoadingTemplates, isError: templatesError } = useTemplates(
         onlyStudyType && reportStudyTypeId ? reportStudyTypeId : undefined,
@@ -190,6 +191,7 @@ export const RedactarInforme = () => {
         undefined,
         reportTypeFilter,
         isTemplateModalOpen,
+        reportData.veterinary_context?.species_id || undefined,
     );
     const studyTypeDefaultTemplate = reportStudyTypeId
         ? templatesByStudyType?.data?.find((template) => template.is_user_default)
@@ -314,14 +316,15 @@ export const RedactarInforme = () => {
     const applyTemplateToReport = useCallback((template: Template) => {
         if (reportReadOnly) return;
         const examinationReason = reportData.clinical_question || reportData.history || '';
+        const animalFields = reportData.animal_fields;
         setAppliedTemplateId(template.guid);
         setFormData(prev => ({
             ...prev,
-            study_reason: mergeTemplateStudyReason(template.study_reason, examinationReason),
-            content: template.content || template.findings || '',
-            conclusion: template.conclusion || '',
+            study_reason: fillAnimalFields(mergeTemplateStudyReason(template.study_reason, examinationReason), animalFields),
+            content: fillAnimalFields(template.content || template.findings || '', animalFields),
+            conclusion: fillAnimalFields(template.conclusion || '', animalFields),
         }));
-    }, [reportData.clinical_question, reportData.history, reportReadOnly]);
+    }, [reportData.animal_fields, reportData.clinical_question, reportData.history, reportReadOnly]);
 
     // Algunos reportes antiguos llegan vacíos aunque exista un default asociado.
     // Aplicarlo desde el frontend evita que el redactor quede en blanco mientras

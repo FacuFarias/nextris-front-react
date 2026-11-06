@@ -13,8 +13,11 @@ layout, controls, TanStack Query, Axios and Zod. The server enforces mode, valid
   create orders/appointments, or upload DICOM for an explicitly selected order.
 - Ownership history is preserved. Ending a relationship revokes that animal's portal authorization.
   Portal access must be explicitly authorized; it is not implied by an owner relationship.
-- Responsible parties, portal accounts/recovery, species/raze catalogs, institution-defined protocols,
-  and simple report templates are managed in the corresponding tabs, subject to saved permissions.
+- Responsible parties, portal accounts/recovery, species/raze catalogs and institution-defined protocols
+  are managed in the corresponding tabs, subject to saved permissions.
+- Report templates use the general edition's Gestión → Informes predefinidos view, adding the animal type
+  (species) as a filter and card badge. The editor inserts `{{Nombre}}`-style animal fields, filled when the
+  template is applied; a datum the animal lacks becomes `[[ ]]`, which blocks signing until completed.
 - Reporting retains the normal editor and workflow, with veterinary context and the existing PDF.
 - DICOM identity reconciliation requires explicit confirmation. The original upload is preserved;
   failures to transfer to PACS are reported rather than presented as successful uploads.
@@ -58,7 +61,7 @@ browser fixtures, uploads, build output, database backups or portal credentials.
 
 `/buscar-pacientes` uses the Worklist page container, shared `TablaDynamic`, purple table header,
 filter panel, column search/sorting/visibility and pagination. Its primary tabs are Animales and
-Responsables. Protocols, simple templates and catalogs remain available from Configuración.
+Responsables. Protocols and catalogs remain available from Configuración; its Plantillas entry opens Informes predefinidos.
 Animal/owner creation and detail editing use the existing Modal component. The layout fills the
 available desktop width and supports mobile views without a document-wide horizontal scrollbar.
 

@@ -11,6 +11,7 @@ export type Informes = {
     guid: string;
     patient_name: string;
     responsible_name?: string;
+    species_id?: string | null;
     patient_id: string;
     patient_dni: string;
     study_type: string;

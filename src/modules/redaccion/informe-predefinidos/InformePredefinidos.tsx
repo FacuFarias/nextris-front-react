@@ -1,4 +1,3 @@
-import { VeterinaryPatients } from "@/modules/veterinary/VeterinaryPatients";
 import { useAppConfig } from "@/context/AppConfigContext";
 import { useState } from "react";
 import { MainLayout } from "@/layouts/layout"
@@ -15,7 +14,8 @@ const getStoredRelationFilter = (key: "modalityId" | "bodypartId") => {
     }
 };
 
-const HumanInformePredefinidos = () => {
+export const InformePredefinidos = () => {
+    const { config } = useAppConfig();
     const [modalityId, setModalityId] = useState<string | undefined>(() => getStoredRelationFilter("modalityId"));
     const [bodypartId, setBodypartId] = useState<string | undefined>(() => getStoredRelationFilter("bodypartId"));
 
@@ -69,7 +69,7 @@ const HumanInformePredefinidos = () => {
                         <h1 className="text-xl font-bold text-brand-purple dark:text-purple-400 sm:text-2xl">Plantillas de Informes</h1>
                     </div>
                     <p className="text-gray-600 dark:text-gray-400">
-                        Gestiona las plantillas predefinidas para agilizar la redacción de informes médicos
+                        Gestiona las plantillas predefinidas para agilizar la redacción de informes {config?.patient_mode === "veterinary" ? "veterinarios" : "médicos"}
                     </p>
                 </div>
 
@@ -88,5 +88,3 @@ const HumanInformePredefinidos = () => {
         </MainLayout>
     )
 }
-
-export const InformePredefinidos = () => { const { config, isLoading } = useAppConfig(); if (isLoading) return <p className="p-5">Cargando…</p>; return config?.patient_mode === "veterinary" ? <VeterinaryPatients initialTab="templates" /> : <HumanInformePredefinidos />; };

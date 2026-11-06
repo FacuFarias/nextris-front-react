@@ -14,12 +14,16 @@ import { useTiposEstudio } from "@/modules/configuracion/configuracion-tablas/ex
 import { useModalidades } from "@/modules/configuracion/configuracion-tablas/examenes/modalidades";
 import { useBodyParts } from "@/modules/configuracion/configuracion-tablas/examenes/partes-cuerpo";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { useAppConfig } from "@/context/AppConfigContext";
+import { get, type Choice } from "@/modules/veterinary/api";
 
 const TEMPLATE_FILTERS_STORAGE_KEY = "informe-predefinidos-filters";
 
 interface StoredTemplateFilters {
     studyTypeFilter?: string;
     reportTypeFilter?: string;
+    speciesFilter?: string;
     searchTerm?: string;
     onlyMine?: boolean;
     modalityId?: string;
@@ -58,7 +62,15 @@ export const TemplateList = ({
     const storedFilters = useMemo(() => getStoredFilters(), []);
     const [studyTypeFilter, setStudyTypeFilter] = useState<string>(storedFilters.studyTypeFilter || "");
     const [reportTypeFilter, setReportTypeFilter] = useState<string>(storedFilters.reportTypeFilter || "");
+    const [speciesFilter, setSpeciesFilter] = useState<string>(storedFilters.speciesFilter || "");
     const [searchTerm, setSearchTerm] = useState(storedFilters.searchTerm || "");
+    const { config } = useAppConfig();
+    const veterinary = config?.patient_mode === "veterinary";
+    const { data: species } = useQuery({
+        queryKey: ["veterinary", "species"],
+        queryFn: () => get<Choice[]>("/veterinary/species"),
+        enabled: veterinary,
+    });
     const [onlyMine, setOnlyMine] = useState(storedFilters.onlyMine || false);
     const navigate = useNavigate();
     // Paginación
@@ -72,20 +84,23 @@ export const TemplateList = ({
         sessionStorage.setItem(TEMPLATE_FILTERS_STORAGE_KEY, JSON.stringify({
             studyTypeFilter,
             reportTypeFilter,
+            speciesFilter,
             searchTerm,
             onlyMine,
             modalityId: modalityId || "",
             bodypartId: bodypartId || "",
             currentPage,
         }));
-    }, [studyTypeFilter, reportTypeFilter, searchTerm, onlyMine, modalityId, bodypartId, currentPage]);
+    }, [studyTypeFilter, reportTypeFilter, speciesFilter, searchTerm, onlyMine, modalityId, bodypartId, currentPage]);
 
     // Hooks
     const { data, isLoading, isError, error } = useTemplates(
         studyTypeFilter || undefined,
         modalityId,
         bodypartId,
-        reportTypeFilter || undefined
+        reportTypeFilter || undefined,
+        true,
+        (veterinary && speciesFilter) || undefined,
     );
     /* const { data: estudios } = useEstudiosPorModalidad(); */
     const deleteMutation = useDeleteTemplate();
@@ -133,6 +148,11 @@ export const TemplateList = ({
         }));
     }, [bodyParts]);
 
+    const speciesOptions = useMemo(() => (species || []).map((item) => ({
+        value: item.id,
+        label: item.name,
+    })), [species]);
+
     const reportTypeOptions = useMemo(() => ([
         { value: 'simple', label: 'Simple' },
         { value: 'inteligente', label: 'Inteligente' },
@@ -168,14 +188,20 @@ export const TemplateList = ({
         setCurrentPage(1);
     };
 
+    const handleSpeciesFilterChange = (value: string) => {
+        setSpeciesFilter(value);
+        setCurrentPage(1);
+    };
+
     // Verificar si hay filtros activos
-    const hasActiveFilters = searchTerm || studyTypeFilter || modalityId || bodypartId || reportTypeFilter || onlyMine;
+    const hasActiveFilters = searchTerm || studyTypeFilter || modalityId || bodypartId || reportTypeFilter || speciesFilter || onlyMine;
 
     // Limpiar todos los filtros
     const handleClearFilters = () => {
         setSearchTerm("");
         setStudyTypeFilter("");
         setReportTypeFilter("");
+        setSpeciesFilter("");
         setOnlyMine(false);
         if (onModalityClick) onModalityClick("");
         if (onBodypartClick) onBodypartClick("");
@@ -268,15 +294,26 @@ export const TemplateList = ({
                     searchPlaceholder="Buscar parte del cuerpo..."
                 />
 
-                {/* Filtro por tipo de informe */}
-                <Autocomplete
-                    options={reportTypeOptions}
-                    value={reportTypeFilter}
-                    onValueChange={handleReportTypeFilterChange}
-                    placeholder="Filtrar por tipo de informe"
-                    emptyMessage="No se encontraron tipos de informe."
-                    searchPlaceholder="Buscar tipo de informe..."
-                />
+                {/* La edición veterinaria usa solo informes simples: el tipo de animal ocupa ese filtro */}
+                {veterinary ? (
+                    <Autocomplete
+                        options={speciesOptions}
+                        value={speciesFilter}
+                        onValueChange={handleSpeciesFilterChange}
+                        placeholder="Filtrar por tipo de animal"
+                        emptyMessage="No se encontraron tipos de animal."
+                        searchPlaceholder="Buscar tipo de animal..."
+                    />
+                ) : (
+                    <Autocomplete
+                        options={reportTypeOptions}
+                        value={reportTypeFilter}
+                        onValueChange={handleReportTypeFilterChange}
+                        placeholder="Filtrar por tipo de informe"
+                        emptyMessage="No se encontraron tipos de informe."
+                        searchPlaceholder="Buscar tipo de informe..."
+                    />
+                )}
 
                 {/* Botón crear nueva plantilla */}
                 <PrimaryButton onClick={() => navigate("/gestion/crear-informe")}>
@@ -333,12 +370,12 @@ export const TemplateList = ({
                             No se encontraron plantillas
                         </h3>
                         <p className="text-gray-600 dark:text-gray-400 mb-6">
-                            {searchTerm || studyTypeFilter || reportTypeFilter
+                            {searchTerm || studyTypeFilter || reportTypeFilter || speciesFilter
                                 ? "Intenta ajustar tus filtros de búsqueda"
                                 : "Aún no hay plantillas creadas"}
                         </p>
-                        {!searchTerm && !studyTypeFilter && !reportTypeFilter && (
-                            <PrimaryButton onClick={() => navigate("/redaccion/crear-informe")}>
+                        {!searchTerm && !studyTypeFilter && !reportTypeFilter && !speciesFilter && (
+                            <PrimaryButton onClick={() => navigate("/gestion/crear-informe")}>
                                 <Plus className="h-4 w-4 mr-2" />
                                 Crear primera plantilla
                             </PrimaryButton>
@@ -355,6 +392,7 @@ export const TemplateList = ({
                                 key={template.guid}
                                 template={template}
                                 index={index}
+                                veterinary={veterinary}
                                 onEdit={handleEdit}
                                 onDelete={handleDelete}
                                 onToggleUserDefault={handleToggleUserDefault}

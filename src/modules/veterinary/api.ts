@@ -9,7 +9,6 @@ export interface Relationship { id: string; name: string; email: string; role: s
 export interface ClinicalEntry { id: string; category: string; note: string; weight_kg: number | null; recorded_at: string; created_by: string }
 export interface Protocol { id: string; name: string; preparation: string; species_id: string | null; study_type_id: string | null; checklist: string[]; min_weight_kg?: number | null; max_weight_kg?: number | null }
 export interface Study { guid: string; localacc: string; createdon: string; study_type: string; isreported: number; has_images?: boolean; studyinstanceuid?: string; veterinary_context?: { protocol?: Protocol } }
-export interface Template { guid: string; title: string; study_type_id: string | null; species_id: string | null; study_reason: string; content: string; conclusion: string }
 export interface RefData { guid?: string; id?: string; description?: string; name?: string; code?: string }
 export const animalSchema = z.object({ name: z.string().trim().min(1, 'Indique el nombre del animal').max(100), birthdate: z.string(), gender: z.enum(['M','F','O']) });
 export const get = async <T,>(path: string): Promise<T> => (await api.get<{data:T}>(path)).data.data;

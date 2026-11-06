@@ -13,6 +13,7 @@ import {
     Microscope,
     Lock,
     Star,
+    PawPrint,
 } from "lucide-react";
 import type { Template } from "../types/informe-pred.types";
 import { stripHtmlTags } from "@/lib/utils";
@@ -29,6 +30,7 @@ const RichTemplateContent = ({ content }: { content: string }) => (
 interface TemplateCardProps {
     template: Template;
     index?: number;
+    veterinary?: boolean;
     onEdit: (template: Template) => void;
     onDelete: (template: Template) => void;
     onToggleUserDefault?: (template: Template) => void;
@@ -41,6 +43,7 @@ interface TemplateCardProps {
 export const TemplateCard = ({
     template,
     index = 0,
+    veterinary = false,
     onEdit,
     onDelete,
     onToggleUserDefault,
@@ -86,18 +89,29 @@ export const TemplateCard = ({
                             </p>
                         )}
                         <div className="template-card__badges flex flex-wrap items-center gap-1.5">
-                            <Badge
-                                variant="outline"
-                                className={`template-card__badge template-card__badge--report ${template.report_type === 'inteligente'
-                                        ? 'template-card__badge--intelligent'
-                                        : 'template-card__badge--simple'
-                                    } text-xs py-0 px-1.5 h-5 ${template.report_type === 'inteligente'
-                                        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900 dark:text-amber-200 dark:border-amber-700'
-                                        : 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600'
-                                    }`}
-                            >
-                                {template.report_type === 'inteligente' ? 'Inteligente' : 'Simple'}
-                            </Badge>
+                            {veterinary ? (
+                                <Badge
+                                    variant="outline"
+                                    className="template-card__badge template-card__badge--species bg-teal-50 text-teal-700 border-teal-200 text-xs py-0 px-1.5 h-5 dark:bg-teal-900 dark:text-teal-200 dark:border-teal-700"
+                                    title="Tipo de animal al que se aplica la plantilla"
+                                >
+                                    <PawPrint className="h-2.5 w-2.5 mr-0.5" />
+                                    {template.species_name || 'Todos los animales'}
+                                </Badge>
+                            ) : (
+                                <Badge
+                                    variant="outline"
+                                    className={`template-card__badge template-card__badge--report ${template.report_type === 'inteligente'
+                                            ? 'template-card__badge--intelligent'
+                                            : 'template-card__badge--simple'
+                                        } text-xs py-0 px-1.5 h-5 ${template.report_type === 'inteligente'
+                                            ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900 dark:text-amber-200 dark:border-amber-700'
+                                            : 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600'
+                                        }`}
+                                >
+                                    {template.report_type === 'inteligente' ? 'Inteligente' : 'Simple'}
+                                </Badge>
+                            )}
 
                             {template.owner_id === 'nextris' && (
                                 <Badge
@@ -142,7 +156,7 @@ export const TemplateCard = ({
                                 </Badge>
                             )}
 
-                            <Badge
+                            {template.modality_description && <Badge
                                 variant="outline"
                                 data-card-control
                                 className={`template-card__badge template-card__badge--modality transition-all cursor-pointer text-xs py-0 px-1.5 h-5 ${isModalityActive
@@ -158,9 +172,9 @@ export const TemplateCard = ({
                             >
                                 <Microscope className="h-2.5 w-2.5 mr-0.5 dark:text-green-400" />
                                 {template.modality_description}
-                            </Badge>
+                            </Badge>}
 
-                            <Badge
+                            {template.bodypart_description && <Badge
                                 variant="outline"
                                 data-card-control
                                 className={`template-card__badge template-card__badge--bodypart transition-all cursor-pointer text-xs py-0 px-1.5 h-5 ${isBodypartActive
@@ -176,7 +190,7 @@ export const TemplateCard = ({
                             >
                                 <Microscope className="h-2.5 w-2.5 mr-0.5 dark:text-blue-400" />
                                 {template.bodypart_description}
-                            </Badge>
+                            </Badge>}
                         </div>
 
                     </div>
@@ -245,10 +259,11 @@ export const TemplateCard = ({
                             <p className="font-semibold leading-snug">{template.title}</p>
                             <p className="mt-0.5 text-xs font-normal text-gray-500 dark:text-gray-400">
                                 {[
+                                    veterinary ? (template.species_name || 'Todos los animales') : undefined,
                                     template.study_type_description,
                                     template.modality_description,
                                     template.bodypart_description,
-                                    template.report_type === 'inteligente' ? 'Informe inteligente' : 'Informe simple',
+                                    veterinary ? undefined : template.report_type === 'inteligente' ? 'Informe inteligente' : 'Informe simple',
                                 ].filter(Boolean).join(' · ')}
                             </p>
                         </div>
