@@ -60,6 +60,7 @@ export const CrearInforme = () => {
     const [conclusion, setConclusion] = useState("");
     const [technique, setTechnique] = useState("");
     const [isDefaultReport, setIsDefaultReport] = useState(false);
+    const [appliesToAll, setAppliesToAll] = useState(false);
     const [reportType, setReportType] = useState<ReportType>('simple');
     const [studyTypeFilter, setStudyTypeFilter] = useState<string>("");
     const [isStudySidebarOpen, setIsStudySidebarOpen] = useState(true);
@@ -218,6 +219,7 @@ export const CrearInforme = () => {
             setConclusion(template.conclusion || "");
             setTechnique(template.study_reason || "");
             setStudyTypeFilter(template.study_type_id || "");
+            setAppliesToAll(Boolean(template.applies_to_all));
             setReportType((template.report_type as ReportType) || 'simple');
             setIsDefaultReport(Boolean(template.is_system_default || template.is_user_default));
             setStructuredVariables((template as any).structured_variables || "");
@@ -366,7 +368,7 @@ export const CrearInforme = () => {
             toast.error("El título es obligatorio");
             return;
         }
-        if (!studyTypeFilter.trim()) {
+        if (!appliesToAll && !studyTypeFilter.trim()) {
             toast.error("Debe seleccionar un tipo de estudio");
             return;
         }
@@ -752,14 +754,21 @@ export const CrearInforme = () => {
                                                 <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                                                     Tipo de estudio:
                                                 </label>
-                                                <Autocomplete
-                                                    options={tiposEstudioOptions}
-                                                    value={studyTypeFilter}
-                                                    onValueChange={handleFilterChange}
-                                                    placeholder="Filtrar por tipo de estudio"
-                                                    emptyMessage="No se encontraron tipos de estudio."
-                                                    searchPlaceholder="Buscar tipo de estudio..."
-                                                />
+                                                {appliesToAll ? (
+                                                    <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-[#1e2430] text-gray-500 dark:text-gray-400 text-sm cursor-not-allowed select-none">
+                                                        <Lock className="h-3.5 w-3.5 shrink-0" />
+                                                        <span>Todos los tipos de estudio</span>
+                                                    </div>
+                                                ) : (
+                                                    <Autocomplete
+                                                        options={tiposEstudioOptions}
+                                                        value={studyTypeFilter}
+                                                        onValueChange={handleFilterChange}
+                                                        placeholder="Filtrar por tipo de estudio"
+                                                        emptyMessage="No se encontraron tipos de estudio."
+                                                        searchPlaceholder="Buscar tipo de estudio..."
+                                                    />
+                                                )}
                                             </div>
 
                                             <div>
@@ -831,7 +840,7 @@ export const CrearInforme = () => {
 
 
 
-                                            <div className="flex items-center space-x-2">
+                                            {!appliesToAll && <div className="flex items-center space-x-2">
                                                 <Checkbox
                                                     id="default-report"
                                                     checked={isDefaultReport}
@@ -843,7 +852,7 @@ export const CrearInforme = () => {
                                                 >
                                                     Configurar como informe por defecto
                                                 </label>
-                                            </div>
+                                            </div>}
                                         </div>
                                     )}
 

@@ -27,6 +27,7 @@ export interface Template {
     can_delete: boolean;
     is_user_default?: boolean;
     is_system_default?: boolean;
+    applies_to_all?: boolean;
 }
 
 export interface TemplateListResponse {
