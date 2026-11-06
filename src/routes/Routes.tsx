@@ -32,7 +32,7 @@ function RootLayout() {
         track("$pageview", { path: location.pathname, search: location.search });
     }, [location.pathname, location.search, track]);
 
-    return <><Outlet /><BridgeWidget /></>;
+    return <><Outlet />{import.meta.env.VITE_MCP_BRIDGE_ENABLED === 'true' && <BridgeWidget />}</>;
 }
 
 // El resto se carga sólo cuando se navega a la ruta (lazy)

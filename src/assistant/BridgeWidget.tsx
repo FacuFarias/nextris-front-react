@@ -64,7 +64,7 @@ export function BridgeWidget() {
     useEffect(() => {
         if (currentAssistantView(location.pathname) === 'worklist') sessionStorage.removeItem(CHILD_SESSION);
     }, [location.pathname]);
-    const enabled = import.meta.env.VITE_MCP_BRIDGE_ENABLED !== 'false'
+    const enabled = import.meta.env.VITE_MCP_BRIDGE_ENABLED === 'true'
         && authData?.user?.user_type?.toLowerCase() === 'sysadmin';
     const isChild = currentAssistantView(location.pathname) === 'editor'
         && Boolean(window.opener || sessionStorage.getItem(CHILD_SESSION));

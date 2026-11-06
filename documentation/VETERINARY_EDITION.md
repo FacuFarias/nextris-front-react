@@ -66,3 +66,9 @@ Animal filters: name/PatientID/owner search, species, breed and presence of an a
 relationship. Responsible filters: name/document/email/phone search, person/organization and
 active/inactive status. Column filters, sorting and pagination run on the server over the complete
 matching set. Directory controls and detail actions retain the existing saved permissions.
+
+## MCP disabled
+
+CDIVET builds with `VITE_MCP_BRIDGE_ENABLED=false`. The MCP widget, bridge event listeners
+and polling remain unmounted. The development proxy also requires explicit opt-in with `true`.
+Production Nginx rejects `/assistant-bridge` and its subpaths.

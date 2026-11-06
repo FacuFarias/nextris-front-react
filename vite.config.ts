@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
         clientPort: Number(env.VITE_HMR_CLIENT_PORT || 5173),
       } : undefined,
       proxy: {
-        '/assistant-bridge': { target: env.VITE_ASSISTANT_BRIDGE_URL || 'http://127.0.0.1:5188', changeOrigin: true },
+        ...(env.VITE_MCP_BRIDGE_ENABLED === 'true' ? { '/assistant-bridge': { target: env.VITE_ASSISTANT_BRIDGE_URL || 'http://127.0.0.1:5188', changeOrigin: true } } : {}),
         '/api': { target: env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:5001', changeOrigin: true, secure: false },
       },
     },
