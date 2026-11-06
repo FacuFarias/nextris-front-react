@@ -1,4 +1,5 @@
 import { useAuth } from "@/context/AuthContext";
+import { ExamViewerButton } from "@/components/ExamViewerButton";
 import { hasAnyPermission } from "@/lib/permissions";
 import { LocalReportDialog } from '@/components/LocalReportDialog';
 import type { CombinedHistoryEntry, LocalReport } from '@/types/patientHistory';
@@ -85,7 +86,8 @@ export const RedactarInforme = () => {
     const isMobile = useIsMobile();
     const { informeGuid, studyInstanceUID } = useParams();
     const [searchParams] = useSearchParams();
-    const assistantMode = searchParams.get('assistant') === '1';
+    const uploadMode = searchParams.get('upload') === '1';
+    const assistantMode = searchParams.get('assistant') === '1' || uploadMode;
     const closeEditorWindow = () => assistantMode ? navigate('/worklist') : window.close();
 
     // Obtener los parámetros
@@ -2050,6 +2052,7 @@ export const RedactarInforme = () => {
                                             Cancelado{reportData.workflow_detail ? ` · ${reportData.workflow_detail}` : ''}
                                         </span>
                                     )}
+                                    {uploadMode && examId && <ExamViewerButton examId={examId} />}
                                     <FlagsCell
                                         examId={examId}
                                         currentFlags={examFlags}

@@ -3,11 +3,21 @@ import { lazy, Suspense, useEffect, useRef } from "react";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { useAnalytics } from "@/context/AnalyticsContext";
 import { useAuth } from "@/context/AuthContext";
+import { useAppConfig } from "@/context/AppConfigContext";
 import { BridgeWidget } from "@/assistant/BridgeWidget";
 
 // Rutas de autenticación — cargadas de forma eager (necesarias en el arranque)
 import { Login } from "@/modules/auth/login/Login";
 import { ChangePassword } from "@/modules/auth/change-password/ChangePassword";
+
+// Cada edición tiene una sola pantalla de carga; la ruta de la otra redirige a ella.
+function StudyUploadRoute({ legacyPath = false }: { legacyPath?: boolean }) {
+    const { config } = useAppConfig();
+    if (!config) return null;
+    const veterinary = config.patient_mode === "veterinary";
+    if (veterinary) return legacyPath ? <Navigate to="/cargar-estudio" replace /> : <VeterinaryUpload />;
+    return legacyPath ? <CargarEstudios /> : <Navigate to="/gestion/cargar-estudios" replace />;
+}
 
 // ── Page-view tracker ─────────────────────────────────────────────────────────
 // Mounted as the root layout element so it lives inside the RouterProvider
@@ -58,6 +68,7 @@ const CrearInforme = lazy(() => import("@/modules/gestion").then(m => ({ default
 const UnificacionPaciente = lazy(() => import("@/modules/administracion/unificacion-paciente/UnificacionPaciente").then(m => ({ default: m.UnificacionPaciente })));
 const ReasignacionExamenes = lazy(() => import("@/modules/administracion/reasignacion-examenes/ReasignacionExamenes").then(m => ({ default: m.ReasignacionExamenes })));
 const CargarEstudios = lazy(() => import("@/modules/gestion").then(m => ({ default: m.CargarEstudios })));
+const VeterinaryUpload = lazy(() => import("@/modules/veterinary/VeterinaryUpload").then(m => ({ default: m.VeterinaryUpload })));
 const AccesosExternos = lazy(() => import("@/modules/gestion/accesos-externos").then(m => ({ default: m.AccesosExternos })));
 // structured_reports — deshabilitado temporalmente
 // nexi — deshabilitado temporalmente
@@ -308,6 +319,18 @@ const router = createBrowserRouter([
         ),
     },
     {
+        path: "/cargar-estudio",
+        handle: { title: "Cargar Estudio" },
+        element: (
+            <ProtectedRoute
+                allowedRoles={["Sysadmin", "Medico", "Administrador"]}
+                requiredPermissions={["dicom.studies.manage"]}
+            >
+                <StudyUploadRoute />
+            </ProtectedRoute>
+        ),
+    },
+    {
         path: "/gestion/cargar-estudios",
         handle: { title: "Cargar estudios" },
         element: (
@@ -315,7 +338,7 @@ const router = createBrowserRouter([
                 allowedRoles={["Sysadmin", "Medico", "Administrador"]}
                 requiredPermissions={["dicom.studies.manage"]}
             >
-                <CargarEstudios />
+                <StudyUploadRoute legacyPath />
             </ProtectedRoute>
         ),
     },

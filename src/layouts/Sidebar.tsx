@@ -92,6 +92,13 @@ const menuItems: MenuItem[] = [
         requiredPermissions: ["tabs.worklist.view"],
     },
     {
+        icon: UploadCloud,
+        label: "Cargar Estudio",
+        path: "/cargar-estudio",
+        allowedRoles: ["Sysadmin", "Medico", "Administrador"],
+        requiredPermissions: ["dicom.studies.manage"],
+    },
+    {
         icon: NotebookText,
         label: "Vista administrativa",
         path: "/administrative_view",
@@ -286,13 +293,16 @@ export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
         return !disabledModulesSet.has(requiredModule) && moduleCodesSet.has(requiredModule);
     };
 
+    const veterinaryMode = config?.patient_mode === "veterinary";
     const filteredMenuItems = useMemo(() =>
         menuItems.map(item => {
+            if (item.path === "/cargar-estudio" && !veterinaryMode) return null;
             if (!hasAccess(item.allowedRoles, item.requiredPermissions)) return null;
             if (!hasModuleAccess(item.requiredModule || moduleForPath(item.path || ""))) return null;
 
             if (item.subItems) {
                 const filteredSubItems = item.subItems.filter(subItem => {
+                    if (subItem.path === "/gestion/cargar-estudios" && veterinaryMode) return false;
                     if (!hasAccess(subItem.allowedRoles, subItem.requiredPermissions)) return false;
                     if (!hasModuleAccess(subItem.requiredModule || moduleForPath(subItem.path))) return false;
                     return true;
@@ -303,7 +313,7 @@ export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
 
             return item;
         }).filter(Boolean) as MenuItem[]
-        , [userRole, userPermissions, isModulesLoading, hasModulesError, moduleCodesSet, disabledModulesSet]);
+        , [userRole, userPermissions, isModulesLoading, hasModulesError, moduleCodesSet, disabledModulesSet, veterinaryMode]);
 
     // Inicializar ya con los items que corresponden a la ruta actual abiertos
     const [expandedItems, setExpandedItems] = useState<string[]>(() =>
