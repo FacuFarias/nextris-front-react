@@ -20,7 +20,10 @@ export const Login = ({ initialIsPatient = false }: LoginProps) => {
             <BackgroundEffects isPatient={isPatient} />
 
             {/* Content */}
-            <div className="relative z-10 w-full flex flex-col items-center">
+            <div className={cn(
+                "relative z-10 w-full flex flex-col items-center",
+                brand.veterinary && "lg:ml-auto lg:mr-[6vw] lg:max-w-md"
+            )}>
 
 
                 {/* Login Card */}
