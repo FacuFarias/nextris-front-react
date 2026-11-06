@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
-import { brand } from "@/lib/brand";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -357,9 +356,9 @@ export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                             "flex items-center cursor-pointer",
                             collapsed ? "lg:justify-center" : "flex-1"
                         )} onClick={() => navigate(userRole === "patient" ? "/estudios" : "/inicio")}>
-                            <img src={brand.mark} alt={`Logo de ${brand.name}`} className={cn("w-7 h-7 object-contain", brand.icon ? "rounded bg-white" : "brightness-105")} />
+                            <img src={logo} alt="NextRIS Logo" className="w-6 h-6 brightness-105" />
                             <span className={cn("ml-2 font-display text-base font-bold text-white", collapsed && "lg:hidden")}>
-                                {brand.icon ? brand.name : <>Next<span className="text-purple-400">RIS</span></>}
+                                Next<span className="text-purple-400">RIS</span>
                             </span>
                         </div>
                         <button

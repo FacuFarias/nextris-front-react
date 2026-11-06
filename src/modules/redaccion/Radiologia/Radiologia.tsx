@@ -140,7 +140,9 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const [verSinImagenes, setVerSinImagenes] = useState(false);
     // Los estudios recibidos desde PACS pueden no tener todavía una orden CP.
     // Se muestran por defecto y el usuario puede ocultarlos desde el filtro.
-    const [verSinOrden, setVerSinOrden] = useState(true);
+    const [verSinOrdenElegido, setVerSinOrden] = useState(true);
+    // CDIVET no trabaja con órdenes CP: nunca se ocultan estudios por este criterio, ni desde vistas guardadas.
+    const verSinOrden = isVeterinary || verSinOrdenElegido;
     const [incluirCancelado, setIncluirCancelado] = useState(false);
     const [soloConNotas, setSoloConNotas] = useState(false);
     const [flagFilter, setFlagFilter] = useState<string[]>([]);
@@ -1335,7 +1337,9 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                             {/* Sección de Filtros */}
                             <div className="flex flex-col gap-2 flex-1">
                                 <span className="report-filters-panel__heading text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Filtros</span>
-                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-2">
+                                <div className={isVeterinary
+                                    ? "grid grid-cols-1 gap-2 sm:grid-cols-6 sm:[&>*:nth-child(-n+2)]:col-span-3 sm:[&>*:nth-child(n+3)]:col-span-2"
+                                    : "grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-2"}>
                                     <div className="min-w-0">
                                         <InputSearch
                                             searchTerm={searchTerm}
@@ -1467,7 +1471,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                                             Incluir sin imágenes
                                         </Label>
                                     </div>
-                                    {!isAdministrativeView && <div className="flex items-center space-x-2">
+                                    {!isAdministrativeView && !isVeterinary && <div className="flex items-center space-x-2">
                                         <Checkbox
                                             id="sin-orden"
                                             checked={verSinOrden}
