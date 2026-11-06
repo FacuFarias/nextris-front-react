@@ -1,3 +1,4 @@
+import { useAppConfig } from "@/context/AppConfigContext";
 import { LocalReportDialog } from '@/components/LocalReportDialog';
 import type { LocalReport } from '@/types/patientHistory';
 import { hasAnyPermission } from "@/lib/permissions";
@@ -15,7 +16,7 @@ import { useCreateFilterPreset, useUpdateFilterPreset } from "./hooks/use-filter
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useInformes, useBlockExam, useUnblockExam, useUpdateFlags, useUpdateTagIds, useAllTags, useUpdateGeneralNotes, useDeleteExaminationNote, useAssignExam, useAssignExamBatch, useAddTagsBatch, useAddFlagsBatch, useConfirmStudy, useCancellationReasons, useCancelStudy } from "./hooks/use-informes"
 import { useCrossWindowSync } from "./redactar-informe/hooks/use-cross-windows"
-import { getInformesActions, getAdministrativeInformesActions, getFlagsColumn, getTagsColumn, getGeneralNotesAction, getPatientNameColumn, getSelectionColumn, getInformeColumns, informeColumns } from "./components/columns"
+import { getInformesActions, getAdministrativeInformesActions, getFlagsColumn, getTagsColumn, getGeneralNotesAction, getPatientNameColumn, responsibleColumn, getSelectionColumn, getInformeColumns, informeColumns } from "./components/columns"
 import TablaDynamic from "@/components/TableDynamic"
 import type { Informes } from "./types/informes.types"
 import type { FilterPreset, FilterPresetFilters } from "./types/filter-preset.types"
@@ -106,6 +107,10 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const queryClient = useQueryClient();
     const isMobile = useIsMobile();
     const isAdministrativeView = administrativeView;
+    const { config: appConfig } = useAppConfig();
+    const isVeterinary = appConfig?.patient_mode === 'veterinary';
+    const veterinaryDefaults = useMemo(() => ["patient_name", "patient_id", "responsible_name", "study_type", "status", "accession_number", "workflow_state", "study_date", "num_instances"], []);
+
     // Hook para sincronizar entre ventanas
     useCrossWindowSync();
 
@@ -124,6 +129,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const [bodyPartId, setBodyPartId] = useState<string | undefined>(undefined);
     const [modalityId, setModalityId] = useState<string | undefined>(undefined);
     const [searchTerm, setSearchTerm] = useState("");
+    const [responsibleSearch, setResponsibleSearch] = useState("");
     const [assistantPatientId, setAssistantPatientId] = useState("");
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
@@ -154,7 +160,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const [isBlocking, setIsBlocking] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<string[]>(
         normalizeVisibleColumns(
-            isAdministrativeView
+            isVeterinary && !isAdministrativeView ? veterinaryDefaults : isAdministrativeView
                 ? ["patient_name", "patient_id", "patient_dni", "study_type", "template_name", "status", "workflow_state", "created_on", "study_date", "arrival_time", "flags"]
                 : ["patient_name", "patient_id", "patient_dni", "assignto_name", "study_type", "template_name", "status", "accession_number", "workflow_state", "created_on", "study_date", "arrival_time", "num_instances"],
             isAdministrativeView ? [] : FIXED_COLUMN_KEYS,
@@ -163,13 +169,20 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const [sortColumn, setSortColumn] = useState("");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
     const [activePresetId, setActivePresetId] = useState<string | null>(null);
+    useEffect(() => {
+        if (isVeterinary && !isAdministrativeView && activePresetId === null) {
+            setVisibleColumns(normalizeVisibleColumns(veterinaryDefaults));
+        }
+    }, [isVeterinary, isAdministrativeView, veterinaryDefaults, activePresetId]);
+
     const presetsInitializedRef = useRef(false);
     const [shareModal, setShareModal] = useState<{ kind: "images" | "study"; informe: Informes } | null>(null);
     const [missingImageStudy, setMissingImageStudy] = useState<Informes | null>(null);
     const fixedColumnKeys = useMemo<string[]>(() => isAdministrativeView ? [] : [...FIXED_COLUMN_KEYS], [isAdministrativeView]);
 
     const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
-    const debouncedColumnFilters = useDebounce(columnFilters, 500);
+    const effectiveColumnFilters = useMemo(() => ({...columnFilters, ...(isVeterinary && responsibleSearch.trim() ? {responsible_query: responsibleSearch.trim()} : {})}), [columnFilters, isVeterinary, responsibleSearch]);
+    const debouncedColumnFilters = useDebounce(effectiveColumnFilters, 500);
     const useDebounceSearch = useDebounce(searchTerm, 500);
     const [assistantSearchOverride, setAssistantSearchOverride] = useState<string | null>(null);
     const worklistSearch = assistantSearchOverride ?? useDebounceSearch;
@@ -471,8 +484,8 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     }, [unblockExam]);
 
     const patientNameColumn = useMemo(
-        () => getPatientNameColumn(),
-        []
+        () => getPatientNameColumn(isVeterinary),
+        [isVeterinary]
     );
 
     // Columna de banderas generada con el handler actual
@@ -498,17 +511,17 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     }, []);
 
     const missingImageColumns = useMemo(
-        () => getInformeColumns(canLinkMissingImages ? handleOpenMissingImageModal : undefined),
-        [canLinkMissingImages, handleOpenMissingImageModal],
+        () => getInformeColumns(canLinkMissingImages ? handleOpenMissingImageModal : undefined).map(column => isVeterinary && column.key === 'patient_id' ? {...column, label: 'ID ANIMAL'} : column),
+        [canLinkMissingImages, handleOpenMissingImageModal, isVeterinary],
     );
 
     // Todas las columnas disponibles (selección + paciente + estáticas + banderas + tags)
     const allColumns = useMemo(
         () => (isAdministrativeView
             ? [patientNameColumn, ...missingImageColumns, flagsColumn, tagsColumn]
-            : [selectionColumn, patientNameColumn, ...missingImageColumns, flagsColumn, tagsColumn]
+            : [selectionColumn, patientNameColumn, ...(isVeterinary ? [responsibleColumn] : []), ...missingImageColumns, flagsColumn, tagsColumn]
         ).filter((column) => column.key !== "is_reported"),
-        [isAdministrativeView, selectionColumn, patientNameColumn, missingImageColumns, flagsColumn, tagsColumn],
+        [isAdministrativeView, isVeterinary, selectionColumn, patientNameColumn, missingImageColumns, flagsColumn, tagsColumn],
     );
 
     // Columnas visibles (incluye banderas si está en la lista)
@@ -520,6 +533,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     // Función para obtener los filtros actuales como objeto
     const getCurrentFilters = useCallback((): FilterPresetFilters => ({
         search: searchTerm,
+        ...(isVeterinary ? {responsible_search: responsibleSearch} : {}),
         listo_para_leer: isAdministrativeView ? incluirSinFinalizar : listoParaLeer,
         ver_finalizados: isAdministrativeView ? true : verFinalizados,
         asignados_a_mi: isAdministrativeView ? false : asignadosAMi,
@@ -537,13 +551,14 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
         date_field: dateField,
         flag_filter: flagFilter.join(','),
         filters_visible: showFilters,
-    }), [isAdministrativeView, searchTerm, listoParaLeer, incluirSinFinalizar, verFinalizados, asignadosAMi, verSinImagenes, verSinOrden, incluirCancelado, studioTypeId, modalityId, bodyPartId, visibleColumns, perPage, sortColumn, sortDirection, dateRange, dateField, flagFilter, showFilters]);
+    }), [isAdministrativeView, isVeterinary, responsibleSearch, searchTerm, listoParaLeer, incluirSinFinalizar, verFinalizados, asignadosAMi, verSinImagenes, verSinOrden, incluirCancelado, studioTypeId, modalityId, bodyPartId, visibleColumns, perPage, sortColumn, sortDirection, dateRange, dateField, flagFilter, showFilters]);
 
     // Función para aplicar filtros de un preset
     const applyPreset = useCallback((preset: FilterPreset | null) => {
         if (!preset) {
             // Reset a defaults (tab "Todos")
             setSearchTerm("");
+            setResponsibleSearch("");
             setListoParaLeer(true);
             setVerFinalizados(false);
             setAsignadosAMi(false);
@@ -553,7 +568,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
             setStudioTypeId(undefined);
             setModalityId(undefined);
             setBodyPartId(undefined);
-            setVisibleColumns(normalizeVisibleColumns(informeColumns.map(col => col.key as string)));
+            setVisibleColumns(normalizeVisibleColumns(isVeterinary ? veterinaryDefaults : informeColumns.map(col => col.key as string)));
             setPerPage(10);
             setSortColumn("");
             setSortDirection("asc");
@@ -565,6 +580,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
         } else {
             const f = preset.filters;
             setSearchTerm(f.search || "");
+            setResponsibleSearch(f.responsible_search || "");
             setListoParaLeer(f.listo_para_leer ?? true);
             setVerFinalizados(f.ver_finalizados ?? false);
             setAsignadosAMi(f.asignados_a_mi ?? false);
@@ -574,7 +590,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
             setStudioTypeId(f.study_group_id || undefined);
             setModalityId(f.modality_id || undefined);
             setBodyPartId(f.bodypart_id || undefined);
-            const cols = f.visible_columns?.length ? f.visible_columns : informeColumns.map(col => col.key as string);
+            const cols = f.visible_columns?.length ? f.visible_columns : isVeterinary ? veterinaryDefaults : informeColumns.map(col => col.key as string);
             setVisibleColumns(normalizeVisibleColumns(cols));
             setPerPage(f.per_page || 10);
             setSortColumn(f.sort_column || "");
@@ -586,7 +602,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
             setActivePresetId(preset.guid);
         }
         setPage(1);
-    }, []);
+    }, [isVeterinary, veterinaryDefaults]);
 
     // Inicializar con el preset activo al cargar
     useEffect(() => {
@@ -1223,7 +1239,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
 
 
     const activeFilterCount = [
-        searchTerm.trim(), isAdministrativeView ? false : studioTypeId, modalityId, isAdministrativeView ? false : bodyPartId,
+        searchTerm.trim(), isVeterinary && responsibleSearch.trim(), isAdministrativeView ? false : studioTypeId, modalityId, isAdministrativeView ? false : bodyPartId,
         isAdministrativeView ? incluirSinFinalizar : verFinalizados, isAdministrativeView ? false : asignadosAMi, verSinImagenes, verSinOrden, incluirCancelado, soloConNotas,
         flagFilter.length > 0, dateRange !== "all", dateField !== "admision", isAdministrativeView ? false : !listoParaLeer,
     ].filter(Boolean).length;
@@ -1278,7 +1294,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="min-w-0 flex-1"><InputSearch searchTerm={searchTerm} setSearchTerm={(value) => { setSearchTerm(value); setPage(1); }} placeholder="Buscar paciente, Patient ID o historial..." /></div>
+                        <div className="min-w-0 flex-1"><InputSearch searchTerm={searchTerm} setSearchTerm={(value) => { setSearchTerm(value); setPage(1); }} placeholder={isVeterinary ? "Buscar animal, ID o responsable..." : "Buscar paciente, Patient ID o historial..."} /></div>
                         <button type="button" onClick={() => setShowFilters(true)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground" aria-label="Abrir filtros">
                             <SlidersHorizontal className="h-5 w-5" />
                         </button>
@@ -1324,9 +1340,10 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                                         <InputSearch
                                             searchTerm={searchTerm}
                                             setSearchTerm={(value) => { setSearchTerm(value); setPage(1); }}
-                                            placeholder="Buscar paciente, Patient ID o historial..."
+                                            placeholder={isVeterinary ? "Buscar animal, ID o responsable..." : "Buscar paciente, Patient ID o historial..."}
                                         />
                                     </div>
+                                    {isVeterinary && <div className="min-w-0"><InputSearch searchTerm={responsibleSearch} setSearchTerm={value => {setResponsibleSearch(value);setPage(1)}} placeholder="Filtrar por responsable..." /></div>}
                                     {!isAdministrativeView && (
                                         <Autocomplete
                                             className="report-filters-panel__autocomplete"

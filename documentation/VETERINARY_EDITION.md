@@ -72,3 +72,11 @@ matching set. Directory controls and detail actions retain the existing saved pe
 CDIVET builds with `VITE_MCP_BRIDGE_ENABLED=false`. The MCP widget, bridge event listeners
 and polling remain unmounted. The development proxy also requires explicit opt-in with `true`.
 Production Nginx rejects `/assistant-bridge` and its subpaths.
+
+## Veterinary Worklist
+
+The default Todos view shows Animal, ID Animal and Responsable and omits admission/arrival
+stamps, assignment and template columns. Those columns remain available for custom views.
+The dedicated responsible search is saved/restored with a preset and cleared by Todos.
+Global search also matches current responsible names. Responsible column filters and sorting
+are applied by the API before pagination. Human mode retains its existing labels/defaults.

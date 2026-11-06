@@ -1,5 +1,6 @@
 export interface FilterPresetFilters {
     search: string;
+    responsible_search?: string;
     listo_para_leer: boolean;
     ver_finalizados: boolean;
     asignados_a_mi: boolean;

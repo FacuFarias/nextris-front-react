@@ -98,19 +98,24 @@ export const getSelectionColumn = (
     ),
 });
 
-export const getPatientNameColumn = (): TableColumn<Informes> => ({
+export const getPatientNameColumn = (veterinary = false): TableColumn<Informes> => ({
     key: "patient_name",
-    label: "PACIENTE",
+    label: veterinary ? "ANIMAL" : "PACIENTE",
     className: "font-medium",
     sortable: true,
     filterable: true,
     mobile: { role: "title", order: 1 },
     render: (value: string) => (
         <div className="flex items-center gap-2">
-            <span>{formatPatientName(value)}</span>
+            <span>{veterinary ? value : formatPatientName(value)}</span>
         </div>
     ),
 });
+
+export const responsibleColumn: TableColumn<Informes> = {
+    key: "responsible_name", label: "RESPONSABLE", sortable: true, filterable: true,
+    className: "font-medium", render: (value: string | null | undefined) => value || "Pendiente",
+};
 
 const WorkflowStateBadge = ({ state }: { state?: Informes['workflow_state'] }) => {
     if (!state || state === 'pending') return <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-300">Ready</span>;

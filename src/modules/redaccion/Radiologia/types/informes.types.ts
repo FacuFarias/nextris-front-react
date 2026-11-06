@@ -10,6 +10,7 @@ export type StudyNote = {
 export type Informes = {
     guid: string;
     patient_name: string;
+    responsible_name?: string;
     patient_id: string;
     patient_dni: string;
     study_type: string;
