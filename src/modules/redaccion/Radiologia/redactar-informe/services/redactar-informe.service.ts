@@ -41,6 +41,6 @@ export const postNextExam = async (payload: {
 
 
 export const postQuitarFirma = async ({ examId }: { examId: string }) => {
-    const response = await api.post(`/quitar_firma/${examId}`);
+    const response = await api.post(`/reports/${encodeURIComponent(examId)}/unsign`);
     return response.data;
 };
