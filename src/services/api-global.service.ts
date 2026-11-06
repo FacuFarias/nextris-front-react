@@ -85,21 +85,3 @@ export const getObrasSocialesPorLocacion = async (locationGuid: string) => {
         throw error;
     }
 }
-
-export const getImagenesPorEstudio = async (studyGuid: string) => {
-    try {
-        const response = await api.get(`/images/study/${studyGuid}?format=base64`);
-        return response.data.data;
-    } catch (error) {
-        throw error;
-    }
-}
-
-export const deleteImagenDeEstudio = async (studyGuid: string, filename: string) => {
-    try {
-        const response = await api.delete(`/images/study/${studyGuid}/file/${encodeURIComponent(filename)}`);
-        return response.data;
-    } catch (error) {
-        throw error;
-    }
-}

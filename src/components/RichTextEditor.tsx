@@ -3,7 +3,7 @@ import { Node } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
-import Image from '@tiptap/extension-image';
+import { KeyImageExtension } from './KeyImageExtension';
 import Placeholder from '@tiptap/extension-placeholder';
 import {
     Bold,
@@ -182,7 +182,7 @@ export const RichTextEditor = ({
             TextAlign.configure({
                 types: ['heading', 'paragraph'],
             }),
-            Image,
+            KeyImageExtension,
             Placeholder.configure({
                 placeholder,
             }),
@@ -216,7 +216,7 @@ export const RichTextEditor = ({
     useEffect(() => {
         if (!autoGrow || !editor || hasManualResize) return;
 
-        const frame = window.requestAnimationFrame(() => {
+        const resize = () => {
             const wrapper = editorWrapperRef.current;
             const content = editor.view.dom as HTMLElement | undefined;
             if (!wrapper || !content) return;
@@ -231,9 +231,16 @@ export const RichTextEditor = ({
 
             wrapper.style.height = 'auto';
             wrapper.style.height = `${Math.max(40, content.scrollHeight)}px`;
-        });
+        };
+        const frame = window.requestAnimationFrame(resize);
+        // Las imágenes clave cargan después de renderizar: sin esto quedarían recortadas.
+        const dom = editor.view.dom;
+        dom.addEventListener('load', resize, true);
 
-        return () => window.cancelAnimationFrame(frame);
+        return () => {
+            window.cancelAnimationFrame(frame);
+            dom.removeEventListener('load', resize, true);
+        };
     }, [autoGrow, editor, fillWhenEmpty, hasManualResize, value]);
 
     const handleResizeMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {

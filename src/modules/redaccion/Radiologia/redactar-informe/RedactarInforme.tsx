@@ -1,3 +1,4 @@
+import type { Editor } from "@tiptap/react";
 import { useAuth } from "@/context/AuthContext";
 import { ExamViewerButton } from "@/components/ExamViewerButton";
 import { hasAnyPermission } from "@/lib/permissions";
@@ -14,7 +15,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Cat, Dog, PawPrint, ChevronDown, ChevronRight, FileMinus, FileX, Image as ImageIcon, Save, Signature, User, Mars, Venus, Loader2, X, Sparkles, FileText, Bold, Italic, Underline as UnderlineIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, FileIcon, RefreshCcw, Braces, Search, SkipForward, Share2 } from "lucide-react";
 import { LayoutSinSidebar } from "@/layouts/LayoutSinSidebar";
-import { useImagenesPorEstudio } from "@/hooks/use-global";
+import { useKeyImages } from "./hooks/use-key-images";
+import { KeyImageThumbnail } from "./components/KeyImageThumbnail";
+import type { KeyImage } from "@/services/keyImages.service";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { toast } from "sonner";
 import { criteriaService, type ParserVariableTreeNode, type StructuredCriterion, type CriterionEvaluationResult } from "@/services/criteria.service";
@@ -80,6 +83,8 @@ const hasReportContent = (value: string | null | undefined) => {
     );
 };
 
+const REPORT_IMAGE_FIELDS = ['study_reason', 'content', 'conclusion'] as const;
+
 export const RedactarInforme = () => {
     const navigate = useNavigate();
     const isMobile = useIsMobile();
@@ -126,7 +131,6 @@ export const RedactarInforme = () => {
     const reportStudyTypeId = String(reportData.study_type_id || '').trim();
     const reportLocationId = String(reportData.location_id || '').trim();
     const structuredReportsEnabled = Boolean(reportData.structured_reports_enabled);
-    const { data: imagenes, refetch: refetchImagenes, deleteImagen } = useImagenesPorEstudio(studyInstanceUID || '');
     const updateReportMutation = useUpdateReport(informeGuid || '');
     const { mutate: updateFlags, isPending: isUpdatingFlags } = useUpdateFlags();
     const { mutate: updateTagIds, isPending: isUpdatingTagIds } = useUpdateTagIds();
@@ -146,6 +150,7 @@ export const RedactarInforme = () => {
     const canShare = hasAnyPermission(authData?.user?.permissions, ['worklist.share']);
     const [shareKind, setShareKind] = useState<'study' | 'images' | null>(null);
     const shareStudyUid = String(reportData.study_instance_uid || studyInstanceUID || '').trim();
+    const { keyImages, refetch: refetchKeyImages, deleteImage: deleteKeyImage } = useKeyImages(shareStudyUid);
     useEffect(() => { setShareKind(null); }, [informeGuid]);
     const canSign = hasAnyPermission(authData?.user?.permissions, ['reports.sign']);
     const canUnsign = hasAnyPermission(authData?.user?.permissions, ['reports.unsign']);
@@ -447,12 +452,9 @@ export const RedactarInforme = () => {
     const assistantUndo = useRef<{ before: ReturnType<typeof reportSnapshot>; after: ReturnType<typeof reportSnapshot>; sequence: number } | null>(null);
 
     // Ref para rastrear imágenes ya cargadas (evita reemplazar las arrastradas al campo)
-    const loadedImageNamesRef = useRef<Set<string>>(new Set());
 
     // Estado para las imágenes disponibles
-    const [images, setImages] = useState<Array<{ id: number; url: string; name: string }>>([]);
-    const [allImages, setAllImages] = useState<Array<{ id: number; url: string; name: string }>>([]);
-    const [draggedImage, setDraggedImage] = useState<{ id: number; url: string; name: string } | null>(null);
+    const [draggedImage, setDraggedImage] = useState<KeyImage | null>(null);
     const [draggedVariableValue, setDraggedVariableValue] = useState<{
         type: 'variable' | 'criterion';
         text: string;
@@ -477,62 +479,6 @@ export const RedactarInforme = () => {
     const rightSidebarResizeStartXRef = useRef(0);
     const rightSidebarResizeStartWidthRef = useRef(285);
     const rightSidebarResizeMovedRef = useRef(false);
-
-    const getApiOrigin = useCallback(() => {
-        try {
-            const apiBaseUrl = import.meta.env.VITE_API_URL;
-            if (!apiBaseUrl) return window.location.origin;
-            return new URL(apiBaseUrl, window.location.origin).origin;
-        } catch {
-            return window.location.origin;
-        }
-    }, []);
-
-    const getImageUrlByFilename = useCallback((filename: string) => {
-        const safeStudyUID = encodeURIComponent(studyInstanceUID || '');
-        const safeFilename = encodeURIComponent(filename || '');
-        return `${getApiOrigin()}/api/images/study/${safeStudyUID}/file/${safeFilename}`;
-    }, [getApiOrigin, studyInstanceUID]);
-
-    const resolveImageUrl = useCallback((rawPath: string | undefined, filename: string) => {
-        const fallbackUrl = getImageUrlByFilename(filename);
-        if (!rawPath) return fallbackUrl;
-
-        if (rawPath.startsWith('data:image/')) return rawPath;
-
-        if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
-            try {
-                const parsed = new URL(rawPath);
-                if (window.location.protocol === 'https:' && parsed.protocol === 'http:') {
-                    parsed.protocol = 'https:';
-                }
-                return parsed.toString();
-            } catch {
-                return fallbackUrl;
-            }
-        }
-
-        if (rawPath.startsWith('/api/')) {
-            return `${getApiOrigin()}${rawPath}`;
-        }
-
-        if (rawPath.startsWith('api/')) {
-            return `${getApiOrigin()}/${rawPath}`;
-        }
-
-        if (rawPath.startsWith('/uploads') || rawPath.startsWith('/media')) {
-            return `${getApiOrigin()}${rawPath}`;
-        }
-
-        return fallbackUrl;
-    }, [getApiOrigin, getImageUrlByFilename]);
-
-    const getImageMimeType = useCallback((filename: string) => {
-        const lower = filename.toLowerCase();
-        if (lower.endsWith('.png')) return 'image/png';
-        if (lower.endsWith('.webp')) return 'image/webp';
-        return 'image/jpeg';
-    }, []);
 
     const rightSidebarTabLabel = rightSidebarTab === 'history'
             ? 'Historia clínica'
@@ -626,23 +572,17 @@ export const RedactarInforme = () => {
 
         if (!assistantMutation.current) assistantEditSequence.current += 1;
         setFormData(prev => ({ ...prev, [field]: value }));
-
-        const imgElements = newDoc.querySelectorAll('img');
-        const usedImageUrls = Array.from(imgElements).map(img => img.src);
-        const currentImages = new Set(images.map(img => img.url));
-        const missingImages = allImages.filter(img =>
-            !usedImageUrls.includes(img.url) && !currentImages.has(img.url)
-        );
-
-        if (missingImages.length > 0) {
-            setImages(prev => [...prev, ...missingImages]);
-            if (draggedImage && missingImages.some(img => img.id === draggedImage.id)) {
-                setDraggedImage(null);
-            }
-        }
     };
 
-    const handleDragStart = (image: { id: number; url: string; name: string }) => {
+    // Se inserta después de la selección: una imagen recién colocada queda seleccionada y no debe reemplazarse.
+    const insertKeyImage = (editor: Editor, image: KeyImage, position = editor.state.selection.to) => {
+        editor.chain().focus().insertContentAt(position, {
+            type: 'image',
+            attrs: { keyImageId: image.id, alt: `Imagen clave de ${image.author_name}` },
+        }).run();
+    };
+
+    const handleDragStart = (image: KeyImage) => {
         setDraggedImage(image);
         setDraggedVariableValue(null);
     };
@@ -730,12 +670,8 @@ export const RedactarInforme = () => {
         }
 
         if (draggedImage && editor) {
-            editor.chain().focus().setImage({
-                src: draggedImage.url,
-                alt: draggedImage.name,
-                title: draggedImage.name
-            }).run();
-            setImages(prev => prev.filter(img => img.id !== draggedImage.id));
+            insertKeyImage(editor, draggedImage, editor.view.posAtCoords({ left: e.clientX, top: e.clientY })?.pos);
+            setDraggedImage(null);
             setDragOverField(null);
         }
     };
@@ -915,44 +851,16 @@ export const RedactarInforme = () => {
 
     };
 
-    useEffect(() => {
-        if (!imagenes?.images?.length) return;
-
-        const formattedImages = imagenes.images.map((img, index) => {
-            const imageData = typeof img.data === 'string' ? img.data : '';
-            const imageUrl = imageData
-                ? `data:${getImageMimeType(img.filename)};base64,${imageData}`
-                : resolveImageUrl(img.path, img.filename);
-            return { id: index + 1, url: imageUrl, name: img.filename };
-        });
-
-        const newImages = formattedImages.filter(img => !loadedImageNamesRef.current.has(img.name));
-
-        if (newImages.length === 0) return;
-
-        newImages.forEach(img => loadedImageNamesRef.current.add(img.name));
-
-        if (loadedImageNamesRef.current.size === newImages.length) {
-            // Carga inicial: todas las imágenes son nuevas
-            setImages(formattedImages);
-            setAllImages(formattedImages);
-        } else {
-            // Actualización incremental: solo agregar las nuevas al panel
-            setAllImages(formattedImages);
-            setImages(prev => [...prev, ...newImages]);
-        }
-    }, [getImageMimeType, imagenes, resolveImageUrl]);
-
     // Refrescar imágenes clave cuando el usuario vuelve al redactor (ej: desde el visor DICOM)
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                refetchImagenes();
+                refetchKeyImages();
             }
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-    }, [refetchImagenes]);
+    }, [refetchKeyImages]);
 
     useEffect(() => {
         findNextPlaceholderRef.current = findNextPlaceholder;
@@ -2255,24 +2163,16 @@ export const RedactarInforme = () => {
                                     <details className="rounded-md border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-[#151922]">
                                         <summary className="flex min-h-11 cursor-pointer items-center justify-between font-medium">
                                             <span>Imágenes adjuntas</span>
-                                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-[#28303d]">{images.length}</span>
+                                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-[#28303d]">{keyImages.length}</span>
                                         </summary>
-                                        {images.length === 0 ? (
+                                        {keyImages.length === 0 ? (
                                             <p className="py-2 text-center text-xs text-muted-foreground">Sin imágenes adjuntas</p>
                                         ) : (
                                             <div className="mt-2 grid grid-cols-2 gap-2">
-                                                {images.map((image) => (
+                                                {keyImages.map((image) => (
                                                     <figure key={image.id} className="min-w-0 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
-                                                        <img
-                                                            src={image.url}
-                                                            alt={image.name}
-                                                            className="h-auto w-full object-cover"
-                                                            onError={(event) => {
-                                                                const fallbackUrl = getImageUrlByFilename(image.name);
-                                                                if (event.currentTarget.src !== fallbackUrl) event.currentTarget.src = fallbackUrl;
-                                                            }}
-                                                        />
-                                                        <figcaption className="break-words p-1.5 text-center text-[11px] text-muted-foreground">{image.name}</figcaption>
+                                                        <KeyImageThumbnail imageId={image.id} />
+                                                        <figcaption className="break-words p-1.5 text-center text-[11px] text-muted-foreground">{image.author_name}</figcaption>
                                                     </figure>
                                                 ))}
                                             </div>
@@ -2407,11 +2307,11 @@ export const RedactarInforme = () => {
                                         <div className="flex-1 min-h-0 p-3 flex flex-col overflow-hidden">
                                             <div className="flex items-center justify-between mb-4 shrink-0">
                                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                    Arrastra las imágenes a los campos de texto
+                                                    Arrastra una imagen a un campo, o usa «Insertar» para colocarla en el campo activo
                                                 </p>
                                                 <button
                                                     type="button"
-                                                    onClick={() => refetchImagenes()}
+                                                    onClick={() => refetchKeyImages()}
                                                     title="Actualizar imágenes"
                                                     className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-brand-purple dark:hover:text-purple-400 transition-colors"
                                                 >
@@ -2419,50 +2319,55 @@ export const RedactarInforme = () => {
                                                 </button>
                                             </div>
                                             <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 table-scrollbar-purple">
-                                                    {images.map((image, index) => (
-                                                        <div
-                                                            key={image.id}
-                                                            draggable
-                                                            onDragStart={() => handleDragStart(image)}
-                                                            onDragEnd={handleDragEnd}
-                                                            className={`relative group cursor-grab active:cursor-grabbing rounded-md overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 transition-colors ${draggedImage?.id === image.id ? 'opacity-50 scale-95' : ''
-                                                                }`}
-                                                            style={{ animationDelay: `${index * 50}ms` }}
-                                                        >
-                                                            <button
-                                                                type="button"
-                                                                onClick={async (e) => {
-                                                                    e.stopPropagation();
-                                                                    try {
-                                                                        await deleteImagen(image.name);
-                                                                        loadedImageNamesRef.current.delete(image.name);
-                                                                        setImages(prev => prev.filter(img => img.id !== image.id));
-                                                                        setAllImages(prev => prev.filter(img => img.id !== image.id));
-                                                                    } catch {
-                                                                        toast.error('No se pudo eliminar la imagen');
-                                                                    }
-                                                                }}
-                                                                className="absolute top-1 right-1 z-10 p-0.5 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
-                                                                title="Eliminar imagen"
+                                                    {keyImages.length === 0 && (
+                                                        <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-4">Sin imágenes clave. Créalas desde el visor con el botón «Imagen clave».</p>
+                                                    )}
+                                                    {keyImages.map((image) => {
+                                                        const inUse = REPORT_IMAGE_FIELDS.some(field => (formData[field] || '').includes(`data-key-image-id="${image.id}"`));
+                                                        const locked = isSigned || isMobile || reportReadOnly;
+                                                        return (
+                                                            <div
+                                                                key={image.id}
+                                                                draggable={!locked}
+                                                                onDragStart={() => handleDragStart(image)}
+                                                                onDragEnd={handleDragEnd}
+                                                                className={`relative group rounded-md overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 transition-colors ${locked ? '' : 'cursor-grab active:cursor-grabbing'} ${draggedImage?.id === image.id ? 'opacity-50 scale-95' : ''}`}
                                                             >
-                                                                <X className="w-3 h-3" />
-                                                            </button>
-                                                            <img
-                                                                src={image.url}
-                                                                alt={image.name}
-                                                                onError={(e) => {
-                                                                    const fallbackUrl = getImageUrlByFilename(image.name);
-                                                                    if (e.currentTarget.src !== fallbackUrl) {
-                                                                        e.currentTarget.src = fallbackUrl;
-                                                                    }
-                                                                }}
-                                                                className="w-full h-auto object-cover"
-                                                            />
-                                                            <div className="p-2 bg-gray-50 dark:bg-[#2a2e32] text-center">
-                                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{image.name}</p>
+                                                                {image.can_delete && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={async (e) => {
+                                                                            e.stopPropagation();
+                                                                            try {
+                                                                                await deleteKeyImage(image.id);
+                                                                            } catch {
+                                                                                toast.error('No se pudo eliminar la imagen');
+                                                                            }
+                                                                        }}
+                                                                        className="absolute top-1 right-1 z-10 p-0.5 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity hover:bg-red-500"
+                                                                        title={inUse ? 'Quitar del panel (se conserva en el informe)' : 'Eliminar imagen'}
+                                                                        aria-label="Eliminar imagen clave"
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </button>
+                                                                )}
+                                                                <KeyImageThumbnail imageId={image.id} />
+                                                                <div className="flex items-center justify-between gap-2 p-2 bg-gray-50 dark:bg-[#2a2e32]">
+                                                                    <p className="min-w-0 truncate text-xs text-gray-600 dark:text-gray-300" title={image.author_name}>
+                                                                        {inUse ? 'En uso · ' : ''}{image.author_name}
+                                                                    </p>
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={locked || !activeEditor}
+                                                                        onClick={() => activeEditor && insertKeyImage(activeEditor, image)}
+                                                                        className="shrink-0 rounded px-2 py-1 text-xs font-semibold text-brand-purple hover:bg-brand-purple/10 disabled:cursor-not-allowed disabled:opacity-50 dark:text-purple-300 dark:hover:bg-purple-800/30"
+                                                                    >
+                                                                        Insertar
+                                                                    </button>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                             </div>
                                         </div>
                                     ) : rightSidebarTab === 'variables' ? (

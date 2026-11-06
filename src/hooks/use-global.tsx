@@ -1,5 +1,5 @@
-import { getEquiposPorLocacion, getEstudios, getImagenesPorEstudio, deleteImagenDeEstudio, getMedicosAll, getMedicosPorLocacion, getModalidades, getObrasSocialesPorLocacion, getPartesCuerpo, getRadsPerLocation } from '@/services/api-global.service';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getEquiposPorLocacion, getEstudios, getMedicosAll, getMedicosPorLocacion, getModalidades, getObrasSocialesPorLocacion, getPartesCuerpo, getRadsPerLocation } from '@/services/api-global.service';
+import { useQuery } from '@tanstack/react-query';
 import { globalKeys } from '@/constants/query-keys';
 
 
@@ -25,16 +25,6 @@ interface MedicosAll {
 }
 
 
-interface ImagenesPorEstudio {
-    images: Array<{
-        filename: string;
-        path?: string;
-        data?: string;
-        size: number;
-    }>;
-    images_count: number;
-    study_uid: string;
-}
 export const usePartesDelCuerpo = () => {
     const { data, isLoading } = useQuery<ParteCuerpo[]>({
         queryKey: globalKeys.partesDelCuerpo(),
@@ -105,23 +95,4 @@ export const useObrasSocialesPorLocacion = (locationGuid: string) => {
         enabled: !!locationGuid, // Ejecutar solo si locationGuid está definido
     });
     return { data, isLoading };
-}
-
-export const useImagenesPorEstudio = (studyGuid: string) => {
-    const queryClient = useQueryClient();
-
-    const { data, isLoading, refetch } = useQuery<ImagenesPorEstudio>({
-        queryKey: globalKeys.imagenesPorEstudio(studyGuid),
-        queryFn: () => getImagenesPorEstudio(studyGuid),
-        enabled: !!studyGuid,
-    });
-
-    const { mutateAsync: deleteImagen, isPending: isDeleting } = useMutation({
-        mutationFn: (filename: string) => deleteImagenDeEstudio(studyGuid, filename),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: globalKeys.imagenesPorEstudio(studyGuid) });
-        },
-    });
-
-    return { data, isLoading, refetch, deleteImagen, isDeleting };
 }
