@@ -138,8 +138,8 @@ export const CaseLink = () => {
     }
 
     return (
-        <div className="patient-case h-dvh bg-[#f7f3fc] p-2 text-slate-800 sm:p-4 lg:flex lg:items-center lg:justify-center">
-            <main className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-xl border border-purple-100 bg-white shadow-xl lg:h-auto lg:max-h-full lg:w-full lg:max-w-5xl">
+        <div className="patient-case h-dvh bg-[#f7f3fc] p-2 text-slate-800 sm:p-4 md:flex md:items-center md:justify-center">
+            <main className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-xl border border-purple-100 bg-white shadow-xl md:h-auto md:max-h-full md:w-full md:max-w-5xl">
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
                     <header className="bg-gradient-to-r from-[#4a148c] via-[#6a1bb0] to-[#8e24aa] px-3 py-4 text-white sm:px-6">
                         <div className="flex items-center justify-between gap-3">
@@ -162,7 +162,7 @@ export const CaseLink = () => {
                         </div>
                     </header>
 
-                    <section className={`grid divide-y border-b md:divide-x md:divide-y-0 ${brand.veterinary ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+                    <section className={`grid divide-y border-b ${brand.veterinary ? "lg:grid-cols-3 lg:divide-x lg:divide-y-0" : "md:grid-cols-2 md:divide-x md:divide-y-0"}`}>
                         <InfoSection title={brand.veterinary ? "Animal" : "Paciente"} items={[
                             ["Nombre", caseData.patient.name || "-"],
                             [brand.veterinary ? "ID del animal" : "ID del paciente", caseData.patient.id || "-"],
@@ -175,7 +175,7 @@ export const CaseLink = () => {
                                     ["Nombre", owner.name],
                                     ["Relación", responsibleRoles[owner.role] || owner.role],
                                     ["Teléfono", owner.phone || "-"],
-                                    ["Email", owner.email || "-"],
+                                    ["Email", owner.email || "-", true],
                                 ] : [["Nombre", "No registrado"]]} />
                             ))}
                         </div>}
@@ -221,12 +221,12 @@ export const CaseLink = () => {
     );
 };
 
-const InfoSection = ({ title, items }: { title: string; items: [string, string][] }) => (
+const InfoSection = ({ title, items }: { title: string; items: ([string, string] | [string, string, boolean])[] }) => (
     <div className="min-w-0 p-3 sm:p-5">
         <h2 className="mb-3 text-base font-semibold text-[#6a1bb0]">{title}</h2>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-            {items.map(([label, value]) => (
-                <div key={label} className="min-w-0">
+            {items.map(([label, value, wide]) => (
+                <div key={label} className={wide ? "col-span-2 min-w-0" : "min-w-0"}>
                     <dt className="text-xs text-slate-500">{label}:</dt>
                     <dd className="mt-1 min-w-0 text-sm font-medium text-slate-800 [overflow-wrap:anywhere]">{value}</dd>
                 </div>
