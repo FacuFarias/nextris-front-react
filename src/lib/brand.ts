@@ -11,4 +11,5 @@ export const brand = {
     mark: cdivet ? cdivetMark : nextrisLogo,
     icon: cdivet ? "/cdivet-icon.png" : null,
     veterinary: cdivet,
+    productLogo: nextrisLogo,
 };

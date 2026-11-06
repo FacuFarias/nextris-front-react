@@ -31,10 +31,13 @@ interface CaseData {
         institution: string | null;
         referring_physician: string | null;
     };
+    responsibles?: { name: string; role: string; phone: string | null; email: string | null }[];
     report_available: boolean;
     viewer_url: string | null;
     report_url: string | null;
 }
+
+const responsibleRoles: Record<string, string> = { owner: "Propietario", guardian: "Tutor", custodian: "Cuidador", veterinarian: "Veterinario" };
 
 const formatTime = (value: string | null) => {
     if (!value) return "";
@@ -139,18 +142,18 @@ export const CaseLink = () => {
             <main className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-xl border border-purple-100 bg-white shadow-xl lg:h-auto lg:max-h-full lg:w-full lg:max-w-5xl">
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
                     <header className="bg-gradient-to-r from-[#4a148c] via-[#6a1bb0] to-[#8e24aa] px-3 py-4 text-white sm:px-6">
-                        <div className="flex items-center justify-between gap-3 lg:justify-start lg:gap-5">
-                            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm sm:h-14 sm:w-14 sm:p-2 lg:hidden">
-                                    <img src={brand.mark} alt="" className="h-full w-full object-contain" />
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-2 sm:gap-3 lg:gap-5">
+                                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm sm:h-20 sm:w-24 lg:h-24 lg:w-28 lg:p-2">
+                                    <img src={brand.logo} alt={`Logo de ${brand.name}`} className="max-h-full max-w-full object-contain" />
                                 </div>
                                 <div className="min-w-0">
                                     <p className="text-lg font-bold tracking-[0.15em] sm:text-2xl sm:tracking-[0.25em]">{brand.name.toUpperCase()}</p>
                                     <p className="mt-1 text-xs text-purple-100 sm:text-sm">{brand.veterinary ? "Estudio veterinario compartido" : "Estudio médico compartido"}</p>
                                 </div>
                             </div>
-                            <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-lg bg-white p-2 shadow-sm sm:h-16 sm:w-32 sm:py-0 lg:order-first lg:h-24 lg:w-28 lg:py-2">
-                                <img src={brand.logo} alt={`Logo de ${brand.name}`} className="max-h-full max-w-full object-contain" />
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center self-start rounded-lg bg-white p-1 shadow-sm sm:h-14 sm:w-14 lg:h-16 lg:w-16 lg:p-1.5">
+                                <img src={brand.productLogo} alt="Logo de NextRIS" className="max-h-full max-w-full object-contain" />
                             </div>
                         </div>
                         <div className="mt-3 flex items-start gap-2 text-xs text-purple-100 sm:text-sm [&>svg]:shrink-0">
@@ -159,13 +162,23 @@ export const CaseLink = () => {
                         </div>
                     </header>
 
-                    <section className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0">
+                    <section className={`grid divide-y border-b md:divide-x md:divide-y-0 ${brand.veterinary ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
                         <InfoSection title={brand.veterinary ? "Animal" : "Paciente"} items={[
                             ["Nombre", caseData.patient.name || "-"],
                             [brand.veterinary ? "ID del animal" : "ID del paciente", caseData.patient.id || "-"],
                             ["Sexo", caseData.patient.sex || "-"],
                             ["Fecha de nacimiento", formatDate(caseData.patient.birthdate) || "-"],
                         ]} />
+                        {brand.veterinary && <div className="min-w-0 divide-y">
+                            {(caseData.responsibles?.length ? caseData.responsibles : [null]).map((owner, index) => (
+                                <InfoSection key={index} title={index ? `Responsable ${index + 1}` : "Responsable"} items={owner ? [
+                                    ["Nombre", owner.name],
+                                    ["Relación", responsibleRoles[owner.role] || owner.role],
+                                    ["Teléfono", owner.phone || "-"],
+                                    ["Email", owner.email || "-"],
+                                ] : [["Nombre", "No registrado"]]} />
+                            ))}
+                        </div>}
                         <InfoSection title="Estudio de imágenes" items={[
                             ["N.º de acceso", caseData.study.accession_number || "-"],
                             ["Fecha del estudio", (formatDate(caseData.study.date) + " " + formatTime(caseData.study.time)).trim()],
