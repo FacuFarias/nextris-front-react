@@ -1,3 +1,4 @@
+import { useAppConfig } from "@/context/AppConfigContext";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -28,6 +29,8 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
+    const { config } = useAppConfig();
+    const veterinary = config?.patient_mode === "veterinary";
     const [rememberMe, setRememberMe] = useState(false);
     const mutation = UseLogin();
 
@@ -63,7 +66,7 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
             {/* Title */}
             <div className="mb-5 text-center sm:mb-8">
                 <h1 className="font-display text-2xl font-bold text-foreground mb-2">
-                    {isPatient ? "Portal del Paciente" : "Portal Médico"}
+                    {isPatient ? (veterinary ? "Portal de responsables" : "Portal del Paciente") : (veterinary ? "Personal veterinario" : "Portal Médico")}
                 </h1>
                 <p className="text-muted-foreground text-sm">
                     {isPatient
@@ -89,7 +92,7 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
                             name="username"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>{isPatient ? "ID del paciente" : "Usuario médico"}</FormLabel>
+                                    <FormLabel>{isPatient ? (veterinary ? "Usuario del responsable" : "ID del paciente") : (veterinary ? "Usuario del personal" : "Usuario médico")}</FormLabel>
                                     <div className="relative">
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground z-10">
                                             {isPatient ? <User className="w-5 h-5" /> : <Clipboard className="w-5 h-5" />}
@@ -97,7 +100,7 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
                                         <FormControl>
                                             <Input
                                                 type="text"
-                                                placeholder={isPatient ? "ID del paciente" : "Usuario médico"}
+                                                placeholder={isPatient ? (veterinary ? "Usuario del responsable" : "ID del paciente") : (veterinary ? "Usuario del personal" : "Usuario médico")}
                                                 autoComplete="username"
                                                 autoCapitalize="none"
                                                 spellCheck={false}
@@ -186,7 +189,7 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
                         <span>
                             {mutation.isLoading
                                 ? "Iniciando sesión..."
-                                : isPatient ? "Acceder a mis estudios" : "Ingresar al Sistema"}
+                                : isPatient ? (veterinary ? "Acceder a mis animales" : "Acceder a mis estudios") : "Ingresar al Sistema"}
                         </span>
                     </Button>
 

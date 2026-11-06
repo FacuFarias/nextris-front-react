@@ -1,3 +1,4 @@
+import { VeterinaryPatients } from "@/modules/veterinary/VeterinaryPatients";
 import { MainLayout } from "@/layouts/layout"
 import { UploadCloud, FolderOpen, FileText, Sparkles, Rocket, CheckCircle, Loader2, RefreshCw, Archive, Calendar, Unlink2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -15,7 +16,7 @@ import { formatDate } from "@/lib/fechaYhora"
 import { TableRefreshStatus } from "@/components/TableRefreshStatus"
 import { useRowHighlights } from "@/hooks/use-row-highlights"
 
-export const CargarEstudios = () => {
+const HumanCargarEstudios = () => {
     const [files, setFiles] = useState<File[]>([])
     const [isDragging, setIsDragging] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -443,3 +444,5 @@ export const CargarEstudios = () => {
         </MainLayout>
     )
 }
+
+export const CargarEstudios = () => { const { config, isLoading } = useAppConfig(); if (isLoading) return <p className="p-5">Cargando…</p>; return config?.patient_mode === "veterinary" ? <VeterinaryPatients /> : <HumanCargarEstudios />; };

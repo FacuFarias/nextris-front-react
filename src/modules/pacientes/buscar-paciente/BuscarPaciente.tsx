@@ -1,3 +1,5 @@
+import { VeterinaryPatients } from "@/modules/veterinary/VeterinaryPatients";
+import { useAppConfig } from "@/context/AppConfigContext";
 //layout
 import { MainLayout } from "@/layouts/layout";
 //react
@@ -27,7 +29,7 @@ import { CreatePatientForm } from "./components/CreatePatientForm";
 import { useTableColumns } from "@/hooks/use-table-columns";
 import { useAuth } from "@/context/AuthContext";
 
-export const BuscarPaciente = () => {
+const HumanBuscarPaciente = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
@@ -290,3 +292,5 @@ export const BuscarPaciente = () => {
         </MainLayout>
     );
 };
+
+export const BuscarPaciente = () => { const { config, isLoading } = useAppConfig(); if (isLoading) return <p className="p-5">Cargando…</p>; return config?.patient_mode === "veterinary" ? <VeterinaryPatients /> : <HumanBuscarPaciente />; };

@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 
 interface User {
+    portal_subject?: "responsible";
     email: string;
     id: string;
     location_id?: string | null;

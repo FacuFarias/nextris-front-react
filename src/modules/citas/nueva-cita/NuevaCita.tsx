@@ -1,3 +1,5 @@
+import { VeterinaryPatients } from "@/modules/veterinary/VeterinaryPatients";
+import { useAppConfig } from "@/context/AppConfigContext";
 //components
 import { InputSearch } from "@/components/InputSearch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -19,7 +21,7 @@ import { Agenda } from "./components/Agenda"
 import { Examen } from "./components/Examen"
 import { Prestacion } from "./components/Prestacion"
 
-export const NuevaCita = () => {
+const HumanNuevaCita = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedDireccion, setSelectedDireccion] = useState<string>("");
     const [activeTab, setActiveTab] = useState<string>("ubicacion");
@@ -349,3 +351,5 @@ export const NuevaCita = () => {
         </MainLayout>
     )
 }
+
+export const NuevaCita = () => { const { config, isLoading } = useAppConfig(); if (isLoading) return <p className="p-5">Cargando…</p>; return config?.patient_mode === "veterinary" ? <VeterinaryPatients scheduling /> : <HumanNuevaCita />; };

@@ -1,3 +1,4 @@
+import { VeterinaryPatients } from "@/modules/veterinary/VeterinaryPatients";
 //components
 import { InputSearch } from "@/components/InputSearch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -27,7 +28,7 @@ import { usePacienteRapido } from "./hooks/use-paciente-rapido"
 
 
 
-export const AdmisionEspontanea = () => {
+const HumanAdmisionEspontanea = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedDireccion, setSelectedDireccion] = useState<string>("");
     const [activeTab, setActiveTab] = useState<string>("paciente");
@@ -337,3 +338,5 @@ export const AdmisionEspontanea = () => {
         </MainLayout>
     )
 }
+
+export const AdmisionEspontanea = () => { const { config, isLoading } = useAppConfig(); if (isLoading) return <p className="p-5">Cargando…</p>; return config?.patient_mode === "veterinary" ? <VeterinaryPatients scheduling /> : <HumanAdmisionEspontanea />; };

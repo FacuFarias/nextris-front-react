@@ -1,3 +1,4 @@
+import { ResponsiblePortal } from "@/modules/veterinary/ResponsiblePortal";
 import { PatientInicio } from "./PatientInicio";
 import { hasRoleAccess, moduleForPath } from "@/lib/permissions";
 import { MainLayout } from "@/layouts/layout";
@@ -330,7 +331,7 @@ const extraModuleImageByCode: Record<string, string> = {
 
 export const Inicio = () => {
     const { authData } = useAuth();
-    return authData?.user.user_type === "patient" ? <PatientInicio /> : <StaffInicio />;
+    return authData?.user.portal_subject === "responsible" ? <ResponsiblePortal /> : authData?.user.user_type === "patient" ? <PatientInicio /> : <StaffInicio />;
 };
 
 const StaffInicio = () => {

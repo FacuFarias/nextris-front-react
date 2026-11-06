@@ -16,7 +16,8 @@
     "test:worklist-share": "node tests/worklist-share-ui.cjs",
     "test:editor-share": "node tests/editor-share-ui.cjs",
     "test:editor-history": "node tests/editor-history-ui.cjs",
-    "test:patient-mobile": "node tests/patient-mobile-ui.cjs"
+    "test:patient-mobile": "node tests/patient-mobile-ui.cjs",
+    "test:veterinary:browser": "node scripts/test-veterinary-browser.cjs"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.19",

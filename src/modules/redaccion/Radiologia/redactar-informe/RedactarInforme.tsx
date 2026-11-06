@@ -2029,6 +2029,7 @@ export const RedactarInforme = () => {
     return (
         <LayoutSinSidebar disableDefaultBackground>
             <div className="flex h-[calc(100dvh-5rem)] flex-col overflow-hidden rounded-xl bg-gray-50 p-2 dark:bg-[#0f1218] dark:text-gray-100 lg:h-[calc(100dvh-24px)]">
+                {reportData.veterinary_context && <div className="mb-2 rounded border bg-background px-3 py-2 text-sm"><strong>Paciente veterinario</strong> · {reportData.veterinary_context.species_name || 'Especie pendiente'} · {reportData.veterinary_context.breed_name || 'Raza desconocida'} · Peso registrado: {reportData.veterinary_context.weight_kg ?? '—'} kg · {reportData.veterinary_context.birthdate_estimated ? 'Nacimiento estimado: ' : 'Nacimiento: '}{reportData.veterinary_context.birthdate || 'No informado'} · Responsables al realizar el estudio: {(reportData.veterinary_context.responsibles || []).map((r: {name:string}) => r.name).join(', ') || 'Pendiente'}</div>}
                 {/* Encabezado del estudio y notas */}
                 <div className="mb-3 flex shrink-0 items-center justify-between">
                     <div className="relative flex w-full flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-[#151922] md:flex-row md:items-start md:justify-between">

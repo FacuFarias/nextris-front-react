@@ -1,3 +1,5 @@
+import { VeterinaryPatients } from "@/modules/veterinary/VeterinaryPatients";
+import { useAppConfig } from "@/context/AppConfigContext";
 import { useState } from "react";
 import { MainLayout } from "@/layouts/layout"
 import { FileText } from "lucide-react"
@@ -13,7 +15,7 @@ const getStoredRelationFilter = (key: "modalityId" | "bodypartId") => {
     }
 };
 
-export const InformePredefinidos = () => {
+const HumanInformePredefinidos = () => {
     const [modalityId, setModalityId] = useState<string | undefined>(() => getStoredRelationFilter("modalityId"));
     const [bodypartId, setBodypartId] = useState<string | undefined>(() => getStoredRelationFilter("bodypartId"));
 
@@ -86,3 +88,5 @@ export const InformePredefinidos = () => {
         </MainLayout>
     )
 }
+
+export const InformePredefinidos = () => { const { config, isLoading } = useAppConfig(); if (isLoading) return <p className="p-5">Cargando…</p>; return config?.patient_mode === "veterinary" ? <VeterinaryPatients initialTab="templates" /> : <HumanInformePredefinidos />; };

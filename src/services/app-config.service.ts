@@ -1,6 +1,8 @@
 import { api } from '@/lib/api';
 
 export interface AppConfig {
+  patient_mode?: "human" | "veterinary";
+  mwl_enabled?: boolean;
   id: number;
   name: string;
   code: string | null;

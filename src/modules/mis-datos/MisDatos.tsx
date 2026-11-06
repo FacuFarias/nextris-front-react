@@ -1,3 +1,5 @@
+import { ResponsibleProfile } from "@/modules/veterinary/ResponsiblePortal";
+import { useAuth } from "@/context/AuthContext";
 import { MainLayout } from "@/layouts/layout";
 import { DynamicBreadcrumb } from "@/components";
 import { useEffect, useState } from "react";
@@ -156,7 +158,7 @@ const SectionHeader = ({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export const MisDatos = () => {
+const HumanMisDatos = () => {
     const [editingField, setEditingField] = useState<string | null>(null);
     const [editingValue, setEditingValue] = useState("");
     const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
@@ -431,3 +433,5 @@ export const MisDatos = () => {
         </MainLayout>
     );
 };
+
+export const MisDatos = () => { const { authData } = useAuth(); return authData?.user.portal_subject === "responsible" ? <ResponsibleProfile /> : <HumanMisDatos />; };

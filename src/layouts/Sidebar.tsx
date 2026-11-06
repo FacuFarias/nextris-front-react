@@ -1,3 +1,4 @@
+import { useAppConfig } from "@/context/AppConfigContext";
 import { hasRoleAccess, moduleForPath } from "@/lib/permissions";
 import { useState, useMemo } from "react";
 import {
@@ -225,6 +226,7 @@ const menuItems: MenuItem[] = [
 
 export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) => {
 
+    const { config } = useAppConfig();
     const { authData, logout } = useAuth();
     const { disabledModulesSet, moduleCodesSet, isLoading: isModulesLoading, hasError: hasModulesError } = useUserModules(Boolean(authData));
     const { theme, setTheme, actualTheme } = useTheme();
@@ -373,7 +375,7 @@ export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                     <nav className="flex-1 overflow-y-auto py-2">
                         <ul className="space-y-0.5 px-2">
                             {filteredMenuItems.map((item) => (
-                                <li key={item.label}>
+                                <li key={config?.patient_mode === 'veterinary' && item.label === 'Pacientes' ? 'Animales' : authData?.user.portal_subject === 'responsible' && item.label === 'Mis Estudios' ? 'Mis animales' : item.label}>
                                     {item.subItems ? (
                                         <>
                                             <button
@@ -394,7 +396,7 @@ export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <item.icon className="w-4 h-4 text-white transition-transform duration-300 group-hover:scale-110" />
-                                                    <span className={cn("text-xs font-medium", collapsed && "lg:hidden")}>{item.label}</span>
+                                                    <span className={cn("text-xs font-medium", collapsed && "lg:hidden")}>{config?.patient_mode === 'veterinary' && item.label === 'Pacientes' ? 'Animales' : authData?.user.portal_subject === 'responsible' && item.label === 'Mis Estudios' ? 'Mis animales' : item.label}</span>
                                                 </div>
                                                 {!collapsed && (expandedItems.includes(item.label) ? (
                                                     <ChevronDown className="w-3 h-3 transition-transform duration-300" />
@@ -459,7 +461,7 @@ export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                                             <item.icon className={cn(
                                                 "w-4 h-4 transition-transform duration-300 text-white group-hover:scale-110"
                                             )} />
-                                            <span className={cn("text-xs font-medium", collapsed && "lg:hidden")}>{item.label}</span>
+                                            <span className={cn("text-xs font-medium", collapsed && "lg:hidden")}>{config?.patient_mode === 'veterinary' && item.label === 'Pacientes' ? 'Animales' : authData?.user.portal_subject === 'responsible' && item.label === 'Mis Estudios' ? 'Mis animales' : item.label}</span>
                                         </Link>
                                     )}
                                 </li>

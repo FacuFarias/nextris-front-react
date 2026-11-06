@@ -1,3 +1,5 @@
+import { ResponsiblePortal } from "@/modules/veterinary/ResponsiblePortal";
+import { useAuth } from "@/context/AuthContext";
 import { MainLayout } from "@/layouts/layout";
 import { useState } from "react";
 import { DynamicBreadcrumb } from "@/components";
@@ -12,7 +14,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { useStudyShare } from "./hooks/use-study-share";
 import { useMisDatos } from "@/modules/mis-datos/hooks/use-mis-datos";
 
-export const Estudios = () => {
+const HumanEstudios = () => {
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
     const share = useStudyShare();
@@ -220,3 +222,5 @@ export const Estudios = () => {
         </MainLayout>
     );
 };
+
+export const Estudios = () => { const { authData } = useAuth(); return authData?.user.portal_subject === "responsible" ? <ResponsiblePortal /> : <HumanEstudios />; };

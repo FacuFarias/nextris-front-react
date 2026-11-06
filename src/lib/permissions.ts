@@ -20,7 +20,7 @@ export const moduleForPath = (path: string) => {
 };
 
 export const permissionModuleLabels: Record<string, string> = {
-    patients: 'Pacientes', worklist: 'Lista de trabajo', images: 'Imágenes',
+    veterinary: 'Veterinaria', patients: 'Pacientes', worklist: 'Lista de trabajo', images: 'Imágenes',
     reports: 'Informes', templates: 'Informes predefinidos', dicom: 'Estudios DICOM',
     distribution: 'Distribución', gestion: 'Gestión administrativa',
     config: 'Configuración', users: 'Usuarios y permisos',
