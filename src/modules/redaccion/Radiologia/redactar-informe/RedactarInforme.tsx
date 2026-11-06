@@ -1,8 +1,8 @@
 import { useAuth } from "@/context/AuthContext";
 import { ExamViewerButton } from "@/components/ExamViewerButton";
 import { hasAnyPermission } from "@/lib/permissions";
-import { LocalReportDialog } from '@/components/LocalReportDialog';
-import type { CombinedHistoryEntry, LocalReport } from '@/types/patientHistory';
+import { openReportPdf, staffReportPdfPath } from '@/services/reportPdf';
+import type { CombinedHistoryEntry } from '@/types/patientHistory';
 import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { onAssistantCommandAcknowledged, registerAssistantHandler } from "@/assistant/commands"
 import type { AssistantResult } from "@/assistant/commands"
@@ -32,7 +32,6 @@ import { FlagsCell } from "../components/FlagsCell";
 import { TagsCell } from "../components/TagsCell";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ReportNotesPanel } from "./components/ReportNotesPanel";
-import { getReportView } from '@/services/reportView';
 import { closeViewerWindow } from "@/services/viewerWindow";
 import { formatDate } from "@/lib/fechaYhora";
 import { AdministrativeShareModal } from "../components/AdministrativeShareModal";
@@ -383,7 +382,6 @@ export const RedactarInforme = () => {
         return true;
     });
 
-    const [externalHistoryReport, setExternalHistoryReport] = useState<LocalReport | null>(null);
 
     const handleOpenHistoryReport = async (study: CombinedHistoryEntry) => {
         const examId = study.local_exam_id;
@@ -394,8 +392,7 @@ export const RedactarInforme = () => {
         try {
             // The external report ID remains authoritative even when linked to a local exam.
             if (!examId) return;
-            const result = await getReportView(examId);
-            setExternalHistoryReport(result.report);
+            await openReportPdf(staffReportPdfPath(examId));
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe previo');
         }
@@ -1027,8 +1024,7 @@ export const RedactarInforme = () => {
             return;
         }
         try {
-            const result = await getReportView(informeGuid);
-            setExternalHistoryReport(result.report);
+            await openReportPdf(staffReportPdfPath(informeGuid));
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
         }
@@ -2877,8 +2873,6 @@ export const RedactarInforme = () => {
                 onCloseTab={handleCloseTab}
                 onStay={handleStayOnPage}
             />
-
-            <LocalReportDialog report={externalHistoryReport} onClose={() => setExternalHistoryReport(null)} />
 
         </LayoutSinSidebar>
     )

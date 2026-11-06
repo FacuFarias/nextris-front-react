@@ -1,22 +1,21 @@
-import { useQuery } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/layouts/layout';
-import { getReportView } from '@/services/reportView';
-import { PatientReportDialog } from './components/PatientReportDialog';
+import { fetchReportPdf, staffReportPdfPath } from '@/services/reportPdf';
 
 export function LocalReportPage() {
     const { examId } = useParams();
-    const navigate = useNavigate();
-    const { data, isLoading, error } = useQuery({
-        queryKey: ['local-report', examId],
-        queryFn: () => getReportView(examId!),
-        enabled: Boolean(examId),
-        retry: false,
-    });
+    const [error, setError] = useState('');
+    useEffect(() => {
+        if (!examId) return;
+        let active = true;
+        fetchReportPdf(staffReportPdfPath(examId))
+            .then(url => { if (active) window.location.replace(url); })
+            .catch((failure: Error) => { if (active) setError(failure.message); });
+        return () => { active = false; };
+    }, [examId]);
     return <MainLayout>
-        <h1 className="text-xl font-semibold">Informe médico</h1>
-        {isLoading && <p role="status">Consultando informe…</p>}
-        {error && <p role="alert">{error.message}</p>}
-        <PatientReportDialog view={data || null} onClose={() => navigate('/worklist')} />
+        <h1 className="text-xl font-semibold">Informe</h1>
+        {error ? <p role="alert">{error}</p> : <p role="status">Abriendo informe…</p>}
     </MainLayout>;
 }

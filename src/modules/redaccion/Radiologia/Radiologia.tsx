@@ -1,6 +1,5 @@
 import { useAppConfig } from "@/context/AppConfigContext";
-import { LocalReportDialog } from '@/components/LocalReportDialog';
-import type { LocalReport } from '@/types/patientHistory';
+import { openReportPdf, staffReportPdfPath } from '@/services/reportPdf';
 import { hasAnyPermission } from "@/lib/permissions";
 import { DynamicBreadcrumb } from "@/components/DynamicBreadcrumb"
 import { InputSearch } from "@/components/InputSearch"
@@ -48,7 +47,7 @@ import { useAuth } from "@/context/AuthContext"
 import { getDicomViewerUrl } from "@/services/dicomViewer"
 import { cancelPreparedViewer, openStudyInViewer, prepareViewerWindow } from "@/services/viewerWindow"
 import type { ViewerWindowTicket } from "@/services/viewerWindow"
-import { getReportView, getInformes, putRedactarInforme, type ConfirmStudyPayload } from "./services/informes.service"
+import { getInformes, putRedactarInforme, type ConfirmStudyPayload } from "./services/informes.service"
 import { informesKeys } from "./constants/query-keys"
 import { useTemplates } from "../informe-predefinidos/hooks/use-templates"
 import type { Template } from "../informe-predefinidos/types/informe-pred.types"
@@ -154,7 +153,6 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const [isNoImageModalOpen, setIsNoImageModalOpen] = useState(false);
     const [isConfirmStudyModalOpen, setIsConfirmStudyModalOpen] = useState(false);
     const [isCancelStudyModalOpen, setIsCancelStudyModalOpen] = useState(false);
-    const [externalReport, setExternalReport] = useState<LocalReport | null>(null);
     const [openingReport, setOpeningReport] = useState(false);
     const openingReportRef = useRef(false);
     const [selectedExamForConfirm, setSelectedExamForConfirm] = useState<Informes | null>(null);
@@ -1138,8 +1136,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
         openingReportRef.current = true;
         setOpeningReport(true);
         try {
-            const result = await getReportView(informe.guid);
-            setExternalReport(result.report);
+            await openReportPdf(staffReportPdfPath(informe.guid));
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
         } finally {
@@ -1973,9 +1970,6 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                 isLoading={isCancellingStudy}
                 onConfirm={handleCancelStudy}
             />
-
-
-            <LocalReportDialog report={externalReport} onClose={() => setExternalReport(null)} />
             {openingReport && (
                 <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg border bg-background px-4 py-3 text-sm shadow-lg">
                     <Loader2 className="size-4 animate-spin text-purple-600" />

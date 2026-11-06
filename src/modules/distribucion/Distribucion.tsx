@@ -1,6 +1,5 @@
 import { useAuth } from "@/context/AuthContext";
-import { LocalReportDialog } from '@/components/LocalReportDialog';
-import type { LocalReport } from '@/types/patientHistory';
+import { openReportPdf, staffReportPdfPath } from '@/services/reportPdf';
 import { hasAnyPermission } from "@/lib/permissions";
 import { DynamicBreadcrumb, InputSearch } from "@/components"
 import TablaDynamic from "@/components/TableDynamic";
@@ -25,7 +24,6 @@ import backDarkImage from "@/assets/dark-calendar.jpg";
 export const Distribucion = () => {
     const { authData } = useAuth();
     const [searchTerm, setSearchTerm] = useState("");
-    const [externalReport, setExternalReport] = useState<LocalReport | null>(null);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [allReported, setAllReported] = useState(false);
@@ -88,8 +86,7 @@ export const Distribucion = () => {
 
     const handleViewReport = async (examen: Examen) => {
         try {
-            const result = await distribucionService.viewReport(examen.guid);
-            setExternalReport(result.report);
+            await openReportPdf(staffReportPdfPath(examen.guid));
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
             console.error("Error al abrir informe:", error);
@@ -218,7 +215,6 @@ export const Distribucion = () => {
                     stickyPagination
                 />
             </div>
-            <LocalReportDialog report={externalReport} onClose={() => setExternalReport(null)} />
         </MainLayout>
     )
 }

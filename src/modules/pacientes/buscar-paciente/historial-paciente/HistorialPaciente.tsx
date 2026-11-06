@@ -1,5 +1,4 @@
-import { LocalReportDialog } from '@/components/LocalReportDialog';
-import type { LocalReport } from '@/types/patientHistory';
+import { openReportPdf, staffReportPdfPath } from '@/services/reportPdf';
 import { MainLayout } from '@/layouts/layout'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useHistorialPaciente, useViewImagenDicom, useToggleExamVisibility } from './hooks/use-historial-paciente';
@@ -21,7 +20,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
-import { getReportView } from '@/services/reportView';
 
 export const HistorialPaciente = () => {
     const location = useLocation()
@@ -33,7 +31,6 @@ export const HistorialPaciente = () => {
     const [perPage, setPerPage] = useState(10);
     const patient = location?.state?.patient;
     const { historyData, isLoading } = useHistorialPaciente({ patientId: patient?.guid || '' });
-    const [externalReport, setExternalReport] = useState<LocalReport | null>(null);
     const { viewImagenDicom } = useViewImagenDicom();
     const { toggleVisibility } = useToggleExamVisibility();
 
@@ -135,8 +132,7 @@ export const HistorialPaciente = () => {
         }
         try {
             if (!patient.local_exam_id) return;
-            const result = await getReportView(patient.local_exam_id);
-            setExternalReport(result.report);
+            await openReportPdf(staffReportPdfPath(patient.local_exam_id));
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
         }
@@ -240,8 +236,6 @@ export const HistorialPaciente = () => {
                     mobileMode="cards"
                 />
             </div>
-
-            <LocalReportDialog report={externalReport} onClose={() => setExternalReport(null)} />
 
             <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
                 <DialogContent className="sm:max-w-xl" showCloseButton={false}>

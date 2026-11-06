@@ -1,5 +1,4 @@
-import { PatientReportDialog } from './PatientReportDialog';
-import type { PatientReportView } from '../types/patientReport';
+import { openReportPdf } from '@/services/reportPdf';
 import { useRef, useState, type ReactNode } from "react";
 import type { TableColumn } from "@/types/table";
 import { formatDate } from "@/lib/fechaYhora";
@@ -12,16 +11,13 @@ import { toast } from "sonner";
 
 export const ReportButton = ({ study }: { study: Study }) => {
     const [loading, setLoading] = useState(false);
-    const [report, setReport] = useState<PatientReportView | null>(null);
     const requestVersion = useRef(0);
 
     const handleOpen = async () => {
         const version = ++requestVersion.current;
         setLoading(true);
         try {
-            const view = await estudiosService.getReport(study.examination_id);
-            if (version !== requestVersion.current) return;
-            setReport(view);
+            await openReportPdf(`/patient-portal/examinations/${encodeURIComponent(study.examination_id)}/report/pdf`);
         } catch (error) {
             if (version !== requestVersion.current) return;
             toast.error(error instanceof Error ? error.message : 'No se pudo abrir el informe');
@@ -45,7 +41,6 @@ export const ReportButton = ({ study }: { study: Study }) => {
 
     return <>
         {button}
-        <PatientReportDialog view={report} onClose={() => setReport(null)} />
     </>;
 };
 

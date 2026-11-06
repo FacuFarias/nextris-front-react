@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { api } from "@/lib/api";
@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, ExternalLink, FileText, Image, Loader2, ShieldCheck } from "lucide-react";
 import { brand } from "@/lib/brand";
 import { formatDate, formatDateTime } from "@/lib/fechaYhora";
-import { PatientReportDialog } from "@/modules/estudios/components/PatientReportDialog";
-import type { PatientReportView } from "@/modules/estudios/types/patientReport";
+import { openReportPdf } from "@/services/reportPdf";
 
 interface CaseData {
     expires_at: string;
@@ -58,8 +57,6 @@ export const CaseLink = () => {
     const [expiredLink, setExpiredLink] = useState<string | null>(null);
     const [loadingReportCode, setLoadingReportCode] = useState<string | null>(null);
     const [reportFailure, setReportFailure] = useState<{ shortCode: string; message: string } | null>(null);
-    const [report, setReport] = useState<{ shortCode: string; view: PatientReportView } | null>(null);
-    const reportRequest = useRef<AbortController | null>(null);
     const { data: caseData, error, isLoading, refetch, isFetching } = useQuery({
         queryKey: ["shared-case", shortCode],
         enabled: Boolean(shortCode),
@@ -87,32 +84,17 @@ export const CaseLink = () => {
     const expired = caseData && (expiredLink === caseData.expires_at || Date.parse(caseData.expires_at) <= Date.now());
     const reportLoading = loadingReportCode === shortCode;
     const reportError = reportFailure && reportFailure.shortCode === shortCode ? reportFailure.message : null;
-    useEffect(() => {
-        const controller = new AbortController();
-        reportRequest.current = controller;
-        return () => controller.abort();
-    }, [shortCode, expired]);
 
     const openReport = async () => {
         if (!shortCode || expired) return;
-        const controller = reportRequest.current;
-        if (!controller || controller.signal.aborted) return;
         setLoadingReportCode(shortCode);
         setReportFailure(null);
         try {
-            const response = await api.get<{ success: boolean; data: PatientReportView; message?: string }>(
-                `/s/${encodeURIComponent(shortCode)}/report`, { timeout: 20000, signal: controller.signal },
-            );
-            if (!response.data.success || response.data.data?.source !== "nextris" || !response.data.data.document) {
-                throw new Error(response.data.message || "No se pudo consultar el informe en NextRIS");
-            }
-            if (!controller.signal.aborted) setReport({ shortCode, view: response.data.data });
+            await openReportPdf(`/s/${encodeURIComponent(shortCode)}/report.pdf`);
         } catch (error: unknown) {
-            const failure = error as { response?: { data?: { message?: string } } };
-            if (!controller.signal.aborted) setReportFailure({ shortCode, message: failure.response?.data?.message
-                || (error instanceof Error ? error.message : "No se pudo abrir el informe") });
+            setReportFailure({ shortCode, message: error instanceof Error ? error.message : "No se pudo abrir el informe" });
         } finally {
-            if (!controller.signal.aborted) setLoadingReportCode(null);
+            setLoadingReportCode(null);
         }
     };
 
@@ -215,7 +197,6 @@ export const CaseLink = () => {
                         </Button>
                     </div>
                 </section>
-                <PatientReportDialog view={report && report.shortCode === shortCode ? report.view : null} onClose={() => setReport(null)} />
             </main>
         </div>
     );
