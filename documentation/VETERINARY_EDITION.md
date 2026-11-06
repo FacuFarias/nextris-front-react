@@ -53,3 +53,16 @@ errors; new veterinary modules are checked independently and the full baseline s
 Production serves `dist/` with Nginx. Rebuild and deploy the backend/frontend pair; changing the
 Vite development server does not update the published site. Do not commit private `.env` files,
 browser fixtures, uploads, build output, database backups or portal credentials.
+
+## Patient directory layout
+
+`/buscar-pacientes` uses the Worklist page container, shared `TablaDynamic`, purple table header,
+filter panel, column search/sorting/visibility and pagination. Its primary tabs are Animales and
+Responsables. Protocols, simple templates and catalogs remain available from Configuración.
+Animal/owner creation and detail editing use the existing Modal component. The layout fills the
+available desktop width and supports mobile views without a document-wide horizontal scrollbar.
+
+Animal filters: name/PatientID/owner search, species, breed and presence of an active responsible
+relationship. Responsible filters: name/document/email/phone search, person/organization and
+active/inactive status. Column filters, sorting and pagination run on the server over the complete
+matching set. Directory controls and detail actions retain the existing saved permissions.

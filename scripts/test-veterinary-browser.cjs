@@ -21,13 +21,13 @@ const fixtures = JSON.parse(fs.readFileSync(process.env.VETERINARY_BROWSER_FIXTU
   await page.getByRole('button',{name:'Ingresar al Sistema'}).click();
   await page.waitForURL('**/inicio');
   await page.goto(origin+'/buscar-pacientes',{waitUntil:'networkidle'});
-  await page.getByRole('heading',{name:'Pacientes veterinarios'}).waitFor();
+  await page.getByRole('heading',{name:'Buscar pacientes'}).waitFor();
   if(await page.locator('a[href="/nexi"],a[href^="/reportes-estructurados"]').count()) throw Error('Disabled modules visible');
   await page.getByRole('button',{name:'Nuevo animal',exact:true}).click();
   const animalName='Synthetic browser '+crypto.randomBytes(4).toString('hex');
-  await page.getByLabel('Nombre del animal',{exact:true}).fill(animalName);
-  await page.getByLabel('Especie',{exact:true}).selectOption(fixtures.animal.veterinary.species_id);
-  await page.getByLabel('Peso registrado (kg)',{exact:true}).fill('6.5');
+  await page.getByRole('dialog').getByLabel('Nombre del animal',{exact:true}).fill(animalName);
+  await page.getByRole('dialog').getByLabel('Especie',{exact:true}).selectOption(fixtures.animal.veterinary.species_id);
+  await page.getByRole('dialog').getByLabel('Peso registrado (kg)',{exact:true}).fill('6.5');
   const creation=page.waitForResponse(r=>r.url().endsWith('/api/patients')&&r.request().method()==='POST');
   await page.getByRole('button',{name:'Guardar',exact:true}).click();
   const created=await creation;if(created.status()!==201)throw Error('Browser animal creation failed');
