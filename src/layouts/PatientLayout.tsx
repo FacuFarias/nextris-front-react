@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useUserModules } from "@/hooks/use-user-modules";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import clinicaLogo from "@/assets/logo/logo5.png";
+import { brand } from "@/lib/brand";
 import { Sidebar } from "./Sidebar";
 
 export const PatientLayout = ({ children }: { children: ReactNode }) => {
@@ -44,7 +44,7 @@ export const PatientLayout = ({ children }: { children: ReactNode }) => {
         <div style={{ height: viewportHeight }} className="patient-portal flex h-dvh min-w-0 flex-col overflow-hidden bg-background">
             <header className="z-40 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 pt-[env(safe-area-inset-top)] lg:hidden">
                 <div className="flex min-h-16 min-w-0 items-center gap-3">
-                    <img src={clinicaLogo} alt="NextRIS" className="h-12 w-20 shrink-0 object-contain" />
+                    <img src={brand.logo} alt={brand.name} className="h-12 w-20 shrink-0 rounded object-contain" />
                     <p className="text-sm font-semibold text-foreground">Portal de pacientes</p>
                 </div>
                 <DropdownMenu>

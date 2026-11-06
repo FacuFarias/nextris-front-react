@@ -1,3 +1,4 @@
+import { brand } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Menu, X } from "lucide-react";
@@ -11,7 +12,7 @@ interface MainLayoutProps {
     mobileTitle?: string;
 }
 
-export const MainLayout = ({ children, isOverflow = true, mobileTitle = "NextRIS" }: MainLayoutProps) => {
+export const MainLayout = ({ children, isOverflow = true, mobileTitle = brand.name }: MainLayoutProps) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     // En escritorio la navegación comienza compacta para dejar más espacio al contenido.
     const [sidebarCollapsed, setSidebarCollapsed] = useState(true);

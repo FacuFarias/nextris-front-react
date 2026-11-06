@@ -1,3 +1,4 @@
+import { brand } from "@/lib/brand";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { LoginCard } from "./components/LoginCard";
@@ -34,7 +35,7 @@ export const Login = ({ initialIsPatient = false }: LoginProps) => {
                     isPatient ? "text-teal-700/60" : "text-indigo-300/60"
                 )} style={{ animationDelay: '0.2s' }}>
                     <p className="text-sm">
-                        © 2026 NextRIS - Todos los derechos reservados
+                        © 2026 {brand.name} - Todos los derechos reservados
                     </p>
                 </div>
             </div>

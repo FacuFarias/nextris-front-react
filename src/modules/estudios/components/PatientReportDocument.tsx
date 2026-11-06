@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import clinicLogo from '@/assets/logo/logo5.png';
+import { brand } from '@/lib/brand';
 import { LocalReportContent } from '@/components/LocalReportContent';
 import { formatDate, formatDateTime } from '@/lib/fechaYhora';
 import type { PatientReportView } from '../types/patientReport';
@@ -23,7 +23,7 @@ export const patientReportStyles = `
 .patient-report .report-study-title { max-width: 42%; text-align: right; margin: 0; font-size: 18px; }
 .patient-report .report-patient-name dd { font-weight: 700; }
 .patient-report .report-metadata + .report-metadata { margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e5e5; }
-.patient-report .report-logo { width: 64px; height: 64px; flex-shrink: 0; object-fit: contain; }
+.patient-report .report-logo { width: 96px; height: 80px; flex-shrink: 0; object-fit: contain; }
 .patient-report .report-letterhead p { margin: 4px 0 0; color: #555; font-size: 13px; }
 .patient-report .report-metadata { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px 18px; line-height: 1.45; }
@@ -50,7 +50,7 @@ export const patientReportStyles = `
     .patient-report .report-letterhead { flex-wrap: wrap; }
     .patient-report .report-study-title { max-width: 100%; width: 100%; text-align: left; }
     .patient-report h1 { font-size: 20px; }
-    .patient-report .report-logo { width: 60px; height: 60px; }
+    .patient-report .report-logo { width: 76px; height: 64px; }
 }
 @media print {
     html, body { margin: 0; padding: 0; background: #fff; }
@@ -96,17 +96,17 @@ export function PatientReportDocument({ view }: { view: PatientReportView }) {
     return <article className="patient-report" aria-label="Documento del informe">
         <header className="report-header">
           <div className="report-letterhead">
-            <img src={institution.logo && validImage(institution.logo) ? institution.logo : clinicLogo}
-                alt="Logo de NextRIS" className="report-logo" />
+            <img src={institution.logo && validImage(institution.logo) ? institution.logo : brand.logo}
+                alt={`Logo de ${brand.name}`} className="report-logo" />
             <div className="report-institution">
-                <h1>{institution.name || 'NextRIS'}</h1>
+                <h1>{institution.name || brand.name}</h1>
                 {institution.address && <p>{institution.address}</p>}
             </div>
             <h2 className="report-study-title">{report.procedimientos || study.description || 'Informe médico'}</h2>
           </div>
         <dl className="report-metadata">
-            <div className="report-patient-name"><dt>Paciente</dt><dd>{patient.name}</dd></div>
-            {patient.identifier && <div><dt>ID del paciente</dt><dd>{patient.identifier}</dd></div>}
+            <div className="report-patient-name"><dt>{brand.veterinary ? 'Animal' : 'Paciente'}</dt><dd>{patient.name}</dd></div>
+            {patient.identifier && <div><dt>{brand.veterinary ? 'ID del animal' : 'ID del paciente'}</dt><dd>{patient.identifier}</dd></div>}
             {patient.national_code && <div><dt>Documento</dt><dd>{patient.national_code}</dd></div>}
         </dl>
         <dl className="report-metadata">

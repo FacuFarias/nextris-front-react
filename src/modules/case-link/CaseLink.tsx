@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, ExternalLink, FileText, Image, Loader2, ShieldCheck } from "lucide-react";
-import nextrisLogo from "@/assets/logo/logo5.png";
+import { brand } from "@/lib/brand";
 import { formatDate, formatDateTime } from "@/lib/fechaYhora";
 import { PatientReportDialog } from "@/modules/estudios/components/PatientReportDialog";
 import type { PatientReportView } from "@/modules/estudios/types/patientReport";
@@ -135,22 +135,22 @@ export const CaseLink = () => {
     }
 
     return (
-        <div className="patient-case h-dvh bg-[#f7f3fc] p-2 text-slate-800 sm:p-4">
-            <main className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-xl border border-purple-100 bg-white shadow-xl">
+        <div className="patient-case h-dvh bg-[#f7f3fc] p-2 text-slate-800 sm:p-4 lg:flex lg:items-center lg:justify-center">
+            <main className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-xl border border-purple-100 bg-white shadow-xl lg:h-auto lg:max-h-full lg:w-full lg:max-w-5xl">
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
                     <header className="bg-gradient-to-r from-[#4a148c] via-[#6a1bb0] to-[#8e24aa] px-3 py-4 text-white sm:px-6">
-                        <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center justify-between gap-3 lg:justify-start lg:gap-5">
                             <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm sm:h-14 sm:w-14 sm:p-2">
-                                    <img src={nextrisLogo} alt="Logo de NextRIS" className="h-full w-full object-contain" />
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm sm:h-14 sm:w-14 sm:p-2 lg:hidden">
+                                    <img src={brand.mark} alt="" className="h-full w-full object-contain" />
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-lg font-bold tracking-[0.15em] sm:text-2xl sm:tracking-[0.25em]">NEXTRIS</p>
-                                    <p className="mt-1 text-xs text-purple-100 sm:text-sm">Estudio médico compartido</p>
+                                    <p className="text-lg font-bold tracking-[0.15em] sm:text-2xl sm:tracking-[0.25em]">{brand.name.toUpperCase()}</p>
+                                    <p className="mt-1 text-xs text-purple-100 sm:text-sm">{brand.veterinary ? "Estudio veterinario compartido" : "Estudio médico compartido"}</p>
                                 </div>
                             </div>
-                            <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-lg bg-white p-2 shadow-sm sm:h-16 sm:w-32 sm:py-0">
-                                <img src={nextrisLogo} alt="Logo de NextRIS" className="max-h-full max-w-full object-contain" />
+                            <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-lg bg-white p-2 shadow-sm sm:h-16 sm:w-32 sm:py-0 lg:order-first lg:h-24 lg:w-28 lg:py-2">
+                                <img src={brand.logo} alt={`Logo de ${brand.name}`} className="max-h-full max-w-full object-contain" />
                             </div>
                         </div>
                         <div className="mt-3 flex items-start gap-2 text-xs text-purple-100 sm:text-sm [&>svg]:shrink-0">
@@ -160,11 +160,11 @@ export const CaseLink = () => {
                     </header>
 
                     <section className="grid divide-y border-b md:grid-cols-2 md:divide-x md:divide-y-0">
-                        <InfoSection title="Paciente" items={[
+                        <InfoSection title={brand.veterinary ? "Animal" : "Paciente"} items={[
                             ["Nombre", caseData.patient.name || "-"],
-                            ["ID del paciente", caseData.patient.id || "-"],
+                            [brand.veterinary ? "ID del animal" : "ID del paciente", caseData.patient.id || "-"],
                             ["Sexo", caseData.patient.sex || "-"],
-                            ["Fecha de nacimiento", formatDate(caseData.patient.birthdate)],
+                            ["Fecha de nacimiento", formatDate(caseData.patient.birthdate) || "-"],
                         ]} />
                         <InfoSection title="Estudio de imágenes" items={[
                             ["N.º de acceso", caseData.study.accession_number || "-"],
@@ -176,7 +176,7 @@ export const CaseLink = () => {
                     </section>
 
                     <footer className="bg-[#fbf9fe] px-4 py-3 text-center text-xs text-slate-500 sm:px-6">
-                        Este enlace del caso fue generado por NextRIS. Solo permite acceder al estudio asociado al enlace.
+                        Este enlace del caso fue generado por {brand.name}. Solo permite acceder al estudio asociado al enlace.
                     </footer>
                 </div>
 

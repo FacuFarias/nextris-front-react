@@ -1,3 +1,4 @@
+import { brand } from '@/lib/brand';
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, Printer, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -30,7 +31,7 @@ export function PatientReportDialog({ view, onClose }: { view: PatientReportView
             const printWindow = frame.contentWindow;
             if (!printDocument || !printWindow) throw new Error('No se pudo preparar la impresión');
             printDocument.documentElement.lang = 'es';
-            printDocument.title = 'Informe médico';
+            printDocument.title = brand.veterinary ? 'Informe veterinario' : 'Informe médico';
             const style = printDocument.createElement('style');
             style.textContent = patientReportStyles;
             printDocument.head.appendChild(style);
@@ -56,8 +57,8 @@ export function PatientReportDialog({ view, onClose }: { view: PatientReportView
     return <Dialog open={view !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
         <DialogContent showCloseButton={false} className="patient-form flex flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl sm:gap-0 sm:p-0">
             <DialogHeader className="relative shrink-0 border-b p-4 pr-16 text-left">
-                <DialogTitle>Informe médico</DialogTitle>
-                <DialogDescription>NextRIS · Solo lectura</DialogDescription>
+                <DialogTitle>{brand.veterinary ? 'Informe veterinario' : 'Informe médico'}</DialogTitle>
+                <DialogDescription>{brand.name} · Solo lectura</DialogDescription>
                 <Button variant="outline" className="mt-2 w-fit max-w-full whitespace-normal text-left" onClick={print} disabled={printing || !view}>
                     {printing ? <Loader2 className="size-4 animate-spin" /> : <Printer className="size-4" />}
                     Imprimir / Guardar como PDF

@@ -4,6 +4,7 @@ import { ProtectedRoute } from "./ProtectedRoute";
 import { useAnalytics } from "@/context/AnalyticsContext";
 import { useAuth } from "@/context/AuthContext";
 import { useAppConfig } from "@/context/AppConfigContext";
+import { brand } from "@/lib/brand";
 import { BridgeWidget } from "@/assistant/BridgeWidget";
 
 // Rutas de autenticación — cargadas de forma eager (necesarias en el arranque)
@@ -31,7 +32,7 @@ function RootLayout() {
         .at(-1);
 
     useEffect(() => {
-        document.title = pageTitle ? `NextRIS - ${pageTitle}` : "NextRIS";
+        document.title = pageTitle ? `${brand.name} - ${pageTitle}` : brand.name;
     }, [pageTitle]);
     const { track } = useAnalytics();
     const lastPath = useRef<string | null>(null);

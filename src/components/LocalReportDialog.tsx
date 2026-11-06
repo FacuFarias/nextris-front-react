@@ -1,4 +1,4 @@
-import nextrisLogo from "@/assets/logo/logo5.png";
+import { brand } from "@/lib/brand";
 import { LocalReportContent } from './LocalReportContent';
 import { ReportProfessionalSignatures } from './ReportProfessionalSignatures';
 import { X } from 'lucide-react';
@@ -20,15 +20,15 @@ export function LocalReportDialog({ report, onClose }: { report: LocalReport | n
             <DialogContent showCloseButton={false} className="flex flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl sm:gap-0 sm:p-0">
                 <DialogHeader className="relative shrink-0 border-b px-5 py-5 pr-16 text-left sm:px-6 sm:pr-16">
                     <div className="mb-3 flex items-center gap-4 border-b border-violet-200 pb-4 dark:border-violet-800">
-                        <img src={institution?.logo_path || nextrisLogo} alt="Logo de la clínica" className="h-16 w-16 shrink-0 rounded bg-white object-contain p-1" />
+                        <img src={institution?.logo_path || brand.logo} alt="Logo de la clínica" className="h-16 w-16 shrink-0 rounded bg-white object-contain p-1" />
                         <div className="min-w-0 break-words">
-                            <p className="text-lg font-bold text-brand-purple dark:text-violet-200">{institution?.name || 'NextRIS'}</p>
+                            <p className="text-lg font-bold text-brand-purple dark:text-violet-200">{institution?.name || brand.name}</p>
                             {institution?.address && <p className="text-sm text-muted-foreground">{institution.address}</p>}
                         </div>
                     </div>
-                    <DialogTitle className="leading-snug">{report?.procedimientos || 'Informe de NextRIS'}</DialogTitle>
+                    <DialogTitle className="leading-snug">{report?.procedimientos || `Informe de ${brand.name}`}</DialogTitle>
                     <DialogDescription>
-                        NextRIS · Solo lectura · {formatDateTime(report?.fecha)} · {report?.accession_number}
+                        {brand.name} · Solo lectura · {formatDateTime(report?.fecha)} · {report?.accession_number}
                     </DialogDescription>
                     <DialogClose
                         aria-label="Cerrar informe"

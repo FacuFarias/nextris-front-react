@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { User, Lock, Shield, Activity, Clipboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoginTypeSelector } from "./LoginTypeSelector";
-import clinicaLogo from "@/assets/logo/logo5.png";
+import { brand } from "@/lib/brand";
 import { UseLogin } from "../hooks/use-login";
 interface LoginCardProps {
     isPatient: boolean;
@@ -57,9 +57,9 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
         )}>
             <div className="mb-4 animate-slide-up flex flex-col items-center sm:mb-8">
                 <img
-                    src={clinicaLogo}
-                    alt="NextRIS"
-                    className="h-24 w-auto sm:h-32"
+                    src={brand.logo}
+                    alt={brand.name}
+                    className="h-28 w-auto rounded-lg sm:h-36"
                 />
             </div>
 
@@ -71,7 +71,7 @@ export const LoginCard = ({ isPatient, onTypeChange }: LoginCardProps) => {
                 <p className="text-muted-foreground text-sm">
                     {isPatient
                         ? "Acceda a las imágenes y reportes de sus estudios"
-                        : "Sistema de gestión clínica NextRIS"}
+                        : `Sistema de gestión clínica ${brand.name}`}
                 </p>
             </div>
 

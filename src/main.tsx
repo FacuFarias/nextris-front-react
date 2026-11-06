@@ -9,6 +9,10 @@ import { ThemeProvider } from './context/ThemeContext.tsx'
 import { AppConfigProvider } from './context/AppConfigContext.tsx'
 import { AnalyticsProvider } from './context/AnalyticsContext.tsx'
 import { queryClient } from './lib/queryClient.ts'
+import { brand } from './lib/brand.ts'
+
+if (brand.icon) document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.setAttribute('href', brand.icon)
+document.title = brand.name
 
 createRoot(document.getElementById('root')!).render(
 
