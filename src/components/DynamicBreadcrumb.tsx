@@ -26,6 +26,7 @@ const routeNames: Record<string, string> = {
     "crear-informe": "Crear informe",
     "editar-informe": "Editar informe",
     "cargar-estudios": "Cargar estudios",
+    almacenamiento: "Almacenamiento",
     "redactar-informe": "Redactar informe",
     distribucion: "Distribución",
     configuraciones: "Configuraciones",

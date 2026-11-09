@@ -1,0 +1,1 @@
+export { Almacenamiento } from "./Almacenamiento";

@@ -23,7 +23,7 @@ import {
     Info,
     PanelLeftClose,
     PanelLeftOpen,
-    Share2, FileCode2, ListTree, Scale, Files, Sparkles,
+    Share2, HardDrive, FileCode2, ListTree, Scale, Files, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo/logo5.png";
@@ -116,7 +116,7 @@ const menuItems: MenuItem[] = [
         icon: Briefcase,
         label: "Gestión",
         path: "/administracion",
-        requiredPermissions: ["tabs.gestion.view", "templates.manage", "dicom.studies.manage"],
+        requiredPermissions: ["tabs.gestion.view", "templates.manage", "dicom.studies.manage", "storage.view"],
         subItems: [
             {
                 icon: UserCog,
@@ -152,6 +152,13 @@ const menuItems: MenuItem[] = [
                 path: "/gestion/accesos-externos",
                 allowedRoles: ["Sysadmin", "Administrador"],
                 requiredPermissions: ["tabs.gestion.view"],
+            },
+            {
+                icon: HardDrive,
+                label: "Gestión de almacenamiento",
+                path: "/gestion/almacenamiento",
+                allowedRoles: ["Sysadmin", "Administrador"],
+                requiredPermissions: ["storage.view"],
             },
             // DEPRECATED
             // {

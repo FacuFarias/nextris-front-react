@@ -71,6 +71,7 @@ const ReasignacionExamenes = lazy(() => import("@/modules/administracion/reasign
 const CargarEstudios = lazy(() => import("@/modules/gestion").then(m => ({ default: m.CargarEstudios })));
 const VeterinaryUpload = lazy(() => import("@/modules/veterinary/VeterinaryUpload").then(m => ({ default: m.VeterinaryUpload })));
 const AccesosExternos = lazy(() => import("@/modules/gestion/accesos-externos").then(m => ({ default: m.AccesosExternos })));
+const Almacenamiento = lazy(() => import("@/modules/gestion/almacenamiento").then(m => ({ default: m.Almacenamiento })));
 // structured_reports — deshabilitado temporalmente
 // nexi — deshabilitado temporalmente
 
@@ -352,6 +353,18 @@ const router = createBrowserRouter([
                 requiredPermissions={["tabs.gestion.view"]}
             >
                 <AccesosExternos />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/gestion/almacenamiento",
+        handle: { title: "Gestión de almacenamiento" },
+        element: (
+            <ProtectedRoute
+                allowedRoles={["Sysadmin", "Administrador"]}
+                requiredPermissions={["storage.view"]}
+            >
+                <Almacenamiento />
             </ProtectedRoute>
         ),
     },

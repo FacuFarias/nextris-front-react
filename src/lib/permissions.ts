@@ -22,7 +22,7 @@ export const moduleForPath = (path: string) => {
 export const permissionModuleLabels: Record<string, string> = {
     veterinary: 'Veterinaria', patients: 'Pacientes', worklist: 'Lista de trabajo', images: 'Imágenes',
     reports: 'Informes', templates: 'Informes predefinidos', dicom: 'Estudios DICOM',
-    distribution: 'Distribución', gestion: 'Gestión administrativa',
+    distribution: 'Distribución', gestion: 'Gestión administrativa', storage: 'Almacenamiento',
     config: 'Configuración', users: 'Usuarios y permisos',
     admissions: 'Admisión', appointments: 'Citas', nexi: 'Nexi', structured_reports: 'Reportes estructurados',
 };

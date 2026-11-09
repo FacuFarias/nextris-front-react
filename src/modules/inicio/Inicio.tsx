@@ -12,6 +12,7 @@ import {
     UserCog,
     FileText,
     FileEdit,
+    HardDrive,
     Send,
     Wrench,
     Settings,
@@ -223,6 +224,15 @@ const menuSections: MenuSection[] = [
                 path: "/gestion/cargar-estudios",
                 allowedRoles: ["Sysadmin", "Medico", "Administrador"],
                 requiredPermissions: ["dicom.studies.manage"],
+            },
+            {
+                id: "almacenamiento",
+                title: "Gestión de almacenamiento",
+                description: "Espacio en fs1, Backblaze B2 y crecimiento",
+                icon: <HardDrive className="w-5 h-5" />,
+                path: "/gestion/almacenamiento",
+                allowedRoles: ["Sysadmin", "Administrador"],
+                requiredPermissions: ["storage.view"],
             },
             {
                 id: "configuraciones",
