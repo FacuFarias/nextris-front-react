@@ -10,6 +10,8 @@ import { api } from "@/lib/api"
 import type { PacsStudy } from "../hooks/use-studies-by-location"
 import { formatDate } from "@/lib/fechaYhora"
 import { DateInput } from "@/components/ui/date-input"
+import { useAppConfig } from "@/context/AppConfigContext"
+import { VeterinaryReassignImagesModal } from "./VeterinaryReassignImagesModal"
 
 interface PatientSearchResult {
   guid: string
@@ -30,7 +32,7 @@ interface ReasignarImagenModalProps {
 
 type ModalStep = "search" | "confirm" | "dicom_confirm"
 
-export const ReasignarImagenModal = ({ open, onOpenChange, study, onSuccess }: ReasignarImagenModalProps) => {
+const HumanReasignarImagenModal = ({ open, onOpenChange, study, onSuccess }: ReasignarImagenModalProps) => {
   const [step, setStep] = useState<ModalStep>("search")
   const [searchTerm, setSearchTerm] = useState("")
   const [searchResults, setSearchResults] = useState<PatientSearchResult[]>([])
@@ -475,4 +477,12 @@ export const ReasignarImagenModal = ({ open, onOpenChange, study, onSuccess }: R
       </DialogContent>
     </Dialog>
   )
+}
+
+export const ReasignarImagenModal = (props: ReasignarImagenModalProps) => {
+  const { config, isLoading } = useAppConfig()
+  if (!props.open || !props.study || isLoading || !config) return null
+  return config.patient_mode === "veterinary"
+    ? <VeterinaryReassignImagesModal key={props.study.pk} {...props} study={props.study} />
+    : <HumanReasignarImagenModal {...props} />
 }

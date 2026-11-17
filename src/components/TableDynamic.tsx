@@ -34,6 +34,7 @@ export function TablaDynamic<T extends Record<string, any>>({
     data,
     columns,
     actions = [],
+    actionsPosition = "after-first",
     loading = false,
     refreshing = false,
     refreshError = false,
@@ -497,6 +498,64 @@ export function TablaDynamic<T extends Record<string, any>>({
     // Keep a minimum width so the header label "Acciones" is fully visible.
     const actionsColumnWidth = actions.length > 0 ? Math.max(actions.length * 36 + 16, 140) : 140;
 
+    const actionsHeader = actions.length > 0 ? (
+        <TableHead
+            style={{ width: `${actionsColumnWidth}px`, minWidth: `${actionsColumnWidth}px` }}
+            className="text-white/95 text-left py-2 px-2 text-sm"
+        >
+            Acciones
+        </TableHead>
+    ) : null;
+
+    const renderActionsCell = (row: T, index: number) => actions.length > 0 ? (
+        <TableCell
+            style={{ width: `${actionsColumnWidth}px`, minWidth: `${actionsColumnWidth}px` }}
+            className="py-1 px-2 overflow-visible"
+        >
+            <TooltipProvider>
+                <div className="flex items-center justify-start gap-1 w-max min-w-full whitespace-nowrap">
+                    {actions.map((action, actionIndex) => {
+                        const isHidden = action.hidden?.(row) ?? false;
+
+                        if (isHidden) {
+                            return <div key={actionIndex} className="h-8 w-8 shrink-0" aria-hidden="true" />;
+                        }
+
+                        return action.component ? (
+                            <div key={actionIndex} className="h-8 w-8 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                {action.component(row, getRowIndex(index))}
+                            </div>
+                        ) : (
+                            <Tooltip key={actionIndex}>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        aria-label={typeof action.label === "function" ? action.label(row) : action.label}
+                                        variant="ghost"
+                                        size="icon"
+                                        className={cn(
+                                            "h-8 w-8 shrink-0 hover:bg-brand-purple/15 dark:hover:bg-purple-800/45 cursor-pointer",
+                                            action.variant === "destructive" && "hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400"
+                                        )}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            action.onClick?.(row, getRowIndex(index));
+                                        }}
+                                        disabled={action.disabled?.(row)}
+                                    >
+                                        {typeof action.icon === "function" ? action.icon(row) : action.icon}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" align="center" sideOffset={6}>
+                                    <p>{typeof action.label === "function" ? action.label(row) : action.label}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        );
+                    })}
+                </div>
+            </TooltipProvider>
+        </TableCell>
+    ) : null;
+
     useEffect(() => {
         if (!preserveTableHeight || !pagination) return;
 
@@ -598,6 +657,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                     <Table containerClassName="!overflow-visible" className={cn("w-full table-fixed select-none", tableClassName)}>
                     <TableHeader ref={tableHeaderRef} className="sticky top-0 z-20 bg-[linear-gradient(90deg,#6a1bb0,#4a148c)] dark:bg-[linear-gradient(90deg,#4a157a,#2d0d52)] border-b border-white/10 shadow-[0_6px_18px_rgba(32,12,62,0.35)]">
                         <TableRow className="bg-transparent hover:bg-transparent border-b-0">
+                            {actionsPosition === "first" && actionsHeader}
                             {renderColumns.length > 0 && (() => {
                                 const [firstColumn] = renderColumns;
                                 const firstColKey = String(firstColumn.key);
@@ -694,14 +754,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                     </TableHead>
                                 );
                             })()}
-                            {actions.length > 0 && (
-                                <TableHead
-                                    style={{ width: `${actionsColumnWidth}px`, minWidth: `${actionsColumnWidth}px` }}
-                                    className="text-white/95 text-left py-2 px-2 text-sm"
-                                >
-                                    Acciones
-                                </TableHead>
-                            )}
+                            {actionsPosition === "after-first" && actionsHeader}
                             {showIndex && (
                                 <TableHead
                                     style={{ width: `${indexColumnWidth}px`, minWidth: `${indexColumnWidth}px`, maxWidth: `${indexColumnWidth}px` }}
@@ -920,6 +973,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                 if (onRowContextMenu) e.preventDefault();
                                             }}
                                         >
+                                            {actionsPosition === "first" && renderActionsCell(row, index)}
                                             {renderColumns.length > 0 && (() => {
                                                 const [firstColumn] = renderColumns;
                                                 return (
@@ -936,54 +990,7 @@ export function TablaDynamic<T extends Record<string, any>>({
                                                     </TableCell>
                                                 );
                                             })()}
-                                            {actions.length > 0 && (
-                                                <TableCell
-                                                    style={{ width: `${actionsColumnWidth}px`, minWidth: `${actionsColumnWidth}px` }}
-                                                    className="py-1 px-2 overflow-visible"
-                                                >
-                                                    <TooltipProvider>
-                                                        <div className="flex items-center justify-start gap-1 w-max min-w-full whitespace-nowrap">
-                                                            {actions.map((action, actionIndex) => {
-                                                                const isHidden = action.hidden?.(row) ?? false;
-
-                                                                if (isHidden) {
-                                                                    return <div key={actionIndex} className="h-8 w-8 shrink-0" aria-hidden="true" />;
-                                                                }
-
-                                                                return action.component ? (
-                                                                    <div key={actionIndex} className="h-8 w-8 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                                                        {action.component(row, getRowIndex(index))}
-                                                                    </div>
-                                                                ) : (
-                                                                    <Tooltip key={actionIndex}>
-                                                                        <TooltipTrigger asChild>
-                                                                            <Button
-                                                                                aria-label={typeof action.label === "function" ? action.label(row) : action.label}
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                className={cn(
-                                                                                    "h-8 w-8 shrink-0 hover:bg-brand-purple/15 dark:hover:bg-purple-800/45 cursor-pointer",
-                                                                                    action.variant === "destructive" && "hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400"
-                                                                                )}
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    action.onClick?.(row, getRowIndex(index));
-                                                                                }}
-                                                                                disabled={action.disabled?.(row)}
-                                                                            >
-                                                                                {typeof action.icon === "function" ? action.icon(row) : action.icon}
-                                                                            </Button>
-                                                                        </TooltipTrigger>
-                                                                        <TooltipContent side="top" align="center" sideOffset={6}>
-                                                                            <p>{typeof action.label === "function" ? action.label(row) : action.label}</p>
-                                                                        </TooltipContent>
-                                                                    </Tooltip>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </TooltipProvider>
-                                                </TableCell>
-                                            )}
+                                            {actionsPosition === "after-first" && renderActionsCell(row, index)}
                                             {showIndex && (
                                                 <TableCell
                                                     style={{ width: `${indexColumnWidth}px`, minWidth: `${indexColumnWidth}px`, maxWidth: `${indexColumnWidth}px` }}

@@ -8,8 +8,8 @@ export interface StorageCount {
 export interface StorageOverview {
     generated_at: string;
     disk: { path: string; total: number; used: number; free: number; threshold: number; margin: number };
-    local_cache: { fs1: StorageCount; retrieve: StorageCount; bytes: number };
-    b2: StorageCount & { source: "catalog" };
+    local_cache: { fs1: StorageCount; retrieve: StorageCount; bytes: number; studies: number };
+    b2: StorageCount & { source: "catalog"; studies: number };
     pending_b2: StorageCount & { oldest_age_seconds: number | null };
     today: { date: string; studies: number; bytes: number };
     study_size: {
@@ -60,4 +60,39 @@ export interface ApiEnvelope<T> {
     success: boolean;
     data: T;
     message?: string;
+}
+
+export interface CacheCopy extends StorageCount {
+    storage: "fs1" | "fs1-retrieve";
+    instances: number;
+    all_backed_up: boolean;
+    entered_at: string;
+    expires_at: string;
+    ttl_seconds: number;
+    expired: boolean;
+    can_remove: boolean;
+    blocked_reason: string | null;
+    queue_status: "queued" | "failed" | null;
+}
+
+export interface CacheStudy {
+    study_pk: number;
+    study_uid: string;
+    study_date: string;
+    study_time: string;
+    description: string;
+    accession: string;
+    patient_name: string;
+    copies: CacheCopy[];
+}
+
+export interface CacheStudies {
+    items: CacheStudy[];
+    total: number;
+    page: number;
+    per_page: number;
+    timezone: string;
+    policy_enabled: boolean;
+    poll_seconds: number;
+    generated_at: string;
 }

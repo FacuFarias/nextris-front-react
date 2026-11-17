@@ -492,6 +492,7 @@ export const getInformesActions = (
     onAdminUnlock?: (examId: string) => void,
     isAdmin: boolean = false,
     canViewImages = true,
+    simpleVeterinary = false,
 ): TableAction<Informes>[] => [
         {
             label: (informe: Informes) => {
@@ -533,10 +534,10 @@ export const getInformesActions = (
         },
         {
             label: (informe: Informes) => {
-                if (informe.w_order === 1 || informe.is_executed) return "Editar confirmación";
+                if (informe.is_executed || (!simpleVeterinary && informe.w_order === 1)) return "Editar confirmación";
                 return onConfirmStudy ? "Confirmar estudio" : "Estudio sin confirmar";
             },
-            icon: <i className="fi fi-rr-search-alt text-[16px] text-green-600" aria-hidden="true" />,
+            icon: (informe: Informes) => <i className={`fi fi-rr-search-alt text-[16px] ${simpleVeterinary && !informe.is_executed ? 'text-amber-500 dark:text-amber-400' : 'text-green-600'}`} aria-hidden="true" />,
             onClick: (informe: Informes) => {
                 if (onConfirmStudy) {
                     onConfirmStudy(informe);

@@ -22,6 +22,23 @@ layout, controls, TanStack Query, Axios and Zod. The server enforces mode, valid
 - DICOM identity reconciliation requires explicit confirmation. The original upload is preserved;
   failures to transfer to PACS are reported rather than presented as successful uploads.
 
+## Images and animal assignment
+
+The Images page uses Animal and DICOM ID labels in veterinary mode. Its
+reassignment modal searches the existing animal directory by animal name, ID
+or responsible (including the responsible's document). Results show species and
+responsibles. Create new animal opens the veterinary registration form with
+name, species, breed, sex, birth date/estimated flag, reproductive status and
+weight. It offers an existing responsible, new responsible, or pending
+responsibility. Animal surname and animal DNI fields are not presented.
+
+Animal creation and its optional owner relationship are saved atomically through
+the veterinary patient resource. After creation, the new animal is selected for
+confirmation; image assignment is a separate explicit step. The user confirms
+that the images belong to that animal. The original PACS files remain intact.
+Saved/signed reports cannot be moved to a different animal from this modal.
+The human mode continues to render the original patient dialog.
+
 ## Responsible flow
 
 Login uses the existing `/pacientes` entry, relabeled Portal de responsables. The account must change

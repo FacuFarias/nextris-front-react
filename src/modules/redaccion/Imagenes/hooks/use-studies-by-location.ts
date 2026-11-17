@@ -40,6 +40,7 @@ interface UseStudiesByLocationParams {
   columnFilters?: Record<string, string>
   dateRange?: string
   dateField?: string
+  unlinkedOnly?: boolean
   sortColumn?: string
   sortDirection?: "asc" | "desc"
 }
@@ -52,17 +53,19 @@ export const useStudiesByLocation = ({
   columnFilters = {},
   dateRange = "all",
   dateField = "arrival",
+  unlinkedOnly = true,
   sortColumn = "study_datetime",
   sortDirection = "desc",
 }: UseStudiesByLocationParams) => {
   const { data, isLoading, isFetching, error, refetch } = useQuery<StudiesByLocationResponse>({
-    queryKey: ["studies-by-location", locationId || "all", page, perPage, search, sortColumn, sortDirection, columnFilters, dateRange, dateField],
+    queryKey: ["studies-by-location", locationId || "all", page, perPage, search, sortColumn, sortDirection, columnFilters, dateRange, dateField, unlinkedOnly],
     queryFn: async () => {
       const effectiveLocationId = locationId || "all"
 
       const params = new URLSearchParams()
       params.set("page", String(page))
       params.set("per_page", String(perPage))
+      params.set("unlinked_only", String(unlinkedOnly))
       if (search) params.set("search", search)
       if (dateRange) params.set("date_range", dateRange)
       if (dateField) params.set("date_field", dateField)

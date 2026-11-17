@@ -1,6 +1,7 @@
 import { api } from '@/lib/api';
 
 export interface AppConfig {
+  workflow_profile?: "standard" | "simple_veterinary";
   patient_mode?: "human" | "veterinary";
   mwl_enabled?: boolean;
   id: number;

@@ -8,6 +8,7 @@ export interface ImageFilterPresetFilters {
   sort_direction: "asc" | "desc"
   date_range: string
   date_field: string
+  unlinked_only?: boolean
   filters_visible: boolean
   column_filters: Record<string, string>
 }

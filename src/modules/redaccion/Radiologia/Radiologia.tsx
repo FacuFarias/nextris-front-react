@@ -108,6 +108,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const isAdministrativeView = administrativeView;
     const { config: appConfig } = useAppConfig();
     const isVeterinary = appConfig?.patient_mode === 'veterinary';
+    const isSimpleVeterinary = isVeterinary && appConfig?.workflow_profile === 'simple_veterinary';
     const veterinaryDefaults = useMemo(() => ["patient_name", "patient_id", "responsible_name", "study_type", "status", "accession_number", "workflow_state", "study_date", "num_instances"], []);
 
     // Hook para sincronizar entre ventanas
@@ -156,6 +157,17 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const [openingReport, setOpeningReport] = useState(false);
     const openingReportRef = useRef(false);
     const [selectedExamForConfirm, setSelectedExamForConfirm] = useState<Informes | null>(null);
+    const confirmationInitialData = useMemo(() => ({
+        referring_physician_id: selectedExamForConfirm?.referring_physician_id || null,
+        requesting_physician_id: selectedExamForConfirm?.requesting_physician_id || null,
+        requesting_physician_name: selectedExamForConfirm?.requesting_physician_name || "",
+        studytype_id: selectedExamForConfirm?.study_type_id || "",
+        clinical_question: selectedExamForConfirm?.clinical_question || "",
+        modality_id: selectedExamForConfirm?.modality_id || null,
+        modality_description: selectedExamForConfirm?.modality_description || "",
+        other_details: selectedExamForConfirm?.other_details || "",
+        laterality_id: selectedExamForConfirm?.laterality_id || null,
+    }), [selectedExamForConfirm]);
     const [selectedInforme, setSelectedInforme] = useState<Informes | null>(null);
     const [isBlocking, setIsBlocking] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<string[]>(
@@ -201,7 +213,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const { allTags } = useAllTags();
     const { mutate: updateGeneralNotes, isPending: isUpdatingNotes } = useUpdateGeneralNotes();
     const { mutate: deleteExaminationNote, isPending: isDeletingNote } = useDeleteExaminationNote();
-    const { informesData, isLoading: isLoadingInformes, isFetching: isFetchingInformes, error: informesError, refetchInformes } = useInformes({ page, per_page: perPage, search: worklistSearch, column_filters: debouncedColumnFilters, patient_id_exact: assistantPatientId, show_reported: isAdministrativeView ? true : verFinalizados, show_ready: isAdministrativeView ? incluirSinFinalizar : listoParaLeer, assigned_to_me: isAdministrativeView ? false : asignadosAMi, show_no_image: verSinImagenes, show_without_order: verSinOrden, show_only_with_notes: soloConNotas, show_cancelled: incluirCancelado, bodypart_id: isAdministrativeView ? "" : bodyPartId, modality_id: modalityId, study_group_id: isAdministrativeView ? "" : studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField, sort_column: sortColumn, sort_direction: sortDirection });
+    const { informesData, isLoading: isLoadingInformes, isFetching: isFetchingInformes, error: informesError, refetchInformes } = useInformes({ refetch_interval: isSimpleVeterinary ? 10000 : 120000, page, per_page: perPage, search: worklistSearch, column_filters: debouncedColumnFilters, patient_id_exact: assistantPatientId, show_reported: isAdministrativeView ? true : verFinalizados, show_ready: isAdministrativeView ? incluirSinFinalizar : listoParaLeer, assigned_to_me: isAdministrativeView ? false : asignadosAMi, show_no_image: verSinImagenes, show_without_order: verSinOrden, show_only_with_notes: soloConNotas, show_cancelled: incluirCancelado, bodypart_id: isAdministrativeView ? "" : bodyPartId, modality_id: modalityId, study_group_id: isAdministrativeView ? "" : studioTypeId, flag_filter: flagFilter.join(','), date_range: dateRange, date_field: dateField, sort_column: sortColumn, sort_direction: sortDirection });
     const { gruposEstudio } = useGrupoEstudio();
     const { modalidades } = useModalidades();
     const { bodyParts } = useBodyParts();
@@ -219,9 +231,9 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
     const { mutateAsync: addTagsBatch } = useAddTagsBatch();
     const { mutateAsync: addFlagsBatch } = useAddFlagsBatch();
 
-    const canAssign = authData?.user?.permissions?.includes('*')
+    const canAssign = !isSimpleVeterinary && (authData?.user?.permissions?.includes('*')
         || authData?.user?.permissions?.includes('reports.assign')
-        || false;
+        || false);
     const canWrite = authData?.user?.permissions?.includes('*')
         || authData?.user?.permissions?.includes('reports.write')
         || false;
@@ -1645,7 +1657,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                             canViewImages,
                             canShareImages,
                         )
-                        : getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewReport, getGeneralNotesAction(handleUpdateGeneralNotes, handleDeleteNote, canDeleteNotes, isUpdatingNotes, isDeletingNote), canWrite, canAssign ? handleAssignExam : undefined, canConfirmExecute ? handleOpenConfirmStudy : undefined, isAdmin ? handleAdminUnlock : undefined, isAdmin, canViewImages)}
+                        : getInformesActions(handleRedactarInforme, handleViewImagenes, handleViewReport, getGeneralNotesAction(handleUpdateGeneralNotes, handleDeleteNote, canDeleteNotes, isUpdatingNotes, isDeletingNote), canWrite, canAssign ? handleAssignExam : undefined, canConfirmExecute ? handleOpenConfirmStudy : undefined, isAdmin ? handleAdminUnlock : undefined, isAdmin, canViewImages, isSimpleVeterinary)}
                     onPaginationChange={(newPage) => {
                         setPage(newPage);
                     }}
@@ -1766,6 +1778,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                             <DropdownMenuLabel className="border-b border-gray-100 px-3 py-2 text-xs font-semibold text-gray-500 dark:border-purple-900 dark:text-gray-400">
                                 Acciones del estudio
                             </DropdownMenuLabel>
+                            {!isSimpleVeterinary && <>
                             <DropdownMenuItem
                                 disabled={!canAssign}
                                 onSelect={() => handleContextAction('assign')}
@@ -1774,6 +1787,7 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                                 <UserCheck className="h-4 w-4 text-brand-purple" />
                                 Asignar a...
                             </DropdownMenuItem>
+                            </>}
                             <DropdownMenuItem
                                 onSelect={() => handleContextAction('tags')}
                                 className="gap-2 px-3 py-2 text-gray-700 focus:bg-purple-50 dark:text-gray-200 dark:focus:bg-purple-900/40"
@@ -1942,18 +1956,8 @@ export const Radiologia = ({ administrativeView = false }: { administrativeView?
                 isOpen={isConfirmStudyModalOpen}
                 onClose={closeConfirmStudyModal}
                 patientName={selectedExamForConfirm?.patient_name}
-                isEditing={Boolean(selectedExamForConfirm?.w_order === 1 || selectedExamForConfirm?.is_executed)}
-                initialData={{
-                    referring_physician_id: selectedExamForConfirm?.referring_physician_id || null,
-                    requesting_physician_id: selectedExamForConfirm?.requesting_physician_id || null,
-                    requesting_physician_name: selectedExamForConfirm?.requesting_physician_name || "",
-                    studytype_id: selectedExamForConfirm?.study_type_id || "",
-                    clinical_question: selectedExamForConfirm?.clinical_question || "",
-                    modality_id: selectedExamForConfirm?.modality_id || null,
-                    modality_description: selectedExamForConfirm?.modality_description || "",
-                    other_details: selectedExamForConfirm?.other_details || "",
-                    laterality_id: selectedExamForConfirm?.laterality_id || null,
-                }}
+                isEditing={Boolean(selectedExamForConfirm?.is_executed || (!isSimpleVeterinary && selectedExamForConfirm?.w_order === 1))}
+                initialData={confirmationInitialData}
                 onConfirm={handleConfirmStudy}
                 onCancelStudy={canConfirmExecute && selectedExamForConfirm?.workflow_state === 'pending' && !selectedExamForConfirm?.is_reported
                     ? handleOpenCancelStudy

@@ -2,6 +2,7 @@ import { api } from '@/lib/api';
 import { z } from 'zod';
 
 export interface Choice { id: string; name: string; species_id?: string; code_value?: string; coding_scheme?: string }
+export interface AnimalDicomReference { initial: Record<string, string>; dicom: { patient_name: string; patient_id: string; birthdate: string; gender: string; species: string; breed: string; weight_kg: string; reproductive_status: string; responsible_name: string; responsible_organization: string } }
 export interface VeterinaryData { species_id: string | null; breed_id: string | null; species_name?: string; breed_name?: string; weight_kg: number | null; birthdate_estimated: boolean; reproductive_status: string }
 export interface Animal { guid: string; patientid: string; name: string; surname?: string; birthdate: string | null; gender: string; veterinary: VeterinaryData; study_count: number; responsibles: { id: string; name: string }[] }
 export interface Responsible { id: string; kind: string; name: string; email: string | null; phone: string | null; document: string | null; address?: string; organization?: string; is_active: boolean }

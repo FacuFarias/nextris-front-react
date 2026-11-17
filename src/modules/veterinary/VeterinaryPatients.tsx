@@ -1,4 +1,4 @@
-import { useState, useId } from 'react';
+import { useState, useId, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
@@ -16,18 +16,45 @@ import { api } from '@/lib/api';
 import { get,post,put,animalSchema } from './api';
 import type { Animal,Choice,Responsible,Relationship,ClinicalEntry,Protocol,Study,RefData } from './api';
 
-type Field = { key: string; label: string; type?: string; options?: {value:string;label:string;parent?:string}[]; required?: boolean };
+type Field = { key: string; label: string; type?: string; placeholder?: string; options?: {value:string;label:string;parent?:string}[]; required?: boolean };
 type Values = Record<string,string>;
 const selectClass='w-full rounded-md border bg-background px-3 py-2 text-sm';
 const message=(error:unknown)=>error instanceof z.ZodError ? (error.issues[0]?.message||'Revise los datos ingresados') : isAxiosError(error)?String(error.response?.data?.message||error.response?.data?.error||error.message):error instanceof Error?error.message:'No se pudo completar la operación';
 const choice=(rows:RefData[]=[])=>rows.map(x=>({value:String(x.guid||x.id||''),label:x.description||x.name||x.code||''}));
 
-export function VeterinaryForm({fields,initial={},onSubmit,label='Guardar'}:{fields:Field[];initial?:Values;onSubmit:(data:Values)=>Promise<void>;label?:string}) {
- const formId=useId();
- const [values,setValues]=useState<Values>(initial);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [success,setSuccess]=useState(false);
- return <form className="space-y-3" onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');setSuccess(false);try{await onSubmit(values);setSuccess(true)}catch(err){setError(message(err))}finally{setBusy(false)}}}>
-  <div className="grid gap-3 sm:grid-cols-2">{fields.map(f=><div className="space-y-1 text-sm" key={f.key}><label className="block" htmlFor={formId+f.key}>{f.label}</label>{f.type==='textarea'?<textarea id={formId+f.key} className="min-h-24 w-full rounded-md border bg-background p-2" required={f.required} value={values[f.key]||''} onChange={e=>setValues({...values,[f.key]:e.target.value})}/>:f.type==='select'?<select id={formId+f.key} className={selectClass} required={f.required} value={values[f.key]||''} onChange={e=>setValues({...values,[f.key]:e.target.value,...(f.key==='species_id'?{breed_id:''}:{})})}><option value="">Sin informar</option>{f.options?.filter(o=>!o.parent||!values.species_id||o.parent===values.species_id).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>:f.type==='checkbox'?<input id={formId+f.key} type="checkbox" className="ml-2" checked={values[f.key]==='true'} onChange={e=>setValues({...values,[f.key]:String(e.target.checked)})}/>:<Input id={formId+f.key} required={f.required} type={f.type||'text'} step={f.type==='number'?'any':undefined} value={values[f.key]||''} onChange={e=>setValues({...values,[f.key]:e.target.value})}/>}</div>)}</div>
-  {error&&<p role="alert" className="text-sm text-red-600">{error}</p>}{success&&<p role="status" className="text-sm text-green-700">Guardado correctamente.</p>}<Button disabled={busy} type="submit">{busy?'Guardando…':label}</Button>
+export function VeterinaryForm({ fields, initial = {}, onSubmit, label = 'Guardar', renderFields, renderActions, markRequired = false }: {
+ fields: Field[];
+ initial?: Values;
+ onSubmit: (data: Values) => Promise<void>;
+ label?: string;
+ renderFields?: (fields: Record<string, ReactNode>) => ReactNode;
+ renderActions?: (busy: boolean) => ReactNode;
+ markRequired?: boolean;
+}) {
+ const formId = useId();
+ const [values, setValues] = useState<Values>(initial);
+ const [busy, setBusy] = useState(false);
+ const [error, setError] = useState('');
+ const [success, setSuccess] = useState(false);
+ const fieldNodes = fields.map(f => <div className="space-y-1 text-sm" key={f.key}>
+  <label className="block" htmlFor={formId + f.key}>{f.label}{markRequired && f.required && <span aria-hidden="true" className="ml-1 text-rose-500">*</span>}</label>
+  {f.type === 'textarea' ? <textarea id={formId + f.key} className="min-h-24 w-full rounded-md border bg-background p-2" required={f.required} value={values[f.key] || ''} onChange={e => setValues({ ...values, [f.key]: e.target.value })} />
+   : f.type === 'select' ? <select id={formId + f.key} className={selectClass} required={f.required} value={values[f.key] || ''} onChange={e => setValues({ ...values, [f.key]: e.target.value, ...(f.key === 'species_id' ? { breed_id: '' } : {}) })}>
+    <option value="">Sin informar</option>{f.options?.filter(o => !o.parent || !values.species_id || o.parent === values.species_id).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+   </select>
+   : f.type === 'checkbox' ? <input id={formId + f.key} type="checkbox" className="ml-2" checked={values[f.key] === 'true'} onChange={e => setValues({ ...values, [f.key]: String(e.target.checked) })} />
+   : <Input id={formId + f.key} required={f.required} type={f.type || 'text'} placeholder={f.placeholder} step={f.type === 'number' ? 'any' : undefined} value={values[f.key] || ''} onChange={e => setValues({ ...values, [f.key]: e.target.value })} />}
+ </div>);
+ return <form className="space-y-3" onSubmit={async e => {
+  e.preventDefault(); setBusy(true); setError(''); setSuccess(false);
+  try { await onSubmit(values); setSuccess(true); }
+  catch (err) { setError(message(err)); }
+  finally { setBusy(false); }
+ }}>
+  {renderFields ? renderFields(Object.fromEntries(fields.map((f, index) => [f.key, fieldNodes[index]]))) : <div className="grid gap-3 sm:grid-cols-2">{fieldNodes}</div>}
+  {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+  {success && <p role="status" className="text-sm text-green-700">Guardado correctamente.</p>}
+  {renderActions ? renderActions(busy) : <Button disabled={busy} type="submit">{busy ? 'Guardando…' : label}</Button>}
  </form>;
 }
 

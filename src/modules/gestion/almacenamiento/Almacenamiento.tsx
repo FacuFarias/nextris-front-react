@@ -20,6 +20,7 @@ import { storageService } from "./services";
 import type { StatusLevel, StorageHistory, StorageOverview } from "./types";
 import { formatAge, formatBytes, formatDay, formatDays, formatNumber } from "./format";
 import { TrendChart, type TrendPoint } from "./components/TrendChart";
+import { CacheStudiesDialog } from "./components/CacheStudiesDialog";
 
 const RANGES = [
     { days: 30, label: "30 días" },
@@ -48,8 +49,10 @@ const STATUS: Record<StatusLevel, { label: string; icon: typeof CheckCircle2; cl
     },
 };
 
-const Kpi = ({ icon, label, value, children }: { icon: ReactNode; label: string; value: string; children?: ReactNode }) => (
-    <Card className="gap-2 py-4">
+const Kpi = ({ icon, label, value, children, onClick }: { icon: ReactNode; label: string; value: string; children?: ReactNode; onClick?: () => void }) => (
+    <Card className={cn("relative gap-2 py-4", onClick && "transition-colors hover:border-brand-purple")}>
+        {onClick && <button type="button" onClick={onClick} aria-label="Ver estudios disponibles en caché" aria-haspopup="dialog"
+            className="absolute inset-0 z-10 cursor-pointer rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple" />}
         <CardHeader className="px-4">
             <CardDescription className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
                 <span className="text-brand-purple dark:text-purple-400">{icon}</span>
@@ -198,7 +201,7 @@ const Charts = ({ history }: { history: StorageHistory }) => {
     );
 };
 
-const Content = ({ overview, history }: { overview: StorageOverview; history?: StorageHistory }) => {
+const Content = ({ overview, history, onOpenCache }: { overview: StorageOverview; history?: StorageHistory; onOpenCache: () => void }) => {
     const { disk, local_cache, b2, pending_b2, today, study_size, projection } = overview;
     return (
         <div className="space-y-5">
@@ -213,15 +216,18 @@ const Content = ({ overview, history }: { overview: StorageOverview; history?: S
                             : `${formatBytes(-disk.margin)} por debajo del umbral: el PACS está retirando copias locales.`}
                     </p>
                 </Kpi>
-                <Kpi icon={<Layers className="h-4 w-4" />} label="Caché local del PACS" value={formatBytes(local_cache.bytes)}>
+                <Kpi icon={<Layers className="h-4 w-4" />} label="Caché local del PACS" value={formatBytes(local_cache.bytes)} onClick={onOpenCache}>
+                    <p className="font-semibold text-foreground">{formatNumber(local_cache.studies)} estudios almacenados</p>
                     <p>
                         Recepción (fs1): {formatBytes(local_cache.fs1.bytes)} · {formatNumber(local_cache.fs1.objects)} objetos
                     </p>
                     <p>
                         Recuperadas de B2: {formatBytes(local_cache.retrieve.bytes)} · {formatNumber(local_cache.retrieve.objects)} objetos
                     </p>
+                    <p className="font-medium text-brand-purple dark:text-purple-400">Ver estudios y vencimientos →</p>
                 </Kpi>
                 <Kpi icon={<Cloud className="h-4 w-4" />} label="Backblaze B2" value={formatBytes(b2.bytes)}>
+                    <p className="font-semibold text-foreground">{formatNumber(b2.studies)} estudios almacenados</p>
                     <p>{formatNumber(b2.objects)} objetos copiados según el catálogo del PACS.</p>
                     <p>No incluye versiones antiguas del bucket: el uso facturado puede ser mayor.</p>
                 </Kpi>
@@ -271,6 +277,7 @@ const Content = ({ overview, history }: { overview: StorageOverview; history?: S
 
 export const Almacenamiento = () => {
     const [days, setDays] = useState(30);
+    const [cacheOpen, setCacheOpen] = useState(false);
     const overview = useQuery({
         queryKey: ["storage", "overview", days],
         queryFn: () => storageService.overview(days),
@@ -332,7 +339,7 @@ export const Almacenamiento = () => {
                         No se pudo obtener el estado del almacenamiento. Intentá actualizar en unos segundos.
                     </div>
                 ) : overview.data ? (
-                    <Content overview={overview.data} history={history.data} />
+                    <Content overview={overview.data} history={history.data} onOpenCache={() => setCacheOpen(true)} />
                 ) : (
                     <p className="text-sm text-muted-foreground">Cargando estado del almacenamiento…</p>
                 )}
@@ -342,6 +349,7 @@ export const Almacenamiento = () => {
                         Actualizado {new Date(overview.data.generated_at).toLocaleString("es-AR")} · se renueva cada minuto.
                     </p>
                 )}
+                <CacheStudiesDialog open={cacheOpen} onOpenChange={setCacheOpen} />
             </div>
         </MainLayout>
     );

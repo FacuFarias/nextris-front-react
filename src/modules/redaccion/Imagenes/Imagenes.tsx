@@ -7,6 +7,7 @@ import { Image as ImageIcon, RefreshCcw, SlidersHorizontal, X } from "lucide-rea
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { FilterPresetTabs } from "./components/FilterPresetTabs"
 import { getImageActions, imageColumns } from "./components/columns"
 import { ReasignarImagenModal } from "./components/ReasignarImagenModal"
@@ -20,18 +21,42 @@ import type { ImageFilterPreset, ImageFilterPresetFilters } from "./types/filter
 import { useAuth } from "@/context/AuthContext"
 import { api } from "@/lib/api"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useAppConfig } from "@/context/AppConfigContext"
 
 const DEFAULT_VISIBLE_COLUMNS = imageColumns
     .map((col) => col.key as string)
-    .filter((key) => !["updated_time", "study_datetime", "sending_aet"].includes(key))
+    .filter((key) => !["updated_time", "sending_aet"].includes(key))
+
+// Accept layouts saved before study date and time were combined.
+const normalizeVisibleColumns = (savedColumns?: string[]) => {
+  const available = new Set(imageColumns.map(column => String(column.key)))
+  const keys = (savedColumns?.length ? savedColumns : DEFAULT_VISIBLE_COLUMNS)
+    .map(key => key === "study_date" || key === "study_time" ? "study_datetime" : key)
+    .filter(key => available.has(key))
+  return keys.length ? Array.from(new Set(keys)) : DEFAULT_VISIBLE_COLUMNS
+}
+
+const normalizeSortColumn = (key?: string) => {
+  if (!key || ["study_date", "study_time", "has_studytype", "has_active_share_link"].includes(key)) return "study_datetime"
+  return key
+}
 
 export const Imagenes = () => {
   const isMobile = useIsMobile()
   const { authData } = useAuth()
+  const { config } = useAppConfig()
+  const veterinary = config?.patient_mode === "veterinary"
+  const columns = useMemo(() => imageColumns.map(column => {
+    if (!veterinary) return column
+    if (column.key === "patient_name") return { ...column, label: "ANIMAL" }
+    if (column.key === "patient_id") return { ...column, label: "ID DICOM", mobile: { ...column.mobile, label: "ID DICOM" } }
+    return column
+  }), [veterinary])
   const [searchTerm, setSearchTerm] = useState("")
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
   const [dateRange, setDateRange] = useState<string>("all")
   const [dateField, setDateField] = useState<string>("arrival")
+  const [unlinkedOnly, setUnlinkedOnly] = useState(true)
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
   const [sortColumn, setSortColumn] = useState("study_datetime")
@@ -61,6 +86,7 @@ export const Imagenes = () => {
     columnFilters,
     dateRange,
     dateField,
+    unlinkedOnly,
     sortColumn,
     sortDirection,
   })
@@ -168,6 +194,7 @@ export const Imagenes = () => {
       setSelectedModality("all")
       setDateRange("all")
       setDateField("arrival")
+      setUnlinkedOnly(true)
       setVisibleColumns(DEFAULT_VISIBLE_COLUMNS)
       setPerPage(10)
       setSortColumn("study_datetime")
@@ -184,9 +211,10 @@ export const Imagenes = () => {
     setSelectedModality(filters.column_filters?.modality || "all")
     setDateRange(filters.date_range || "all")
     setDateField(filters.date_field || "arrival")
-    setVisibleColumns(filters.visible_columns?.length ? filters.visible_columns : DEFAULT_VISIBLE_COLUMNS)
+    setUnlinkedOnly(filters.unlinked_only ?? true)
+    setVisibleColumns(normalizeVisibleColumns(filters.visible_columns))
     setPerPage(filters.per_page || 10)
-    setSortColumn(filters.sort_column || "study_datetime")
+    setSortColumn(normalizeSortColumn(filters.sort_column))
     setSortDirection(filters.sort_direction || "desc")
     setShowFilters(filters.filters_visible ?? true)
     setActivePresetId(preset.guid)
@@ -217,9 +245,10 @@ export const Imagenes = () => {
     sort_direction: sortDirection,
     date_range: dateRange,
     date_field: dateField,
+    unlinked_only: unlinkedOnly,
     filters_visible: showFilters,
     column_filters: columnFilters,
-  }), [columnFilters, dateField, dateRange, perPage, searchTerm, showFilters, sortColumn, sortDirection, visibleColumns])
+  }), [columnFilters, dateField, dateRange, perPage, searchTerm, showFilters, sortColumn, sortDirection, unlinkedOnly, visibleColumns])
 
   const toggleColumn = useCallback((columnKey: string) => {
     setVisibleColumns((prev) => {
@@ -316,13 +345,15 @@ export const Imagenes = () => {
         canShareImages ? handleOpenShareDialog : undefined,
         canReassign ? handleOpenReassignModal : undefined,
         handleOpenEditModal,
-        canDelete ? setSelectedStudyToDelete : undefined
+        canDelete ? setSelectedStudyToDelete : undefined,
+        veterinary
       )
     },
-    [authData?.user, handleOpenShareDialog, handleViewDicom, handleOpenReassignModal, handleOpenEditModal]
+    [authData?.user, handleOpenShareDialog, handleViewDicom, handleOpenReassignModal, handleOpenEditModal, veterinary]
   )
   const isLoading = isLoadingStudies
   const activeFilterCount = [
+    unlinkedOnly,
     searchTerm.trim(),
     selectedModality !== "all",
     dateRange !== "all",
@@ -381,8 +412,26 @@ export const Imagenes = () => {
                     setSearchTerm(value)
                     setPage(1)
                   }}
-                  placeholder="Paciente, Patient ID, ACC. Nº, UID..."
+                  placeholder={veterinary ? "Animal, ID DICOM, ACC. Nº, UID..." : "Paciente, Patient ID, ACC. Nº, UID..."}
                 />
+              </div>
+
+              <div className="hidden w-px self-stretch bg-gray-300 lg:block" />
+              <div className="block h-px bg-gray-300 lg:hidden" />
+
+              <div className="flex shrink-0 flex-col gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Vinculación</span>
+                <label htmlFor="images-unlinked-only" className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-foreground lg:min-h-10">
+                  <Checkbox
+                    id="images-unlinked-only"
+                    checked={unlinkedOnly}
+                    onCheckedChange={(checked) => {
+                      setUnlinkedOnly(checked === true)
+                      setPage(1)
+                    }}
+                  />
+                  Imágenes no vinculadas
+                </label>
               </div>
 
               <div className="hidden w-px self-stretch bg-gray-300 lg:block" />
@@ -468,10 +517,13 @@ export const Imagenes = () => {
 
         <TablaDynamic<PacsStudy>
             data={tableStudies}
+            emptyMessage={unlinkedOnly && !studiesError ? 'No hay imágenes pendientes de vincular. Los estudios vinculados están disponibles en la Lista de trabajo.' : 'No hay imágenes para los filtros seleccionados.'}
             rowIdKey="pk"
-            columns={imageColumns}
-            allColumns={imageColumns}
+            columns={columns}
+            allColumns={columns}
             actions={actions}
+            actionsPosition="first"
+            fixedColumnKeys={["patient_name"]}
             pagination={{
               page,
               pageSize: perPage,
@@ -496,8 +548,8 @@ export const Imagenes = () => {
             loading={isLoading}
             refreshing={isFetchingStudies && !isLoading}
             refreshError={Boolean(studiesError)}
-            refreshScopeKey={JSON.stringify([page, perPage, useDebounceSearch, columnFilters, dateRange, dateField, sortColumn, sortDirection, selectedModality])}
-            filterAnimationKey={JSON.stringify([useDebounceSearch, columnFilters, dateRange, dateField, selectedModality])}
+            refreshScopeKey={JSON.stringify([page, perPage, useDebounceSearch, columnFilters, dateRange, dateField, sortColumn, sortDirection, selectedModality, unlinkedOnly])}
+            filterAnimationKey={JSON.stringify([useDebounceSearch, columnFilters, dateRange, dateField, selectedModality, unlinkedOnly])}
             serverSideFiltering
             onColumnFiltersChange={(filters) => {
               setColumnFilters(filters)

@@ -2,8 +2,7 @@ import type { TableColumn, TableAction } from "@/types/table"
 import type { PacsStudy } from "../hooks/use-studies-by-location"
 import { fechaYhora, formatDate } from "@/lib/fechaYhora"
 import { Badge } from "@/components/ui/badge"
-import { Check, Eye, Pencil, Share2, Trash2, UserPen, X } from "lucide-react"
-import { toast } from "sonner"
+import { Check, Eye, PawPrint, Pencil, Share2, Trash2, UserPen, X } from "lucide-react"
 import { formatPatientName } from "@/lib/formatPatientName"
 
 const formatStudyTime = (timeValue: string | null) => {
@@ -86,66 +85,6 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
     ),
   },
   {
-    key: "has_studytype",
-    label: "ST",
-    headerTitle: "STUDY TYPE ASIGNADO",
-    className: "font-medium text-center",
-    headerClassName: "w-[45px]",
-    sortable: true,
-    filterable: false,
-    mobile: { role: "hidden" },
-    render: (value: boolean) => (
-      <div className="flex justify-center" title={value ? "Study type asignado" : "Sin study type"}>
-        {value ? (
-          <Check className="h-4 w-4 text-emerald-500" />
-        ) : (
-          <X className="h-4 w-4 text-red-500" />
-        )}
-      </div>
-    ),
-  },
-  {
-    key: "has_active_share_link",
-    label: "LINK",
-    className: "font-medium text-center",
-    headerClassName: "w-[65px]",
-    sortable: true,
-    filterable: false,
-    mobile: { role: "hidden" },
-    render: (value: boolean | undefined, row: PacsStudy) => {
-      const isActive = Boolean(value && row.active_share_url)
-
-      if (!isActive) {
-        return (
-          <div className="flex justify-center">
-            <X className="h-4 w-4 text-red-500" />
-          </div>
-        )
-      }
-
-      return (
-        <div className="flex justify-center">
-          <button
-            type="button"
-            title="Copiar link activo"
-            className="inline-flex items-center justify-center rounded-md p-1 hover:bg-emerald-500/10"
-            onClick={async (event) => {
-              event.stopPropagation()
-              try {
-                await navigator.clipboard.writeText(row.active_share_url as string)
-                toast.success("Link copiado al portapapeles")
-              } catch {
-                toast.error("No se pudo copiar el link")
-              }
-            }}
-          >
-            <Check className="h-4 w-4 text-emerald-500" />
-          </button>
-        </div>
-      )
-    },
-  },
-  {
     key: "modality",
     label: "MODALIDAD",
     className: "font-medium",
@@ -206,37 +145,20 @@ export const imageColumns: TableColumn<PacsStudy>[] = [
     },
   },
   {
-    key: "study_date",
-    label: "FECHA DE ESTUDIO",
-    className: "font-medium",
-    sortable: true,
-    filterable: false,
-    mobile: { role: "hidden" },
-    render: (value: string | null) => {
-      if (!value) return <span className="text-gray-400 text-xs">—</span>
-      return formatDate(value)
-    },
-  },
-  {
-    key: "study_time",
-    label: "HORA DE ESTUDIO",
-    className: "font-medium",
-    sortable: true,
-    filterable: false,
-    mobile: { role: "hidden" },
-    render: (value: string | null) => formatStudyTime(value),
-  },
-  {
     key: "study_datetime",
-    label: "FECHA Y HORA",
+    label: "FECHA Y HORA DE ESTUDIO",
     className: "font-medium",
+    headerClassName: "w-[160px]",
     sortable: true,
     filterable: false,
     mobile: { role: "hidden" },
-    render: (value: string | null) => {
-      if (!value) return <span className="text-gray-400 text-xs">—</span>
-      return fechaYhora(value)
-    },
+    changeValue: (row) => [row.study_date, row.study_time],
+    render: (_value: string | null, row: PacsStudy) => (
+      <div className="flex flex-col gap-0.5 tabular-nums">
+        <span>{row.study_date ? formatDate(row.study_date) : "—"}</span>
+        <span className="font-normal text-muted-foreground">{formatStudyTime(row.study_time)}</span>
+      </div>
+    ),
   },
 ]
 
@@ -245,7 +167,8 @@ export const getImageActions = (
   onShare?: (study: PacsStudy) => void,
   onReassign?: (study: PacsStudy) => void,
   onEdit?: (study: PacsStudy) => void,
-  onDelete?: (study: PacsStudy) => void
+  onDelete?: (study: PacsStudy) => void,
+  veterinary = false
 ): TableAction<PacsStudy>[] => {
   const actions: TableAction<PacsStudy>[] = []
 
@@ -279,8 +202,10 @@ export const getImageActions = (
 
   if (onReassign) {
     actions.push({
-      icon: <UserPen className="h-4 w-4" />,
-      label: "Reasignar a otro paciente",
+      icon: veterinary ? <PawPrint className="h-4 w-4" /> : <UserPen className="h-4 w-4" />,
+      label: (study) => veterinary
+        ? (study.is_linked ? "Reasignar a otro animal" : "Asignar a otro animal")
+        : "Reasignar a otro paciente",
       onClick: (study) => onReassign(study),
       variant: "secondary",
     })

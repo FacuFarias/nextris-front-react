@@ -7,14 +7,14 @@ import { informesKeys } from "../constants/query-keys";
 import { toast } from "sonner";
 import { notifyInformeChange, useCrossWindowSync } from "../redactar-informe/hooks/use-cross-windows";
 
-export const useInformes = ({ page = 1, per_page = 8, search = "", column_filters = {} as Record<string, string>, patient_id_exact = "", show_reported = false, show_ready = false, assigned_to_me = false, show_no_image = false, show_without_order = false, show_only_with_notes = false, show_cancelled = false, bodypart_id = "", modality_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc" }) => {
+export const useInformes = ({ refetch_interval = 120000, page = 1, per_page = 8, search = "", column_filters = {} as Record<string, string>, patient_id_exact = "", show_reported = false, show_ready = false, assigned_to_me = false, show_no_image = false, show_without_order = false, show_only_with_notes = false, show_cancelled = false, bodypart_id = "", modality_id = "", study_group_id = "", flag_filter = "", date_range = "all", date_field = "admision", sort_column = "", sort_direction = "desc" }) => {
     useCrossWindowSync();
 
     const { data, isLoading, isFetching, error, refetch } = useQuery<ApiPaginatedResponse<Informes>>({
         queryKey: [...informesKeys.list(page, per_page, search, show_reported, show_ready, assigned_to_me, show_no_image, show_without_order, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction, show_only_with_notes, patient_id_exact), column_filters, show_cancelled],
         queryFn: () => getInformes({ page, per_page, search, column_filters, show_cancelled, patient_id_exact, show_reported, show_ready, assigned_to_me, show_no_image, show_without_order, show_only_with_notes, bodypart_id, modality_id, study_group_id, flag_filter, date_range, date_field, sort_column, sort_direction }),
         staleTime: 5_000,
-        refetchInterval: 120000,
+        refetchInterval: refetch_interval,
         refetchIntervalInBackground: false,
     });
 

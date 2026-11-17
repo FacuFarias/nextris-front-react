@@ -58,6 +58,7 @@ export interface DynamicTableProps<T = any> extends PaginationProps {
     data: T[];
     columns: TableColumn<T>[];
     actions?: TableAction<T>[];
+    actionsPosition?: "first" | "after-first";
     loading?: boolean;
     refreshing?: boolean;
     refreshError?: boolean;
